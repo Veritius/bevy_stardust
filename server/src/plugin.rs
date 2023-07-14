@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use bevy_stardust_shared::plugin::StardustSharedPlugin;
 
 pub struct StardustServerPlugin {
     pub private_key: String,
@@ -8,6 +9,6 @@ pub struct StardustServerPlugin {
 
 impl Plugin for StardustServerPlugin {
     fn build(&self, app: &mut App) {
-        todo!()
+        app.add_plugins(StardustSharedPlugin);
     }
 }
