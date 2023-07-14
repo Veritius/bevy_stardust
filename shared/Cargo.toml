@@ -1,0 +1,9 @@
+[package]
+name="bevy_stardust_shared"
+version="0.1.0"
+edition="2021"
+authors=["Veritius <veritiusgaming@gmail.com>"]
+
+[dependencies]
+bevy_ecs = "0.11"
+renet = "0.0.12"
