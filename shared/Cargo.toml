@@ -6,4 +6,5 @@ authors=["Veritius <veritiusgaming@gmail.com>"]
 
 [dependencies]
 bevy_ecs = "0.11"
+bevy_reflect = "0.11"
 renet = "0.0.12"

@@ -41,12 +41,25 @@ pub trait BitReader {
     fn iter(&mut self) -> BitReaderIter where Self: Sized {
         BitReaderIter::new(self)
     }
+    /// Reads `amount` bytes from the buffer and returns them.
+    fn read_bytes(&mut self, amount: usize) -> Result<Vec<u8>, BitstreamError> where Self: Sized {
+        let mut vec = Vec::with_capacity(amount);
+        let mut iter = self.iter();
+        for _ in 0..amount {
+            match iter.next() {
+                Some(byte) => vec.push(byte),
+                None => return Err(BitstreamError),
+            }
+        }
+
+        Ok(vec)
+    }
 }
 
 /// Allows manual bitstream serialisation rather than using Bevy reflection.
 pub trait ManualBitSerialisation {
     fn serialise(&self, writer: &mut impl BitWriter);
-    fn deserialise(&self, reader: &mut impl BitReader);
+    fn deserialise(reader: &mut impl BitReader) -> Result<Self, BitstreamError> where Self: Sized;
 }
 
 /// A simple iterator over bytes in a [BitReader].
