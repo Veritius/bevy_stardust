@@ -6,3 +6,4 @@ authors=["Veritius <veritiusgaming@gmail.com>"]
 
 [dependencies]
 bevy = { version = "0.11", default-features=false }
+glam = { version = "0.24" }
