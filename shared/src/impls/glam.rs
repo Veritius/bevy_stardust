@@ -33,8 +33,8 @@ macro_rules! read_f64 {
 /// Usage example: `impl_float_array!(Vec2, 2, to_array, from_array, owned);`
 /// 
 /// The arguments are as follows:
-/// - The type to implement on
 /// - `f32` or `f64`
+/// - The type to implement on
 /// - The amount of floats in the array
 /// - The to-method, the from-method
 /// - `owned` (disables the borrow given to `to-method` as an argument)
