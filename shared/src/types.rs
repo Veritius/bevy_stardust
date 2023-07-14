@@ -1,13 +1,5 @@
-use crate::bits::{ManualBitSerialisation, BitstreamError};
+/// Unique identifier for a client.
+pub struct NetworkUserId(pub(crate) u32);
 
 /// A type that is replicated over the network.
-pub struct NetworkTypeId(u32);
-impl ManualBitSerialisation for NetworkTypeId {
-    fn serialise(&self, writer: &mut impl crate::bits::BitWriter) {
-        todo!()
-    }
-
-    fn deserialise(reader: &mut impl crate::bits::BitReader) -> Result<NetworkTypeId, BitstreamError> {
-        todo!()
-    }
-}
+pub struct NetworkTypeId(pub(crate) u32);
