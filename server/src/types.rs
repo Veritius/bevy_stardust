@@ -1,6 +1,5 @@
-use bevy_stardust_shared::bevy_ecs::system::Resource;
-use bevy_stardust_shared::bevy_ecs;
 use bevy_stardust_shared::types::NetworkTypeId;
+use bevy::prelude::*;
 
 /// Serverside type storage.
 #[derive(Resource)]
