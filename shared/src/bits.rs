@@ -5,7 +5,7 @@ const DEFAULT_WRITER_ALLOCATION: usize = 256;
 pub trait BitWriter {
     /// Creates a new instance of the BitWriter.
     fn new() -> Self;
-    /// Expands the buffer to allow the allocation of at least `bytes` more bytes.
+    /// Expands the buffer to allow the writing of at least `bytes` more bytes.
     fn allocate_bytes(&mut self, bytes: usize);
 
     /// Writes a single bit to the buffer.
