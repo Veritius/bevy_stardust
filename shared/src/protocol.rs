@@ -9,6 +9,11 @@ pub struct Protocol {
     channels: Vec<ChannelConfig>
 }
 
+impl Protocol {
+    /// Returns the unique ID of this Protocol object.
+    fn unique_id(&self) -> u32 { self.unique_id }
+}
+
 pub struct ProtocolBuilder {
     unique_id: Option<u32>,
     channels: Vec<(TypeId, ChannelConfig)>,
