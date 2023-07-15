@@ -4,6 +4,7 @@ use crate::bits::{ManualBitSerialisation, BitWriter, BitReader, BitstreamError};
 
 impl ManualBitSerialisation for Transform {
     fn serialise(&self, writer: &mut impl BitWriter) {
+        writer.allocate_bytes(40);
         self.translation.serialise(writer);
         self.rotation.serialise(writer);
         self.scale.serialise(writer);

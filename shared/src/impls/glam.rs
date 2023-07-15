@@ -121,7 +121,10 @@ macro_rules! impl_int_array {
         impl ManualBitSerialisation for $type {
             fn serialise(&self, writer: &mut impl BitWriter) {
                 for i in self.to_array() {
-                    writer.write_bytes(i.to_be_bytes().iter().cloned());
+                    let bytes = i.to_be_bytes();
+                    let bytes_iter = bytes.iter().cloned();
+                    writer.allocate_bytes(bytes.len());
+                    writer.write_bytes(bytes_iter);
                 }
             }
         

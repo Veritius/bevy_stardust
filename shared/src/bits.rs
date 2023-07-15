@@ -5,13 +5,13 @@ const DEFAULT_WRITER_ALLOCATION: usize = 256;
 pub trait BitWriter {
     /// Creates a new instance of the BitWriter.
     fn new() -> Self;
-    /// Allocates space for `amount` more bytes.
+    /// Expands the buffer to allow the allocation of at least `bytes` more bytes.
     fn allocate_bytes(&mut self, bytes: usize);
 
     /// Writes a single bit to the buffer.
     fn write_bit(&mut self, data: bool);
     /// Writes a byte (u8) to the buffer.
-    fn write_u8(&mut self, data: u8);
+    fn write_byte(&mut self, data: u8);
     /// Writes four bytes (u32) to the buffer.
     fn write_u32(&mut self, data: u32);
     /// Writes eight bytes (u64) to the buffer.
@@ -108,7 +108,7 @@ impl BitWriter for DefaultBitWriter {
     }
 
     fn allocate_bytes(&mut self, bytes: usize) {
-        self.buffer.reserve(bytes);
+        self.buffer.reserve_exact(bytes);
     }
 
     fn write_bit(&mut self, data: bool) {
@@ -122,7 +122,7 @@ impl BitWriter for DefaultBitWriter {
         }
     }
 
-    fn write_u8(&mut self, data: u8) {
+    fn write_byte(&mut self, data: u8) {
         let mut temp = data;
         for _ in 0..8 {
             self.write_bit(temp & 1 != 0);
@@ -154,7 +154,7 @@ impl BitWriter for DefaultBitWriter {
 
     fn write_bytes<T: Iterator<Item = u8>>(&mut self, iter: T) {
         for byte in iter {
-            self.write_u8(byte);
+            self.write_byte(byte);
         }
     }
 
