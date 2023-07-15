@@ -1,4 +1,4 @@
-use glam::{Vec2, Vec3, Vec3A, Vec4, Mat2, Mat3, Mat3A, Mat4, Quat, Affine2, Affine3A, DVec2, DVec3, DVec4, DMat2, DMat3, DMat4, DQuat, DAffine2, DAffine3, IVec2, IVec3, IVec4, UVec2, UVec3, UVec4, I64Vec4, I64Vec2, I64Vec3, U64Vec2, U64Vec3, U64Vec4};
+use glam::{Vec2, Vec3, Vec3A, Vec4, Mat2, Mat3, Mat3A, Mat4, Quat, Affine2, Affine3A, DVec2, DVec3, DVec4, DMat2, DMat3, DMat4, DQuat, DAffine2, DAffine3, IVec2, IVec3, IVec4, UVec2, UVec3, UVec4, I64Vec4, I64Vec2, I64Vec3, U64Vec2, U64Vec3, U64Vec4, BVec2, BVec3, BVec4};
 use crate::bits::{ManualBitSerialisation, BitWriter, BitReader, BitstreamError};
 
 macro_rules! write_f32 {
@@ -169,3 +169,51 @@ impl_int_array!(i64, I64Vec4, 4);
 impl_int_array!(u64, U64Vec2, 2);
 impl_int_array!(u64, U64Vec3, 3);
 impl_int_array!(u64, U64Vec4, 4);
+
+impl ManualBitSerialisation for BVec2 {
+    fn serialise(&self, writer: &mut impl BitWriter) {
+        writer.write_bit(self.x);
+        writer.write_bit(self.y);
+    }
+
+    fn deserialise(reader: &mut impl BitReader) -> Result<Self, BitstreamError> where Self: Sized {
+        Ok(BVec2::new(
+            reader.read_bit()?,
+            reader.read_bit()?,
+        ))
+    }
+}
+
+impl ManualBitSerialisation for BVec3 {
+    fn serialise(&self, writer: &mut impl BitWriter) {
+        writer.write_bit(self.x);
+        writer.write_bit(self.y);
+        writer.write_bit(self.z);
+    }
+
+    fn deserialise(reader: &mut impl BitReader) -> Result<Self, BitstreamError> where Self: Sized {
+        Ok(BVec3::new(
+            reader.read_bit()?,
+            reader.read_bit()?,
+            reader.read_bit()?,
+        ))
+    }
+}
+
+impl ManualBitSerialisation for BVec4 {
+    fn serialise(&self, writer: &mut impl BitWriter) {
+        writer.write_bit(self.x);
+        writer.write_bit(self.y);
+        writer.write_bit(self.z);
+        writer.write_bit(self.w);
+    }
+
+    fn deserialise(reader: &mut impl BitReader) -> Result<Self, BitstreamError> where Self: Sized {
+        Ok(BVec4::new(
+            reader.read_bit()?,
+            reader.read_bit()?,
+            reader.read_bit()?,
+            reader.read_bit()?,
+        ))
+    }
+}
