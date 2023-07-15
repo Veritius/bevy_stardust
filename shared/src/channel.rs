@@ -1,10 +1,12 @@
+/// Trait for a channel type. Effectively just a marker for `TypeId`s.
+pub trait Channel: Send + Sync + 'static {}
+
+/// Configuration for a network channel.
+#[derive(Debug, Clone)]
 pub struct ChannelConfig {
-    /// Max storage space for incoming messages, in kilobytes.
-    pub memory_size: u32,
-    /// The direction messages can flow in.
     pub direction: ChannelDirection,
-    /// The reliability of messages (resending, ordering)
-    pub reliability: ChannelReliability,
+    pub ordering: ChannelOrdering,
+    pub mode: ChannelReliability,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -18,11 +20,15 @@ pub enum ChannelDirection {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ChannelOrdering {
+    Ordered,
+    Unordered,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ChannelReliability {
-    /// Messages will arrive in order.
-    OrderedReliable,
-    /// Messages will arrive.
-    UnorderedReliable,
-    /// Messages may arrive.
-    Unreliable
+    /// Messages will arrive eventually.
+    Reliable,
+    /// Messages may or may not arrive.
+    Unreliable,
 }
