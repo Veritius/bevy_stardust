@@ -15,6 +15,14 @@ pub struct ProtocolBuilder {
 }
 
 impl ProtocolBuilder {
+    /// Creates a new blank `ProtocolBuilder`
+    fn new() -> Self {
+        Self {
+            unique_id: None,
+            channels: vec![],
+        }
+    }
+
     /// Generates a unique protocol ID from the project name and an arbitrary version value.
     /// You *must* use this function before building the protocol.
     fn generate_id(&mut self, name: String, version: String) {
