@@ -31,7 +31,7 @@ pub trait BitReader {
     /// Reads a single bit, advancing the buffer.
     fn read_bit(&mut self) -> Result<bool, BitstreamError>;
     /// Reads a byte (u8), advancing the buffer.
-    fn read_u8(&mut self) -> Result<u8, BitstreamError>;
+    fn read_byte(&mut self) -> Result<u8, BitstreamError>;
     /// Reads four bytes (u32), advancing the buffer.
     fn read_u32(&mut self) -> Result<u32, BitstreamError>;
     /// Reads eight bytes (u64), advancing the buffer.
@@ -77,7 +77,7 @@ impl<'a> Iterator for BitReaderIter<'a> {
     type Item = u8;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let byte = self.reader.read_u8();
+        let byte = self.reader.read_byte();
         match byte {
             Ok(val) => Some(val),
             Err(_) => None,
