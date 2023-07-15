@@ -1,4 +1,4 @@
-use glam::{Vec2, Vec3, Vec3A, Vec4, Mat2, Mat3, Mat3A, Mat4, Quat, Affine2, Affine3A, DVec2, DVec3, DVec4, DMat2, DMat3, DMat4, DQuat, DAffine2, DAffine3};
+use glam::{Vec2, Vec3, Vec3A, Vec4, Mat2, Mat3, Mat3A, Mat4, Quat, Affine2, Affine3A, DVec2, DVec3, DVec4, DMat2, DMat3, DMat4, DQuat, DAffine2, DAffine3, IVec2, IVec3, IVec4, UVec2, UVec3, UVec4, I64Vec4, I64Vec2, I64Vec3, U64Vec2, U64Vec3, U64Vec4};
 use crate::bits::{ManualBitSerialisation, BitWriter, BitReader, BitstreamError};
 
 macro_rules! write_f32 {
@@ -116,6 +116,26 @@ macro_rules! impl_float_array {
     };
 }
 
+macro_rules! impl_int_array {
+    ($int:ident, $type:ident, $ints:expr) => {
+        impl ManualBitSerialisation for $type {
+            fn serialise(&self, writer: &mut impl BitWriter) {
+                for i in self.to_array() {
+                    writer.write_bytes(i.to_be_bytes().iter().cloned());
+                }
+            }
+        
+            fn deserialise(reader: &mut impl BitReader) -> Result<Self, BitstreamError> {
+                let mut vals = [0; $ints];
+                for z in 0..$ints {
+                    vals[z] = $int::deserialise(reader)?;
+                }
+                Ok($type::from_array(vals))
+            }
+        }
+    };
+}
+
 impl_float_array!(f32, Vec2, 2, to_array, from_array, owned);
 impl_float_array!(f32, Vec3, 3, to_array, from_array, owned);
 impl_float_array!(f32, Vec3A, 3, to_array, from_array, owned);
@@ -136,3 +156,16 @@ impl_float_array!(f64, DMat4, 16, to_cols_array, from_cols_array);
 impl_float_array!(f64, DQuat, 4, to_array, from_array, owned);
 impl_float_array!(f64, DAffine2, 6, to_cols_array, from_cols_array);
 impl_float_array!(f64, DAffine3, 12, to_cols_array, from_cols_array);
+
+impl_int_array!(i32, IVec2, 2);
+impl_int_array!(i32, IVec3, 3);
+impl_int_array!(i32, IVec4, 4);
+impl_int_array!(u32, UVec2, 2);
+impl_int_array!(u32, UVec3, 3);
+impl_int_array!(u32, UVec4, 4);
+impl_int_array!(i64, I64Vec2, 2);
+impl_int_array!(i64, I64Vec3, 3);
+impl_int_array!(i64, I64Vec4, 4);
+impl_int_array!(u64, U64Vec2, 2);
+impl_int_array!(u64, U64Vec3, 3);
+impl_int_array!(u64, U64Vec4, 4);
