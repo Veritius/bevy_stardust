@@ -2,6 +2,8 @@ use std::{collections::{hash_map::DefaultHasher, HashMap}, hash::Hasher, any::Ty
 use bevy::prelude::Resource;
 use crate::channel::{Channel, ChannelConfig};
 
+const STARDUST_PROTOCOL_VERSION: [u8; 2] = 0_u16.to_be_bytes();
+
 #[derive(Resource)]
 pub struct Protocol {
     unique_id: u32,
@@ -32,6 +34,7 @@ impl ProtocolBuilder {
     /// You *must* use this function before building the protocol.
     fn generate_id(&mut self, name: String, version: String) {
         let mut hasher = DefaultHasher::new();
+        hasher.write(&STARDUST_PROTOCOL_VERSION);
         hasher.write(name.as_bytes());
         hasher.write(version.as_bytes());
         // Take the first 32 bits from the hash result as a protocol ID.
