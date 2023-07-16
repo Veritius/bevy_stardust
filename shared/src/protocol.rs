@@ -1,78 +1,80 @@
-use std::{collections::{hash_map::DefaultHasher, HashMap}, hash::Hasher, any::TypeId};
-use bevy::prelude::Resource;
-use crate::channel::{Channel, ChannelConfig};
+#[allow(deprecated)]
+use std::hash::SipHasher;
+use std::{any::TypeId, collections::BTreeMap, hash::Hasher};
+use bevy::prelude::{App, Resource};
+use crate::channel::{Channel, ChannelConfig, ChannelId};
 
-const STARDUST_PROTOCOL_VERSION: [u8; 2] = 0_u16.to_be_bytes();
+/// Maximum packet length that can be sent/received before fragmentation.
+pub const MAX_PACKET_LENGTH: u16 = 1500;
+/// Unique value for the Stardust protocol. 
+const STARDUST_PROTOCOL_VERSION: u16 = 0;
 
+/// The shared agreement between the client and server used to transport information.
+/// 
+/// This **must** be identical on both the client and server. The best way to achieve this is putting it in a shared location, ie another crate.
 #[derive(Resource)]
 pub struct Protocol {
     unique_id: u32,
-    channel_ids: HashMap<TypeId, u16>,
-    channels: Vec<ChannelConfig>
+
+    channel_types: BTreeMap<TypeId, ChannelId>,
+    channels: Vec<(TypeId, ChannelConfig)>,
 }
 
-impl Protocol {
-    /// Returns the unique ID of this Protocol object.
-    fn unique_id(&self) -> u32 { self.unique_id }
-}
-
+#[derive(Resource, Default)]
 pub struct ProtocolBuilder {
-    unique_id: Option<u32>,
+    protocol_id: u32,
     channels: Vec<(TypeId, ChannelConfig)>,
 }
 
 impl ProtocolBuilder {
-    /// Creates a new blank `ProtocolBuilder`
-    fn new() -> Self {
-        Self {
-            unique_id: None,
-            channels: vec![],
+    pub fn set_id(&mut self, id: u32) { self.protocol_id = id; }
+
+    pub fn add_channel<T: Channel>(&mut self, config: ChannelConfig) {
+        let this = TypeId::of::<T>();
+        for (other, _) in self.channels.iter() {
+            // Prevent channels being added twice
+            if this == *other { panic!("Channel added twice: {:?}", this); }
         }
+        self.channels.push((this, config));
     }
 
-    /// Generates a unique protocol ID from the project name and an arbitrary version value.
-    /// You *must* use this function before building the protocol.
-    fn generate_id(&mut self, name: String, version: String) {
-        let mut hasher = DefaultHasher::new();
-        hasher.write(&STARDUST_PROTOCOL_VERSION);
-        hasher.write(name.as_bytes());
-        hasher.write(version.as_bytes());
-        // Take the first 32 bits from the hash result as a protocol ID.
-        let hash: [u8; 8] = hasher.finish().to_be_bytes();
-        let crushed = u32::from_be_bytes([hash[0], hash[1], hash[2], hash[3]]);
-        self.unique_id = Some(crushed);
-    }
+    pub(crate) fn build(&self) -> Protocol {
+        let mut protocol = Protocol {
+            unique_id: self.protocol_id,
 
-    /// Adds a channel to the protocol.
-    fn add_channel<T: Channel>(&mut self, config: ChannelConfig) {
-        let id = TypeId::of::<T>();
-        self.channels.push((id, config))
-    }
+            channel_types: BTreeMap::new(),
+            channels: Vec::with_capacity(self.channels.len()),
+        };
 
-    /// Consumes this `ProtocolBuilder` and returns a `Protocol` for use in networking.
-    #[must_use]
-    fn build(self) -> Protocol {
-        // Check ID exists
-        if self.unique_id.is_none() { panic!("No unique protocol ID set! Did you use generate_id first?"); }
-
-        // Add channels to maps
-        let mut series_id: u16 = 0;
-        let mut channel_ids = HashMap::new();
-        let mut channels = Vec::with_capacity(self.channels.len());
-        for (type_id, config) in self.channels {
-            let id = series_id;
-            channel_ids.insert(type_id, id);
-            channels.push(config);
-
-            // Increase series_id and panic on overflow
-            series_id = series_id.checked_add(1)
-                .unwrap_or_else(|| panic!("Protocol channel cap of 65536 exceeded!"));
+        let mut idx: ChannelId = 0;
+        for (ctype, config) in &self.channels {
+            protocol.channel_types.insert(*ctype, idx);
+            protocol.channels.push((*ctype, config.clone()));
+            if idx == ChannelId::MAX { panic!("Channel limit ")}
+            idx += 1;
         }
 
-        Protocol {
-            unique_id: self.unique_id.unwrap(),
-            channel_ids,
-            channels,
-        }
+        protocol
+    }
+}
+
+pub trait ProtocolAppExts {
+    fn gen_protocol_id<H: std::hash::Hash>(&mut self, val: H);
+    fn add_net_channel<T: Channel>(&mut self, config: ChannelConfig);
+}
+
+impl ProtocolAppExts for App {
+    fn gen_protocol_id<H: std::hash::Hash>(&mut self, val: H) {
+        // SipHasher is used directly to prevent the generated ID changing between Rust releases,
+        // as noted in the documentation for DefaultHasher
+        #[allow(deprecated)]
+        let mut hasher = SipHasher::default();
+        hasher.write_u16(STARDUST_PROTOCOL_VERSION);
+    }
+
+    fn add_net_channel<T: Channel>(&mut self, config: ChannelConfig) {
+        let mut builder = self.world.get_resource_mut::<ProtocolBuilder>()
+            .expect("StardustSharedPlugin should have been added before this");
+        builder.add_channel::<T>(config);
     }
 }

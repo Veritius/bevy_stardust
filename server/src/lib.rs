@@ -1,3 +1,5 @@
-pub mod types;
 pub mod plugin;
-pub mod connection;
+pub mod config;
+pub mod client;
+
+mod connection;

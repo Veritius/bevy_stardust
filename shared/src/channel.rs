@@ -1,5 +1,7 @@
+pub type ChannelId = u16;
+
 /// Trait for a channel type. Effectively just a marker for `TypeId`s.
-pub trait Channel: Send + Sync + 'static {}
+pub trait Channel: std::fmt::Debug + Send + Sync + 'static {}
 
 /// Configuration for a network channel.
 /// It's recommended to disable features you won't need.
@@ -17,7 +19,7 @@ pub struct ChannelConfig {
 impl ChannelConfig {
     /// Configures a 'real-time' channel. Prioritises speed over correctness or efficiency.
     /// Messages that arrive late (based on game tick) will be discarded.
-    fn realtime(direction: ChannelDirection) -> Self {
+    pub fn realtime(direction: ChannelDirection) -> Self {
         Self {
             direction,
             ordering: ChannelOrdering::Unordered,
