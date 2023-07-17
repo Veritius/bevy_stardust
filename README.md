@@ -4,6 +4,8 @@ A (very opinionated) experimental client/server networking crate for Bevy, fully
 This crate is highly experimental and you shouldn't use it for anything you care about. Things *will* break.
 This is also a hobby project. It's probably not very good, but you're more than welcome to help out!
 
+**Cryptographic features are not currently supported. Man in the middle attacks are really, really easy with this crate.**
+
 ## Planned features
 - Reliability
 - Ordering
