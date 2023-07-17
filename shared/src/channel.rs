@@ -110,6 +110,8 @@ pub enum ChannelCompression {
 }
 
 /// Whether or not messages are encrypted for only the recipient to read.
+/// 
+/// **CRYPTOGRAPHIC FUNCTIONALITY IS NOT SUPPORTED AT THE MOMENT.**
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ChannelEncryption {
     Enabled,
@@ -118,6 +120,8 @@ pub enum ChannelEncryption {
 
 
 /// Whether or not messages are cryptographically signed and validated.
+/// 
+/// **CRYPTOGRAPHIC FUNCTIONALITY IS NOT SUPPORTED AT THE MOMENT.**
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ChannelSigning {
     Enabled,

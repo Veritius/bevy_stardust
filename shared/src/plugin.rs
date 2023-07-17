@@ -1,5 +1,5 @@
 use bevy::prelude::{Plugin, App};
-use crate::{protocol::{ProtocolBuilder, ProtocolAppExts}, channel::{ChannelConfig, ChannelDirection, ChannelOrdering, ChannelReliability, ChannelLatestness, ChannelErrorChecking, ChannelFragmentation, ChannelCompression, ChannelEncryption, ChannelSigning}, authentication::AuthenticationChannel};
+use crate::{protocol::{ProtocolBuilder, ProtocolAppExts}, channel::{ChannelConfig, ChannelDirection, ChannelOrdering, ChannelReliability, ChannelLatestness, ChannelErrorChecking, ChannelFragmentation, ChannelCompression, ChannelEncryption, ChannelSigning}, authentication::channel::AuthenticationChannel};
 
 pub struct StardustSharedPlugin;
 impl Plugin for StardustSharedPlugin {
