@@ -1,6 +1,6 @@
 use bevy::prelude::*;
-use crate::{components::ReplicatedEntity, bits::ManualBitSerialisation};
-use super::config::ReplicatedComponentData;
+use crate::bits::ManualBitSerialisation;
+use super::{config::ReplicatedComponentData, markers::ReplicatedEntity};
 
 pub(crate) fn replication_send_system_bitstream<T: Component + ManualBitSerialisation>(
     config: Res<ReplicatedComponentData<T>>,
