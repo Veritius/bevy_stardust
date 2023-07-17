@@ -10,12 +10,12 @@ pub struct ChannelConfig {
     pub direction: ChannelDirection,
     pub ordering: ChannelOrdering,
     pub reliability: ChannelReliability,
+    pub latestness: ChannelLatestness,
     pub error_checking: ChannelErrorChecking,
     pub fragmentation: ChannelFragmentation,
     pub compression: ChannelCompression,
     pub encryption: ChannelEncryption,
     pub signing: ChannelSigning,
-    pub latest_only: bool,
 }
 
 impl ChannelConfig {
@@ -26,12 +26,12 @@ impl ChannelConfig {
             direction,
             ordering: ChannelOrdering::Unordered,
             reliability: ChannelReliability::Unreliable,
+            latestness: ChannelLatestness::Within(3),
             error_checking: ChannelErrorChecking::Disabled,
             fragmentation: ChannelFragmentation::Disabled,
             compression: ChannelCompression::Disabled,
             encryption: ChannelEncryption::Disabled,
             signing: ChannelSigning::Enabled,
-            latest_only: true,
         }
     }
 }
@@ -62,6 +62,13 @@ pub enum ChannelReliability {
     Reliable,
     /// Messages may or may not arrive.
     Unreliable,
+}
+
+/// Whether or not to discard messages if they are X ticks late.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ChannelLatestness {
+    Ignore,
+    Within(u32),
 }
 
 /// Whether or not messages in this channel will be error checked.
