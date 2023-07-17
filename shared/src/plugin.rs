@@ -1,5 +1,5 @@
 use bevy::prelude::{Plugin, App};
-use crate::{protocol::ProtocolBuilder, replication::{extension::AutoReplicationEnabled, config::ReplicatedComponentData}};
+use crate::{protocol::ProtocolBuilder};
 
 pub struct StardustSharedPlugin;
 impl Plugin for StardustSharedPlugin {
@@ -11,8 +11,5 @@ impl Plugin for StardustSharedPlugin {
         let builder = app.world.remove_resource::<ProtocolBuilder>()
             .expect("Builder should have been present").build();
         app.world.insert_resource(builder);
-
-        // Remove values that are no longer needed
-        app.world.remove_resource::<AutoReplicationEnabled>();
     }
 }

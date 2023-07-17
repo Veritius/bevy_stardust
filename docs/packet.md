@@ -4,7 +4,7 @@ See the following: https://gafferongames.com/post/reliability_ordering_and_conge
 
 Always present:
 - 4 bytes: Protocol id (32-bit number)
-- 2 bytes: Channel id (16-bit number)
+- 4 bytes: Channel id (32-bit number)
 - 2 bytes: Ack (16-bit number)
 - 4 bytes: Ack bitfield (32-bit bitfield)
 

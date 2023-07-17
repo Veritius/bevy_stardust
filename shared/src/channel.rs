@@ -1,4 +1,4 @@
-pub type ChannelId = u16;
+pub type ChannelId = u32;
 
 /// Trait for a channel type. Effectively just a marker for `TypeId`s.
 pub trait Channel: std::fmt::Debug + Send + Sync + 'static {}
@@ -48,6 +48,7 @@ pub enum ChannelDirection {
 }
 
 /// Whether or not messages should be read in the order they arrive in.
+/// Messages sent in the wrong direction will be discarded.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ChannelOrdering {
     Ordered,

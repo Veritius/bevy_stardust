@@ -1,7 +1,6 @@
+pub mod plugin;
 pub mod channel;
-pub mod extension;
-
-pub(crate) mod config;
+pub mod config;
 
 mod systems;
 mod markers;
