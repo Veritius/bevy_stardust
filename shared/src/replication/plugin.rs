@@ -1,7 +1,19 @@
 use std::marker::PhantomData;
 use bevy::prelude::*;
-use crate::{bits::ManualBitSerialisation, schedule::NetworkTransmit};
-use super::{config::{ComponentReplicationConfig, ReplicatedComponentData}, systems::{replication_send_system_reflected, replication_send_system_bitstream}};
+use crate::{bits::ManualBitSerialisation, schedule::NetworkTransmit, protocol::ProtocolAppExts, channel::{ChannelConfig, ChannelDirection, ChannelOrdering, ChannelReliability, ChannelErrorChecking, ChannelFragmentation, ChannelCompression, ChannelEncryption, ChannelSigning}};
+use super::{config::{ComponentReplicationConfig, ReplicatedComponentData}, systems::{replication_send_system_reflected, replication_send_system_bitstream}, channel::ComponentReplicationChannel};
+
+const DEFAULT_REPLICATION_CHANNEL_CONFIG: ChannelConfig = ChannelConfig {
+    direction: ChannelDirection::Bidirectional,
+    ordering: ChannelOrdering::Unordered,
+    reliability: ChannelReliability::Reliable,
+    error_checking: ChannelErrorChecking::Enabled,
+    fragmentation: ChannelFragmentation::Enabled,
+    compression: ChannelCompression::Disabled,
+    encryption: ChannelEncryption::Enabled,
+    signing: ChannelSigning::Disabled,
+    latest_only: false,
+};
 
 /// Enables replication for a component implementing `ManualBitSerialisation`.
 /// 
@@ -20,6 +32,16 @@ impl<T: Component + ManualBitSerialisation> ReplicateComponentPluginBitstream<T>
 
 impl<T: Component + ManualBitSerialisation> Plugin for ReplicateComponentPluginBitstream<T> {
     fn build(&self, app: &mut App) {
+        app.add_net_channel::<ComponentReplicationChannel<T>>(
+            if let Some(config) = &self.config.channel_config_override {
+                // return override value
+                config.clone()
+            } else {
+                // default config for replication channels
+                DEFAULT_REPLICATION_CHANNEL_CONFIG
+            }
+        );
+
         app.insert_resource(ReplicatedComponentData {
             config: self.config.clone(),
             phantom: PhantomData::<T>,
@@ -51,6 +73,16 @@ impl<T: Component + Reflect> ReplicateComponentPluginReflected<T> {
 
 impl<T: Component + Reflect> Plugin for ReplicateComponentPluginReflected<T> {
     fn build(&self, app: &mut App) {
+        app.add_net_channel::<ComponentReplicationChannel<T>>(
+            if let Some(config) = &self.config.channel_config_override {
+                // return override value
+                config.clone()
+            } else {
+                // default config for replication channels
+                DEFAULT_REPLICATION_CHANNEL_CONFIG
+            }
+        );
+
         app.insert_resource(ReplicatedComponentData {
             config: self.config.clone(),
             phantom: PhantomData::<T>,
