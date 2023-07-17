@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 use bevy::prelude::*;
-use crate::bits::ManualBitSerialisation;
-use super::config::ComponentReplicationConfig;
+use crate::{bits::ManualBitSerialisation, schedule::NetworkTransmit};
+use super::{config::{ComponentReplicationConfig, ReplicatedComponentData}, systems::{replication_send_system_reflected, replication_send_system_bitstream}};
 
 /// Enables replication for a component implementing `ManualBitSerialisation`.
 /// 
@@ -20,7 +20,14 @@ impl<T: Component + ManualBitSerialisation> ReplicateComponentPluginBitstream<T>
 
 impl<T: Component + ManualBitSerialisation> Plugin for ReplicateComponentPluginBitstream<T> {
     fn build(&self, app: &mut App) {
-        todo!()
+        app.insert_resource(ReplicatedComponentData {
+            config: self.config.clone(),
+            phantom: PhantomData::<T>,
+        });
+        
+        app.add_systems(NetworkTransmit::Process, (
+            replication_send_system_bitstream::<T>,
+        ));
     }
 
     fn finish(&self, app: &mut App) {
@@ -44,7 +51,14 @@ impl<T: Component + Reflect> ReplicateComponentPluginReflected<T> {
 
 impl<T: Component + Reflect> Plugin for ReplicateComponentPluginReflected<T> {
     fn build(&self, app: &mut App) {
-        todo!()
+        app.insert_resource(ReplicatedComponentData {
+            config: self.config.clone(),
+            phantom: PhantomData::<T>,
+        });
+
+        app.add_systems(NetworkTransmit::Process, (
+            replication_send_system_reflected::<T>,
+        ));
     }
 
     fn finish(&self, app: &mut App) {
