@@ -38,7 +38,8 @@ impl ProtocolBuilder {
         self.channels.push((this, config));
     }
 
-    pub(crate) fn build(&self) -> Protocol {
+    /// Consumes the `ProtocolBuilder` and returns a finished `Protocol`
+    pub(crate) fn build(self) -> Protocol {
         let mut protocol = Protocol {
             unique_id: self.protocol_id,
 
@@ -50,8 +51,7 @@ impl ProtocolBuilder {
         for (ctype, config) in &self.channels {
             protocol.channel_types.insert(*ctype, idx);
             protocol.channels.push((*ctype, config.clone()));
-            if idx == ChannelId::MAX { panic!("Channel limit ")}
-            idx += 1;
+            idx = idx.checked_add(1).expect("Channel limit exceeded!");
         }
 
         protocol
@@ -70,6 +70,13 @@ impl ProtocolAppExts for App {
         #[allow(deprecated)]
         let mut hasher = SipHasher::default();
         hasher.write_u16(STARDUST_PROTOCOL_VERSION);
+        val.hash(&mut hasher);
+
+        let mut builder = self.world.get_resource_mut::<ProtocolBuilder>()
+            .expect("StardustSharedPlugin should have been added before this");
+        let hash = hasher.finish().to_be_bytes();
+        let crammed = [hash[0], hash[1], hash[2], hash[3]];
+        builder.protocol_id = u32::from_be_bytes(crammed);
     }
 
     fn add_net_channel<T: Channel>(&mut self, config: ChannelConfig) {

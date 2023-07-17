@@ -1,6 +1,7 @@
-use crate::channel::Channel;
+pub mod channel;
+pub mod extension;
 
-/// Channel for component replication messages.
-#[derive(Debug)]
-pub(crate) struct ComponentReplicationChannel;
-impl Channel for ComponentReplicationChannel {}
+pub(crate) mod config;
+
+mod systems;
+mod markers;
