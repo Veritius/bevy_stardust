@@ -4,6 +4,17 @@ A (very opinionated) experimental client/server networking crate for Bevy, fully
 This crate is highly experimental and you shouldn't use it for anything you care about. Things *will* break.
 This is also a hobby project. It's probably not very good, but you're more than welcome to help out!
 
+## Planned features
+- Reliability
+- Ordering
+- Fragmentation
+- Error checking
+- Compression
+- Encryption
+- Signing
+
+## Other crates
+
 If you want peer-to-peer networking, use [bevy_ggrs](https://github.com/gschup/bevy_ggrs). If you want something with more granular control use [naia](https://github.com/naia-lib/naia).
 
 Minimum supported Rust version is the latest stable release.
