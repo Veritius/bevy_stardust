@@ -15,7 +15,6 @@ pub struct ChannelConfig {
     pub fragmentation: ChannelFragmentation,
     pub compression: ChannelCompression,
     pub encryption: ChannelEncryption,
-    pub signing: ChannelSigning,
 }
 
 impl ChannelConfig {
@@ -30,8 +29,7 @@ impl ChannelConfig {
             error_checking: ChannelErrorChecking::Enabled,
             fragmentation: ChannelFragmentation::Enabled,
             compression: ChannelCompression::Disabled,
-            encryption: ChannelEncryption::Enabled,
-            signing: ChannelSigning::Enabled,
+            encryption: ChannelEncryption::Signing,
         }
     }
 
@@ -47,7 +45,6 @@ impl ChannelConfig {
             fragmentation: ChannelFragmentation::Disabled,
             compression: ChannelCompression::Disabled,
             encryption: ChannelEncryption::Disabled,
-            signing: ChannelSigning::Enabled,
         }
     }
 }
@@ -114,16 +111,7 @@ pub enum ChannelCompression {
 /// **CRYPTOGRAPHIC FUNCTIONALITY IS NOT SUPPORTED AT THE MOMENT.**
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ChannelEncryption {
-    Enabled,
-    Disabled,
-}
-
-
-/// Whether or not messages are cryptographically signed and validated.
-/// 
-/// **CRYPTOGRAPHIC FUNCTIONALITY IS NOT SUPPORTED AT THE MOMENT.**
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum ChannelSigning {
-    Enabled,
+    Encryption,
+    Signing,
     Disabled,
 }

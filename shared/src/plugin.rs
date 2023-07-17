@@ -1,5 +1,5 @@
-use bevy::prelude::{Plugin, App};
-use crate::{protocol::{ProtocolBuilder, ProtocolAppExts}, channel::{ChannelConfig, ChannelDirection, ChannelOrdering, ChannelReliability, ChannelLatestness, ChannelErrorChecking, ChannelFragmentation, ChannelCompression, ChannelEncryption, ChannelSigning}, authentication::channel::AuthenticationChannel};
+use bevy::prelude::{Plugin, App, warn};
+use crate::{protocol::{ProtocolBuilder, ProtocolAppExts}, channel::{ChannelConfig, ChannelDirection, ChannelOrdering, ChannelReliability, ChannelLatestness, ChannelErrorChecking, ChannelFragmentation, ChannelCompression, ChannelEncryption}, authentication::channel::AuthenticationChannel, cryptography::CryptoSharedAuthority};
 
 pub struct StardustSharedPlugin;
 impl Plugin for StardustSharedPlugin {
@@ -14,13 +14,17 @@ impl Plugin for StardustSharedPlugin {
             fragmentation: ChannelFragmentation::Enabled,
             compression: ChannelCompression::Disabled,
             encryption: ChannelEncryption::Disabled,
-            signing: ChannelSigning::Enabled,
         });
     }
 
     fn finish(&self, app: &mut App) {
-        let builder = app.world.remove_resource::<ProtocolBuilder>()
+        let protocol = app.world.remove_resource::<ProtocolBuilder>()
             .expect("Builder should have been present").build();
-        app.world.insert_resource(builder);
+
+        if protocol.any_encrypted() && !app.world.contains_resource::<CryptoSharedAuthority>() {
+            warn!("One or more channels in the protocol have cryptographic features enabled, but no shared authority is defined. Encryption and signing are disabled!");
+        }
+
+        app.world.insert_resource(protocol);
     }
 }

@@ -1,0 +1,8 @@
+[package]
+name="bevy_stardust_auth"
+version="0.1.0"
+edition="2021"
+authors=["Veritius <veritiusgaming@gmail.com>"]
+
+[dependencies]
+ring = "0.16.20"

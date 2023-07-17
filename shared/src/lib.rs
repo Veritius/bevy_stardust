@@ -6,5 +6,6 @@ pub mod protocol;
 pub mod replication;
 pub mod schedule;
 pub mod authentication;
+pub mod cryptography;
 
 mod impls;
