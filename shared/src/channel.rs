@@ -19,6 +19,22 @@ pub struct ChannelConfig {
 }
 
 impl ChannelConfig {
+    /// Configures an 'essential' channel. Prioritises validity over speed or efficiency.
+    /// Use this for messages that *must* be correct.
+    pub fn essential(direction: ChannelDirection) -> Self {
+        Self {
+            direction,
+            ordering: ChannelOrdering::Ordered,
+            reliability: ChannelReliability::Reliable,
+            latestness: ChannelLatestness::Ignore,
+            error_checking: ChannelErrorChecking::Enabled,
+            fragmentation: ChannelFragmentation::Enabled,
+            compression: ChannelCompression::Disabled,
+            encryption: ChannelEncryption::Enabled,
+            signing: ChannelSigning::Enabled,
+        }
+    }
+
     /// Configures a 'real-time' channel. Prioritises speed over correctness or efficiency.
     /// Messages that arrive late (based on game tick) will be discarded.
     pub fn realtime(direction: ChannelDirection) -> Self {
