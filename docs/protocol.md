@@ -1,4 +1,5 @@
 # Stardust Protocol
+**THIS IS NOT DONE**
 
 ## Messaging system
 This is the protocol used to send messages between the client and server.
@@ -29,7 +30,7 @@ If the channel is ordered or has cryptographic features, a 32-bit sequence value
 TODO
 
 ## Authentication system
-This system exists to allow a Diffie-Hellman key exchange without any chance of a MITM attack.
+This system exists to allow a Diffie-Hellman key exchange ~~without any chance of a MITM attack~~ (soon).
 This only applies to the cryptographic authentication step. For client-server communication, see `Messaging system`.
 
 The implementation is inspired by the following resources:
