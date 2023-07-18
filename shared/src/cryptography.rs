@@ -1,16 +1,15 @@
-use std::net::IpAddr;
+use std::{net::SocketAddr, fmt::Debug};
 use bevy::prelude::{Resource, App};
 use rand::Rng;
 
-/// Shared cryptographic authority. Used during key exchange to prevent MITM attacks.
+/// Shared authentication server. Securely connects the client and server to perform a key exchange.
 #[derive(Debug, Resource)]
-pub(crate) struct CryptoSharedAuthority {
-    address: IpAddr,
-    public_key: [u8; 16],
+pub(crate) struct AuthServerLocation {
+    address: SocketAddr,
 }
 
 /// The **unique** private key of this peer. Used for signing and encryption.
-#[derive(Debug, Resource)]
+#[derive(Resource)]
 pub struct CryptoPrivateKey {
     private_key: [u8; 32],
 }
@@ -28,18 +27,25 @@ impl CryptoPrivateKey {
     }
 }
 
+impl Debug for CryptoPrivateKey {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("CryptoPrivateKey")
+        .field("private_key", &"[hidden]")
+        .finish()
+    }
+}
+
 pub trait NetworkCryptographyAppExt {
     /// Sets the shared cryptographic authority used in the key exchange stage of authentication to prevent MITM attacks.
-    fn set_cryptographic_authority(&mut self, address: impl Into<IpAddr>, public_key: [u8; 16]);
+    fn set_auth_server(&mut self, address: impl Into<SocketAddr>);
     /// Sets the private key of the client or server. Used for signing/encryption.
     fn set_private_key(&mut self, private_key: [u8; 32]);
 }
 
 impl NetworkCryptographyAppExt for App {
-    fn set_cryptographic_authority(&mut self, address: impl Into<IpAddr>, public_key: [u8; 16]) {
-        self.insert_resource(CryptoSharedAuthority {
+    fn set_auth_server(&mut self, address: impl Into<SocketAddr>) {
+        self.insert_resource(AuthServerLocation {
             address: address.into(),
-            public_key,
         });
     }
 

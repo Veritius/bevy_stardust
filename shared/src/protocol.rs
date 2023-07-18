@@ -30,6 +30,11 @@ impl Protocol {
         }
         return false
     }
+
+    /// Returns the Protocol ID
+    pub fn id(&self) -> u32 {
+        self.unique_id
+    }
 }
 
 #[derive(Resource, Default)]
