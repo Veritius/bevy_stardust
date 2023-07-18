@@ -30,36 +30,4 @@ If the channel is ordered or has cryptographic features, a 32-bit sequence value
 TODO
 
 ## Authentication system
-This system exists to allow a Diffie-Hellman key exchange ~~without any chance of a MITM attack~~ (soon).
-This only applies to the cryptographic authentication step. For client-server communication, see `Messaging system`.
-
-The implementation is inspired by the following resources:
-- [TLS Handshake Explained - Computerphile](https://www.youtube.com/watch?v=86cQJ0MMses)
-- [netcode.io 1.02 protocol](https://github.com/networkprotocol/netcode/blob/997c0e67b84bf385e9789fd7d99942cbab216c6f/STANDARD.md)
-
-For the purposes of this explanation:
-- C is the client trying to join
-- S is the dedicated server
-- A is the authentication server, whose public key C and S already know
-
-When a server first starts up:
-1. S sends a message to A, containing S's public key. This message is encrypted using A's public key and contains a digest of the payload.
-2. A signs the message verifying S's public key, sending it back to S.
-
-When a client tries to join:
-1. This process is the same as what the server does when it first starts up, but it's C instead of S.
-2. C requests to join S, attaching its A-signed public key.
-3. S checks that C's message is valid using A's public key, and sends back S's A-signed public key.
-4. C checks that S's message is valid using A's public key.
-
-### Packet layout
-- "STARDUST AUTH 0.1.0" - auth version string, 20 bytes (may change), null-terminated
-- 8 bit number - message type
-- Payload digest (256 bits)
-- Payload (up to 1500 bytes - everything before)
-
-#### Message type IDs
-- 001 - Request for public key signature
-- 002 - Signed public key response
-- 003 - Digest was invalid, resend
-- 004 - Failed for indeterminate reason
+TODO
