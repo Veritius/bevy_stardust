@@ -7,3 +7,5 @@ authors=["Veritius <veritiusgaming@gmail.com>"]
 [dependencies]
 bevy_stardust_shared = { path = "../shared" }
 bevy = { version = "0.11", default-features=false }
+rustls-pemfile = "1.0.3"
+mio = { version = "0.8.8", features = ["net", "os-poll"] }
