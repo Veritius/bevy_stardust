@@ -8,13 +8,15 @@ fn main() {
 
     // Note: Order matters!
     // When adding any plugins that change the Protocol, they must always be added after StardustSharedPlugin and StardustServerPlugin
+    // This could be your own network code or another crate. If order isn't correct, you'll encounter connection issues or panics.
 
-    app.add_plugins(StardustSharedPlugin);
+    app.add_plugins(StardustSharedPlugin {});
     app.add_plugins(StardustServerPlugin {
         config: ServerConfig {
             max_players: 64,
         },
-        bind_port: 26020,
+        tls_bind_port: 26020,
+        udp_bind_port: 26021,
     });
 
     app.add_plugins(DemoSharedPlugin);

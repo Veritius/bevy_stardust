@@ -8,8 +8,9 @@ fn main() {
 
     // Note: Order matters!
     // When adding any plugins that change the Protocol, they must always be added after StardustSharedPlugin and StardustClientPlugin
+    // This could be your own network code or another crate. If order isn't correct, you'll encounter connection issues or panics.
 
-    app.add_plugins(StardustSharedPlugin);
+    app.add_plugins(StardustSharedPlugin {});
     app.add_plugins(StardustClientPlugin {});
 
     app.add_plugins(DemoSharedPlugin);

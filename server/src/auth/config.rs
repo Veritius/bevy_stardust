@@ -2,10 +2,14 @@ use std::{path::PathBuf, io::BufReader, net::SocketAddr};
 use bevy::prelude::Resource;
 use bevy_stardust_shared::rustls::{Certificate, PrivateKey};
 
+/// Configures the TLS web server that clients use for key exchange.
 #[derive(Resource)]
 pub struct AuthenticationServerConfig {
+    /// Address for the webserver to bind to.
     pub address: SocketAddr,
+    /// Certificates for the server to send to clients.
     pub certificates: Vec<Certificate>,
+    /// The private key of this server. Whatever you do, **keep this secret.**
     pub private_key: PrivateKey,
 }
 

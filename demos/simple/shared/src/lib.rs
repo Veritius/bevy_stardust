@@ -2,6 +2,10 @@ pub mod protocol;
 
 use bevy_stardust_shared::{bevy::prelude::*, protocol::ProtocolAppExts};
 
+// The shared crate is where you should add any plugins that change the protocol.
+// Since any changes in the shared crate will be reflected in the client and server crate,
+// there won't be any differences in their protocols.
+
 pub struct DemoSharedPlugin;
 impl Plugin for DemoSharedPlugin {
     fn build(&self, app: &mut App) {
