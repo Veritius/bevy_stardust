@@ -1,7 +1,7 @@
-use std::{sync::{mpsc::{self, Receiver}, Arc, Mutex}, thread, collections::HashMap, net::SocketAddr, io};
+use std::{sync::{mpsc::{self, Receiver}, Arc, Mutex}, thread, collections::HashMap, net::{SocketAddr, Shutdown}, io};
 use bevy::prelude::{Resource, error, debug};
 use bevy_stardust_shared::rustls::{ServerConfig, Certificate, PrivateKey, ServerConnection};
-use mio::{net::{TcpListener, TcpStream}, Token, Registry, Interest};
+use mio::{net::{TcpListener, TcpStream}, Token, Registry, Interest, event::Event, Events, Poll};
 use super::tlsconfig::server_config;
 
 #[derive(Resource)]
@@ -26,8 +26,9 @@ pub fn start_auth_server(
 
     // Start thread
     thread::spawn(move || {
+        // Setup inter-thread channel and server struct
         let sender = channel.0;
-        let server = AuthenticatorServerInternal {
+        let mut server = AuthenticatorServerInternal {
             listener: TcpListener::bind(address)
                 .expect(&format!("Auth server could not bind to {:?}", address)),
             connections: HashMap::new(),
@@ -37,6 +38,24 @@ pub fn start_auth_server(
                 private_key
             ),
         };
+
+        // mio types
+        let mut poll = Poll::new().unwrap();
+        poll
+            .registry()
+            .register(&mut server.listener, LISTENER, Interest::READABLE)
+            .unwrap();
+        let mut events = Events::with_capacity(256);
+
+        loop {
+            poll.poll(&mut events, None).unwrap();
+            for event in events.iter() {
+                match event.token() {
+                    LISTENER => { server.accept(poll.registry()).expect("Error accepting socket"); }
+                    _ => server.connection_event(poll.registry(), event)
+                }
+            }
+        }
     });
 
     AuthenticatorServer {
@@ -67,7 +86,12 @@ impl AuthenticatorServerInternal {
                     let token = Token(self.next_id);
                     self.next_id += 1;
 
-                    let mut connection = OpenConnection::new(socket, token, tls_conn);
+                    let mut connection = OpenConnection::new(
+                        socket,
+                        token,
+                        tls_conn,
+                        ConnectionState::Connected
+                    );
                     connection.register(registry);
 
                 },
@@ -79,12 +103,23 @@ impl AuthenticatorServerInternal {
             }
         }
     }
+
+    fn connection_event(&mut self, registry: &Registry, event: &Event) {
+        let token = event.token();
+        if self.connections.contains_key(&token) {
+            self.connections.get_mut(&token).unwrap().ready(registry, event.clone());
+            if self.connections[&token].state() == ConnectionState::Closed {
+                self.connections.remove(&token);
+            }
+        }
+    }
 }
 
 pub(super) struct OpenConnection {
     socket: TcpStream,
     token: Token,
     connection: ServerConnection,
+    state: ConnectionState,
 }
 
 impl OpenConnection {
@@ -92,11 +127,34 @@ impl OpenConnection {
         socket: TcpStream,
         token: Token,
         connection: ServerConnection,
+        state: ConnectionState,
     ) -> Self {
         Self {
             socket,
             token,
-            connection
+            connection,
+            state,
+        }
+    }
+
+    pub fn ready(
+        &mut self,
+        registry: &Registry,
+        ev: Event,
+    ) {
+        if ev.is_readable() { self.do_tls_read(); }
+        if ev.is_writable() { self.do_tls_write_and_handle_error(); }
+        
+        match self.state {
+            ConnectionState::Connected => {
+                self.reregister(registry);
+            },
+            ConnectionState::Closing => {
+                let _ = self.socket.shutdown(Shutdown::Both);
+                self.state = ConnectionState::Closed;
+                self.deregister(registry);
+            },
+            ConnectionState::Closed => {},
         }
     }
 
@@ -106,7 +164,15 @@ impl OpenConnection {
     ) {
         let event_set = self.event_set();
         registry.register(&mut self.socket, self.token, event_set).unwrap();
-        todo!()
+    }
+
+    pub fn reregister(&mut self, registry: &Registry) {
+        let event_set = self.event_set();
+        registry.reregister(&mut self.socket, self.token, event_set).unwrap();
+    }
+
+    pub fn deregister(&mut self, registry: &Registry) {
+        registry.deregister(&mut self.socket).unwrap();
     }
 
     pub fn event_set(&self) -> Interest {
@@ -119,8 +185,46 @@ impl OpenConnection {
             _ => { Interest::READABLE },
         }
     }
+
+    pub fn do_tls_read(&mut self) {
+        match self.connection.read_tls(&mut self.socket) {
+            Err(err) => {
+                if let io::ErrorKind::WouldBlock = err.kind() { return; }
+                error!("TLS server read error: {:?}", err);
+                self.state = ConnectionState::Closing;
+                return;
+            },
+            Ok(0) => {
+                debug!("TLS server end of field");
+                self.state = ConnectionState::Closing;
+                return;
+            }
+            Ok(_) => {}
+        }
+
+        if let Err(err) = self.connection.process_new_packets() {
+            error!("Cannot process packet: {:?}", err);
+        }
+    }
+
+    pub fn tls_write(&mut self) -> io::Result<usize> {
+        self.connection.write_tls(&mut self.socket)
+    }
+
+    pub fn do_tls_write_and_handle_error(&mut self) {
+        let rc = self.tls_write();
+        if rc.is_err() {
+            error!("Write failed: {:?}", rc.unwrap_err());
+            self.state = ConnectionState::Closing;
+        }
+    }
+
+    pub fn state(&self) -> ConnectionState {
+        self.state
+    }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub(super) enum ConnectionState {
     Connected,
     Closing,
