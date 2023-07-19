@@ -4,4 +4,7 @@ members = [
     "client",
     "server",
     "shared",
+    "demos/simple/client",
+    "demos/simple/server",
+    "demos/simple/shared",
 ]

@@ -1,5 +1,4 @@
 use std::{path::PathBuf, io::BufReader, net::SocketAddr};
-
 use bevy::prelude::Resource;
 use bevy_stardust_shared::rustls::{Certificate, PrivateKey};
 
