@@ -1,4 +1,4 @@
-use std::{collections::HashMap, sync::Arc, io, path::PathBuf, net::SocketAddr, str::FromStr};
+use std::{collections::HashMap, sync::Arc, io::{self, Read, Write}, path::PathBuf, net::SocketAddr, str::FromStr};
 use log::{error, debug};
 use mio::{net::{TcpListener, TcpStream}, Token, Registry, Interest, event::Event, Poll};
 use rustls::{ServerConfig, ServerConnection};
@@ -163,6 +163,26 @@ impl OpenConnection {
             error!("Failed to write TLS message: {:?}", err);
             self.state = ConnectionState::Closing;
         }
+    }
+
+    /// Read incoming plaintext for this connection. Use `tls_read` before this.
+    fn plain_read(&mut self) -> Result<Option<String>, ()> {
+        if let Ok(io_state) = self.tls_conn.process_new_packets() {
+            if io_state.plaintext_bytes_to_read() == 0 { return Ok(None); }
+            let mut buf = Vec::new();
+            buf.resize(io_state.plaintext_bytes_to_read(), 0u8);
+            self.tls_conn.reader().read_exact(&mut buf).unwrap();
+            let m = String::from_utf8(buf);
+            if m.is_err() { return Err(()); }
+            return Ok(Some(m.unwrap()));
+        } else {
+            return Err(())
+        }
+    }
+
+    /// Write plaintext to this connection. Use `tls_write` to send an encrypted message.
+    pub fn plain_write(&mut self, buf: &[u8]) {
+        self.tls_conn.writer().write_all(buf).unwrap();
     }
 
     fn register(
