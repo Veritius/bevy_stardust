@@ -1,9 +1,29 @@
-use std::{collections::HashMap, sync::Arc, io};
+use std::{collections::HashMap, sync::Arc, io, path::PathBuf, net::SocketAddr, str::FromStr};
 use log::{error, debug};
-use mio::{net::{TcpListener, TcpStream}, Token, Registry, Interest, event::Event};
+use mio::{net::{TcpListener, TcpStream}, Token, Registry, Interest, event::Event, Poll};
 use rustls::{ServerConfig, ServerConnection};
 
-const LISTENER: Token = Token(0);
+use crate::{config::ConfigFile, crypto::{load_certificates, load_private_key}};
+
+pub const LISTENER: Token = Token(0);
+
+pub fn setup_server(config: &ConfigFile) -> (AuthServer, Poll) {
+    let certificates = load_certificates(PathBuf::from_str(&config.encryption.certificate).unwrap().as_path());
+    let privatekey = load_private_key(PathBuf::from_str(&config.encryption.privatekey).unwrap().as_path());
+
+    let server_config = Arc::new(ServerConfig::builder()
+        .with_safe_defaults()
+        .with_no_client_auth()
+        .with_single_cert(certificates, privatekey)
+        .expect("Private key was invalid"));
+
+    let mut listener = TcpListener::bind(SocketAddr::from_str(&format!("0.0.0.0:{}", config.server.port)).expect("Invalid port value"))
+        .expect("Couldn't bind to address (port already occupied?)");
+    let poll = Poll::new().unwrap();
+    poll.registry().register(&mut listener, LISTENER, Interest::READABLE).unwrap();
+
+    (AuthServer::new(listener, server_config), poll)
+}
 
 pub struct AuthServer {
     server: TcpListener,
@@ -14,18 +34,18 @@ pub struct AuthServer {
 
 impl AuthServer {
     pub fn new(
-        server: TcpListener,
+        listener: TcpListener,
         tls_config: Arc<ServerConfig>,
     ) -> Self {
         Self {
-            server,
+            server: listener,
             connections: HashMap::new(),
             next_id: 2,
             tls_config,
         }
     }
 
-    fn accept(
+    pub fn accept(
         &mut self,
         registry: &Registry,
     ) -> Result<(), io::Error> {
@@ -49,7 +69,7 @@ impl AuthServer {
         }
     }
 
-    fn connection_event(
+    pub fn connection_event(
         &mut self,
         registry: &Registry,
         event: &Event,
