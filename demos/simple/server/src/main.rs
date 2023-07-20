@@ -15,8 +15,7 @@ fn main() {
         config: ServerConfig {
             max_players: 64,
         },
-        tls_bind_port: 26020,
-        udp_bind_port: 26021,
+        bind_port: 26020,
     });
 
     app.add_plugins(DemoSharedPlugin);

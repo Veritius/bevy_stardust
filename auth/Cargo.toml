@@ -1,0 +1,13 @@
+[package]
+name="bevy_stardust_auth"
+version="0.1.0"
+edition="2021"
+authors=["Veritius <veritiusgaming@gmail.com>"]
+
+[dependencies]
+rustls = "0.21.5"
+rustls-pemfile = "1.0.3"
+mio = { version = "0.8.8", features = ["net", "os-poll"] }
+clap = { version = "4.3.17", features = [ "derive" ] }
+log = "0.4.19"
+env_logger = "0.10.0"
