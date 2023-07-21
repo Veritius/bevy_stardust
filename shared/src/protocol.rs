@@ -2,7 +2,7 @@
 use std::hash::SipHasher;
 use std::{any::TypeId, collections::BTreeMap, hash::Hasher};
 use bevy::prelude::{App, Resource};
-use crate::channel::{Channel, ChannelConfig, ChannelId, ChannelEncryption};
+use crate::channel::{Channel, ChannelConfig, ChannelId};
 
 /// Maximum packet length that can be sent/received before fragmentation.
 pub const MAX_PACKET_LENGTH: u16 = 1500;
@@ -21,16 +21,6 @@ pub struct Protocol {
 }
 
 impl Protocol {
-    /// Returns `true` if any channels have cryptographic features enabled.
-    pub(crate) fn any_encrypted(&self) -> bool {
-        for (_, config) in &self.channels {
-            if config.encryption != ChannelEncryption::Disabled {
-                return true;
-            }
-        }
-        return false
-    }
-
     /// Returns the Protocol ID
     pub fn id(&self) -> u32 {
         self.unique_id

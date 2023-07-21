@@ -11,7 +11,6 @@ This is also a hobby project. It's probably not very good, but you're more than 
 - Error checking
 - Compression
 - Encryption
-- Signing
 
 ## Other crates
 

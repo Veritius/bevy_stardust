@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 use bevy::prelude::*;
-use crate::{bits::ManualBitSerialisation, schedule::NetworkTransmit, protocol::ProtocolAppExts, channel::{ChannelConfig, ChannelDirection, ChannelOrdering, ChannelReliability, ChannelErrorChecking, ChannelFragmentation, ChannelCompression, ChannelEncryption, ChannelLatestness}};
+use crate::{bits::ManualBitSerialisation, schedule::NetworkTransmit, protocol::ProtocolAppExts, channel::{ChannelConfig, ChannelDirection, ChannelOrdering, ChannelReliability, ChannelErrorChecking, ChannelFragmentation, ChannelCompression, ChannelLatestness}};
 use super::{config::{ComponentReplicationConfig, ReplicatedComponentData}, systems::{replication_send_system_reflected, replication_send_system_bitstream}, channel::ComponentReplicationChannel};
 
 const DEFAULT_REPLICATION_CHANNEL_CONFIG: ChannelConfig = ChannelConfig {
@@ -11,7 +11,6 @@ const DEFAULT_REPLICATION_CHANNEL_CONFIG: ChannelConfig = ChannelConfig {
     error_checking: ChannelErrorChecking::Enabled,
     fragmentation: ChannelFragmentation::Enabled,
     compression: ChannelCompression::Disabled,
-    encryption: ChannelEncryption::Signing,
 };
 
 /// Enables replication for a component implementing `ManualBitSerialisation`.

@@ -1,5 +1,4 @@
 pub use bevy;
-pub use rustls;
 
 pub mod bits;
 pub mod types;
