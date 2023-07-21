@@ -1,11 +1,14 @@
 pub mod config;
 pub mod server;
 pub mod crypto;
+pub mod msg;
 
 
 use log::info;
 use mio::Events;
 use crate::{config::config, server::{setup_server, LISTENER}};
+
+pub const AUTH_PROTOCOL_VERSION: &str = "0.1.0";
 
 
 fn main() {
@@ -18,6 +21,7 @@ fn main() {
     logger.init();
 
     info!("{} v{}", env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION"));
+    info!("Auth protocol version {}", AUTH_PROTOCOL_VERSION);
 
     let (mut server, mut poll) = setup_server(&config);
     info!("Server set up, starting...");

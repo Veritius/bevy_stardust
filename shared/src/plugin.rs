@@ -1,5 +1,5 @@
 use bevy::prelude::{Plugin, App, warn, info};
-use crate::{protocol::{ProtocolBuilder, ProtocolAppExts}, channel::{ChannelConfig, ChannelDirection, ChannelOrdering, ChannelReliability, ChannelLatestness, ChannelErrorChecking, ChannelFragmentation, ChannelCompression, ChannelEncryption}, authentication::channel::AuthenticationChannel};
+use crate::{protocol::{ProtocolBuilder, ProtocolAppExts}, channel::{ChannelConfig, ChannelDirection, ChannelOrdering, ChannelReliability, ChannelLatestness, ChannelErrorChecking, ChannelFragmentation, ChannelCompression, ChannelEncryption}};
 
 /// Shared information between the client and server.
 /// See the demos for information on how to use this.
@@ -7,16 +7,6 @@ pub struct StardustSharedPlugin {}
 impl Plugin for StardustSharedPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(ProtocolBuilder::default());
-        app.add_net_channel::<AuthenticationChannel>(ChannelConfig {
-            direction: ChannelDirection::Bidirectional,
-            ordering: ChannelOrdering::Ordered,
-            reliability: ChannelReliability::Reliable,
-            latestness: ChannelLatestness::Ignore,
-            error_checking: ChannelErrorChecking::Enabled,
-            fragmentation: ChannelFragmentation::Enabled,
-            compression: ChannelCompression::Disabled,
-            encryption: ChannelEncryption::Disabled,
-        });
     }
 
     fn finish(&self, app: &mut App) {

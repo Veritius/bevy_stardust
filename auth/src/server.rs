@@ -2,8 +2,7 @@ use std::{collections::HashMap, sync::Arc, io::{self, Read, Write}, path::PathBu
 use log::{error, debug};
 use mio::{net::{TcpListener, TcpStream}, Token, Registry, Interest, event::Event, Poll};
 use rustls::{ServerConfig, ServerConnection};
-
-use crate::{config::ConfigFile, crypto::{load_certificates, load_private_key}};
+use crate::{config::ConfigFile, crypto::{load_certificates, load_private_key}, msg::parse_message};
 
 pub const LISTENER: Token = Token(0);
 
@@ -89,7 +88,7 @@ impl AuthServer {
 }
 
 #[derive(Debug)]
-struct OpenConnection {
+pub struct OpenConnection {
     socket: TcpStream,
     token: Token,
     state: ConnectionState,
@@ -119,7 +118,12 @@ impl OpenConnection {
         registry: &Registry,
         event: &Event,
     ) {
-        if event.is_readable() { self.tls_read(); }
+        if event.is_readable() {
+            self.tls_read();
+            if let Ok(Some(string)) = self.plain_read() {
+                parse_message(self, &string);
+            }
+        }
         if event.is_writable() { self.tls_write_and_handle_error(); }
 
         if self.state() == ConnectionState::Closing {
@@ -229,6 +233,10 @@ impl OpenConnection {
         self.state
     }
 
+    pub fn kind(&self) -> ConnectionKind {
+        self.kind
+    }
+
     // fn tick_age(
     //     &mut self,
     //     args: &Args,
@@ -247,8 +255,19 @@ enum ConnectionState {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-enum ConnectionKind {
+pub enum ConnectionKind {
     Unknown,
-    GameClient,
-    GameServer,
+    GameClient(ClientConnectionStage),
+    GameServer(ServerConnectionStage),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum ClientConnectionStage {
+    WaitingOnServer,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+
+pub enum ServerConnectionStage {
+    ReplaceMe,
 }

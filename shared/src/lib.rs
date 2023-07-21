@@ -8,6 +8,5 @@ pub mod channel;
 pub mod protocol;
 pub mod replication;
 pub mod schedule;
-pub mod authentication;
 
 mod impls;
