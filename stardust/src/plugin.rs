@@ -1,5 +1,5 @@
 use bevy::prelude::{Plugin, App, info};
-use crate::protocol::ProtocolBuilder;
+use crate::shared::protocol::ProtocolBuilder;
 
 /// Shared information between the client and server.
 /// See the demos for information on how to use this.

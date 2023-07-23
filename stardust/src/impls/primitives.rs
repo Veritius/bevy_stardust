@@ -1,4 +1,4 @@
-use crate::bits::{ManualBitSerialisation, BitWriter, BitReader, BitstreamError};
+use crate::shared::serialisation::{ManualBitSerialisation, BitWriter, BitReader, BitstreamError};
 
 /// Implements serialisation for integers and other types where endianness matters.
 /// Always converts to big endian for network transport.

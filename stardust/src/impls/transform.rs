@@ -1,6 +1,6 @@
 use bevy::prelude::Transform;
 use glam::{Vec3, Quat};
-use crate::bits::{ManualBitSerialisation, BitWriter, BitReader, BitstreamError};
+use crate::shared::serialisation::{ManualBitSerialisation, BitWriter, BitReader, BitstreamError};
 
 impl ManualBitSerialisation for Transform {
     fn serialise(&self, writer: &mut impl BitWriter) {

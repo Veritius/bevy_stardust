@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use crate::bits::ManualBitSerialisation;
+use crate::shared::serialisation::ManualBitSerialisation;
 use super::{config::ReplicatedComponentData, markers::ReplicatedEntity};
 
 pub(crate) fn replication_send_system_bitstream<T: Component + ManualBitSerialisation>(

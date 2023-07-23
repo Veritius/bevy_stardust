@@ -1,4 +1,4 @@
-mod bevy_components;
+mod transform;
 mod glam;
 mod network_types;
 mod primitives;
