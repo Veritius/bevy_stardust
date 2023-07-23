@@ -3,40 +3,44 @@ use bevy::prelude::Resource;
 use crate::{channel::Channel, types::NetworkUserId};
 
 /// A thin wrapper around a `Vec<u8>` containing the *payload* of a message. Stardust automatically assembles the header.
-pub struct Message(Vec<u8>);
+pub struct Message(Box<[u8]>);
 impl Message {
     pub fn from_vec(bytes: Vec<u8>) -> Self {
-        Message(bytes)
+        Message(bytes.into_boxed_slice())
     }
 
     /// Consumes the `Message`, returning the internal storage.
-    pub fn bytes(self) -> Vec<u8> {
+    pub fn bytes(self) -> Box<[u8]> {
         self.0
     }
 }
 
 #[derive(Resource)]
 pub struct MessageReader<T: Channel> {
-    messages: HashMap<NetworkUserId, (usize, Box<[Message]>)>,
+    messages: HashMap<NetworkUserId, Messages>,
     phantom: PhantomData<T>,
 }
 
 impl<T: Channel> MessageReader<T> {
-    pub fn read_from(&mut self, user: NetworkUserId) -> Option<MessageReaderIter<T>> {
-        todo!()
+    pub fn read_from(&mut self, user: NetworkUserId) -> Option<&Messages> {
+        if let Some(v) = self.messages.get(&user) {
+            Some(v)
+        } else {
+            None
+        }
     }
 }
 
-pub struct MessageReaderIter<'a, T: Channel> {
-    reader: &'a mut (usize, &'a [Message]),
-    phantom: PhantomData<T>,
+pub struct Messages {
+    index: usize,
+    slice: Box<[Message]>,
 }
 
-impl<'a, T: Channel> Iterator for MessageReaderIter<'a, T> {
-    type Item = &'a Message;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        todo!()
+impl Messages {
+    pub fn next(&mut self) -> Option<&Message> {
+        let x = self.slice.get(self.index);
+        self.index += 1;
+        return x;
     }
 }
 

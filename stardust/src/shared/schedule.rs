@@ -1,13 +1,13 @@
 use bevy::ecs::schedule::ScheduleLabel;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, ScheduleLabel)]
-pub enum NetworkReceive {
+pub enum NetworkReceiveLabels {
     Receive,
     Process,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, ScheduleLabel)]
-pub enum NetworkTransmit {
+pub enum NetworkTransmitLabels {
     Process,
     Transmit,
     ClearBuffer,
