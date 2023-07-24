@@ -5,9 +5,6 @@ edition="2021"
 authors=["Veritius <veritiusgaming@gmail.com>"]
 
 [features]
-default=["client", "server"] #remove this
-client=[]
-server=[]
 expose_internals=[]
 
 [dependencies]

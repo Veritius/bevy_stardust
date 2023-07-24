@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use crate::shared::protocol::ProtocolBuilder;
+use crate::{shared::protocol::ProtocolBuilder, server::plugin::StardustServerPlugin, client::plugin::StardustClientPlugin};
 use super::scheduling::{network_pre_update, network_post_update};
 
 /// Shared information between the client and server.
@@ -13,6 +13,10 @@ impl Plugin for StardustSharedPlugin {
     }
 
     fn finish(&self, app: &mut App) {
+        if app.is_plugin_added::<StardustServerPlugin>() && app.is_plugin_added::<StardustClientPlugin>() {
+            panic!("You can't be both a client and a server!");
+        }
+
         let protocol = app.world.remove_resource::<ProtocolBuilder>()
             .expect("Builder should have been present").build();
 
