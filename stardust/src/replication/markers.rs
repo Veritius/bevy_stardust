@@ -1,11 +1,12 @@
 use std::marker::PhantomData;
 use bevy::prelude::Component;
-use crate::types::NetworkEntityId;
+
+use super::entities::ReplicatedEntityId;
 
 /// Added to entities to mark them as replicated.
 #[derive(Component)]
 pub struct ReplicatedEntity {
-    network_id: NetworkEntityId,
+    pub(super) network_id: ReplicatedEntityId,
 }
 
 /// Enables replication for disabled-by-default components.

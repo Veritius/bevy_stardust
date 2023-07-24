@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 use bevy::prelude::*;
-use crate::{channel::{ChannelConfig, ChannelDirection, ChannelOrdering, ChannelReliability, ChannelErrorChecking, ChannelFragmentation, ChannelCompression, ChannelLatestness}, shared::{serialisation::ManualBitSerialisation, schedule::NetworkTransmitLabels, protocol::ProtocolAppExts}};
+use crate::{channel::{ChannelConfig, ChannelDirection, ChannelOrdering, ChannelReliability, ChannelErrorChecking, ChannelFragmentation, ChannelCompression, ChannelLatestness}, shared::{serialisation::ManualBitSerialisation, protocol::ProtocolAppExts}};
 use super::{config::{ComponentReplicationConfig, ReplicatedComponentData}, systems::{replication_send_system_reflected, replication_send_system_bitstream}, channel::ComponentReplicationChannel};
 
 const DEFAULT_REPLICATION_CHANNEL_CONFIG: ChannelConfig = ChannelConfig {
@@ -45,7 +45,7 @@ impl<T: Component + ManualBitSerialisation> Plugin for ReplicateComponentPluginB
             phantom: PhantomData::<T>,
         });
         
-        app.add_systems(NetworkTransmitLabels::Process, (
+        app.add_systems(PostUpdate, (
             replication_send_system_bitstream::<T>,
         ));
     }
@@ -86,7 +86,7 @@ impl<T: Component + Reflect> Plugin for ReplicateComponentPluginReflected<T> {
             phantom: PhantomData::<T>,
         });
 
-        app.add_systems(NetworkTransmitLabels::Process, (
+        app.add_systems(PostUpdate, (
             replication_send_system_reflected::<T>,
         ));
     }

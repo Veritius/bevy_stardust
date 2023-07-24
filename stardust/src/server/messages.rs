@@ -4,9 +4,8 @@ use crate::{
         ChannelWriter as ChannelWriterInternal,
         ChannelReader as ChannelReaderInternal,
         Messages, Message,
-    }, serialisation::{ManualBitSerialisation, DefaultBitWriter, BitWriter}},
+    }, serialisation::{ManualBitSerialisation, DefaultBitWriter, BitWriter}, user::NetworkUserId},
     channel::Channel,
-    types::NetworkUserId,
 };
 
 /// Allows simple reading of messages in a channel.

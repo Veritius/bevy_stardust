@@ -1,7 +1,7 @@
 use std::{marker::PhantomData, collections::HashMap};
 use bevy::prelude::Resource;
-use crate::{channel::Channel, types::NetworkUserId};
-use super::bytes::OwnedByteStore;
+use crate::channel::Channel;
+use super::{bytes::OwnedByteStore, user::NetworkUserId};
 
 /// A thin wrapper around a byte array containing the *payload* of a message. Stardust automatically assembles the header.
 pub struct Message(Box<[u8]>);

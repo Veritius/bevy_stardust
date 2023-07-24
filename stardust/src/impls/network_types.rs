@@ -1,4 +1,4 @@
-use crate::{shared::serialisation::{ManualBitSerialisation, BitWriter, BitReader, BitstreamError}, types::{NetworkUserId, NetworkTypeId, NetworkEntityId}};
+use crate::{shared::{serialisation::{ManualBitSerialisation, BitWriter, BitReader, BitstreamError}, user::NetworkUserId}, replication::entities::ReplicatedEntityId};
 
 /// Implements ManualBitSerialisation for tuple structs with a single `u32` field.
 macro_rules! impl_single {
@@ -27,5 +27,4 @@ macro_rules! impl_single {
 }
 
 impl_single!(NetworkUserId, u32);
-impl_single!(NetworkTypeId, u32);
-impl_single!(NetworkEntityId, u64);
+impl_single!(ReplicatedEntityId, u64);
