@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 use bevy::prelude::*;
-use crate::{channel::{ChannelConfig, ChannelDirection, ChannelOrdering, ChannelReliability, ChannelErrorChecking, ChannelFragmentation, ChannelCompression, ChannelLatestness}, shared::{serialisation::ManualBitSerialisation, protocol::ProtocolAppExts}};
+use crate::{shared::channel::{ChannelConfig, ChannelDirection, ChannelOrdering, ChannelReliability, ChannelErrorChecking, ChannelFragmentation, ChannelCompression, ChannelLatestness}, shared::{serialisation::ManualBitSerialisation, protocol::ProtocolAppExts}};
 use super::{config::{ComponentReplicationConfig, ReplicatedComponentData}, systems::{replication_send_system_reflected, replication_send_system_bitstream}, channel::ComponentReplicationChannel};
 
 const DEFAULT_REPLICATION_CHANNEL_CONFIG: ChannelConfig = ChannelConfig {

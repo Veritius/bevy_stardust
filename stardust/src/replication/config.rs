@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 use bevy::prelude::{Resource, Component};
-use crate::channel::ChannelConfig;
+use crate::shared::channel::ChannelConfig;
 
 /// Configuration for `ReplicateComponentPlugin` plugins.
 #[derive(Debug, Clone)]

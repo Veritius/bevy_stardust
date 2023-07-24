@@ -2,6 +2,7 @@ pub mod plugin;
 pub mod protocol;
 pub mod serialisation;
 pub mod scheduling;
+pub mod channel;
 
 pub(crate) mod send;
 pub(crate) mod receive;

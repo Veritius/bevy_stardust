@@ -1,4 +1,38 @@
-pub type ChannelId = u32;
+use super::serialisation::{ManualBitSerialisation, BitWriter, BitReader, BitstreamError};
+
+pub const CHANNEL_ID_LIMIT: u32 = 2u32.pow(24);
+
+/// A 24-bit channel ID, stored in a u32.
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub struct ChannelId(u32);
+
+impl ChannelId {
+    /// Panics with a value greater than 2^24.
+    pub(super) fn new(value: u32) -> Self {
+        if value > CHANNEL_ID_LIMIT {
+            panic!("Cannot create a ChannelId with a value greater than 2^24");
+        }
+
+        Self(value)
+    }
+}
+
+impl ManualBitSerialisation for ChannelId {
+    fn serialise(&self, writer: &mut impl BitWriter) {
+        let bytes = self.0.to_be_bytes();
+        for i in 1..3 {
+            writer.write_byte(bytes[i]);
+        }
+    }
+
+    fn deserialise(reader: &mut impl BitReader) -> Result<Self, BitstreamError> {
+        let mut bytes = [0u8; 4];
+        for i in 1..3 {
+            bytes[i] = reader.read_byte()?;
+        }
+        Ok(Self(u32::from_be_bytes(bytes)))
+    }
+}
 
 /// Trait for a channel type. Effectively just a marker for `TypeId`s.
 pub trait Channel: std::fmt::Debug + Send + Sync + 'static {}

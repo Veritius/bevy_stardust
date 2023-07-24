@@ -2,7 +2,9 @@
 use std::hash::SipHasher;
 use std::{any::TypeId, collections::BTreeMap, hash::Hasher};
 use bevy::prelude::{App, Resource};
-use crate::channel::{Channel, ChannelConfig, ChannelId};
+use crate::shared::channel::{Channel, ChannelConfig, ChannelId};
+
+use super::channel::CHANNEL_ID_LIMIT;
 
 /// Maximum packet length that can be sent/received before fragmentation.
 pub const MAX_PACKET_LENGTH: usize = 1500;
@@ -54,11 +56,12 @@ impl ProtocolBuilder {
             channels: Vec::with_capacity(self.channels.len()),
         };
 
-        let mut idx: ChannelId = 0;
+        let mut idx = 0;
         for (ctype, config) in &self.channels {
-            protocol.channel_types.insert(*ctype, idx);
+            if idx > CHANNEL_ID_LIMIT { panic!("Channel limit exceeded"); }
+            protocol.channel_types.insert(*ctype, ChannelId::new(idx));
             protocol.channels.push((*ctype, config.clone()));
-            idx = idx.checked_add(1).expect("Channel limit exceeded!");
+            idx += 1;
         }
 
         protocol
