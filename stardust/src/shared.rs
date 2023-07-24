@@ -11,3 +11,8 @@ pub mod serialisation;
 pub(crate) mod messages;
 #[cfg(feature="expose_internals")]
 pub mod messages;
+
+#[cfg(not(feature="expose_internals"))]
+pub(crate) mod bytes;
+#[cfg(feature="expose_internals")]
+pub mod bytes;

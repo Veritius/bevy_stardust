@@ -1,12 +1,15 @@
 use std::{marker::PhantomData, collections::HashMap};
 use bevy::prelude::Resource;
 use crate::{channel::Channel, types::NetworkUserId};
+use super::bytes::OwnedByteStore;
 
-/// A thin wrapper around a `Vec<u8>` containing the *payload* of a message. Stardust automatically assembles the header.
+/// A thin wrapper around a byte array containing the *payload* of a message. Stardust automatically assembles the header.
 pub struct Message(Box<[u8]>);
+
 impl Message {
-    pub fn from_vec(bytes: Vec<u8>) -> Self {
-        Message(bytes.into_boxed_slice())
+    /// Returns an iterable slice of the bytes in the array.
+    pub fn read(&self) -> &[u8] {
+        &self.0
     }
 
     /// Consumes the `Message`, returning the internal storage.
@@ -15,15 +18,22 @@ impl Message {
     }
 }
 
+impl<T: OwnedByteStore> From<T> for Message {
+    fn from(value: T) -> Self {
+        Self(value.into_boxed())
+    }
+}
+
+/// Stores messages for reading by systems.
 #[derive(Resource)]
-pub struct MessageReader<T: Channel> {
-    messages: HashMap<NetworkUserId, Messages>,
+pub struct ChannelReader<T: Channel> {
+    pub(crate) messages: HashMap<NetworkUserId, Messages>,
     phantom: PhantomData<T>,
 }
 
-impl<T: Channel> MessageReader<T> {
-    pub fn read_from(&mut self, user: NetworkUserId) -> Option<&Messages> {
-        if let Some(v) = self.messages.get(&user) {
+impl<T: Channel> ChannelReader<T> {
+    pub fn read_user(&mut self, user: NetworkUserId) -> Option<&mut Messages> {
+        if let Some(v) = self.messages.get_mut(&user) {
             Some(v)
         } else {
             None
@@ -31,6 +41,7 @@ impl<T: Channel> MessageReader<T> {
     }
 }
 
+/// Stores the channel messages from specific users.
 pub struct Messages {
     index: usize,
     slice: Box<[Message]>,
@@ -42,20 +53,39 @@ impl Messages {
         self.index += 1;
         return x;
     }
+
+    /// Exposes the internal message storage, allowing reading without advancing the counter.
+    #[cfg(feature="expose_internals")]
+    pub fn internal_buffer(&self) -> &[Message] {
+        &self.slice
+    }
 }
 
 #[derive(Resource)]
-pub struct MessageWriter<T: Channel> {
-    messages: HashMap<NetworkUserId, Vec<Message>>,
+pub struct ChannelWriter<T: Channel> {
+    single: HashMap<NetworkUserId, Vec<Message>>,
+    multiple: Vec<(Box<[NetworkUserId]>, Message)>,
+    broadcast: Vec<Message>,
     phantom: PhantomData<T>,
 }
 
-impl<T: Channel> MessageWriter<T> {
-    pub fn send(&mut self, to: NetworkUserId, message: Message) {
-        if let Some(val) = self.messages.get_mut(&to) {
-            val.push(message);
+impl<T: Channel> ChannelWriter<T> {
+    /// Sends a message to one user.
+    pub fn send(&mut self, user: NetworkUserId, message: impl Into<Message>) {
+        if let Some(val) = self.single.get_mut(&user) {
+            val.push(message.into());
         } else {
-            self.messages.insert(to, vec![message]);
+            self.single.insert(user, vec![message.into()]);
         }
+    }
+
+    /// Sends a message to several users.
+    pub fn send_multi(&mut self, users: &[NetworkUserId], message: impl Into<Message>) {
+        self.multiple.push((users.clone().into(), message.into()));
+    }
+
+    /// Sends a message on to all users.
+    pub fn broadcast(&mut self, message: impl Into<Message>) {
+        self.broadcast.push(message.into());
     }
 }

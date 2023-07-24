@@ -22,8 +22,8 @@ pub trait BitWriter {
     /// Reads an iterator of bytes (u8) and writes it to the buffer.
     fn write_bytes<T: Iterator<Item = u8>>(&mut self, iter: T);
 
-    /// Consumes the `BitWriter`, returning a series of bytes for network transport.
-    fn to_bytes(self) -> Vec<u8>;
+    /// Consumes the `BitWriter`, returning an array of bytes for network transport.
+    fn to_bytes(self) -> Box<[u8]>;
 }
 
 /// A trait for bitstream readers, used in deserialising network data.
@@ -158,7 +158,7 @@ impl BitWriter for DefaultBitWriter {
         }
     }
 
-    fn to_bytes(self) -> Vec<u8> {
-        self.buffer
+    fn to_bytes(self) -> Box<[u8]> {
+        self.buffer.into_boxed_slice()
     }
 }
