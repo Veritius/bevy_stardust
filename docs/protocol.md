@@ -10,7 +10,7 @@ The implementation is inspired by the following resources:
 ### Packet layouts
 All packets start with a unique 32-bit 'protocol id'. This protocol ID is used to discard packets from anything that isn't your game.
 
-Then, there is a 32-bit number indicating the **channel**. This is used to direct the right messages to the right Bevy systems. In this case, extra information will be added that will be processed by Stardust, and the actual payload will be given to your Bevy systems.
+Then, there is a 24-bit number indicating the **channel**. This is used to direct the right messages to the right Bevy systems. In this case, extra information will be added that will be processed by Stardust, and the actual payload will be given to your Bevy systems.
 
 6 bytes are dedicated to **acks**, documented in [this page by Gaffer on Games](https://gafferongames.com/post/reliability_ordering_and_congestion_avoidance_over_udp/). Despite being for reliability, they will be included in non-reliable channels.
 
