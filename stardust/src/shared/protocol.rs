@@ -5,7 +5,7 @@ use bevy::prelude::{App, Resource};
 use crate::channel::{Channel, ChannelConfig, ChannelId};
 
 /// Maximum packet length that can be sent/received before fragmentation.
-pub const MAX_PACKET_LENGTH: u16 = 1500;
+pub const MAX_PACKET_LENGTH: usize = 1500;
 /// Unique value for the Stardust protocol. 
 const STARDUST_PROTOCOL_VERSION: u16 = 0;
 
