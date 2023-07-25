@@ -15,6 +15,11 @@ impl ChannelId {
 
         Self(value)
     }
+
+    pub(crate) fn from_bytes(bytes: &[u8; 3]) -> Self {
+        let mut bytes = [0, bytes[0], bytes[1], bytes[2]];
+        Self(u32::from_be_bytes(bytes))
+    }
 }
 
 impl ManualBitSerialisation for ChannelId {
@@ -26,11 +31,8 @@ impl ManualBitSerialisation for ChannelId {
     }
 
     fn deserialise(reader: &mut impl BitReader) -> Result<Self, BitstreamError> {
-        let mut bytes = [0u8; 4];
-        for i in 1..3 {
-            bytes[i] = reader.read_byte()?;
-        }
-        Ok(Self(u32::from_be_bytes(bytes)))
+        let bytes = reader.read_bytes(3)?;
+        Ok(Self(u32::from_be_bytes(bytes.try_into().unwrap())))
     }
 }
 
