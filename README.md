@@ -1,10 +1,13 @@
-# bevy_stardust
-A (very opinionated) experimental client/server networking crate for Bevy, fully operating within the ECS paradigm.
+<h1><p align="center">✨ bevy_stardust</p></h1>
+Stardust is a networking crate built for, and tightly integrated into Bevy's architecture. Stardust intends to make networking easy, but lets you do the hard stuff when you want to.
 
-This crate is highly experimental and you shouldn't use it for anything you care about. Things *will* break.
-This is also a hobby project. It's probably not very good, but you're more than welcome to help out!
+## Features
+- Enable replicating a component (even from another crate!) with only a few lines of code.
+- Per-entity and per-component control of replication. Disable replicating a component as part of a bundle, or only allow it on some entities.
+- Bevy plugins can easily add their own networked code.
+- Easy organisation of network messages, automatically compartmentalised into 'channels'.
 
-## Planned features
+### Planned features
 - Reliability
 - Ordering
 - Fragmentation
@@ -12,12 +15,11 @@ This is also a hobby project. It's probably not very good, but you're more than 
 - Compression
 - Encryption
 
-## Other crates
+## Why you may not want Stardust
+Stardust will never be as efficient as manually writing your own networking code. In fact, Stardust is pretty inefficient, with a lot of the code being more focused on developer ergonomics rather than being extremely performant.
 
-If you want peer-to-peer networking, use [bevy_ggrs](https://github.com/gschup/bevy_ggrs). If you want something with more granular control use [naia](https://github.com/naia-lib/naia).
+Internally, there are no guarantees of the consistency of the code. While the API surface will stay largely the same, there may be dramatic changes under the hood with little warning.
 
-Minimum supported Rust version is the latest stable release.
+Additionally, Stardust is native-only, using UDP sockets. It does not support wasm, but this might change in future.
 
-| Bevy version | Crate version |
-| ------------ | ------------- |
-| 0.11         | main          |
+It's worth having a look at the [other options](https://bevyengine.org/assets/#networking) before committing to using Stardust.
