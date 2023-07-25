@@ -29,6 +29,11 @@ impl Protocol {
         self.unique_id
     }
 
+    pub fn get_id<T: Channel>(&self) -> Option<ChannelId> {
+        let type_id = TypeId::of::<T>();
+        self.channel_type_map.get(&type_id).cloned()
+    }
+
     /// Returns how many channels are registered.
     pub fn channels(&self) -> u32 {
         self.channel_count
