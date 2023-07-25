@@ -48,8 +48,8 @@ impl ManualBitSerialisation for ChannelId {
     }
 }
 
-/// Trait for a channel type. Effectively just a marker for `TypeId`s.
 pub trait Channel: std::fmt::Debug + Send + Sync + 'static {}
+impl<T: std::fmt::Debug + Send + Sync + 'static> Channel for T {}
 
 /// Configuration for a network channel.
 /// It's recommended to disable features you won't need.
