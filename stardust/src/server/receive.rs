@@ -9,8 +9,9 @@ pub struct MessageParserParam<'w> {
 }
 
 impl MessageParserParam<'_> {
+    /// Removes the channel data from the map. This will cause other systems requesting the same channel data afterwards to panic.
     pub fn take(&self, channel: ChannelId) -> Vec<(Entity, Box<[u8]>)> {
-        todo!()
+        self.map.0.lock().unwrap().remove(&channel).expect("Requested channel was not in map (already removed by another system?)")
     }
 }
 
