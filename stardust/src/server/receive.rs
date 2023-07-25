@@ -8,18 +8,20 @@ const MIN_PACKET_BYTES: usize = 7;
 // Receives raw packet information from all UDP sockets associated with clients.
 pub(super) fn receive_packets_system(
     protocol: Res<Protocol>,
-    clients: Query<&Client>,
+    clients: Query<(Entity, &Client)>,
 ) {
-    let mut pool = TaskPool::new();
+    let protocol = protocol.as_ref();
+    let pool = TaskPool::new();
 
     // Read packets from all clients
     let packets = pool.scope(|s| {
-        for client in clients.iter() {
-            s.spawn(async {
+        for (client_id, client_comp) in clients.iter() {
+            let client_id = client_id.clone();
+            s.spawn(async move {
                 let mut packets = vec![];
                 let mut buffer = [0u8; MAX_PACKET_LENGTH];
                 loop {
-                    if let Ok(bytes) = client.socket.recv(&mut buffer) {
+                    if let Ok(bytes) = client_comp.socket.recv(&mut buffer) {
                         // Some early checks
                         if bytes < MIN_PACKET_BYTES { continue; } // Not enough data to be a valid packet, discard
                         let protocol_id = u32::from_be_bytes(buffer[0..=3].try_into().unwrap());
@@ -35,8 +37,8 @@ pub(super) fn receive_packets_system(
                             packet.push(buffer[i]);
                         }
                         
-                        // Push packet payload and channel ID
-                        packets.push((channel_id, packet.into_boxed_slice()));
+                        // Add message information to list
+                        packets.push((client_id, channel_id, packet.into_boxed_slice()));
                     } else {
                         // No more data to read
                         break;
