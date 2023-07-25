@@ -21,13 +21,13 @@ pub(super) fn receive_packets_system(
                 let mut packets = vec![];
                 let mut buffer = [0u8; MAX_PACKET_LENGTH];
                 loop {
-                    if let Ok((bytes, origin)) = client_comp.socket.recv_from(&mut buffer) {
+                    if let Ok(bytes) = client_comp.socket.recv(&mut buffer) {
                         // Some early checks
-                        if origin != client_comp.address { continue; } // Packet received from the wrong address
+                        // Source address is already filtered by UdpSocket::connect()
                         if bytes < MIN_PACKET_BYTES { continue; } // Not enough data to be a valid packet, discard
                         let protocol_id = u32::from_be_bytes(buffer[0..=3].try_into().unwrap());
                         if protocol_id != protocol.id() { continue; } // Wrong protocol ID, discard packet
-                        
+
                         // Get channel ID
                         let channel_id = ChannelId::from_bytes(buffer[4..=7].try_into().unwrap());
 
@@ -37,7 +37,7 @@ pub(super) fn receive_packets_system(
                         for i in (MIN_PACKET_BYTES + 1)..(midx) {
                             packet.push(buffer[i]);
                         }
-                        
+
                         // Add message information to list
                         packets.push((client_id, channel_id, packet.into_boxed_slice()));
                     } else {
@@ -50,6 +50,4 @@ pub(super) fn receive_packets_system(
             });
         }
     });
-
-
 }
