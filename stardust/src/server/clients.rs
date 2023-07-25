@@ -1,4 +1,4 @@
-use std::net::{UdpSocket, SocketAddr};
+use std::net::UdpSocket;
 use bevy::prelude::*;
 
 /// Represents a connected client as an entity.
@@ -6,6 +6,8 @@ use bevy::prelude::*;
 /// Despawning the entity or otherwise removing the component will silently disconnect the client.
 #[derive(Debug, Component)]
 pub struct Client {
+    #[cfg(not(feature="expose_internals"))]
     pub(super) socket: UdpSocket,
-    pub(super) address: SocketAddr,
+    #[cfg(feature="expose_internals")]
+    pub socket: UdpSocket,
 }

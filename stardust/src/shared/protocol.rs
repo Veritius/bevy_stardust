@@ -18,14 +18,26 @@ const STARDUST_PROTOCOL_VERSION: u16 = 0;
 pub struct Protocol {
     unique_id: u32,
 
-    channel_types: BTreeMap<TypeId, ChannelId>,
-    channels: Vec<(TypeId, ChannelConfig)>,
+    channel_count: u32,
+    channel_type_map: BTreeMap<TypeId, ChannelId>,
+    channels: Vec<ChannelConfig>,
 }
 
 impl Protocol {
-    /// Returns the Protocol ID
+    /// Returns the unique Protocol ID
     pub fn id(&self) -> u32 {
         self.unique_id
+    }
+
+    /// Returns how many channels are registered.
+    pub fn channels(&self) -> u32 {
+        self.channel_count
+    }
+
+    /// Returns a channel's config from its ID.
+    pub fn channel_config(&self, channel: ChannelId) -> Option<&ChannelConfig> {
+        self.channels
+            .get::<usize>(channel.into())
     }
 }
 
@@ -52,17 +64,20 @@ impl ProtocolBuilder {
         let mut protocol = Protocol {
             unique_id: self.protocol_id,
 
-            channel_types: BTreeMap::new(),
+            channel_count: 0,
+            channel_type_map: BTreeMap::new(),
             channels: Vec::with_capacity(self.channels.len()),
         };
 
         let mut idx = 0;
         for (ctype, config) in &self.channels {
             if idx > CHANNEL_ID_LIMIT { panic!("Channel limit exceeded"); }
-            protocol.channel_types.insert(*ctype, ChannelId::new(idx));
-            protocol.channels.push((*ctype, config.clone()));
+            protocol.channel_type_map.insert(*ctype, ChannelId::new(idx));
+            protocol.channels.push(config.clone());
             idx += 1;
         }
+
+        protocol.channel_count = idx - 1;
 
         protocol
     }

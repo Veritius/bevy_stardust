@@ -3,12 +3,12 @@ use super::serialisation::{ManualBitSerialisation, BitWriter, BitReader, Bitstre
 pub const CHANNEL_ID_LIMIT: u32 = 2u32.pow(24);
 
 /// A 24-bit channel ID, stored in a u32.
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct ChannelId(u32);
 
 impl ChannelId {
     /// Panics with a value greater than 2^24.
-    pub(super) fn new(value: u32) -> Self {
+    pub(crate) fn new(value: u32) -> Self {
         if value > CHANNEL_ID_LIMIT {
             panic!("Cannot create a ChannelId with a value greater than 2^24");
         }
@@ -19,6 +19,18 @@ impl ChannelId {
     pub(crate) fn from_bytes(bytes: &[u8; 3]) -> Self {
         let mut bytes = [0, bytes[0], bytes[1], bytes[2]];
         Self(u32::from_be_bytes(bytes))
+    }
+}
+
+impl std::fmt::Debug for ChannelId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_tuple("ChannelId").field(&self.0).finish()
+    }
+}
+
+impl From<ChannelId> for usize {
+    fn from(value: ChannelId) -> Self {
+        value.0 as usize
     }
 }
 
@@ -43,6 +55,10 @@ pub trait Channel: std::fmt::Debug + Send + Sync + 'static {}
 /// It's recommended to disable features you won't need.
 #[derive(Debug, Clone)]
 pub struct ChannelConfig {
+    /// How many messages are expected to arrive over this channel on the server, per tick. Note this is not per client, this is for all clients combined.
+    pub messages_per_tick_server: usize,
+    /// How many messages are expected to arrive over this channel on the client, per tick.
+    pub messages_per_tick_client: usize,
     pub direction: ChannelDirection,
     pub ordering: ChannelOrdering,
     pub reliability: ChannelReliability,
@@ -55,8 +71,14 @@ pub struct ChannelConfig {
 impl ChannelConfig {
     /// Configures an 'essential' channel. Prioritises validity over speed or efficiency.
     /// Use this for messages that *must* be correct.
-    pub fn essential(direction: ChannelDirection) -> Self {
+    pub fn essential(
+        messages_per_tick_server: usize,
+        messages_per_tick_client: usize,
+        direction: ChannelDirection,
+    ) -> Self {
         Self {
+            messages_per_tick_server,
+            messages_per_tick_client,
             direction,
             ordering: ChannelOrdering::Ordered,
             reliability: ChannelReliability::Reliable,
@@ -69,8 +91,14 @@ impl ChannelConfig {
 
     /// Configures a 'real-time' channel. Prioritises speed over correctness or efficiency.
     /// Messages that arrive late (based on game tick) will be discarded.
-    pub fn realtime(direction: ChannelDirection) -> Self {
+    pub fn realtime(
+        messages_per_tick_server: usize,
+        messages_per_tick_client: usize,
+        direction: ChannelDirection,
+    ) -> Self {
         Self {
+            messages_per_tick_server,
+            messages_per_tick_client,
             direction,
             ordering: ChannelOrdering::Unordered,
             reliability: ChannelReliability::Unreliable,

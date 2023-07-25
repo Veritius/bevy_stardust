@@ -1,6 +1,5 @@
 use bevy::prelude::*;
 use crate::shared::scheduling::ReadPackets;
-
 use super::receive::receive_packets_system;
 
 pub struct StardustServerPlugin {
