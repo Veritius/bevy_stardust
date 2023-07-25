@@ -37,7 +37,7 @@ pub(super) fn receive_packets_system(
                         }
                         
                         // Push packet payload and channel ID
-                        packets.push((channel_id, packet));
+                        packets.push((channel_id, packet.into_boxed_slice()));
                     } else {
                         // No more data to read
                         break;
