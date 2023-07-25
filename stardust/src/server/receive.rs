@@ -29,11 +29,10 @@ pub(super) fn receive_packets_system(
                         let channel_id = ChannelId::from_bytes(buffer[4..=7].try_into().unwrap());
 
                         // Copy relevant buffer data into vec
-                        let mut packet = Vec::with_capacity(bytes - MIN_PACKET_BYTES);
-                        for i in (MIN_PACKET_BYTES + 1)..bytes {
-                            let byte = buffer.get(i);
-                            if byte.is_none() { continue; }
-                            packet.push(byte.unwrap().clone());
+                        let midx = bytes - MIN_PACKET_BYTES - 1;
+                        let mut packet = Vec::with_capacity(midx);
+                        for i in (MIN_PACKET_BYTES + 1)..(midx) {
+                            packet.push(buffer[i]);
                         }
                         
                         // Push packet payload and channel ID
