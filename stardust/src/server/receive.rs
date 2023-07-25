@@ -1,17 +1,56 @@
 use std::{collections::BTreeMap, sync::Mutex};
-use bevy::{prelude::*, tasks::TaskPool};
+use bevy::{prelude::*, tasks::TaskPool, ecs::system::{SystemState, SystemParam}};
 use crate::shared::{protocol::{MAX_PACKET_LENGTH, Protocol}, channel::ChannelId};
 use super::clients::Client;
+
+#[derive(SystemParam)]
+pub struct MessageParserParam<'w> {
+    map: Res<'w, ChannelMap>,
+}
+
+impl MessageParserParam<'_> {
+    pub fn take(&self, channel: ChannelId) -> Vec<(Entity, Box<[u8]>)> {
+        todo!()
+    }
+}
+
+#[derive(Resource)]
+struct ChannelMap(Mutex<BTreeMap<ChannelId, Vec<(Entity, Box<[u8]>)>>>);
+
+impl FromWorld for ChannelMap {
+    fn from_world(world: &mut World) -> Self {
+        let protocol = world.resource::<Protocol>();
+
+        // Preallocate space
+        let mut map: BTreeMap<ChannelId, Vec<(Entity, Box<[u8]>)>> = BTreeMap::new();
+        for i in 0..protocol.channels() {
+            let id = ChannelId::new(i);
+            let cfg = protocol.channel_config(id).expect(&format!("Channel {:?} had no associated config", id));
+            map.insert(id, Vec::with_capacity(cfg.messages_per_tick_server));
+        }
+
+        Self(Mutex::new(map))
+    }
+}
 
 /// Minimum packet length in bytes. Packets with less information than this will be discarded.
 const MIN_PACKET_BYTES: usize = 7;
 
 // Receives raw packet information from all UDP sockets associated with clients.
 pub(super) fn receive_packets_system(
-    protocol: Res<Protocol>,
-    clients: Query<(Entity, &Client)>,
+    world: &mut World,
 ) {
-    let protocol = protocol.as_ref();
+    let mut state: SystemState<(
+        Res<Protocol>,
+        Query<(Entity, &Client)>,
+        ResMut<ChannelMap>,
+    )> = SystemState::new(world);
+    let state = state.get_mut(world);
+    
+    let protocol = state.0.as_ref();
+    let clients = state.1;
+    let mut channel_map = state.2.0.lock().unwrap();
+
     let pool = TaskPool::new();
 
     // Read packets from all clients
@@ -52,21 +91,12 @@ pub(super) fn receive_packets_system(
         }
     });
 
-    // Preallocate expected amount for each channel
-    let sorted_packets: Mutex<BTreeMap<ChannelId, Vec<(Entity, Box<[u8]>)>>> = Mutex::new(BTreeMap::new());
-    let mut packet_map_write = sorted_packets.lock().unwrap();
-    for i in 0..protocol.channels() {
-        let id = ChannelId::new(i);
-        let cfg = protocol.channel_config(id).expect(&format!("Channel {:?} had no associated config", id));
-        packet_map_write.insert(id, Vec::with_capacity(cfg.messages_per_tick_server));
-    }
-
     // Sort packets into channels
     for _ in 0..=packet_groups.len() {
         let mut packet_group = packet_groups.pop().unwrap();
         for _ in 0..=packet_group.len() {
             let (sender, channel, packet) = packet_group.pop().unwrap();
-            packet_map_write.get_mut(&channel).unwrap().push((sender, packet));
+            channel_map.get_mut(&channel).unwrap().push((sender, packet));
         }
     }
 }
