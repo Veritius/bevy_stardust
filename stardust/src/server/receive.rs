@@ -21,8 +21,9 @@ pub(super) fn receive_packets_system(
                 let mut packets = vec![];
                 let mut buffer = [0u8; MAX_PACKET_LENGTH];
                 loop {
-                    if let Ok(bytes) = client_comp.socket.recv(&mut buffer) {
+                    if let Ok((bytes, origin)) = client_comp.socket.recv_from(&mut buffer) {
                         // Some early checks
+                        if origin != client_comp.address { continue; } // Packet received from the wrong address
                         if bytes < MIN_PACKET_BYTES { continue; } // Not enough data to be a valid packet, discard
                         let protocol_id = u32::from_be_bytes(buffer[0..=3].try_into().unwrap());
                         if protocol_id != protocol.id() { continue; } // Wrong protocol ID, discard packet

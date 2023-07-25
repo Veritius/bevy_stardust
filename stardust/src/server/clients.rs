@@ -1,4 +1,4 @@
-use std::net::UdpSocket;
+use std::net::{UdpSocket, SocketAddr};
 use bevy::prelude::*;
 
 /// Represents a connected client as an entity.
@@ -7,4 +7,5 @@ use bevy::prelude::*;
 #[derive(Debug, Component)]
 pub struct Client {
     pub(super) socket: UdpSocket,
+    pub(super) address: SocketAddr,
 }
