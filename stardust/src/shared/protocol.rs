@@ -19,7 +19,8 @@ pub struct Protocol {
     unique_id: u32,
 
     channel_count: u32,
-    channel_type_map: BTreeMap<TypeId, ChannelId>,
+    type_to_channel_map: BTreeMap<TypeId, ChannelId>,
+    channel_to_type_map: Vec<TypeId>,
     channels: Vec<ChannelConfig>,
 }
 
@@ -29,9 +30,15 @@ impl Protocol {
         self.unique_id
     }
 
+    /// Gets the channel ID from a type implementing Channel. If the channel hasn't been registered, it will return None.
     pub fn get_id<T: Channel>(&self) -> Option<ChannelId> {
         let type_id = TypeId::of::<T>();
-        self.channel_type_map.get(&type_id).cloned()
+        self.type_to_channel_map.get(&type_id).cloned()
+    }
+
+    /// Gets a TypeId from a ChannelId. If the ChannelId has no associated type, it will return None.
+    pub(crate) fn get_type(&self, id: ChannelId) -> Option<TypeId> {
+        self.channel_to_type_map.get::<usize>(id.into()).cloned()
     }
 
     /// Returns how many channels are registered.
@@ -70,14 +77,16 @@ impl ProtocolBuilder {
             unique_id: self.protocol_id,
 
             channel_count: 0,
-            channel_type_map: BTreeMap::new(),
+            type_to_channel_map: BTreeMap::new(),
+            channel_to_type_map: Vec::with_capacity(self.channels.len()),
             channels: Vec::with_capacity(self.channels.len()),
         };
 
         let mut idx = 0;
         for (ctype, config) in &self.channels {
             if idx > CHANNEL_ID_LIMIT { panic!("Channel limit exceeded"); }
-            protocol.channel_type_map.insert(*ctype, ChannelId::new(idx));
+            protocol.type_to_channel_map.insert(*ctype, ChannelId::new(idx));
+            protocol.channel_to_type_map.push(*ctype);
             protocol.channels.push(config.clone());
             idx += 1;
         }
