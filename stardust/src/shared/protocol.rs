@@ -51,6 +51,11 @@ impl Protocol {
         self.channels
             .get::<usize>(channel.into())
     }
+
+    /// Returns whether or not the channel with the given ID exists.
+    pub fn channel_exists(&self, channel: ChannelId) -> bool {
+        <ChannelId as Into<u32>>::into(channel) <= self.channels()
+    }
 }
 
 #[derive(Resource, Default)]

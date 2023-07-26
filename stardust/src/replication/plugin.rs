@@ -4,8 +4,6 @@ use crate::{shared::channel::{ChannelConfig, ChannelDirection, ChannelOrdering, 
 use super::{config::{ComponentReplicationConfig, ReplicatedComponentData}, systems::{replication_send_system_reflected, replication_send_system_bitstream}, channel::ComponentReplicationChannel};
 
 const DEFAULT_REPLICATION_CHANNEL_CONFIG: ChannelConfig = ChannelConfig {
-    messages_per_tick_server: 32,
-    messages_per_tick_client: 256,
     direction: ChannelDirection::Bidirectional,
     ordering: ChannelOrdering::Unordered,
     reliability: ChannelReliability::Reliable,
