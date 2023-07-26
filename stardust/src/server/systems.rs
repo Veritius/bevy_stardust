@@ -3,6 +3,9 @@ use bevy::{prelude::*, tasks::TaskPool, ecs::system::SystemState};
 use crate::shared::{protocol::{MAX_PACKET_LENGTH, Protocol}, channel::{ChannelId, ChannelDirection}};
 use super::{clients::Client, receive::Payload};
 
+// TODO: All of this can be done better, but I just want it to work.
+// Focus on optimisation, especially with the ordering/fragmentation code involving sorting into channels.
+
 /// Minimum packet length in bytes. Packets with less information than this will be discarded.
 const MIN_PACKET_BYTES: usize = 7;
 
@@ -76,7 +79,7 @@ pub(super) fn receive_packets_system(
         }
     }
 
-    // Process all packets for extra stuff (ordering)
+    // Process all packets for extra stuff (ordering, fragmentation)
     let mut processed = pool.scope(|s| {
         loop {
             if sorted.len() == 0 { break; } // out of channels to deal with
