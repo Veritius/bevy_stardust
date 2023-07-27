@@ -19,7 +19,7 @@ Stardust is a networking crate built for, and tightly integrated into Bevy's arc
 ## Why you may not want Stardust
 Stardust will never be as efficient as manually writing your own networking code. In fact, Stardust is pretty inefficient, with a lot of the code being more focused on developer ergonomics rather than being extremely performant.
 
-Internally, there are no guarantees of the consistency of the code. While the API surface will stay largely the same, there may be dramatic changes under the hood with little warning.
+Stardust is a hobby project, with no guarantee of anything. Internally, there are no guarantees of the consistency of the code. While the API surface will stay largely the same, there may be dramatic changes under the hood with little warning.
 
 Additionally, Stardust is native-only, using UDP sockets. It does not support wasm, but this might change in future.
 
