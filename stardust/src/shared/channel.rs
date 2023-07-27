@@ -51,7 +51,7 @@ impl ManualBitSerialisation for ChannelId {
     fn serialise(&self, writer: &mut impl BitWriter) {
         let bytes = self.0.to_be_bytes();
         for i in 1..3 {
-            writer.write_byte(bytes[i]);
+            writer.write_octet(bytes[i]);
         }
     }
 

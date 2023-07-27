@@ -20,7 +20,6 @@ pub struct Protocol {
 
     channel_count: u32,
     type_to_channel_map: BTreeMap<TypeId, ChannelId>,
-    channel_to_type_map: Vec<TypeId>,
     channels: Vec<ChannelConfig>,
 }
 
@@ -34,11 +33,6 @@ impl Protocol {
     pub fn get_id<T: Channel>(&self) -> Option<ChannelId> {
         let type_id = TypeId::of::<T>();
         self.type_to_channel_map.get(&type_id).cloned()
-    }
-
-    /// Gets a TypeId from a ChannelId. If the ChannelId has no associated type, it will return None.
-    pub(crate) fn get_type(&self, id: ChannelId) -> Option<TypeId> {
-        self.channel_to_type_map.get::<usize>(id.into()).cloned()
     }
 
     /// Returns how many channels are registered.
@@ -67,13 +61,13 @@ pub struct ProtocolBuilder {
 impl ProtocolBuilder {
     pub fn set_id(&mut self, id: u32) { self.protocol_id = id; }
 
-    pub fn add_channel<T: Channel>(&mut self, config: ChannelConfig) {
+    pub fn add_channel<T: Channel>(&mut self, config: impl Into<ChannelConfig>) {
         let this = TypeId::of::<T>();
         for (other, _) in self.channels.iter() {
             // Prevent channels being added twice
             if this == *other { panic!("Channel added twice: {:?}", this); }
         }
-        self.channels.push((this, config));
+        self.channels.push((this, config.into()));
     }
 
     /// Consumes the `ProtocolBuilder` and returns a finished `Protocol`
@@ -83,7 +77,6 @@ impl ProtocolBuilder {
 
             channel_count: 0,
             type_to_channel_map: BTreeMap::new(),
-            channel_to_type_map: Vec::with_capacity(self.channels.len()),
             channels: Vec::with_capacity(self.channels.len()),
         };
 
@@ -91,7 +84,6 @@ impl ProtocolBuilder {
         for (ctype, config) in &self.channels {
             if idx > CHANNEL_ID_LIMIT { panic!("Channel limit exceeded"); }
             protocol.type_to_channel_map.insert(*ctype, ChannelId::new(idx));
-            protocol.channel_to_type_map.push(*ctype);
             protocol.channels.push(config.clone());
             idx += 1;
         }
@@ -104,7 +96,7 @@ impl ProtocolBuilder {
 
 pub trait ProtocolAppExts {
     fn gen_protocol_id<H: std::hash::Hash>(&mut self, val: H);
-    fn add_net_channel<T: Channel>(&mut self, config: ChannelConfig);
+    fn add_net_channel<T: Channel>(&mut self, config: impl Into<ChannelConfig>);
 }
 
 impl ProtocolAppExts for App {
@@ -123,9 +115,9 @@ impl ProtocolAppExts for App {
         builder.protocol_id = u32::from_be_bytes(crammed);
     }
 
-    fn add_net_channel<T: Channel>(&mut self, config: ChannelConfig) {
+    fn add_net_channel<T: Channel>(&mut self, config: impl Into<ChannelConfig>) {
         let mut builder = self.world.get_resource_mut::<ProtocolBuilder>()
             .expect("StardustSharedPlugin should have been added before this");
-        builder.add_channel::<T>(config);
+        builder.add_channel::<T>(config.into());
     }
 }

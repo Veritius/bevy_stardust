@@ -4,28 +4,28 @@ use crate::shared::serialisation::{ManualBitSerialisation, BitWriter, BitReader,
 macro_rules! write_f32 {
     ($writer:ident, $($value:expr),+) => {{
         $(
-            $writer.write_u32($value.to_bits());
+            $writer.write_four($value.to_bits());
         )*
     }}
 }
 
 macro_rules! read_f32 {
     ($reader:ident) => {
-        f32::from_bits($reader.read_u32()?)
+        f32::from_bits($reader.read_four()?)
     }
 }
 
 macro_rules! write_f64 {
     ($writer:ident, $($value:expr),+) => {{
         $(
-            $writer.write_u64($value.to_bits());
+            $writer.write_eight($value.to_bits());
         )*
     }}
 }
 
 macro_rules! read_f64 {
     ($reader:ident) => {
-        f64::from_bits($reader.read_u64()?)
+        f64::from_bits($reader.read_eight()?)
     }
 }
 
