@@ -6,6 +6,7 @@ Stardust is a networking crate built for, and tightly integrated into Bevy's arc
 - Per-entity and per-component control of replication. Disable replicating a component as part of a bundle, or only allow it on some entities.
 - Bevy plugins can easily add their own networked code.
 - Easy organisation of network messages, automatically compartmentalised into 'channels'.
+- Stardust's code is primarily server-authoritative, but you can ignore all of that and do determinism if you want.
 
 ### Planned features
 - Reliability

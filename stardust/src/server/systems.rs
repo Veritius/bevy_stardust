@@ -1,7 +1,7 @@
 use std::collections::{BTreeMap, HashMap};
 use bevy::{prelude::*, tasks::TaskPool, ecs::system::SystemState};
-use crate::shared::{protocol::{MAX_PACKET_LENGTH, Protocol}, channel::{ChannelId, ChannelDirection}};
-use super::{clients::Client, receive::{Payload, AllChannelData, ChannelData, Payloads}};
+use crate::shared::{protocol::{MAX_PACKET_LENGTH, Protocol}, channel::{ChannelId, ChannelDirection}, receive::{Payload, Payloads}};
+use super::{clients::Client, receive::{AllChannelData, ChannelData}};
 
 // TODO: All of this can be done better, but I just want it to work.
 // Focus on optimisation, especially with the ordering/fragmentation code involving sorting into channels.
