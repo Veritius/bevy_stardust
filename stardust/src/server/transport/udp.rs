@@ -1,9 +1,8 @@
 //! Native UDP transport layer for servers.
 
-use std::net::UdpSocket;
-
+use std::{net::UdpSocket, collections::{BTreeMap, HashMap}};
 use bevy::{prelude::*, tasks::TaskPool};
-use crate::{shared::{scheduling::{TransportReadPackets, TransportSendPackets}, channels::{components::{OrderedChannel, ReliableChannel, FragmentedChannel, ChannelData}, id::ChannelId, registry::ChannelRegistry}}, server::clients::Client};
+use crate::{shared::{scheduling::{TransportReadPackets, TransportSendPackets}, channels::{components::{OrderedChannel, ReliableChannel, FragmentedChannel, ChannelData}, id::ChannelId, registry::ChannelRegistry}, receive::Payload}, server::clients::Client};
 
 /// A simple transport layer over native UDP sockets.
 pub struct ServerUdpTransportPlugin;
@@ -70,6 +69,50 @@ fn receive_packets_system(
 
                 // Return packets
                 packets
+            });
+        }
+    });
+
+    let mut sorted: BTreeMap<ChannelId, Vec<(Entity, Box<[u8]>)>> = BTreeMap::new();
+
+    // Sort into channels for processing
+    loop {
+        if client_packets.len() == 0 { break; }
+        let mut pg = client_packets.pop().unwrap();
+        loop {
+            if pg.len() == 0 { break; }
+            let (client, channel, payload) = pg.pop().unwrap();
+            let v = sorted.entry(channel).or_insert(Vec::with_capacity(1));
+            v.push((client, payload));
+        }
+    }
+
+    // Process all packets by channel
+    let mut processed = pool.scope(|s| {
+        loop {
+            if sorted.len() == 0 { break; }
+            let (channel_id, payloads) = sorted.pop_first().unwrap();
+            let channel_ent = channel_registry.get_from_id(channel_id).unwrap();
+            let (c_data, c_ord, c_rel, c_fra) = channels.get(channel_ent).unwrap();
+
+            s.spawn(async move {
+                let mut intermediate_map = HashMap::new();
+
+                // Process individual packets
+                for (client, data) in payloads {
+                    let payload = Payload {
+                        ignore_head: 0,
+                        ignore_tail: 0,
+                        data,
+                    };
+
+                    let keyref = intermediate_map.entry(client).or_insert(Vec::with_capacity(1));
+                    keyref.push(payload);
+                }
+
+                // Put into channel map
+                let names: Vec<Entity> = intermediate_map.keys().cloned().collect();
+                // let mut channel_data = 
             });
         }
     });
