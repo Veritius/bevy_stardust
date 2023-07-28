@@ -1,5 +1,7 @@
 //! Types for writing custom transport layers.
 
+pub mod udp;
+
 use bevy::prelude::*;
 use crate::shared::serialisation::Octet;
 

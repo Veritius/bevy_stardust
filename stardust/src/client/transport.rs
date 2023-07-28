@@ -1,3 +1,5 @@
+pub mod udp;
+
 use bevy::prelude::*;
 use crate::shared::serialisation::Octet;
 
