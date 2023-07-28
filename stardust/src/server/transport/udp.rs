@@ -49,9 +49,9 @@ fn receive_packets_system(
                         // Discard packet, too small to be useful.
                         if octets <= 3 { continue; }
 
-                        // Get channel ID
+                        // Get channel ID and check it exists
                         let channel_id = ChannelId::try_from(&buffer[0..=3]).unwrap();
-                        let channel_config = channels.get(channel_registry.get_from_id(channel_id).expect("Channel ID did not have associated entity ID")).unwrap();
+                        if !channel_registry.channel_exists(channel_id) { break; }
 
                         // Copy octets from buffer
                         let idx = octets - PACKET_HEADER_SIZE - 1;

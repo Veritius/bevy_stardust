@@ -37,6 +37,10 @@ impl ChannelRegistry {
         self.entity_map.get(&id).cloned()
     }
 
+    pub fn channel_exists(&self, id: ChannelId) -> bool {
+        self.entity_map.contains_key(&id)
+    }
+
     /// Returns how many channels currently exist.
     pub fn channel_count(&self) -> u32 {
         self.channel_count
