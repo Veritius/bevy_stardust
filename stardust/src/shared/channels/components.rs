@@ -4,20 +4,32 @@ use super::id::ChannelId;
 
 /// An entity representing a channel.
 #[derive(Component)]
-pub struct Channel {
-    pub(crate) direction: ChannelDirection,
-    pub(crate) typeid: TypeId,
-    pub(crate) channelid: ChannelId,
+pub struct ChannelData {
+    pub(crate) config: ChannelConfig,
+    pub(crate) type_id: TypeId,
+    pub(crate) channel_id: ChannelId,
 }
 
-impl Channel {
-    pub fn direction(&self) -> ChannelDirection {
-        self.direction
+impl ChannelData {
+    /// Returns ChannelConfig.
+    pub fn config(&self) -> ChannelConfig {
+        self.config
     }
 
-    pub fn id(&self) -> ChannelId {
-        self.channelid
+    /// Returns the associated `TypeId` used to access this channel.
+    pub fn type_id(&self) -> TypeId {
+        self.type_id
     }
+
+    /// Returns the associated `ChannelId` used for network transport.
+    pub fn channel_id(&self) -> ChannelId {
+        self.channel_id
+    }
+}
+
+#[derive(Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub struct ChannelConfig {
+    pub direction: ChannelDirection,
 }
 
 /// Configures the direction of a channel.

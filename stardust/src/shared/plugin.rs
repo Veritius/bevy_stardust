@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use crate::{shared::protocol::ProtocolBuilder, server::plugin::StardustServerPlugin, client::plugin::StardustClientPlugin};
-use super::scheduling::{network_pre_update, network_post_update};
+use super::{scheduling::{network_pre_update, network_post_update}, channels::systems::panic_on_channel_removal};
 
 /// Shared information between the client and server.
 /// See the demos for information on how to use this.
@@ -10,6 +10,8 @@ impl Plugin for StardustSharedPlugin {
         app.insert_resource(ProtocolBuilder::default());
         app.add_systems(PreUpdate, network_pre_update);
         app.add_systems(PostUpdate, network_post_update);
+
+        app.add_systems(PreUpdate, panic_on_channel_removal);
     }
 
     fn finish(&self, app: &mut App) {
