@@ -22,6 +22,27 @@ impl ManualBitSerialisation for ChannelId {
 
 impl From<u32> for ChannelId {
     fn from(value: u32) -> Self {
-        todo!()
+        if value > CHANNEL_ID_LIMIT { panic!("Can't create a channel ID with a value") }
+        let [_, a, b, c] = value.to_be_bytes();
+        Self([a, b, c])
+    }
+}
+
+impl From<usize> for ChannelId {
+    fn from(value: usize) -> Self {
+        ChannelId::from(value as u32)
+    }
+}
+
+impl From<ChannelId> for u32 {
+    fn from(value: ChannelId) -> Self {
+        let ChannelId([a, b, c]) = value;
+        u32::from_be_bytes([0, a, b, c])
+    }
+}
+
+impl From<ChannelId> for usize {
+    fn from(value: ChannelId) -> Self {
+        Into::<u32>::into(value) as usize
     }
 }
