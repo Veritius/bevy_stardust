@@ -15,7 +15,7 @@ Stardust is a networking crate built for, and tightly integrated into Bevy's arc
 - Replicate components, even those from other crates, with a single line of code.
 - Control replication on a per-entity basis with components and bundles.
 
-*Note: While you can use any transport method, Stardust only includes support for native UDP.*
+*Note: While you can use any transport method, Stardust by itself only supports native UDP.*
 
 ### Planned features
 - Reliability
@@ -24,10 +24,3 @@ Stardust is a networking crate built for, and tightly integrated into Bevy's arc
 - Error checking
 - Compression
 - Encryption
-
-## Why you may not want Stardust
-If your game has some really, really tough networking requirements, Stardust is not your best choice. Stardust sacrifices a bit of efficiency for making it easy to work with. Stardust is also client/server only - it will never support peer-to-peer.
-
-Stardust is a hobby project, with no guarantee of anything. Internally, there are no guarantees of the consistency of the code. While the API surface will stay largely the same, there may be dramatic changes under the hood with little warning.
-
-It's worth having a look at the [other options](https://bevyengine.org/assets/#networking) before committing to using Stardust.
