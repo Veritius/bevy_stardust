@@ -1,6 +1,5 @@
 use std::marker::PhantomData;
 use bevy::prelude::Component;
-use crate::shared::channel::Channel;
 
 /// Channel for component replication messages.
 pub struct ComponentReplicationChannel<T: Component>(PhantomData<T>);

@@ -1,20 +1,20 @@
 use std::{marker::PhantomData, collections::{BTreeMap, HashMap, hash_map::Iter}};
 use bevy::{prelude::{Resource, Res, Entity, World}, ecs::system::SystemParam};
-use crate::shared::{channel::{Channel, ChannelId}, protocol::Protocol, receive::Payloads};
+use crate::shared::{receive::Payloads, channels::{id::{ChannelId, Channel}, registry::ChannelRegistry}};
 
 /// Data from all channels.
 #[derive(Resource, Default)]
-pub(super) struct AllChannelData(pub(crate) BTreeMap<ChannelId, ChannelData>);
+pub(super) struct AllChannelData(pub(crate) BTreeMap<ChannelId, AllClientMessages>);
 impl AllChannelData {
     /// Gets all messages from all clients sent over the channel.
-    fn get(&self, id: ChannelId) -> Option<&ChannelData> {
+    fn get(&self, id: ChannelId) -> Option<&AllClientMessages> {
         self.0.get(&id)
     }
 }
 
-/// All messages from all clients.
-pub struct ChannelData(pub(super) HashMap<Entity, Payloads>);
-impl ChannelData {
+/// All messages from all clients from a specific channel.
+pub struct AllClientMessages(pub(super) HashMap<Entity, Payloads>);
+impl AllClientMessages {
     /// Returns all payloads from a single client.
     pub fn from_client(&self, client: Entity) -> Option<&Payloads> {
         self.0.get(&client)
@@ -30,16 +30,14 @@ impl ChannelData {
 #[derive(SystemParam)]
 pub struct ChannelReader<'w, T: Channel> {
     store: Res<'w, AllChannelData>,
-    protocol: Res<'w, Protocol>,
+    channel_registry: Res<'w, ChannelRegistry>,
     phantom: PhantomData<T>,
 }
 
 impl<'w, T: Channel> ChannelReader<'w, T> {
     /// Accesses network messages. Will always return `None` if outside of `NetworkPreUpdate`.
-    pub fn read(&self) -> Option<&ChannelData> {
-        if self.store.0.is_empty() { return None; }
-        let protocol = self.protocol.get_id::<T>()?;
-        self.store.get(protocol)
+    pub fn read(&self) -> Option<&AllClientMessages> {
+        todo!()
     }
 }
 

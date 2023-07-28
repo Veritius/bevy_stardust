@@ -1,6 +1,6 @@
 use std::{marker::PhantomData, collections::BTreeMap};
 use bevy::{prelude::*, ecs::system::SystemParam};
-use crate::shared::{channel::{Channel, ChannelId}, protocol::Protocol, receive::Payloads};
+use crate::shared::{channels::{registry::ChannelRegistry, id::{Channel, ChannelId}}, receive::Payloads};
 
 #[derive(Resource, Default)]
 pub(super) struct AllChannelData(pub(crate) BTreeMap<ChannelId, Payloads>);
@@ -15,14 +15,12 @@ impl AllChannelData {
 #[derive(SystemParam)]
 pub struct ChannelReader<'w, T: Channel> {
     store: Res<'w, AllChannelData>,
-    protocol: Res<'w, Protocol>,
+    channel_registry: Res<'w, ChannelRegistry>,
     phantom: PhantomData<T>,
 }
 
 impl<'w, T: Channel> ChannelReader<'w, T> {
     pub fn read(&self) -> Option<&Payloads> {
-        if self.store.0.is_empty() { return None; }
-        let id = self.protocol.get_id::<T>()?;
-        self.store.get(id)
+        todo!()
     }
 }

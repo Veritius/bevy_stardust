@@ -2,7 +2,7 @@
 
 use std::{net::UdpSocket, collections::{BTreeMap, HashMap}};
 use bevy::{prelude::*, tasks::TaskPool};
-use crate::{shared::{scheduling::{TransportReadPackets, TransportSendPackets}, channels::{components::{OrderedChannel, ReliableChannel, FragmentedChannel, ChannelData}, id::ChannelId, registry::ChannelRegistry}, receive::Payload}, server::clients::Client};
+use crate::{shared::{scheduling::{TransportReadPackets, TransportSendPackets}, channels::{components::{OrderedChannel, ReliableChannel, FragmentedChannel, ChannelData}, id::ChannelId, registry::ChannelRegistry}, receive::{Payload, Payloads}}, server::{clients::Client, receive::{AllClientMessages, AllChannelData}}};
 
 /// A simple transport layer over native UDP sockets.
 pub struct ServerUdpTransportPlugin;
@@ -23,6 +23,7 @@ const MAX_PACKET_LENGTH: usize = 1500;
 const PACKET_HEADER_SIZE: usize = 3;
 
 fn receive_packets_system(
+    mut commands: Commands,
     clients: Query<(Entity, &Client, &UdpClient)>,
     channels: Query<(&ChannelData, Option<&OrderedChannel>, Option<&ReliableChannel>, Option<&FragmentedChannel>)>,
     channel_registry: Res<ChannelRegistry>,
@@ -91,10 +92,13 @@ fn receive_packets_system(
     let mut processed = pool.scope(|s| {
         loop {
             if sorted.len() == 0 { break; }
+
+            // Channel config
             let (channel_id, payloads) = sorted.pop_first().unwrap();
             let channel_ent = channel_registry.get_from_id(channel_id).unwrap();
             let (c_data, c_ord, c_rel, c_fra) = channels.get(channel_ent).unwrap();
 
+            // Process packets
             s.spawn(async move {
                 let mut intermediate_map = HashMap::new();
 
@@ -112,10 +116,24 @@ fn receive_packets_system(
 
                 // Put into channel map
                 let names: Vec<Entity> = intermediate_map.keys().cloned().collect();
-                // let mut channel_data = 
+                let mut channel_data = AllClientMessages(HashMap::new());
+                for name in names {
+                    let f = intermediate_map.remove(&name).unwrap();
+                    channel_data.0.insert(name, Payloads(f.into_boxed_slice()));
+                }
+
+                (channel_id, channel_data)
             });
         }
     });
+
+    let mut cdata = BTreeMap::new();
+    while processed.len() != 0 {
+        let (cid, data) = processed.pop().unwrap();
+        cdata.insert(cid, data);
+    }
+
+    commands.insert_resource(AllChannelData(cdata));
 }
 
 fn send_packets_system(

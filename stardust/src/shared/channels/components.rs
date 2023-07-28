@@ -27,13 +27,13 @@ impl ChannelData {
     }
 }
 
-#[derive(Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct ChannelConfig {
     pub direction: ChannelDirection,
 }
 
 /// Configures the direction of a channel.
-#[derive(Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum ChannelDirection {
     /// The client and server can both send messages on this channel.
     #[default]
