@@ -1,13 +1,12 @@
-use std::collections::BTreeMap;
-
 use bevy::prelude::*;
-
-use super::receive::AllChannelData;
+use super::{receive::AllChannelData, connection::RemoteConnectionStatus};
 
 pub struct StardustClientPlugin;
 
 impl Plugin for StardustClientPlugin {
     fn build(&self, app: &mut App) {
-        app.insert_resource(AllChannelData(BTreeMap::new()));
+        app.add_state::<RemoteConnectionStatus>();
+
+        app.insert_resource(AllChannelData::default());
     }
 }

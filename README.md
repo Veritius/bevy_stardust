@@ -7,6 +7,7 @@ Stardust is a networking crate built for, and tightly integrated into Bevy's arc
 - Bevy plugins can easily add their own networked code.
 - Easy organisation of network messages, automatically compartmentalised into 'channels'.
 - Stardust's code is primarily server-authoritative, but you can ignore all of that and do determinism if you want.
+- Use any transport method you want. UDP, WebRTC, etc.
 
 ### Planned features
 - Reliability
@@ -20,7 +21,5 @@ Stardust is a networking crate built for, and tightly integrated into Bevy's arc
 Stardust will never be as efficient as manually writing your own networking code. In fact, Stardust is pretty inefficient, with a lot of the code being more focused on developer ergonomics rather than being extremely performant.
 
 Stardust is a hobby project, with no guarantee of anything. Internally, there are no guarantees of the consistency of the code. While the API surface will stay largely the same, there may be dramatic changes under the hood with little warning.
-
-Additionally, Stardust is native-only, using UDP sockets. It does not support wasm, but this might change in future.
 
 It's worth having a look at the [other options](https://bevyengine.org/assets/#networking) before committing to using Stardust.

@@ -1,39 +1,49 @@
 use bevy::{ecs::schedule::ScheduleLabel, prelude::World};
 
-/// Runs during Bevy's `PreUpdate` and contains [ReadPackets], [ProcessMessages], and [NetworkPreUpdateCleanup].
-/// 
-/// Used for receiving packets from peers and processing them.
+/// Runs during Bevy's PreUpdate and is used for receiving packets from peers and processing them.
 #[derive(Debug, Clone, Hash, PartialEq, Eq, ScheduleLabel)]
 pub struct NetworkPreUpdate;
 
 pub(super) fn network_pre_update(world: &mut World) {
-    world.run_schedule(ReadPackets);
-    world.run_schedule(ProcessMessages);
+    world.run_schedule(TransportReadPackets);
+    world.run_schedule(ReadOctetStrings);
     world.run_schedule(NetworkPreUpdateCleanup);
 }
 
-/// Receive packets from UDP sockets and process them to yield usable payloads. Runs during [NetworkPreUpdate].
-/// Only visible inside the Stardust crate.
+/// Receive packets and process them into usable data (ordering, defragmentation)
+///
+/// Only transport layer systems should be in here!
 #[derive(Debug, Clone, Hash, PartialEq, Eq, ScheduleLabel)]
-pub(crate) struct ReadPackets;
+pub struct TransportReadPackets;
 
-/// Read bytes and turn into events, etc. Runs during [NetworkPreUpdate].
+/// Read bytes and turn into events, etc.
 #[derive(Debug, Clone, Hash, PartialEq, Eq, ScheduleLabel)]
-pub struct ProcessMessages;
+pub struct ReadOctetStrings;
 
-/// Clean up anything unnecessary. Runs during [NetworkPreUpdate].
+/// Clean up anything unnecessary.
 #[derive(Debug, Clone, Hash, PartialEq, Eq, ScheduleLabel)]
 pub struct NetworkPreUpdateCleanup;
 
-/// Runs during Bevy's `PostUpdate` and contains [SendPackets]
+/// Runs during Bevy's `PostUpdate` and deals with **sending data.**
 #[derive(Debug, Clone, Hash, PartialEq, Eq, ScheduleLabel)]
 pub struct NetworkPostUpdate;
 
 pub(super) fn network_post_update(world: &mut World) {
-    world.run_schedule(SendPackets);
+    world.run_schedule(WriteOctetStrings);
+    world.run_schedule(TransportSendPackets);
+    world.run_schedule(NetworkPostUpdateCleanup);
 }
 
-/// Sends packets to peers. Runs during [NetworkPostUpdate].
-/// Only visible inside the Stardust crate.
+/// Bevy systems data of any length to be sent over the network.
 #[derive(Debug, Clone, Hash, PartialEq, Eq, ScheduleLabel)]
-pub(crate) struct SendPackets;
+pub struct WriteOctetStrings;
+
+/// The transport layer fragments and sends packets over the network.
+/// 
+/// Only transport layer systems should be in here!
+#[derive(Debug, Clone, Hash, PartialEq, Eq, ScheduleLabel)]
+pub struct TransportSendPackets;
+
+/// Clean up anything unnecessary.
+#[derive(Debug, Clone, Hash, PartialEq, Eq, ScheduleLabel)]
+pub struct NetworkPostUpdateCleanup;

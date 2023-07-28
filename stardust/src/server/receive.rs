@@ -3,7 +3,7 @@ use bevy::{prelude::{Resource, Res, Entity, World}, ecs::system::SystemParam};
 use crate::shared::{channel::{Channel, ChannelId}, protocol::Protocol, receive::Payloads};
 
 /// Data from all channels.
-#[derive(Resource)]
+#[derive(Resource, Default)]
 pub(super) struct AllChannelData(pub(crate) BTreeMap<ChannelId, ChannelData>);
 impl AllChannelData {
     /// Gets all messages from all clients sent over the channel.

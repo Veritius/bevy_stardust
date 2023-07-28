@@ -2,7 +2,7 @@ use std::{marker::PhantomData, collections::BTreeMap};
 use bevy::{prelude::*, ecs::system::SystemParam};
 use crate::shared::{channel::{Channel, ChannelId}, protocol::Protocol, receive::Payloads};
 
-#[derive(Resource)]
+#[derive(Resource, Default)]
 pub(super) struct AllChannelData(pub(crate) BTreeMap<ChannelId, Payloads>);
 
 impl AllChannelData {
