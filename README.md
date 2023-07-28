@@ -24,3 +24,4 @@ Stardust is a networking crate built for, and tightly integrated into Bevy's arc
 - Error checking
 - Compression
 - Encryption
+- `bevy_mod_scripting` support
