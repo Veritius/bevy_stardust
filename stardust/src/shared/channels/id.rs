@@ -20,6 +20,15 @@ impl ManualBitSerialisation for ChannelId {
     }
 }
 
+impl TryFrom<&[u8]> for ChannelId {
+    type Error = ();
+
+    fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
+        if value.len() != 3 { return Err(()); }
+        Ok(Self(value.try_into().unwrap()))
+    }
+}
+
 impl From<u32> for ChannelId {
     fn from(value: u32) -> Self {
         if value > CHANNEL_ID_LIMIT { panic!("Can't create a channel ID with a value") }

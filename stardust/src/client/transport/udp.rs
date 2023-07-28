@@ -1,11 +1,9 @@
 //! Native UDP transport layer for clients.
 
 use bevy::prelude::*;
-use crate::shared::{
-    scheduling::{TransportReadPackets, TransportSendPackets},
-    protocol::Protocol
-};
+use crate::shared::scheduling::{TransportReadPackets, TransportSendPackets};
 
+/// A simple transport layer over native UDP sockets.
 pub struct ClientUdpTransportPlugin;
 impl Plugin for ClientUdpTransportPlugin {
     fn build(&self, app: &mut App) {
@@ -15,13 +13,13 @@ impl Plugin for ClientUdpTransportPlugin {
 }
 
 fn receive_packets_system(
-    protocol: Res<Protocol>,
+    
 ) {
 
 }
 
 fn send_packets_system(
-    protocol: Res<Protocol>,
+    
 ) {
 
 }

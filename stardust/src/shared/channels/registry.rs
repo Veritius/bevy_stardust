@@ -32,6 +32,11 @@ impl ChannelRegistry {
         Some((channel_id, entity))
     }
 
+    /// Gets the ID of an entity used to store channel configuration data.
+    pub fn get_from_id(&self, id: ChannelId) -> Option<Entity> {
+        self.entity_map.get(&id).cloned()
+    }
+
     /// Returns how many channels currently exist.
     pub fn channel_count(&self) -> u32 {
         self.channel_count
