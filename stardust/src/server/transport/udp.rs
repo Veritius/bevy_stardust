@@ -77,11 +77,9 @@ fn receive_packets_system(
     let mut sorted: BTreeMap<ChannelId, Vec<(Entity, Box<[u8]>)>> = BTreeMap::new();
 
     // Sort into channels for processing
-    loop {
-        if client_packets.len() == 0 { break; }
+    while client_packets.len() != 0 {
         let mut pg = client_packets.pop().unwrap();
-        loop {
-            if pg.len() == 0 { break; }
+        while pg.len() != 0 {
             let (client, channel, payload) = pg.pop().unwrap();
             let v = sorted.entry(channel).or_insert(Vec::with_capacity(1));
             v.push((client, payload));
@@ -90,9 +88,7 @@ fn receive_packets_system(
 
     // Process all packets by channel
     let mut processed = pool.scope(|s| {
-        loop {
-            if sorted.len() == 0 { break; }
-
+        while sorted.len() != 0 {
             // Channel config
             let (channel_id, payloads) = sorted.pop_first().unwrap();
             let channel_ent = channel_registry.get_from_id(channel_id).unwrap();
