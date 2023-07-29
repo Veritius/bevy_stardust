@@ -4,3 +4,4 @@ pub mod receive;
 pub mod send;
 pub mod events;
 pub mod transport;
+pub mod connection;
