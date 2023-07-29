@@ -5,4 +5,3 @@ pub mod send;
 pub mod transport;
 
 mod systems;
-mod attempt;
