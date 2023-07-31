@@ -9,7 +9,7 @@ use bevy::prelude::*;
 use crate::shared::scheduling::{TransportReadPackets, TransportSendPackets};
 use self::{receiver::receive_packets_system, sender::send_packets_system, listener::TcpListenerServer};
 
-/// A simple transport layer over native UDP sockets.
+/// A simple transport layer over native UDP sockets, using TCP for a handshake.
 pub struct ServerUdpTransportPlugin {
     pub udp_port: u16,
     pub tcp_port: u16,

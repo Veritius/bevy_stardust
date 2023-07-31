@@ -32,11 +32,12 @@ impl ChannelRegistry {
         Some((channel_id, entity))
     }
 
-    /// Gets the ID of an entity used to store channel configuration data.
+    /// Gets the ID of the entity used to store channel configuration data.
     pub fn get_from_id(&self, id: ChannelId) -> Option<Entity> {
         self.entity_map.get(&id).cloned()
     }
 
+    /// Returns whether the channel exists.
     pub fn channel_exists(&self, id: ChannelId) -> bool {
         self.entity_map.contains_key(&id)
     }

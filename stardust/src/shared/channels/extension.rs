@@ -4,16 +4,16 @@ use super::{id::Channel, components::{ChannelData, ChannelConfig}, registry::Cha
 
 pub trait ChannelSetupAppExt {
     /// Registers a channel with type `T` and the config and components given.
-    fn register_channel<T: Channel>(&mut self, config: ChannelConfig, comps: impl Bundle);
+    fn register_channel<T: Channel>(&mut self, config: ChannelConfig, components: impl Bundle);
 }
 
 impl ChannelSetupAppExt for App {
     fn register_channel<T: Channel>(
         &mut self,
         config: ChannelConfig,
-        comps: impl Bundle
+        components: impl Bundle,
     ) {
-        let entity_id = self.world.spawn(comps).id();
+        let entity_id = self.world.spawn(components).id();
         let mut registry = self.world.resource_mut::<ChannelRegistry>();
         let channel_id = registry.register_channel::<T>(entity_id);
         
