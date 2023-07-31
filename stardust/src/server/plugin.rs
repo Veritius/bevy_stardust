@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use super::{receive::AllChannelData, connection::{TryDisconnectEvent, PlayerConnectedEvent, PlayerDisconnectedEvent}};
+use super::connection::{TryDisconnectEvent, PlayerConnectedEvent, PlayerDisconnectedEvent};
 
 pub struct StardustServerPlugin;
 
@@ -8,7 +8,5 @@ impl Plugin for StardustServerPlugin {
         app.add_event::<TryDisconnectEvent>();
         app.add_event::<PlayerConnectedEvent>();
         app.add_event::<PlayerDisconnectedEvent>();
-
-        app.insert_resource(AllChannelData::default());
     }
 }

@@ -1,3 +1,5 @@
+use super::octetstring::OctetString;
+
 /// All [Payload] for a channel. If the channel this originated from is ordered, the [Payload]s will be in order.
 pub struct Payloads(pub(crate) Box<[Payload]>);
 
@@ -5,13 +7,14 @@ pub struct Payloads(pub(crate) Box<[Payload]>);
 pub struct Payload {
     pub(crate) ignore_head: usize,
     pub(crate) ignore_tail: usize,
-    pub(crate) data: Box<[u8]>,
+    pub(crate) data: OctetString,
 }
 
 impl Payload {
     /// Gives access to the relevant octets of the message.
     pub fn read(&self) -> &[u8] {
-        let len = self.data.len();
-        &self.data[self.ignore_head-1..len - self.ignore_tail]
+        let data = self.data.as_slice();
+        let len = data.len();
+        &data[self.ignore_head-1..len - self.ignore_tail]
     }
 }

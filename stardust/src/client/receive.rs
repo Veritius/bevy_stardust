@@ -1,26 +1,22 @@
-use std::{marker::PhantomData, collections::BTreeMap};
+use std::marker::PhantomData;
 use bevy::{prelude::*, ecs::system::SystemParam};
-use crate::shared::{channels::{registry::ChannelRegistry, id::{Channel, ChannelId}}, receive::Payloads};
-
-#[derive(Resource, Default)]
-pub(super) struct AllChannelData(pub(crate) BTreeMap<ChannelId, Payloads>);
-
-impl AllChannelData {
-    pub fn get(&self, channel: ChannelId) -> Option<&Payloads> {
-        self.0.get(&channel)
-    }
-}
+use crate::shared::{channels::{registry::ChannelRegistry, id::Channel}, receive::Payloads, messages::receive::IncomingNetworkMessages};
+use super::peers::Server;
 
 /// Added to a Bevy system to read network messages over channel `T`.
 #[derive(SystemParam)]
-pub struct ChannelReader<'w, T: Channel> {
-    store: Res<'w, AllChannelData>,
+pub struct ChannelReader<'w, 's, T: Channel> {
+    server: Query<'w, 's, &'static IncomingNetworkMessages, With<Server>>,
     channel_registry: Res<'w, ChannelRegistry>,
     phantom: PhantomData<T>,
 }
 
-impl<'w, T: Channel> ChannelReader<'w, T> {
-    pub fn read(&self) -> Option<&Payloads> {
-        todo!()
+impl<'w, 's, T: Channel> ChannelReader<'w, 's, T> {
+    pub fn read_from_server(&self) -> Option<&Payloads> {
+        let val = &self.channel_registry.get_from_type::<T>();
+        if val.is_none() { return None; }
+        self.server
+            .single()
+            .0.get(&val.unwrap().0)
     }
 }
