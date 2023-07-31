@@ -1,5 +1,7 @@
 use std::any::TypeId;
 use bevy::prelude::*;
+use crate::shared::messages::send::OutgoingOctetStrings;
+
 use super::{id::Channel, components::{ChannelData, ChannelConfig}, registry::ChannelRegistry};
 
 pub trait ChannelSetupAppExt {
@@ -16,6 +18,8 @@ impl ChannelSetupAppExt for App {
         let entity_id = self.world.spawn(components).id();
         let mut registry = self.world.resource_mut::<ChannelRegistry>();
         let channel_id = registry.register_channel::<T>(entity_id);
+
+        self.insert_resource(OutgoingOctetStrings::<T>::default());
         
         let type_id = TypeId::of::<T>();
         self.world.entity_mut(entity_id).insert(ChannelData {

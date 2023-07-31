@@ -1,3 +1,4 @@
+use std::collections::BTreeMap;
 use bevy::{prelude::*, tasks::TaskPool};
 use crate::{shared::{channels::{id::ChannelId, components::*, registry::ChannelRegistry}, messages::receive::IncomingNetworkMessages}, server::clients::Client};
 use super::{PACKET_HEADER_SIZE, MAX_PACKET_LENGTH, UdpClient};
@@ -15,11 +16,11 @@ pub(super) fn receive_packets_system(
     let channel_registry = &channel_registry;
 
     // Receive packets from connected clients
-    let mut client_packets = pool.scope(|s| {
+    pool.scope(|s| {
         for (client_id, _, client_udp, client_incoming) in clients.iter_mut() {
             let client_id = client_id.clone();
             s.spawn(async move {
-                let mut packets = vec![];
+                let mut map = BTreeMap::new();
                 let mut buffer = [0u8; MAX_PACKET_LENGTH];
 
                 // Read all packets
@@ -39,16 +40,12 @@ pub(super) fn receive_packets_system(
                             packet.push(buffer[i]);
                         }
 
-                        // Insert packet data
-                        packets.push((channel_id, packet.into_boxed_slice()));
+                        map.entry(channel_id).or_insert(Vec::with_capacity(1)).push(packet);
                     } else {
                         // We're done reading packets
                         break;
                     }
                 }
-
-                // Return packets
-                packets
             });
         }
     });

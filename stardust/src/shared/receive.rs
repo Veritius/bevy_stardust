@@ -1,7 +1,7 @@
 use super::octetstring::OctetString;
 
-/// All [Payload] for a channel. If the channel this originated from is ordered, the [Payload]s will be in order.
-pub struct Payloads(pub(crate) Box<[Payload]>);
+/// All [Payload] objects for a channel. If the channel this originated from is ordered, the [Payload]s will be in order.
+pub struct Payloads(pub Box<[Payload]>);
 
 /// A single network message sent over a channel, free of any additional transmission information when read.
 pub struct Payload {
