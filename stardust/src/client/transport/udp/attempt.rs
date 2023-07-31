@@ -1,5 +1,4 @@
 use std::{sync::mpsc::{Receiver, self}, net::SocketAddr, thread::{JoinHandle, self}};
-
 use crate::client::connection::ConnectionRejectionReason;
 
 /// A running attempt to connect to a remote server.

@@ -34,7 +34,7 @@ pub(super) fn network_post_update(world: &mut World) {
     world.run_schedule(NetworkPostUpdateCleanup);
 }
 
-/// Bevy systems data of any length to be sent over the network.
+/// Bevy systems write octet strings to be sent over the network.
 #[derive(Debug, Clone, Hash, PartialEq, Eq, ScheduleLabel)]
 pub struct WriteOctetStrings;
 

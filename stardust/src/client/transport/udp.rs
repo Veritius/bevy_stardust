@@ -1,11 +1,12 @@
 //! Native UDP transport layer for clients.
 
-mod packets;
+mod receiver;
+mod sender;
 mod attempt;
 
 use bevy::prelude::{Plugin, App};
 use crate::shared::scheduling::{TransportReadPackets, TransportSendPackets};
-use self::packets::{receive_packets_system, send_packets_system};
+use self::{receiver::receive_packets_system, sender::send_packets_system};
 
 /// A simple transport layer over native UDP sockets.
 pub struct ClientUdpTransportPlugin;

@@ -1,4 +1,4 @@
-pub type Octet = u8;
+use super::octetstring::Octet;
 
 /// The default writer allocation amount, in bytes.
 const DEFAULT_WRITER_ALLOCATION: usize = 256;
