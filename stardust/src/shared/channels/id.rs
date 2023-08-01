@@ -29,17 +29,21 @@ impl TryFrom<&[u8]> for ChannelId {
     }
 }
 
-impl From<u32> for ChannelId {
-    fn from(value: u32) -> Self {
-        if value > CHANNEL_ID_LIMIT { panic!("Can't create a channel ID with a value") }
+impl TryFrom<u32> for ChannelId {
+    type Error = ();
+
+    fn try_from(value: u32) -> Result<Self, Self::Error> {
+        if value > CHANNEL_ID_LIMIT { return Err(())}
         let [_, a, b, c] = value.to_be_bytes();
-        Self([a, b, c])
+        Ok(Self([a, b, c]))
     }
 }
 
-impl From<usize> for ChannelId {
-    fn from(value: usize) -> Self {
-        ChannelId::from(value as u32)
+impl TryFrom<usize> for ChannelId {
+    type Error = ();
+
+    fn try_from(value: usize) -> Result<Self, Self::Error> {
+        ChannelId::try_from(value as u32)
     }
 }
 
