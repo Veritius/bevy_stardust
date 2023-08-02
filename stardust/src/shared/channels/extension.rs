@@ -1,7 +1,6 @@
 use std::any::TypeId;
 use bevy::prelude::*;
 use crate::shared::messages::send::OutgoingOctetStrings;
-
 use super::{id::Channel, components::{ChannelData, ChannelConfig}, registry::ChannelRegistry};
 
 pub trait ChannelSetupAppExt {

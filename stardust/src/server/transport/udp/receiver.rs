@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 use bevy::{prelude::*, tasks::TaskPool};
-use crate::{shared::{channels::{id::ChannelId, components::*, registry::ChannelRegistry}, messages::receive::IncomingNetworkMessages}, server::clients::Client};
+use crate::{shared::{channels::{id::ChannelId, components::*, registry::ChannelRegistry}, messages::receive::IncomingNetworkMessages, receive::{Payload, Payloads}}, server::clients::Client};
 use super::{PACKET_HEADER_SIZE, MAX_PACKET_LENGTH, UdpClient};
 
 pub(super) fn receive_packets_system(
@@ -16,7 +16,7 @@ pub(super) fn receive_packets_system(
     let channel_registry = &channel_registry;
 
     // Receive packets from connected clients
-    pool.scope(|s| {
+    let outputs = pool.scope(|s| {
         for (client_id, _, client_udp, client_incoming) in clients.iter_mut() {
             let client_id = client_id.clone();
             s.spawn(async move {
@@ -46,7 +46,28 @@ pub(super) fn receive_packets_system(
                         break;
                     }
                 }
+
+                // Process map into Payloads
+                let mut nmap = BTreeMap::new();
+                while map.len() != 0 {
+                    let (cid, mut vec) = map.pop_first().unwrap();
+                    let payloads: Payloads = vec
+                        .drain(..)
+                        .map(|x| {
+                            Payload::new(0, 0, x) })
+                        .collect::<Vec<Payload>>()
+                        .into();
+                    nmap.insert(cid, payloads);
+                }
+
+                (client_id, nmap)
             });
         }
     });
+
+    // Write client data
+    for (client, map) in outputs {
+        let (_, _, _, mut data) = clients.get_mut(client).unwrap();
+        data.0 = map;
+    }
 }

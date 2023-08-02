@@ -7,8 +7,14 @@ pub trait Channel: std::fmt::Debug + Send + Sync + 'static {}
 impl<T: std::fmt::Debug + Send + Sync + 'static> Channel for T {}
 
 /// A unique 24-bit channel identifier.
-#[derive(Debug, Default, Clone, Copy, Hash, Reflect, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Copy, Hash, Reflect, PartialEq, Eq, PartialOrd, Ord)]
 pub struct ChannelId([u8;3]);
+
+impl std::fmt::Debug for ChannelId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_tuple("ChannelId").field(&Into::<u32>::into(self.clone())).finish()
+    }
+}
 
 impl ManualBitSerialisation for ChannelId {
     fn serialise(&self, writer: &mut impl BitWriter) {

@@ -11,7 +11,7 @@ pub struct ChannelData {
 }
 
 impl ChannelData {
-    /// Returns ChannelConfig.
+    /// Returns the `ChannelConfig` of this channel.
     pub fn config(&self) -> ChannelConfig {
         self.config
     }
@@ -27,8 +27,10 @@ impl ChannelData {
     }
 }
 
+/// Defines required channel information.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct ChannelConfig {
+    /// Defines the direction of the channel, discarding messages going in the wrong direction.
     pub direction: ChannelDirection,
 }
 

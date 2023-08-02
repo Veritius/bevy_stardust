@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 use bevy::prelude::*;
-use crate::shared::{serialisation::ManualBitSerialisation, channels::{extension::ChannelSetupAppExt, components::{ChannelConfig, ChannelDirection}}};
-use super::{config::{ComponentReplicationConfig, ReplicatedComponentData}, systems::{replication_send_system_reflected, replication_send_system_bitstream}, channel::ComponentReplicationChannel};
+use crate::shared::{serialisation::ManualBitSerialisation, channels::{extension::ChannelSetupAppExt, components::{ChannelConfig, ChannelDirection, ReliableChannel}}};
+use super::{config::{ComponentReplicationConfig, ReplicatedComponentData}, systems::{replication_send_system_reflected, replication_send_system_bitstream}};
 
 /// Enables replication for a component implementing `ManualBitSerialisation`.
 /// 
@@ -20,7 +20,9 @@ impl<T: Component + ManualBitSerialisation + std::fmt::Debug> ReplicateComponent
 
 impl<T: Component + ManualBitSerialisation + std::fmt::Debug> Plugin for ReplicateComponentPluginBitstream<T> {
     fn build(&self, app: &mut App) {
-        app.register_channel::<T>(ChannelConfig { direction: ChannelDirection::ServerToClient }, ());
+        app.register_channel::<T>(ChannelConfig {
+            direction: ChannelDirection::ServerToClient,
+        }, ReliableChannel);
 
         app.insert_resource(ReplicatedComponentData {
             config: self.config.clone(),
@@ -53,7 +55,9 @@ impl<T: Component + Reflect + std::fmt::Debug> ReplicateComponentPluginReflected
 
 impl<T: Component + Reflect + std::fmt::Debug> Plugin for ReplicateComponentPluginReflected<T> {
     fn build(&self, app: &mut App) {
-        app.register_channel::<T>(ChannelConfig { direction: ChannelDirection::ServerToClient }, ());
+        app.register_channel::<T>(ChannelConfig {
+            direction: ChannelDirection::ServerToClient,
+        }, ReliableChannel);
 
         app.insert_resource(ReplicatedComponentData {
             config: self.config.clone(),
