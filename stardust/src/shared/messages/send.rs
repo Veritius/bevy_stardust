@@ -22,8 +22,8 @@ impl<T: Channel> Default for OutgoingOctetStrings<T> {
 }
 
 impl<T: Channel> OutgoingOctetStrings<T> {
-    pub fn send(&mut self, target: SendTarget, octets: OctetString) {
-        self.octets.push(octets);
+    pub fn send(&mut self, target: SendTarget, octets: impl Into<OctetString>) {
+        self.octets.push(octets.into());
         let idx = self.octets.len() - 1;
         self.targets.push((target, idx));
     }
