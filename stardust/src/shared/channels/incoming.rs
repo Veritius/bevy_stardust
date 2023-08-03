@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 use bevy::prelude::*;
-use crate::shared::{channels::id::ChannelId, receive::Payloads};
+use crate::shared::{channels::id::ChannelId, payload::Payloads};
 
 /// Incoming messages from this remote peer.
 #[derive(Component)]

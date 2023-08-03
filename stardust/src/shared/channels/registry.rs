@@ -1,7 +1,6 @@
 use std::{collections::BTreeMap, any::TypeId, sync::{Arc, Mutex}};
 use bevy::prelude::{Resource, Entity};
-use crate::shared::messages::outgoing::{OutgoingOctetStrings, OutgoingOctetStringsUntyped};
-use super::id::{Channel, ChannelId, CHANNEL_ID_LIMIT};
+use super::{id::{Channel, ChannelId, CHANNEL_ID_LIMIT}, outgoing::OutgoingOctetStringsUntyped};
 
 #[derive(Resource)]
 pub struct ChannelRegistry {

@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 use bevy::{prelude::*, tasks::TaskPool};
-use crate::{shared::{channels::{id::ChannelId, components::*, registry::ChannelRegistry}, messages::incoming::IncomingNetworkMessages, receive::{Payload, Payloads}}, server::clients::Client};
+use crate::{server::clients::Client, shared::{channels::{components::*, incoming::IncomingNetworkMessages, registry::ChannelRegistry, id::ChannelId}, payload::{Payloads, Payload}}};
 use super::{PACKET_HEADER_SIZE, MAX_PACKET_LENGTH, UdpClient};
 
 pub(super) fn receive_packets_system(
