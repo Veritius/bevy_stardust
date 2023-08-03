@@ -1,11 +1,14 @@
 use std::{collections::BTreeMap, any::TypeId};
-use bevy::prelude::*;
+use bevy::prelude::{Resource, Entity};
+use crate::shared::messages::send::OutgoingOctetStrings;
+
 use super::id::{Channel, ChannelId, CHANNEL_ID_LIMIT};
 
 #[derive(Resource)]
 pub struct ChannelRegistry {
     channel_count: u32,
     channel_type_map: BTreeMap<TypeId, ChannelId>,
+    sender_type_map: BTreeMap<ChannelId, TypeId>,
     entity_map: BTreeMap<ChannelId, Entity>,
 }
 
@@ -18,6 +21,7 @@ impl ChannelRegistry {
         let type_id = TypeId::of::<T>();
         let channel_id = ChannelId::try_from(self.channel_count - 1).unwrap();
         self.channel_type_map.insert(type_id, channel_id);
+        self.sender_type_map.insert(channel_id, TypeId::of::<OutgoingOctetStrings<T>>());
         self.entity_map.insert(channel_id, entity);
         self.channel_count += 1;
 
@@ -37,6 +41,11 @@ impl ChannelRegistry {
         self.entity_map.get(&id).cloned()
     }
 
+    /// Gets the TypeId of the `OutgoingOctetStrings<T>` corresponding to `id`, used in transport layers.
+    pub fn get_outgoing_type_id_from_channel_id(&self, id: ChannelId) -> Option<TypeId> {
+        self.sender_type_map.get(&id).cloned()
+    }
+
     /// Returns whether the channel exists.
     pub fn channel_exists(&self, id: ChannelId) -> bool {
         self.entity_map.contains_key(&id)
@@ -53,6 +62,7 @@ impl Default for ChannelRegistry {
         Self {
             channel_count: 0,
             channel_type_map: BTreeMap::new(),
+            sender_type_map: BTreeMap::new(),
             entity_map: BTreeMap::new(),
         }
     }
