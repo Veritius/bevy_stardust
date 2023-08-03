@@ -1,6 +1,57 @@
-use std::{marker::PhantomData, sync::{Arc, Mutex}};
-use bevy::prelude::*;
+use std::{marker::PhantomData, sync::{Arc, Mutex, MutexGuard}, ops::Deref};
+use bevy::{prelude::*, ecs::system::SystemParam};
 use crate::shared::{octetstring::OctetString, channels::id::Channel};
+use super::{registry::ChannelRegistry, id::ChannelId};
+
+// TODO: This is pretty janky, clean it up a bit.
+
+/// SystemParam that allows accessing `OutgoingOctetStringsUntyped`
+#[derive(SystemParam)]
+pub struct OutgoingOctetStringsAccessor<'w> {
+    registry: Res<'w, ChannelRegistry>,
+}
+
+impl OutgoingOctetStringsAccessor<'_> {
+    /// Allows access to all channels and their outgoing octet strings.
+    pub fn all(&self) -> impl Iterator<Item = OutgoingOctetStringAccessorItem> + '_ {
+        struct OutgoingOctetStringsAccessorIterator<'a> {
+            registry: &'a ChannelRegistry,
+            index: u32,
+        }
+
+        impl<'a> Iterator for OutgoingOctetStringsAccessorIterator<'a> {
+            type Item = OutgoingOctetStringAccessorItem;
+
+            fn next(&mut self) -> Option<Self::Item> {
+                let id = ChannelId::try_from(self.index);
+                if id.is_err() { return None; }
+                let id = id.unwrap();
+                let arc = self.registry.get_outgoing_arc(id)?.clone();
+                Some(OutgoingOctetStringAccessorItem { id, arc })
+            }
+        }
+
+        OutgoingOctetStringsAccessorIterator {
+            registry: &self.registry,
+            index: 0,
+        }
+    }
+}
+
+pub struct OutgoingOctetStringAccessorItem {
+    id: ChannelId,
+    arc: Arc<Mutex<OutgoingOctetStringsUntyped>>,
+}
+
+impl OutgoingOctetStringAccessorItem {
+    pub fn id(&self) -> ChannelId {
+        self.id
+    }
+
+    pub fn octets<'a> (&'a self) -> MutexGuard<'a, OutgoingOctetStringsUntyped> {
+        self.arc.lock().unwrap()
+    }
+}
 
 /// Used to write octet strings to remote peers. No associated type or channel information, and only accessible in `TransportSendPackets` for use by transport layers.
 /// 

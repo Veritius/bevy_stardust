@@ -1,4 +1,4 @@
-use bevy::{ecs::schedule::ScheduleLabel, prelude::World};
+use bevy::{ecs::schedule::ScheduleLabel, prelude::{World, Resource}};
 
 /// Runs during Bevy's PreUpdate and is used for receiving packets from peers and processing them.
 #[derive(Debug, Clone, Hash, PartialEq, Eq, ScheduleLabel)]
@@ -30,9 +30,16 @@ pub struct NetworkPostUpdate;
 
 pub(super) fn network_post_update(world: &mut World) {
     world.run_schedule(WriteOctetStrings);
+    
+    world.insert_resource(IsTransportSendPackets);
     world.run_schedule(TransportSendPackets);
+    world.remove_resource::<IsTransportSendPackets>();
+    
     world.run_schedule(NetworkPostUpdateCleanup);
 }
+
+#[derive(Resource)]
+pub(super) struct IsTransportSendPackets;
 
 /// Bevy systems write octet strings to be sent over the network.
 #[derive(Debug, Clone, Hash, PartialEq, Eq, ScheduleLabel)]
