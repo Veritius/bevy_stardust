@@ -6,7 +6,7 @@ use super::{id::{Channel, ChannelId, CHANNEL_ID_LIMIT}, outgoing::OutgoingOctetS
 pub struct ChannelRegistry {
     channel_count: u32,
     channel_type_map: BTreeMap<TypeId, ChannelId>,
-    sender_type_map: BTreeMap<ChannelId, Arc<Mutex<OutgoingOctetStringsUntyped>>>,
+    outgoing_arc_map: BTreeMap<ChannelId, Arc<Mutex<OutgoingOctetStringsUntyped>>>,
     entity_map: BTreeMap<ChannelId, Entity>,
 }
 
@@ -23,7 +23,7 @@ impl ChannelRegistry {
         let type_id = TypeId::of::<T>();
         let channel_id = ChannelId::try_from(self.channel_count - 1).unwrap();
         self.channel_type_map.insert(type_id, channel_id);
-        self.sender_type_map.insert(channel_id, untyped_store);
+        self.outgoing_arc_map.insert(channel_id, untyped_store);
         self.entity_map.insert(channel_id, entity);
         self.channel_count += 1;
 
@@ -52,6 +52,10 @@ impl ChannelRegistry {
     pub fn channel_count(&self) -> u32 {
         self.channel_count
     }
+
+    pub(super) fn get_outgoing_arc(&self, id: ChannelId) -> Option<Arc<Mutex<OutgoingOctetStringsUntyped>>> {
+        self.outgoing_arc_map.get(&id).cloned()
+    }
 }
 
 impl Default for ChannelRegistry {
@@ -59,7 +63,7 @@ impl Default for ChannelRegistry {
         Self {
             channel_count: 0,
             channel_type_map: BTreeMap::new(),
-            sender_type_map: BTreeMap::new(),
+            outgoing_arc_map: BTreeMap::new(),
             entity_map: BTreeMap::new(),
         }
     }
