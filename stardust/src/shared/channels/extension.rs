@@ -1,6 +1,6 @@
 use std::any::TypeId;
 use bevy::prelude::*;
-use crate::shared::messages::send::OutgoingOctetStrings;
+use crate::shared::messages::outgoing::{OutgoingOctetStrings, OutgoingOctetStringsUntyped};
 use super::{id::Channel, components::{ChannelData, ChannelConfig}, registry::ChannelRegistry};
 
 pub trait ChannelSetupAppExt {
@@ -9,24 +9,29 @@ pub trait ChannelSetupAppExt {
 }
 
 impl ChannelSetupAppExt for App {
-    fn register_channel<T: Channel>(
+    fn register_channel<C: Channel>(
         &mut self,
         config: ChannelConfig,
         components: impl Bundle,
     ) {
+        // Create config entity and get registry type
         let entity_id = self.world.spawn(components).id();
         let mut registry = self.world.resource_mut::<ChannelRegistry>();
-        let channel_id = registry.register_channel::<T>(entity_id);
 
-        self.insert_resource(OutgoingOctetStrings::<T>::default());
+        // Create storage location on heap and register channel to registry
+        let store = OutgoingOctetStringsUntyped::new();
+        let channel_id = registry.register_channel::<C>(entity_id, store.clone());
+        self.insert_resource(OutgoingOctetStrings::<C>::new(store));
         
-        let type_id = TypeId::of::<T>();
+        // Add config components
+        let type_id = TypeId::of::<C>();
         self.world.entity_mut(entity_id).insert(ChannelData {
             config,
             type_id,
             channel_id,
         });
         
-        trace!("Channel registered with ID {:?} on entity {:?}", channel_id, entity_id);
+        // Log addition at trace level
+        trace!("Channel registered with type ID {:?} on channel ID {:?} with config entity {:?} ", type_id, channel_id, entity_id);
     }
 }

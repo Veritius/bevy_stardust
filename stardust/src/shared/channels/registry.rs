@@ -1,19 +1,22 @@
-use std::{collections::BTreeMap, any::TypeId};
+use std::{collections::BTreeMap, any::TypeId, sync::{Arc, Mutex}};
 use bevy::prelude::{Resource, Entity};
-use crate::shared::messages::send::OutgoingOctetStrings;
-
+use crate::shared::messages::outgoing::{OutgoingOctetStrings, OutgoingOctetStringsUntyped};
 use super::id::{Channel, ChannelId, CHANNEL_ID_LIMIT};
 
 #[derive(Resource)]
 pub struct ChannelRegistry {
     channel_count: u32,
     channel_type_map: BTreeMap<TypeId, ChannelId>,
-    sender_type_map: BTreeMap<ChannelId, TypeId>,
+    sender_type_map: BTreeMap<ChannelId, Arc<Mutex<OutgoingOctetStringsUntyped>>>,
     entity_map: BTreeMap<ChannelId, Entity>,
 }
 
 impl ChannelRegistry {
-    pub(super) fn register_channel<T: Channel>(&mut self, entity: Entity) -> ChannelId {
+    pub(super) fn register_channel<T: Channel>(
+        &mut self,
+        entity: Entity,
+        untyped_store: Arc<Mutex<OutgoingOctetStringsUntyped>>
+    ) -> ChannelId {
         if self.channel_count >= CHANNEL_ID_LIMIT {
             panic!("Exceeded channel limit of 2^24 (how did you manage to do this?)");
         }
@@ -21,7 +24,7 @@ impl ChannelRegistry {
         let type_id = TypeId::of::<T>();
         let channel_id = ChannelId::try_from(self.channel_count - 1).unwrap();
         self.channel_type_map.insert(type_id, channel_id);
-        self.sender_type_map.insert(channel_id, TypeId::of::<OutgoingOctetStrings<T>>());
+        self.sender_type_map.insert(channel_id, untyped_store);
         self.entity_map.insert(channel_id, entity);
         self.channel_count += 1;
 
@@ -39,11 +42,6 @@ impl ChannelRegistry {
     /// Gets the ID of the entity used to store channel configuration data.
     pub fn get_from_id(&self, id: ChannelId) -> Option<Entity> {
         self.entity_map.get(&id).cloned()
-    }
-
-    /// Gets the TypeId of the `OutgoingOctetStrings<T>` corresponding to `id`, used in transport layers.
-    pub fn get_outgoing_type_id_from_channel_id(&self, id: ChannelId) -> Option<TypeId> {
-        self.sender_type_map.get(&id).cloned()
     }
 
     /// Returns whether the channel exists.
