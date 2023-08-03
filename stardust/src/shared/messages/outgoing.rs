@@ -64,6 +64,9 @@ impl<T: Channel> OutgoingOctetStrings<T> {
         }
     }
 
+    /// Sends `octets to `target` over channel `T`
+    /// 
+    /// This function intentionally requires `&mut self`, even when it isn't technically necessary, to prevent issues with Bevy's scheduler.
     pub fn send(&mut self, target: SendTarget, octets: impl Into<OctetString>) {
         self.internal.lock().unwrap().send(target, octets);
     }
