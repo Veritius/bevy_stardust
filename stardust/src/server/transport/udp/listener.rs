@@ -1,8 +1,11 @@
 use std::{net::{TcpListener, TcpStream, SocketAddr}, sync::{mpsc::{Receiver, self}, Arc, Mutex}, time::Duration, io::{Read, BufRead, Write}, thread};
 use bevy::prelude::{Resource, info};
-use self::error::json_error;
+use json::JsonValue;
 
-mod error;
+use self::responses::respond_with_code;
+
+mod responses;
+mod join;
 
 /// Maximum mistakes a client can make before they are terminated.
 const HICCUP_DISCONNECT_THRESHOLD: u8 = 12;
@@ -46,8 +49,8 @@ impl TcpListenerServer {
 
                     // Respond with packet and mutate client obj
                     match json {
-                        Ok(json) => todo!(),
-                        Err(err) => { json_error(client, err) },
+                        Ok(json) => { request_type(client, json) },
+                        Err(_) => { respond_with_code(client, 200) },
                     }
 
                     if client.hiccups > HICCUP_DISCONNECT_THRESHOLD {
@@ -75,4 +78,16 @@ enum WaitingState {
 #[derive(Debug, Clone, PartialEq, Eq)]
 enum TcpListenerMessage {
     ClientAccepted(SocketAddr),
+}
+
+fn request_type(
+    client: &mut WaitingClient,
+    json: JsonValue,
+) {
+    match json["code"] {
+        JsonValue::Number(val) => {
+
+        },
+        _ => respond_with_code(client, 210),
+    }
 }
