@@ -24,7 +24,7 @@ Adding these plugins is required before any further setup, like adding channels.
 ### Channels
 Channels are used to compartmentalise network messages for better parallelism and to better suit the ECS design. They are primarily accessed using generic type APIs, though untyped APIs exist for use by transport layers. The generic type you use when creating the channel can then be used to refer back to it as a system parameter.
 
-Creating a channel is done with the `register_channel` function, which can be used on the `App`. `register_channel` has one generic type for your channel, and two arguments to configure it. The first argument is the same type for every channel, a `ChannelConfig`. The second argument is an `impl Bundle`, which is used to add components to an entity storing configuration data
+Creating a channel is done with the `register_channel` function, which can be used on the `App`. `register_channel` has one generic type for your channel, and two arguments to configure it. The first argument is the same type for every channel, a `ChannelConfig`. The second argument is an `impl Bundle`, which is used to add components to an entity storing configuration data.
 
 The second argument is a `Bundle` so components from external crates can be added if need be. These components are used by the transport layer to enable functionality like reliability and ordering. Note that adding a component does not ensure that the transport layer you have chosen does support that functionality.
 
