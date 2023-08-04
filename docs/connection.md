@@ -30,12 +30,12 @@ The JSON table **must** contain a key called `code`, with a number as the value.
     - Sent by the server to a client after `100` to deny their connection.
 - `122` CONNECTION_DENIED_FULL
     - Sent by the server to a client after `100` to deny their connection, indicating that there is no space for them to join.
-- `123` CONNECTION_DENIED_AUTH_FAIL
-    - Some kind of check in the server failed, and the server will not accept the client.
-    - The response table will have a field called `error`, which is a list of strings which can be processed by the client systems.
-    - The response table will have a field called `reason`, which should be shown directly to the client.
-- `124` CONNECTION_DENIED_CUSTOM
+- `123` CONNECTION_DENIED_CUSTOM
     - Arbitrary reason for denial. Response will have a `reason` field that should be shown to the client.
+- `200` INVALID_PACKET_JSON
+    - Packet could not be parsed into JSON.
+- `201` INVALID_PACKET_CODE
+    - Code didn't exist or didn't have the necessary fields.
 </details>
 
 <details>
