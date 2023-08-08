@@ -1,23 +1,23 @@
-use std::{net::{TcpListener, TcpStream, SocketAddr}, sync::{mpsc::{Receiver, self}, Arc, Mutex}, time::Duration, io::{Read, BufRead, Write}, thread, cell::OnceCell};
-use bevy::prelude::{Resource, info};
+use std::{net::{TcpListener, TcpStream, SocketAddr}, sync::{mpsc::{Receiver, self, Sender}, Arc, Mutex}, time::{Duration, Instant}, io::{Read, BufRead, Write}, thread, cell::OnceCell};
+use bevy::prelude::{Resource, info, error};
 use json::{JsonValue, object};
 use semver::{Version, VersionReq};
 
 const VERSION_REQ_STR: &'static str = "=0.0.1";
 const VERSION_REQ_CELL: OnceCell<VersionReq> = OnceCell::new();
-const MAX_HICCUPS: u16 = 16;
+const CONNECTION_TIME_CAP: Duration = Duration::from_secs(30);
 
 #[derive(Resource)]
 pub(super) struct TcpListenerServer(Arc<Mutex<Receiver<TcpListenerMessage>>>);
 
 impl TcpListenerServer {
     pub fn new(pid: u64, port: u16) -> Self {
-        let (sender, receiver) = mpsc::channel();
+        let (mut sender, receiver) = mpsc::channel();
         let handle = thread::spawn(move || {
             let listener = TcpListener::bind(format!("0.0.0.0:{}", port))
                 .expect("TCP listener could not bind to port");
 
-            let pid = format!("{:X}", pid);
+            let srv_pid = format!("{:X}", pid);
             let mut clients = Vec::new();
             
             loop {
@@ -32,8 +32,9 @@ impl TcpListenerServer {
 
                         clients.push(WaitingClient {
                             stream,
+                            connected: Instant::now(),
                             hiccups: 0,
-                            state: ClientState::WaitingInitial,
+                            shutdown: false,
                         });
                     }
                 }
@@ -44,9 +45,8 @@ impl TcpListenerServer {
                     if let Ok(bytes) = client.stream.read(&mut buffer) {
                         // Process into JSON
                         let str = String::from_utf8_lossy(&buffer[0..bytes]);
-                        let json = json::parse(&str);
 
-                        process_client(client, json)
+                        process_client(client, &mut sender, &srv_pid, &str);
                     }
                 }
             }
@@ -58,14 +58,27 @@ impl TcpListenerServer {
 
 struct WaitingClient {
     pub stream: TcpStream,
+    pub connected: Instant,
     pub hiccups: u16,
-    pub state: ClientState,
+    pub shutdown: bool,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-enum ClientState {
-    WaitingInitial,
-    Accepted,
+impl WaitingClient {
+    fn address(&self) -> SocketAddr {
+        self.stream.peer_addr().unwrap()
+    }
+
+    fn send_json(&mut self, json: JsonValue) {
+        let _ = self.stream.write(json.dump().as_bytes());
+        if let Err(err) = self.stream.flush() {
+            error!("Encountered error sending TCP packet to remote peer: {}", err);
+        };
+    }
+
+    fn send_json_and_close(&mut self, json: JsonValue) {
+        self.send_json(json);
+        self.shutdown = true;
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -75,18 +88,32 @@ enum TcpListenerMessage {
 
 fn process_client(
     client: &mut WaitingClient,
-    json: Result<JsonValue, json::Error>
+    sender: &mut Sender<TcpListenerMessage>,
+    srv_pid: &str,
+    data: &str,
 ) {
-    if json.is_err() { todo!() }
+    // Parse JSON
+    let json = json::parse(data);
+    if json.is_err() {
+        client.send_json(object! { "response": "retry" });
+        client.hiccups += 1;
+    }
+    
     let json = json.unwrap();
 
-    match client.state {
-        ClientState::WaitingInitial => {
-            let mut json_response = object!{};
-
-            let version = json["version"].as_str();
-            let pid = json["pid"].as_str();
-        },
-        ClientState::Accepted => panic!("Client was in Accepted state and was processed"),
+    // Check the version
+    if let Some(version) = json["version"].as_str() {
+        
+    } else {
+        client.send_json_and_close(object! { "response": "wrong_version", "range": "todo" });
     }
+
+    // Check the pid
+    if let Some(pid) = json["pid"].as_str() {
+
+    } else {
+        client.send_json_and_close(object! { "response": "wrong_pid", "srv_pid": srv_pid });
+    }
+
+    sender.send(TcpListenerMessage::ClientAccepted(client.address())).expect("Couldn't communicate over MPSC channel");
 }

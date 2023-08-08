@@ -36,17 +36,27 @@ impl_manual_be!(i128, 16);
 impl_manual_be!(f32, 4);
 impl_manual_be!(f64, 8);
 
+impl ManualBitSerialisation for bool {
+    fn serialise(&self, writer: &mut impl BitWriter) {
+        writer.write_bit(*self)
+    }
+
+    fn deserialise(reader: &mut impl BitReader) -> Result<Self, BitstreamError> {
+        reader.read_bit()
+    }
+}
+
 impl ManualBitSerialisation for String {
     fn serialise(&self, writer: &mut impl BitWriter) {
         let bytes = self.bytes();
-        let length = bytes.len() as u16;
+        let length = bytes.len() as u32;
         length.serialise(writer);
         writer.write_bytes(bytes);
     }
 
     fn deserialise(reader: &mut impl BitReader) -> Result<Self, BitstreamError> {
-        let length = u16::deserialise(reader)?;
-        let bytes = reader.read_bytes(length.into())?;
+        let length = u32::deserialise(reader)?;
+        let bytes = reader.read_bytes(length as usize)?;
         if let Ok(string) = String::from_utf8(bytes) {
             return Ok(string)
         } else {
