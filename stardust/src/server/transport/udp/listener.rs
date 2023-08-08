@@ -11,7 +11,8 @@ const MAX_HICCUPS: u16 = 4;
 pub struct TcpListenerServerConfig {
     pub pid: u64,
     pub game_ver: VersionReq,
-    pub port: u16,
+    pub udp_port: u16,
+    pub tcp_port: u16,
 }
 
 #[derive(Resource)]
@@ -23,7 +24,7 @@ impl TcpListenerServer {
         let handle = thread::spawn(move || {
             let config = config;
 
-            let listener = TcpListener::bind(format!("0.0.0.0:{}", config.port))
+            let listener = TcpListener::bind(format!("0.0.0.0:{}", config.tcp_port))
                 .expect("TCP listener could not bind to port");
 
             let srv_pid = format!("{:X}", config.pid);
@@ -152,6 +153,7 @@ fn process_client(
         return;
     }
 
+    client.send_json_and_close(object! { "response": "accepted", "port": config.udp_port });
     sender.send(TcpListenerMessage::ClientAccepted(client.address())).expect("Couldn't communicate over MPSC channel");
     info!("UDP client {}'s connection is accepted", client.address());
 }

@@ -44,8 +44,8 @@ The server will then check the `version` and `pid` values, and send an appropria
 { "response": "retry" }
 ```
 ```json
-// Player is accepted
-{ "response": "accepted" }
+// Player is accepted, UDP port is provided.
+{ "response": "accepted", "port": 12345 }
 ```
 ```json
 // Player is denied, no reason given.
