@@ -6,6 +6,7 @@ use semver::{Version, VersionReq};
 const VERSION_REQ_STR: &'static str = "=0.0.1";
 const VERSION_REQ_CELL: OnceCell<VersionReq> = OnceCell::new();
 const CONNECTION_TIME_CAP: Duration = Duration::from_secs(30);
+const MAX_HICCUPS: u16 = 4;
 
 #[derive(Resource)]
 pub(super) struct TcpListenerServer(Arc<Mutex<Receiver<TcpListenerMessage>>>);
@@ -19,6 +20,7 @@ impl TcpListenerServer {
 
             let srv_pid = format!("{:X}", pid);
             let mut clients = Vec::new();
+            let mut r_list = vec![];
             
             loop {
                 // Accept all incoming
@@ -41,13 +43,28 @@ impl TcpListenerServer {
 
                 // Process clients
                 let mut buffer = [0u8; 1500];
-                for client in clients.iter_mut() {
+                for (idx, client) in clients.iter_mut().enumerate() {
                     if let Ok(bytes) = client.stream.read(&mut buffer) {
                         // Process into JSON
                         let str = String::from_utf8_lossy(&buffer[0..bytes]);
-
                         process_client(client, &mut sender, &srv_pid, &str);
                     }
+
+                    // Disconnect clients if a shutdown is due
+                    if client.shutdown || client.hiccups > MAX_HICCUPS {
+                        use std::net::Shutdown;
+                        let _ = client.stream.shutdown(Shutdown::Both);
+                        r_list.push(idx);
+                    }
+                }
+
+                // Remove any disconnected clients from the list
+                if r_list.len() != 0 {
+                    for r in r_list.iter().rev() {
+                        clients.remove(*r);
+                    }
+                    r_list.clear();
+                    r_list.shrink_to_fit();
                 }
             }
         });
@@ -75,6 +92,11 @@ impl WaitingClient {
         };
     }
 
+    fn send_json_and_hiccup(&mut self, json: JsonValue) {
+        self.send_json(json);
+        self.hiccups += 1;
+    }
+
     fn send_json_and_close(&mut self, json: JsonValue) {
         self.send_json(json);
         self.shutdown = true;
@@ -86,6 +108,7 @@ enum TcpListenerMessage {
     ClientAccepted(SocketAddr),
 }
 
+// Quickly checks the client's data.
 fn process_client(
     client: &mut WaitingClient,
     sender: &mut Sender<TcpListenerMessage>,
@@ -95,25 +118,43 @@ fn process_client(
     // Parse JSON
     let json = json::parse(data);
     if json.is_err() {
-        client.send_json(object! { "response": "retry" });
-        client.hiccups += 1;
+        client.send_json_and_hiccup(object! { "response": "retry" });
+        return;
     }
-    
     let json = json.unwrap();
 
     // Check the version
+    fn quick_wrong_version(client: &mut WaitingClient) { client.send_json_and_close(object! { "response": "wrong_version", "range": VERSION_REQ_STR }); }
     if let Some(version) = json["version"].as_str() {
-        
+        if let Ok(version) = version.parse::<Version>() {
+            let cell = VERSION_REQ_CELL;
+            let req = cell.get_or_init(|| { VERSION_REQ_STR.parse::<VersionReq>().unwrap() });
+            // Invalid version
+            if !req.matches(&version) {
+                quick_wrong_version(client);
+                return;
+            }
+        } else {
+            quick_wrong_version(client);
+            return;
+        }
     } else {
-        client.send_json_and_close(object! { "response": "wrong_version", "range": "todo" });
+        quick_wrong_pid(client, srv_pid);
+        return;
     }
 
     // Check the pid
+    fn quick_wrong_pid(client: &mut WaitingClient, srv_pid: &str) { client.send_json_and_close(object! { "response": "wrong_pid", "srv_pid": srv_pid }); }
     if let Some(pid) = json["pid"].as_str() {
-
+        if pid != srv_pid {
+            quick_wrong_pid(client, srv_pid);
+            return;
+        }
     } else {
-        client.send_json_and_close(object! { "response": "wrong_pid", "srv_pid": srv_pid });
+        quick_wrong_pid(client, srv_pid);
+        return;
     }
 
     sender.send(TcpListenerMessage::ClientAccepted(client.address())).expect("Couldn't communicate over MPSC channel");
+    info!("UDP client {}'s connection is accepted", client.address());
 }
