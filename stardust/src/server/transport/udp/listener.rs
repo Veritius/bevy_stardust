@@ -8,17 +8,25 @@ const VERSION_REQ_CELL: OnceCell<VersionReq> = OnceCell::new();
 const CONNECTION_TIME_CAP: Duration = Duration::from_secs(30);
 const MAX_HICCUPS: u16 = 4;
 
+pub struct TcpListenerServerConfig {
+    pub pid: u64,
+    pub game_ver: VersionReq,
+    pub port: u16,
+}
+
 #[derive(Resource)]
 pub(super) struct TcpListenerServer(Arc<Mutex<Receiver<TcpListenerMessage>>>);
 
 impl TcpListenerServer {
-    pub fn new(pid: u64, port: u16) -> Self {
+    pub fn new(config: TcpListenerServerConfig) -> Self {
         let (mut sender, receiver) = mpsc::channel();
         let handle = thread::spawn(move || {
-            let listener = TcpListener::bind(format!("0.0.0.0:{}", port))
+            let config = config;
+
+            let listener = TcpListener::bind(format!("0.0.0.0:{}", config.port))
                 .expect("TCP listener could not bind to port");
 
-            let srv_pid = format!("{:X}", pid);
+            let srv_pid = format!("{:X}", config.pid);
             let mut clients = Vec::new();
             let mut r_list = vec![];
             
@@ -47,7 +55,7 @@ impl TcpListenerServer {
                     if let Ok(bytes) = client.stream.read(&mut buffer) {
                         // Process into JSON
                         let str = String::from_utf8_lossy(&buffer[0..bytes]);
-                        process_client(client, &mut sender, &srv_pid, &str);
+                        process_client(&config, client, &mut sender, &srv_pid, &str);
                     }
 
                     // Disconnect clients if a shutdown is due
@@ -110,6 +118,7 @@ enum TcpListenerMessage {
 
 // Quickly checks the client's data.
 fn process_client(
+    config: &TcpListenerServerConfig,
     client: &mut WaitingClient,
     sender: &mut Sender<TcpListenerMessage>,
     srv_pid: &str,
@@ -123,25 +132,13 @@ fn process_client(
     }
     let json = json.unwrap();
 
-    // Check the version
-    fn quick_wrong_version(client: &mut WaitingClient) { client.send_json_and_close(object! { "response": "wrong_version", "range": VERSION_REQ_STR }); }
-    if let Some(version) = json["version"].as_str() {
-        if let Ok(version) = version.parse::<Version>() {
-            let cell = VERSION_REQ_CELL;
-            let req = cell.get_or_init(|| { VERSION_REQ_STR.parse::<VersionReq>().unwrap() });
-            // Invalid version
-            if !req.matches(&version) {
-                quick_wrong_version(client);
-                return;
-            }
-        } else {
-            quick_wrong_version(client);
-            return;
-        }
-    } else {
-        quick_wrong_pid(client, srv_pid);
-        return;
-    }
+    // Check the layer version
+    let cell = VERSION_REQ_CELL;
+    let req = cell.get_or_init(|| { VERSION_REQ_STR.parse::<VersionReq>().unwrap() });
+    if !version_comparison(client, req, json["layer_version"].as_str(), "layer") { return };
+
+    // Check the game version
+    if !version_comparison(client, &config.game_ver, json["game_version"].as_str(), "game") { return };
 
     // Check the pid
     fn quick_wrong_pid(client: &mut WaitingClient, srv_pid: &str) { client.send_json_and_close(object! { "response": "wrong_pid", "srv_pid": srv_pid }); }
@@ -157,4 +154,34 @@ fn process_client(
 
     sender.send(TcpListenerMessage::ClientAccepted(client.address())).expect("Couldn't communicate over MPSC channel");
     info!("UDP client {}'s connection is accepted", client.address());
+}
+
+fn version_comparison(
+    client: &mut WaitingClient,
+    requirement: &VersionReq,
+    version: Option<&str>,
+    key: &str,
+) -> bool { // returns success
+    fn quick_wrong_version(client: &mut WaitingClient, key: &str, requirement: &VersionReq) {
+        let version = format!("wrong_{}_version", key);
+        let requirement = requirement.to_string();
+        client.send_json_and_close(object! { "response": version, "range": requirement });
+    }
+
+    if let Some(version) = version {
+        if let Ok(version) = version.parse::<Version>() {
+            if !requirement.matches(&version) {
+                quick_wrong_version(client, key, requirement);
+                return false;
+            }
+        } else {
+            quick_wrong_version(client, key, requirement);
+            return false;
+        }
+    } else {
+        quick_wrong_version(client, key, requirement);
+        return false;
+    }
+
+    return true;
 }

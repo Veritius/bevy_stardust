@@ -12,22 +12,32 @@ Once a TCP connection is established by the standard library, the client starts 
 ```json
 {
     // The version of the UDP transport layer
-    "version": "Stardust UDP v0.1.0",
+    "layer_version": "0.1.0",
+    // The version of your game
+    "game_version": "0.1.0",
     // The client's unique protocol hash
-    "pid": "D7799D37A7A9B082"
+    "protocol": "D7799D37A7A9B082"
 }
 ```
 
 The server will then check the `version` and `pid` values, and send an appropriate response.
 
 ```json
-// The version value is invalid
-{ "response": "wrong_version", "range": "=0.1.0" }
+// The layer version value is invalid
+{ "response": "wrong_layer_version", "range": "=0.1.0" }
+```
+```json
+// The game version value is invalid
+{ "response": "wrong_game_version", "range": "=0.1.0" }
 ```
 ```json
 // The pid value is incorrect
 // This pid value is random and exists only for example's sake
 { "response": "wrong_pid", "srv_pid": "D7799D37A7A9B082" }
+```
+```json
+// Too many players online
+{ "response": "at_capacity" }
 ```
 ```json
 // Something went wrong, the server requests the client to send the packet again

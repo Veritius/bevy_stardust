@@ -1,5 +1,4 @@
 use std::{sync::mpsc::{Receiver, self}, net::SocketAddr, thread::{JoinHandle, self}};
-use crate::client::connection::ConnectionRejectionReason;
 
 /// A running attempt to connect to a remote server.
 #[derive(Debug)]
@@ -14,12 +13,18 @@ pub(super) struct ConnectionAttempt {
 pub(super) enum ConnectionAttemptUpdate {
     /// The connection timed out.
     TimedOut,
-    /// The server rejected the client.
-    Rejected(ConnectionRejectionReason),
-    /// The server wants the client to wait for authentication to occur.
-    ServerWaitAuth,
     /// The server accepted the client.
     Accepted,
+    /// The server rejected the client for an unknown reason.
+    Rejected,
+    /// The server didn't recognise the client's version of the Stardust UDP transport layer.
+    WrongLayerVersion,
+    /// The game version was invalid
+    WrongGameVersion,
+    /// The pid value was invalid
+    WrongPid,
+    /// The server was at capacity
+    AtCapacity,
 }
 
 fn make_attempt(address: SocketAddr) -> ConnectionAttempt {

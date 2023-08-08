@@ -18,23 +18,3 @@ pub enum RemoteConnectionStatus {
 pub struct ConnectionManager<'w> {
     status: Res<'w, State<RemoteConnectionStatus>>,
 }
-
-/// The reason the server disconnected the client. This information is given voluntarily by the server.
-#[derive(Debug, Default, Clone, PartialEq, Eq)]
-pub enum ConnectionRejectionReason {
-    /// The server didn't give a reason.
-    #[default]
-    NoneGiven,
-
-    /// The server's protocol ID and the client's protocol ID were different.
-    BadProtocol,
-
-    /// The server's authentication system rejected the client.
-    AuthDenied,
-
-    /// The server was at the limit for connected clients.
-    PlayerCap,
-
-    /// The server returned a string.
-    Custom(String),
-}
