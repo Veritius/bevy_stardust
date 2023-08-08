@@ -7,7 +7,7 @@ mod sender;
 use std::net::UdpSocket;
 use bevy::prelude::*;
 use crate::shared::scheduling::{TransportReadPackets, TransportSendPackets};
-use self::{receiver::receive_packets_system, sender::send_packets_system, listener::TcpListenerServer};
+use self::{receiver::receive_packets_system, sender::send_packets_system};
 
 /// A simple transport layer over native UDP sockets, using TCP for a handshake.
 pub struct ServerUdpTransportPlugin {
@@ -22,7 +22,7 @@ impl Plugin for ServerUdpTransportPlugin {
     }
 
     fn finish(&self, app: &mut App) {
-        // app.insert_resource(TcpListenerServer::new(self.tcp_port));
+        
     }
 }
 
