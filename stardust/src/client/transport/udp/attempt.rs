@@ -79,37 +79,37 @@ pub(super) fn make_attempt(config: ConnectionAttemptConfig) -> ConnectionAttempt
                         match response {
                             "wrong_layer_version" => {
                                 let _ = sender.send(ConnectionAttemptResult::WrongLayerVersion);
-                                return;
+                                break;
                             },
                             "wrong_pid" => {
                                 let _ = sender.send(ConnectionAttemptResult::WrongPid);
-                                return;
+                                break;
                             },
                             "at_capacity" => {
                                 let _ = sender.send(ConnectionAttemptResult::ServerAtCapacity);
-                                return;
+                                break;
                             },
                             "retry" => todo!(),
                             "accepted" => {
                                 let _ = sender.send(ConnectionAttemptResult::Accepted);
-                                return;
+                                break;
                             },
                             "denied" => {
                                 let _ = sender.send(ConnectionAttemptResult::Rejected);
-                                return;
+                                break;
                             },
                             _ => {
                                 let _ = sender.send(ConnectionAttemptResult::BadServerResponse);
-                                return;
+                                break;
                             }
                         }
                     } else {
                         let _ = sender.send(ConnectionAttemptResult::BadServerResponse);
-                        return;
+                        break;
                     }
                 } else {
                     let _ = sender.send(ConnectionAttemptResult::BadServerResponse);
-                    return;
+                    break;
                 }
             }
         }
