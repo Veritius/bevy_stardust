@@ -1,4 +1,4 @@
-use std::{sync::mpsc::{Receiver, self}, net::{SocketAddr, TcpListener, TcpStream}, thread::{JoinHandle, self}, time::Duration, io::{ErrorKind, Write, Read}};
+use std::{sync::mpsc::{Receiver, self}, net::{SocketAddr, TcpListener, TcpStream, Shutdown}, thread::{JoinHandle, self}, time::Duration, io::{ErrorKind, Write, Read}};
 use json::object;
 use semver::Version;
 
@@ -113,6 +113,9 @@ pub(super) fn make_attempt(config: ConnectionAttemptConfig) -> ConnectionAttempt
                 }
             }
         }
+
+        // Cleanly shut down connection
+        let _ = tcp.shutdown(Shutdown::Both);
     });
 
     ConnectionAttempt {
