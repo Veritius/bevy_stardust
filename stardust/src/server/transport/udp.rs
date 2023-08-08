@@ -17,10 +17,12 @@ pub struct ServerUdpTransportPlugin {
 
 impl Plugin for ServerUdpTransportPlugin {
     fn build(&self, app: &mut App) {
-        app.insert_resource(TcpListenerServer::new(self.tcp_port));
-
         app.add_systems(TransportReadPackets, receive_packets_system);
         app.add_systems(TransportSendPackets, send_packets_system);
+    }
+
+    fn finish(&self, app: &mut App) {
+        // app.insert_resource(TcpListenerServer::new(self.tcp_port));
     }
 }
 
