@@ -10,7 +10,6 @@ const MAX_HICCUPS: u16 = 4;
 
 pub struct TcpListenerServerConfig {
     pub pid: u64,
-    pub game_ver: VersionReq,
     pub udp_port: u16,
     pub tcp_port: u16,
 }
@@ -137,10 +136,7 @@ fn process_client(
     let cell = VERSION_REQ_CELL;
     let req = cell.get_or_init(|| { VERSION_REQ_STR.parse::<VersionReq>().unwrap() });
     if !version_comparison(client, req, json["layer_version"].as_str(), "layer") { return };
-
-    // Check the game version
-    if !version_comparison(client, &config.game_ver, json["game_version"].as_str(), "game") { return };
-
+    
     // Check the pid
     fn quick_wrong_pid(client: &mut WaitingClient, srv_pid: &str) { client.send_json_and_close(object! { "response": "wrong_pid", "srv_pid": srv_pid }); }
     if let Some(pid) = json["pid"].as_str() {

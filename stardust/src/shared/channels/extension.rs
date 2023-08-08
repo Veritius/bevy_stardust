@@ -1,6 +1,6 @@
 use std::any::TypeId;
 use bevy::prelude::*;
-use crate::shared::channels::outgoing::{OutgoingOctetStringsUntyped, OutgoingOctetStrings};
+use crate::shared::{channels::outgoing::{OutgoingOctetStringsUntyped, OutgoingOctetStrings}, hashdiff::NetworkHashAppExt};
 use super::{id::Channel, components::{ChannelData, ChannelConfig}, registry::ChannelRegistry};
 
 pub trait ChannelSetupAppExt {
@@ -30,6 +30,9 @@ impl ChannelSetupAppExt for App {
             type_id,
             channel_id,
         });
+
+        // Change hash value
+        self.add_net_hash_value(type_id);
         
         // Log addition at trace level
         trace!("Channel registered with type ID {:?} on channel ID {:?} with config entity {:?} ", type_id, channel_id, entity_id);

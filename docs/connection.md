@@ -13,8 +13,6 @@ Once a TCP connection is established by the standard library, the client starts 
 {
     // The version of the UDP transport layer
     "layer_version": "0.1.0",
-    // The version of your game
-    "game_version": "0.1.0",
     // The client's unique protocol hash
     "protocol": "D7799D37A7A9B082"
 }
