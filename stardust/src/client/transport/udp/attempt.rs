@@ -1,4 +1,4 @@
-use std::{sync::mpsc::{Receiver, self}, net::{SocketAddr, TcpListener, TcpStream}, thread::{JoinHandle, self}, time::Duration, io::{ErrorKind, Write}};
+use std::{sync::mpsc::{Receiver, self}, net::{SocketAddr, TcpListener, TcpStream}, thread::{JoinHandle, self}, time::Duration, io::{ErrorKind, Write, Read}};
 use json::object;
 use semver::Version;
 
@@ -25,18 +25,18 @@ pub(super) enum ConnectionAttemptResult {
     TcpError,
     /// The connection timed out.
     TimedOut,
+    /// The server sent an invalid response.
+    BadServerResponse,
     /// The server accepted the client.
     Accepted,
     /// The server rejected the client for an unknown reason.
     Rejected,
     /// The server didn't recognise the client's version of the Stardust UDP transport layer.
     WrongLayerVersion,
-    /// The game version was invalid.
-    WrongGameVersion,
     /// The pid value was invalid.
     WrongPid,
     /// The server was at capacity.
-    AtCapacity,
+    ServerAtCapacity,
 }
 
 pub(super) fn make_attempt(config: ConnectionAttemptConfig) -> ConnectionAttempt {
@@ -67,6 +67,52 @@ pub(super) fn make_attempt(config: ConnectionAttemptConfig) -> ConnectionAttempt
         };
         let _ = tcp.write(initial_json.dump().as_bytes());
         let _ = tcp.flush();
+
+        // Wait for new packets
+        let mut buffer = [0u8; 1500];
+        loop {
+            if let Ok(bytes) = tcp.read(&mut buffer) {
+                let str = String::from_utf8_lossy(&buffer[0..bytes]);
+                let json = json::parse(&str);
+                if let Ok(json) = json {
+                    if let Some(response) = json["response"].as_str() {
+                        match response {
+                            "wrong_layer_version" => {
+                                let _ = sender.send(ConnectionAttemptResult::WrongLayerVersion);
+                                return;
+                            },
+                            "wrong_pid" => {
+                                let _ = sender.send(ConnectionAttemptResult::WrongPid);
+                                return;
+                            },
+                            "at_capacity" => {
+                                let _ = sender.send(ConnectionAttemptResult::ServerAtCapacity);
+                                return;
+                            },
+                            "retry" => todo!(),
+                            "accepted" => {
+                                let _ = sender.send(ConnectionAttemptResult::Accepted);
+                                return;
+                            },
+                            "denied" => {
+                                let _ = sender.send(ConnectionAttemptResult::Rejected);
+                                return;
+                            },
+                            _ => {
+                                let _ = sender.send(ConnectionAttemptResult::BadServerResponse);
+                                return;
+                            }
+                        }
+                    } else {
+                        let _ = sender.send(ConnectionAttemptResult::BadServerResponse);
+                        return;
+                    }
+                } else {
+                    let _ = sender.send(ConnectionAttemptResult::BadServerResponse);
+                    return;
+                }
+            }
+        }
     });
 
     ConnectionAttempt {

@@ -25,10 +25,6 @@ The server will then check the `version` and `pid` values, and send an appropria
 { "response": "wrong_layer_version", "range": "=0.1.0" }
 ```
 ```json
-// The game version value is invalid
-{ "response": "wrong_game_version", "range": "=0.1.0" }
-```
-```json
 // The pid value is incorrect
 // This pid value is random and exists only for example's sake
 { "response": "wrong_pid", "srv_pid": "D7799D37A7A9B082" }
