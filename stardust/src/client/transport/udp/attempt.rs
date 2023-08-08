@@ -1,8 +1,13 @@
-use std::{sync::mpsc::{Receiver, self}, net::{SocketAddr, TcpListener, TcpStream, Shutdown}, thread::{JoinHandle, self}, time::Duration, io::{ErrorKind, Write, Read}};
-use json::object;
+use std::{net::{SocketAddr, TcpStream, Shutdown}, thread::{self, JoinHandle}, time::{Duration, Instant}, io::{ErrorKind, Write, Read}};
+use json::{object, JsonValue};
 use semver::Version;
 
+/// The version of the transport layer.
 const LAYER_VERSION: Version = Version::new(0, 1, 0);
+/// Time before the TCP connection attempt stops.
+const TCP_TIMEOUT_DURATION: Duration = Duration::from_secs(15);
+/// Amount of time the client should wait for a server response before closing.
+const RESPONSE_TIMEOUT_DURATION: Duration = Duration::from_secs(15);
 
 #[derive(Debug)]
 pub(super) struct ConnectionAttemptConfig {
@@ -14,7 +19,7 @@ pub(super) struct ConnectionAttemptConfig {
 /// A running attempt to connect to a remote server.
 #[derive(Debug)]
 pub(super) struct ConnectionAttempt {
-    receiver: Receiver<ConnectionAttemptResult>,
+    handle: JoinHandle<ConnectionAttemptResult>,
     remote: SocketAddr,
 }
 
@@ -32,9 +37,9 @@ pub(super) enum ConnectionAttemptResult {
     /// The server rejected the client for an unknown reason.
     Rejected,
     /// The server didn't recognise the client's version of the Stardust UDP transport layer.
-    WrongLayerVersion,
+    WrongLayerVersion(Option<String>),
     /// The pid value was invalid.
-    WrongPid,
+    WrongPid(Option<String>),
     /// The server was at capacity.
     ServerAtCapacity,
 }
@@ -42,24 +47,21 @@ pub(super) enum ConnectionAttemptResult {
 pub(super) fn make_attempt(config: ConnectionAttemptConfig) -> ConnectionAttempt {
     let remote = config.target.clone();
 
-    let (sender, receiver) = mpsc::channel();
-    thread::spawn(move || {
+    let handle = thread::spawn(move || {
         // Move/clone some values
         let config = config;
-        let sender = sender;
 
-        // Create TCP listener
-        let tcp = TcpStream::connect_timeout(&config.target, Duration::from_secs(20));
+        // Create TCP stream
+        let tcp = TcpStream::connect_timeout(&config.target, TCP_TIMEOUT_DURATION);
         if tcp.as_ref().is_err_and(|e| e.kind() == ErrorKind::TimedOut) {
-            let _ = sender.send(ConnectionAttemptResult::TimedOut);
-            return;
+            return ConnectionAttemptResult::TimedOut
         }
         if tcp.as_ref().is_err() {
-            let _ = sender.send(ConnectionAttemptResult::TcpError);
-            return;
+            return ConnectionAttemptResult::TcpError
         }
         let mut tcp = tcp.unwrap();
 
+        // Send data about the client in JSON
         let initial_json = object! {
             "layer_version": LAYER_VERSION.to_string(),
             "game_version": config.version.to_string(),
@@ -67,6 +69,12 @@ pub(super) fn make_attempt(config: ConnectionAttemptConfig) -> ConnectionAttempt
         };
         let _ = tcp.write(initial_json.dump().as_bytes());
         let _ = tcp.flush();
+
+        // Used for timeout logic
+        let started = Instant::now();
+
+        // Used for return
+        let thread_response: ConnectionAttemptResult;
 
         // Wait for new packets
         let mut buffer = [0u8; 1500];
@@ -76,50 +84,68 @@ pub(super) fn make_attempt(config: ConnectionAttemptConfig) -> ConnectionAttempt
                 let json = json::parse(&str);
                 if let Ok(json) = json {
                     if let Some(response) = json["response"].as_str() {
+                        // Helper function
+                        fn get_string_from_json(json: JsonValue, key: &str) -> Option<String> {
+                            match json[key].as_str() {
+                                Some(s) => Some(s.to_string()),
+                                None => None,
+                            }
+                        }
+
+                        // Match response code
                         match response {
                             "wrong_layer_version" => {
-                                let _ = sender.send(ConnectionAttemptResult::WrongLayerVersion);
+                                let ver = get_string_from_json(json, "range");
+                                thread_response = ConnectionAttemptResult::WrongLayerVersion(ver);
                                 break;
                             },
                             "wrong_pid" => {
-                                let _ = sender.send(ConnectionAttemptResult::WrongPid);
+                                let pid = get_string_from_json(json, "srv_pid");
+                                thread_response = ConnectionAttemptResult::WrongPid(pid);
                                 break;
                             },
                             "at_capacity" => {
-                                let _ = sender.send(ConnectionAttemptResult::ServerAtCapacity);
+                                thread_response = ConnectionAttemptResult::ServerAtCapacity;
                                 break;
                             },
                             "retry" => todo!(),
                             "accepted" => {
-                                let _ = sender.send(ConnectionAttemptResult::Accepted);
+                                thread_response = ConnectionAttemptResult::Accepted;
                                 break;
                             },
                             "denied" => {
-                                let _ = sender.send(ConnectionAttemptResult::Rejected);
+                                thread_response = ConnectionAttemptResult::Rejected;
                                 break;
                             },
                             _ => {
-                                let _ = sender.send(ConnectionAttemptResult::BadServerResponse);
+                                thread_response = ConnectionAttemptResult::BadServerResponse;
                                 break;
                             }
                         }
                     } else {
-                        let _ = sender.send(ConnectionAttemptResult::BadServerResponse);
+                        thread_response = ConnectionAttemptResult::BadServerResponse;
                         break;
                     }
                 } else {
-                    let _ = sender.send(ConnectionAttemptResult::BadServerResponse);
+                    thread_response = ConnectionAttemptResult::BadServerResponse;
+                    break;
+                }
+            } else {
+                // Check for timeout
+                if started.elapsed() > RESPONSE_TIMEOUT_DURATION {
+                    thread_response = ConnectionAttemptResult::TimedOut;
                     break;
                 }
             }
         }
 
-        // Cleanly shut down connection
+        // Cleanly shut down connection and return
         let _ = tcp.shutdown(Shutdown::Both);
+        thread_response
     });
 
     ConnectionAttempt {
-        receiver,
+        handle,
         remote,
     }
 }
