@@ -32,7 +32,7 @@ impl ChannelSetupAppExt for App {
         });
 
         // Change hash value
-        self.add_net_hash_value(type_id);
+        self.add_net_hash_value(("channel", C::type_path()));
         
         // Log addition at trace level
         trace!("Channel registered with type ID {:?} on channel ID {:?} with config entity {:?} ", type_id, channel_id, entity_id);

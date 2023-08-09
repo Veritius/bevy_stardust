@@ -1,10 +1,10 @@
-use bevy::reflect::Reflect;
+use bevy::reflect::{Reflect, TypePath};
 use crate::shared::serialisation::{ManualBitSerialisation, BitWriter, BitReader, BitstreamError};
 
 pub(super) const CHANNEL_ID_LIMIT: u32 = 2u32.pow(24);
 
-pub trait Channel: std::fmt::Debug + Send + Sync + 'static {}
-impl<T: std::fmt::Debug + Send + Sync + 'static> Channel for T {}
+pub trait Channel: TypePath + std::fmt::Debug + Send + Sync + 'static {}
+impl<T: TypePath + std::fmt::Debug + Send + Sync + 'static> Channel for T {}
 
 /// A unique 24-bit channel identifier.
 #[derive(Clone, Copy, Hash, Reflect, PartialEq, Eq, PartialOrd, Ord)]

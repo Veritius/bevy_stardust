@@ -1,4 +1,4 @@
-use std::{marker::PhantomData, sync::{Arc, Mutex, MutexGuard}, ops::Deref};
+use std::{marker::PhantomData, sync::{Arc, Mutex, MutexGuard}};
 use bevy::{prelude::*, ecs::system::SystemParam};
 use crate::shared::{octetstring::OctetString, channels::id::Channel};
 use super::{registry::ChannelRegistry, id::ChannelId};

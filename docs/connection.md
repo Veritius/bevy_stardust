@@ -14,10 +14,10 @@ Once a TCP connection is established by the standard library, the client starts 
 
 ```mermaid
 sequenceDiagram
-    participant CU as Client's UDP socket
+    participant SU as Server's UDP socket
     participant ST as Server's TCP server
     participant CT as Client's TCP connection
-    participant SU as Server's UDP socket
+    participant CU as Client's UDP socket
 
     CT->>ST: Creates TCP connection
     CT->>ST: Sends its transport layer version and unique game ID

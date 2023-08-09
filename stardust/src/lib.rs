@@ -5,7 +5,7 @@ pub mod client;
 pub mod server;
 pub mod shared;
 
-pub mod replication;
+// pub mod replication; // ignore this for the time being
 
 mod impls;
 
