@@ -15,13 +15,15 @@ pub(super) fn receive_packets_system(
     let channels = &channels;
     let channel_registry = &channel_registry;
 
-    // Receive packets from connected clients
+    // Receive packets from clients in parallel
     let outputs = pool.scope(|s| {
         for (client_id, _, client_udp, client_incoming) in clients.iter_mut() {
             let client_id = client_id.clone();
             s.spawn(async move {
                 let mut map = BTreeMap::new();
                 let mut buffer = [0u8; MAX_PACKET_LENGTH];
+
+                let addr = client_udp.0.peer_addr().unwrap();
 
                 // Read all packets
                 loop {
