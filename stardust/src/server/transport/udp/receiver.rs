@@ -1,10 +1,26 @@
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, net::UdpSocket};
 use bevy::{prelude::*, tasks::TaskPool};
 use crate::{server::clients::Client, shared::{channels::{components::*, incoming::IncomingNetworkMessages, registry::ChannelRegistry, id::ChannelId}, payload::{Payloads, Payload}}};
 use super::{PACKET_HEADER_SIZE, MAX_PACKET_LENGTH, UdpClient};
 
+/// Unfiltered socket for listening to UDP packets from unregistered peers.
+#[derive(Resource)]
+pub(super) struct UdpListener(pub UdpSocket);
+
+impl UdpListener {
+    pub fn new(port: u16) -> Self {
+        let socket = UdpSocket::bind(format!("0.0.0.0:{}", port))
+            .expect("Couldn't bind to port");
+        
+        socket.set_nonblocking(true).unwrap();
+
+        Self(socket)
+    }
+}
+
 pub(super) fn receive_packets_system(
     mut clients: Query<(Entity, &Client, &UdpClient, &mut IncomingNetworkMessages)>,
+    listener: Res<UdpListener>,
     channels: Query<(&ChannelData, Option<&OrderedChannel>, Option<&ReliableChannel>, Option<&FragmentedChannel>)>,
     channel_registry: Res<ChannelRegistry>,
 ) {
@@ -16,18 +32,18 @@ pub(super) fn receive_packets_system(
     let channel_registry = &channel_registry;
 
     // Receive packets from clients in parallel
-    let outputs = pool.scope(|s| {
+    let mut outputs = pool.scope(|s| {
         for (client_id, _, client_udp, client_incoming) in clients.iter_mut() {
             let client_id = client_id.clone();
             s.spawn(async move {
                 let mut map = BTreeMap::new();
                 let mut buffer = [0u8; MAX_PACKET_LENGTH];
 
-                let addr = client_udp.0.peer_addr().unwrap();
+                let addr = client_udp.address.clone();
 
                 // Read all packets
                 loop {
-                    if let Ok(octets) = client_udp.0.recv(&mut buffer) {
+                    if let Ok(octets) = client_udp.socket.recv(&mut buffer) {
                         // Discard packet, too small to be useful.
                         if octets <= 3 { continue; }
 
@@ -53,12 +69,11 @@ pub(super) fn receive_packets_system(
                 let mut nmap = BTreeMap::new();
                 while map.len() != 0 {
                     let (cid, mut vec) = map.pop_first().unwrap();
-                    let payloads: Payloads = vec
+                    let payloads = vec
                         .drain(..)
                         .map(|x| {
                             Payload::new(0, 0, x) })
-                        .collect::<Vec<Payload>>()
-                        .into();
+                        .collect::<Vec<Payload>>();
                     nmap.insert(cid, payloads);
                 }
 
@@ -68,8 +83,18 @@ pub(super) fn receive_packets_system(
     });
 
     // Write client data
-    for (client, map) in outputs {
-        let (_, _, _, mut data) = clients.get_mut(client).unwrap();
-        data.0 = map;
+    for (client, map) in outputs.iter_mut() {
+        let (_, _, _, mut data) = clients.get_mut(*client).unwrap();
+
+        let keys = map.keys().cloned().collect::<Vec<ChannelId>>();
+        let mut nmap = BTreeMap::new();
+        for key in keys {
+            let mut val = map.remove(&key).unwrap();
+            val.shrink_to_fit();
+            let val = val.into_boxed_slice();
+            nmap.insert(key, val.into());
+        }
+
+        data.0 = nmap;
     }
 }

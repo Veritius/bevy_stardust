@@ -21,19 +21,23 @@ pub(super) fn send_packets_system(
             s.spawn(async move {
                 // Access item fields and channel config
                 let channel = x.id();
+                let shifted = (channel + 1)
+                    .expect("Overran channel limit of (2^24)-1, imposed by the UDP transport layer");
+
                 let outgoing = x.octets();
+
                 let config = if let Some(entity) = registry.get_from_id(channel) {
                     channels.get(entity).unwrap()
                 } else {
                     // Channel doesn't exist, stop this thread
-                    error!("Message sent on nonexistent channel {:?}", channel);
+                    error!("Couldn't send message on channel {:?} as it didn't exist", channel);
                     return;
                 };
 
                 // Send all outgoing
                 let iterator = outgoing.read();
                 for (targets, octets) in iterator {
-                    let shifted = channel + 1;
+                    
                 }
             });
         }

@@ -9,7 +9,7 @@ pub trait Channel: TypePath + std::fmt::Debug + Send + Sync + 'static {}
 impl<T: TypePath + std::fmt::Debug + Send + Sync + 'static> Channel for T {}
 
 /// A unique 24-bit channel identifier. Internally a u32 for comparisons and performance.
-#[derive(Debug, Clone, Copy, Hash, Reflect, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Copy, Hash, Reflect, PartialEq, Eq, PartialOrd, Ord)]
 pub struct ChannelId(u32);
 
 impl ChannelId {
@@ -21,6 +21,12 @@ impl ChannelId {
     pub fn from_bytes(bytes: &[u8; 3]) -> Self {
         let [a, b, c] = *bytes;
         Self(u32::from_be_bytes([0, a, b, c]))
+    }
+}
+
+impl std::fmt::Debug for ChannelId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&format!("c{}", self.0))
     }
 }
 
