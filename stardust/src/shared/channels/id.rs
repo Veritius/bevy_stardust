@@ -1,3 +1,5 @@
+use std::ops::{Add, Sub};
+
 use bevy::reflect::{Reflect, TypePath};
 use crate::shared::serialisation::{ManualBitSerialisation, BitWriter, BitReader, BitstreamError};
 
@@ -39,5 +41,27 @@ impl TryFrom<u32> for ChannelId {
     fn try_from(value: u32) -> Result<Self, Self::Error> {
         if value > CHANNEL_ID_LIMIT { return Err(()); }
         Ok(Self(value))
+    }
+}
+
+impl Add<u32> for ChannelId {
+    type Output = Result<Self, ()>;
+
+    /// Adds `rhs` to the `ChannelId`'s value. Returns `Err(())` if the result would be greater than `2^24`.
+    fn add(self, rhs: u32) -> Self::Output {
+        let add = self.0.checked_add(rhs);
+        if add.is_none() { return Err(()); }
+        Self::try_from(add.unwrap())
+    }
+}
+
+impl Sub<u32> for ChannelId {
+    type Output = Result<Self, ()>;
+
+    /// Subtracts `rhs` from the `ChannelId`'s value. Returns `Err(())` if the result would be greater than `2^24` or the operation would underflow.
+    fn sub(self, rhs: u32) -> Self::Output {
+        let sub = self.0.checked_sub(rhs);
+        if sub.is_none() { return Err(()); }
+        Self::try_from(sub.unwrap())
     }
 }

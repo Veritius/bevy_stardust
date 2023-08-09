@@ -33,7 +33,7 @@ pub(super) fn send_packets_system(
                 // Send all outgoing
                 let iterator = outgoing.read();
                 for (targets, octets) in iterator {
-                    
+                    let shifted = channel + 1;
                 }
             });
         }
