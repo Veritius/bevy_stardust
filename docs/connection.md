@@ -9,6 +9,32 @@ UDP connection initially happens over TCP by transmitting JSON documents.
 
 Once a TCP connection is established by the standard library, the client starts by sending the version of the UDP transport layer, and a unique value that is used to verify that Stardust is configured identically on both the server and client.
 
+<details>
+<summary>Connection flowchart</summary>
+
+```mermaid
+sequenceDiagram
+    participant CU as Client's UDP socket
+    participant ST as Server's TCP server
+    participant CT as Client's TCP connection
+    participant SU as Server's UDP socket
+
+    CT->>ST: Creates TCP connection
+    CT->>ST: Sends its transport layer version and unique game ID
+    ST->>CT: Informs client of acceptance and its UDP port
+
+    alt Client's information is incorrect
+        ST->>CT: Server closes ST's connection with a reason
+    end
+
+    CT->>ST: Client creates a UDP socket and informs the server of the port
+```
+
+</details>
+
+<details>
+<summary>Packets in transaction</summary>
+
 ```json
 {
     // The version of the UDP transport layer
@@ -19,6 +45,24 @@ Once a TCP connection is established by the standard library, the client starts 
 ```
 
 The server will then check the `version` and `pid` values, and send an appropriate response.
+
+```json
+// The client's connection is accepted and the server sends the UDP port it uses.
+{ "response": "accepted", "port": 12345 }
+```
+
+All responses except `accepted` will have the server close the connection.
+
+If the response is acceptance, the client will send the UDP port it will use to communicate.
+
+```json
+{ "response": "udp_port", "port": 12345 }
+```
+</details>
+
+<details>
+<summary>Error responses</summary>
+These are the messages sent by the server to indicate a problem or non-acceptance
 
 ```json
 // The layer version value is invalid
@@ -38,12 +82,7 @@ The server will then check the `version` and `pid` values, and send an appropria
 { "response": "retry" }
 ```
 ```json
-// Player is accepted, UDP port is provided.
-{ "response": "accepted", "port": 12345 }
-```
-```json
 // Player is denied, no reason given.
 { "response": "denied" }
 ```
-
-After a response, the connection is closed.
+</details>
