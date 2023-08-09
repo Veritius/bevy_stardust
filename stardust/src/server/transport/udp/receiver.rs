@@ -32,7 +32,7 @@ pub(super) fn receive_packets_system(
                         if octets <= 3 { continue; }
 
                         // Get channel ID and check it exists
-                        let channel_id = ChannelId::try_from(&buffer[0..=3]).unwrap();
+                        let channel_id = ChannelId::from_bytes(&buffer[0..=3].try_into().unwrap());
                         if !channel_registry.channel_exists(channel_id) { break; }
 
                         // Copy octets from buffer
