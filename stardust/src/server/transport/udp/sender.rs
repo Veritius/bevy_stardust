@@ -21,8 +21,6 @@ pub(super) fn send_packets_system(
             s.spawn(async move {
                 // Access item fields and channel config
                 let channel = x.id();
-                let shifted = (channel + 1)
-                    .expect("Overran channel limit of (2^24)-1, imposed by the UDP transport layer");
 
                 let outgoing = x.octets();
 

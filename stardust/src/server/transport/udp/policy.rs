@@ -6,6 +6,4 @@ use bevy::prelude::*;
 pub struct BlockingPolicy {
     /// List of addresses to ignore.
     pub addresses: Vec<IpAddr>,
-    /// Ignore connections rather than telling them they're blocked.
-    pub ignore: bool,
 }

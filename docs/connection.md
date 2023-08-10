@@ -12,7 +12,7 @@ Each packet's header size is variable, but consistent based on a channel ID, whi
 
 #### All possible packet data
 **Channel ID (3 bytes)**<br>
-Stardust channels are `1` greater than their original value during transport. This is due to the fact that `0` is reserved for communication like clients requesting to join a server.
+Used to indicate other header data in the packet, and to correctly compartmentalise the channels.
 
 **Ack & ack bitfield (8 bytes)**<br>
 Always present to ensure the functionality of reliablity for the entire system, even if the packet is sent over an unreliable channel.

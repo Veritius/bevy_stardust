@@ -1,6 +1,6 @@
 //! Native UDP transport layer for servers.
 
-pub mod lists;
+pub mod policy;
 
 mod listener;
 mod receiver;
