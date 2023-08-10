@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, io::ErrorKind};
 use bevy::{prelude::*, tasks::TaskPool};
 use crate::{server::clients::Client, shared::{channels::{components::*, incoming::IncomingNetworkMessages, registry::ChannelRegistry, id::ChannelId}, payload::{Payloads, Payload}}};
 use super::{PACKET_HEADER_SIZE, MAX_PACKET_LENGTH, UdpClient};
@@ -27,28 +27,31 @@ pub(super) fn receive_packets_system(
 
                 // Read all packets
                 loop {
-                    if let Ok(octets) = client_udp.socket.recv(&mut buffer) {
-                        // Discard packet, too small to be useful.
-                        if octets <= 3 { continue; }
+                    // Check if we've run out of packets
+                    let octets = client_udp.socket.recv(&mut buffer);
+                    if octets.as_ref().is_err_and(|e| e.kind() == ErrorKind::WouldBlock) { break; }
+                    let octets = octets.unwrap();
 
-                        // Get channel ID and check it exists
-                        let channel_id = ChannelId::from_bytes(&buffer[0..=3].try_into().unwrap()) - 1;
-                        if channel_id.is_err() { continue; } // Channel ID is invalid
-                        let channel_id = channel_id.unwrap();
-                        if !channel_registry.channel_exists(channel_id) { break; } // Channel doesn't exist
+                    // Discard packet, too small to be useful.
+                    if octets <= 3 { continue; }
 
-                        // Copy octets from buffer
-                        let idx = octets - PACKET_HEADER_SIZE - 1;
-                        let mut packet = Vec::with_capacity(idx);
-                        for i in (PACKET_HEADER_SIZE + 1)..idx {
-                            packet.push(buffer[i]);
-                        }
+                    // Get channel ID and check it exists
+                    let channel_id = ChannelId::from_bytes(&buffer[0..=3].try_into().unwrap()) - 1;
+                    if channel_id.is_err() { continue; } // Channel ID is invalid
+                    let channel_id = channel_id.unwrap();
+                    if !channel_registry.channel_exists(channel_id) { break; } // Channel doesn't exist
 
-                        map.entry(channel_id).or_insert(Vec::with_capacity(1)).push(packet);
-                    } else {
-                        // We're done reading packets
-                        break;
+                    // Copy octets from buffer
+                    let idx = octets - PACKET_HEADER_SIZE - 1;
+                    let mut packet = Vec::with_capacity(idx);
+                    for i in (PACKET_HEADER_SIZE + 1)..idx {
+                        packet.push(buffer[i]);
                     }
+
+                    map
+                        .entry(channel_id)
+                        .or_insert(Vec::with_capacity(1))
+                        .push(packet);
                 }
 
                 // Process map into Payloads

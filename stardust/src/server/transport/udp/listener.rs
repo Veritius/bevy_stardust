@@ -1,5 +1,6 @@
-use std::net::UdpSocket;
+use std::{net::UdpSocket, io::ErrorKind};
 use bevy::prelude::*;
+use super::lists::BlockingPolicy;
 
 /// Unfiltered socket for listening to UDP packets from unregistered peers.
 #[derive(Resource)]
@@ -21,6 +22,12 @@ struct UdpUnregisteredClient;
 
 pub(super) fn udp_listener_system(
     listener: Res<UdpListener>,
+    policy: Res<BlockingPolicy>,
 ) {
-
+    let mut buffer = [0u8; 1500];
+    loop  {
+        let packet = listener.0.recv_from(&mut buffer);
+        if packet.as_ref().is_err_and(|e| e.kind() == ErrorKind::WouldBlock) { break; }
+        let (octets, addr) = packet.unwrap();
+    }
 }
