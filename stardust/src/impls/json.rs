@@ -3,11 +3,15 @@ use crate::shared::serialisation::{ManualBitSerialisation, BitWriter, BitReader,
 
 impl ManualBitSerialisation for JsonValue {
     fn serialise(&self, writer: &mut impl BitWriter) {
-        todo!()
+        let dumped = self.dump();
+        dumped.serialise(writer);
     }
 
     fn deserialise(reader: &mut impl BitReader) -> Result<Self, BitstreamError> {
-        todo!()
+        let json = String::deserialise(reader)?;
+        let json = json::parse(&json);
+        if json.is_err() { return Err(BitstreamError) }
+        Ok(json.unwrap())
     }
 }
 
