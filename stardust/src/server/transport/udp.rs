@@ -6,10 +6,15 @@ mod listener;
 mod receiver;
 mod sender;
 
-use std::net::{UdpSocket, SocketAddr};
+use std::{net::{UdpSocket, SocketAddr}, cell::LazyCell};
 use bevy::prelude::*;
+use semver::{Version, VersionReq};
 use crate::shared::{scheduling::{TransportReadPackets, TransportSendPackets}, hashdiff::UniqueNetworkHash};
 use self::{receiver::receive_packets_system, sender::send_packets_system, listener::{udp_listener_system, UdpListener}};
+
+pub static STARDUST_UDP_CURRENT_VERSION: Version = Version::new(0, 0, 0);
+pub static STARDUST_UDP_VERSION_RANGE: LazyCell<VersionReq> = LazyCell::new(|| STARDUST_UDP_VERSION_RANGE_STRING.parse().unwrap());
+pub static STARDUST_UDP_VERSION_RANGE_STRING: &'static str = "=0.0.0";
 
 /// A simple transport layer over native UDP sockets, using TCP for a handshake.
 pub struct ServerUdpTransportPlugin {

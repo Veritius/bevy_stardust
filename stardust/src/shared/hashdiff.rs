@@ -3,11 +3,20 @@ use bevy::prelude::*;
 /// A unique value generated when adding things like channels.
 /// This is used to compare two peers when connecting, to prevent different versions of the game from playing together.
 #[derive(Resource)]
-pub struct UniqueNetworkHash(pub(super) u64);
+pub struct UniqueNetworkHash {
+    pub(super) int: u64,
+    pub(super) hex: String,
+}
 
 impl UniqueNetworkHash {
-    pub fn inner(&self) -> u64 {
-        self.0
+    /// Returns the integer form of the network hash.
+    pub fn int(&self) -> u64 {
+        self.int
+    }
+
+    /// Returns the hexadecimal form of the network hash as a string.
+    pub fn hex(&self) -> &str {
+        &self.hex
     }
 }
 

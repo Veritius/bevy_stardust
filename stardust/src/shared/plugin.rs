@@ -24,7 +24,8 @@ impl Plugin for StardustSharedPlugin {
         
         // Finalize hash
         let hasher = app.world.remove_resource::<UniqueNetworkHasher>().unwrap();
-        let hash = hasher.0.finish();
-        app.world.insert_resource(UniqueNetworkHash(hash));
+        let int = hasher.0.finish();
+        let hex = format!("{:X}", int);
+        app.world.insert_resource(UniqueNetworkHash { int, hex });
     }
 }
