@@ -2,7 +2,7 @@ use std::{net::{UdpSocket, SocketAddr}, io::ErrorKind, time::Instant};
 use bevy::prelude::*;
 use semver::Version;
 use crate::shared::hashdiff::UniqueNetworkHash;
-use super::{policy::BlockingPolicy, STARDUST_UDP_VERSION_RANGE};
+use super::{policy::BlockingPolicy, STARDUST_UDP_VERSION_RANGE, get_udp_transport_layer_version_range};
 
 /// Unfiltered socket for listening to UDP packets from unregistered peers.
 #[derive(Resource)]
@@ -123,7 +123,7 @@ fn process_new_client(
 
     // Check version value
     if let Ok(ver) = ver.parse::<Version>() {
-        if !STARDUST_UDP_VERSION_RANGE.matches(&ver) {
+        if !get_udp_transport_layer_version_range().matches(&ver) {
             return None;
         }
     } else {
