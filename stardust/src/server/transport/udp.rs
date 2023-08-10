@@ -1,21 +1,24 @@
 //! Native UDP transport layer for servers.
 
+mod listener;
 mod receiver;
 mod sender;
 
 use std::net::{UdpSocket, SocketAddr};
 use bevy::prelude::*;
 use crate::shared::{scheduling::{TransportReadPackets, TransportSendPackets}, hashdiff::UniqueNetworkHash};
-use self::{receiver::{receive_packets_system, UdpListener}, sender::send_packets_system};
+use self::{receiver::receive_packets_system, sender::send_packets_system, listener::{udp_listener_system, UdpListener}};
 
 /// A simple transport layer over native UDP sockets, using TCP for a handshake.
 pub struct ServerUdpTransportPlugin {
-    pub port: u16,
+    pub listen_port: u16,
+    pub active_port: u16,
 }
 
 impl Plugin for ServerUdpTransportPlugin {
     fn build(&self, app: &mut App) {
-        app.insert_resource(UdpListener::new(self.port));
+        app.insert_resource(UdpListener::new(self.listen_port));
+        app.add_systems(TransportReadPackets, udp_listener_system);
         
         app.add_systems(TransportReadPackets, receive_packets_system);
         app.add_systems(TransportSendPackets, send_packets_system);
