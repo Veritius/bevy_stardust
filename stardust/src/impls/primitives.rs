@@ -46,6 +46,18 @@ impl ManualBitSerialisation for bool {
     }
 }
 
+impl ManualBitSerialisation for usize {
+    fn serialise(&self, writer: &mut impl BitWriter) {
+        let n = *self as u64;
+        n.serialise(writer);
+    }
+
+    fn deserialise(reader: &mut impl BitReader) -> Result<Self, BitstreamError> where Self: Sized {
+        let n = u64::deserialise(reader)?;
+        Ok(n as usize)
+    }
+}
+
 impl ManualBitSerialisation for String {
     fn serialise(&self, writer: &mut impl BitWriter) {
         let bytes = self.bytes();
