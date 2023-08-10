@@ -1,5 +1,4 @@
-use std::ops::{Add, Sub};
-
+use std::ops::{Add, Sub, AddAssign};
 use bevy::reflect::{Reflect, TypePath};
 use crate::shared::serialisation::{ManualBitSerialisation, BitWriter, BitReader, BitstreamError};
 
@@ -69,5 +68,13 @@ impl Sub<u32> for ChannelId {
         let sub = self.0.checked_sub(rhs);
         if sub.is_none() { return Err(()); }
         Self::try_from(sub.unwrap())
+    }
+}
+
+impl AddAssign<u32> for ChannelId {
+    /// Adds `rhs` to `self`. Panics if the result would be greater than `2^24`.
+    fn add_assign(&mut self, rhs: u32) {
+        *self = (*self + rhs)
+            .expect("Tried to create a channel exceeding a value of 2^24")
     }
 }
