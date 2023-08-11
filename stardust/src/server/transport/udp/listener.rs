@@ -59,8 +59,6 @@ pub(super) struct UdpUnregisteredClient {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum WaitingClientState {
-    /// Waiting for the client to acknowledge that they were just accepted.
-    WaitingForAcceptanceAcknowledgment,
     /// This client should be disconnected.
     Completed,
 }
@@ -131,12 +129,11 @@ pub(super) fn udp_listener_system(
 }
 
 fn process_existing_client(
-    data: &str,
-    socket: &UdpSocket,
+    _data: &str,
+    _socket: &UdpSocket,
     client: &mut UdpUnregisteredClient,
 ) {
     match client.state {
-        WaitingClientState::WaitingForAcceptanceAcknowledgment => todo!(),
         WaitingClientState::Completed => {},
     }
 }
@@ -156,16 +153,22 @@ fn process_new_client(
     let json = json.unwrap();
 
     // Get fields from json
+    let req = json["request"].as_str(); // the request field isn't necessary but it makes amplification attacks that much harder
     let ver = json["version"].as_str();
     let pid = json["pid"].as_str();
 
     // Check correctness
-    if ver == None || pid == None { return None; }
-    let (ver, pid) = (ver.unwrap(), pid.unwrap());
+    if req == None || ver == None || pid == None { return None; }
+    let (req, ver, pid) = (req.unwrap(), ver.unwrap(), pid.unwrap());
 
     // Check the length of the fields to prevent amplification attacks
+    if req.len() < 3 { return None; }
     if ver.len() < 1 { return None; }
     if pid.len() != 16 { return None; }
+
+    // Check request type
+    // Largely useless at the moment
+    if req != "join" { return None; }
 
     // Check version value
     if let Ok(ver) = ver.parse::<Version>() {
@@ -207,7 +210,7 @@ fn process_new_client(
         address,
         socket: UdpSocket::bind(address).unwrap(),
         since: Instant::now(),
-        state: WaitingClientState::WaitingForAcceptanceAcknowledgment,
+        state: WaitingClientState::Completed,
     })
 }
 

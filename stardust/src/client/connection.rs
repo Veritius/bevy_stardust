@@ -8,8 +8,6 @@ pub enum RemoteConnectionStatus {
     Unconnected,
     /// The remote server has not yet responded to any messages.
     Connecting,
-    /// The remote server is processing something before it accepts the user.
-    Authenticating,
     /// The client is fully connected with the remote server.
     Connected,
 }
