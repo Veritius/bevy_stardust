@@ -4,9 +4,12 @@ mod receiver;
 mod sender;
 mod attempt;
 
-use bevy::prelude::{Plugin, App};
+use std::net::UdpSocket;
+
+use bevy::prelude::{Plugin, App, Resource};
 use crate::shared::scheduling::{TransportReadPackets, TransportSendPackets};
 use self::{receiver::receive_packets_system, sender::send_packets_system, attempt::connection_attempt_system};
+
 /// A simple transport layer over native UDP sockets.
 pub struct ClientUdpTransportPlugin;
 impl Plugin for ClientUdpTransportPlugin {
@@ -16,3 +19,6 @@ impl Plugin for ClientUdpTransportPlugin {
         app.add_systems(TransportSendPackets, send_packets_system);
     }
 }
+
+#[derive(Resource)]
+struct RemoteServerUdpSocket(pub UdpSocket);
