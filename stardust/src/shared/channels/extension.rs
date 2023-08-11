@@ -22,17 +22,17 @@ impl ChannelSetupAppExt for App {
         let store = OutgoingOctetStringsUntyped::new();
         let channel_id = registry.register_channel::<C>(entity_id, store.clone());
         self.insert_resource(OutgoingOctetStrings::<C>::new(store));
+
+        // Change hash value
+        self.add_net_hash_value(("channel", C::type_path(), config));
         
-        // Add config components
+        // Spawn config entity
         let type_id = TypeId::of::<C>();
         self.world.entity_mut(entity_id).insert(ChannelData {
             config,
             type_id,
             channel_id,
         });
-
-        // Change hash value
-        self.add_net_hash_value(("channel", C::type_path()));
         
         // Log addition at trace level
         trace!("Channel registered with type ID {:?} on channel ID {:?} with config entity {:?} ", type_id, channel_id, entity_id);
