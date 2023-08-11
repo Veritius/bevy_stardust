@@ -25,6 +25,7 @@ pub struct ServerUdpTransportPlugin {
 impl Plugin for ServerUdpTransportPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(UdpListener::new(self.listen_port));
+        app.insert_resource(UdpActivePort(self.active_port));
         app.add_systems(TransportReadPackets, udp_listener_system);
         
         app.add_systems(TransportReadPackets, receive_packets_system);
@@ -51,3 +52,6 @@ pub struct UdpClient {
 const MAX_PACKET_LENGTH: usize = 1500;
 /// The amount of bytes that will always be present in all packages.
 const PACKET_HEADER_SIZE: usize = 3;
+
+#[derive(Resource)]
+struct UdpActivePort(pub u16);

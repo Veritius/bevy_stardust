@@ -1,13 +1,15 @@
-use std::{net::{UdpSocket, SocketAddr}, io::ErrorKind, time::Instant};
+use std::{net::{UdpSocket, SocketAddr}, io::ErrorKind, time::{Instant, Duration}};
 use bevy::prelude::*;
 use json::{JsonValue, object};
 use once_cell::sync::Lazy;
 use semver::Version;
 use crate::{shared::hashdiff::UniqueNetworkHash, server::{clients::Client, settings::NetworkClientCap}};
-use super::{policy::BlockingPolicy, STARDUST_UDP_VERSION_RANGE};
+use super::{policy::BlockingPolicy, STARDUST_UDP_VERSION_RANGE, UdpActivePort};
 
 /// Minimum amount of bytes in a packet to even be bothered to be read.
 const MINIMUM_PACKET_LENGTH: usize = 8;
+/// How long a server will keep a client around before deleting them.
+const TIME_OUT_DURATION: Duration = Duration::from_secs(20);
 
 /// Response sent to clients when the server is full.
 static PLAYER_CAP_LIMIT_RESPONSE: Lazy<String> = Lazy::new(|| { object! { "response": "player_cap_reached" }.dump() });
@@ -28,10 +30,10 @@ impl UdpListener {
 }
 
 #[derive(Default)]
-pub(super) struct WaitingClients(Vec<UdpUnregisteredClient>);
+pub(super) struct WaitingClients(pub Vec<UdpUnregisteredClient>);
 
 impl WaitingClients {
-    pub fn get_existing(&mut self, addr: SocketAddr) -> Option<(usize, &mut UdpUnregisteredClient)> {
+    pub fn get_existing(&mut self, addr: SocketAddr) -> Option<&mut UdpUnregisteredClient> {
         let mut index: Option<usize> = None;
 
         for (idx, cli) in self.0.iter().enumerate() {
@@ -44,7 +46,7 @@ impl WaitingClients {
         if index.is_none() { return None; }
         let index = index.unwrap();
 
-        Some((index, &mut self.0[index]))
+        Some(&mut self.0[index])
     }
 }
 
@@ -55,12 +57,17 @@ pub(super) struct UdpUnregisteredClient {
     state: WaitingClientState,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum WaitingClientState {
-    RemoveMeThisIsJustSoThereArentErrors,
+    /// Waiting for the client to acknowledge that they were just accepted.
+    WaitingForAcceptanceAcknowledgment,
+    /// This client should be disconnected.
+    Completed,
 }
 
 pub(super) fn udp_listener_system(
     mut waiting: Local<WaitingClients>,
+    port: Res<UdpActivePort>,
     existing: Query<(), With<Client>>,
     player_cap: Res<NetworkClientCap>,
     listener: Res<UdpListener>,
@@ -92,12 +99,17 @@ pub(super) fn udp_listener_system(
 
         // Check if we've already received a relevant packet from the client
         match waiting.get_existing(pkt_addr) {
-            Some((index, client)) => {
-                process_existing_client(&data, client);
+            Some(client) => {
+                process_existing_client(
+                    &data,
+                    &listener.0,
+                    client
+                );
             },
             None => {
                 let new = process_new_client(
                     &data,
+                    port.0,
                     &listener.0,
                     players,
                     player_cap,
@@ -107,20 +119,31 @@ pub(super) fn udp_listener_system(
                 if new.is_some() { waiting.0.push(new.unwrap()); }
             },
         }
+
+        // Clear any clients who are due for it
+        let mut rlist = vec![];
+        for (index, client) in waiting.0.iter().enumerate() {
+            if client.state == WaitingClientState::Completed { return; }
+            if client.since.duration_since(Instant::now()) > TIME_OUT_DURATION { return; }
+            rlist.push(index);
+        }
     }
 }
 
 fn process_existing_client(
     data: &str,
+    socket: &UdpSocket,
     client: &mut UdpUnregisteredClient,
 ) {
     match client.state {
-        WaitingClientState::RemoveMeThisIsJustSoThereArentErrors => todo!(),
+        WaitingClientState::WaitingForAcceptanceAcknowledgment => todo!(),
+        WaitingClientState::Completed => {},
     }
 }
 
 fn process_new_client(
     data: &str,
+    port: u16,
     socket: &UdpSocket,
     active: usize,
     maximum: usize,
@@ -173,12 +196,18 @@ fn process_new_client(
         return None;
     }
 
-    // Everything checks out
+    // Respond with acceptance
+    send_json(socket, address, object! {
+        "response": "accepted",
+        "port": port
+    });
+
+    // Return client struct
     return Some(UdpUnregisteredClient {
         address,
         socket: UdpSocket::bind(address).unwrap(),
         since: Instant::now(),
-        state: WaitingClientState::RemoveMeThisIsJustSoThereArentErrors,
+        state: WaitingClientState::WaitingForAcceptanceAcknowledgment,
     })
 }
 
