@@ -30,13 +30,16 @@ pub(super) fn connection_attempt_system(
 ) {
     // Check if there is a target to join
     match (&target, *started) {
-        (None, None) => { return; },
         (Some(target), None) => {
-            info!("Trying to join remote peer {}", target.0);
             next.set(RemoteConnectionStatus::Connecting);
             *started = Some(Instant::now());
-            *tsocket = Some(UdpSocket::bind(target.0).unwrap());
+            let skt = UdpSocket::bind(format!("0.0.0.0:0")).unwrap();
+            let _ = skt.set_nonblocking(true);
+            let _ = skt.connect(target.0);
+            info!("Trying to join remote peer {} over socket {}", target.0, skt.local_addr().unwrap());
+            *tsocket = Some(skt);
         },
+        (Some(_), Some(_)) => {},
         _ => { return; }
     }
 
@@ -53,7 +56,9 @@ pub(super) fn connection_attempt_system(
     // Read socket for any responses
     let Some(socket) = tsocket.deref() else { panic!() };
     if target_just_added {
+        let mut failed = false;
         let mut buffer = [0u8; 1500];
+
         loop {
             // Receive octets and parse json
             let Ok(octets) = socket.recv(&mut buffer) else { break };
@@ -88,7 +93,8 @@ pub(super) fn connection_attempt_system(
                     return;
                 },
                 Some("denied") => {
-                    info!("Denied by remote server {}", target.unwrap().0);
+                    info!("Denied by remote server {}", target.as_ref().unwrap().0);
+                    failed = true;
                     break;
                 },
                 None | _ => {
@@ -97,16 +103,18 @@ pub(super) fn connection_attempt_system(
             };
         }
 
-        // Failed to connect
-        commands.remove_resource::<ConnectToRemoteUdp>();
-        next.set(RemoteConnectionStatus::Unconnected);
-        (*tsocket, *started, *last_sent) = (None, None, None);
-        return;
+        if failed {
+            // Failed to connect
+            commands.remove_resource::<ConnectToRemoteUdp>();
+            next.set(RemoteConnectionStatus::Unconnected);
+            (*tsocket, *started, *last_sent) = (None, None, None);
+            return;
+        }
     }
 
     // Check for timeout
     if started.unwrap().duration_since(Instant::now()) > RESPONSE_TIMEOUT_DURATION {
-        info!("Timed out from connecting to remote server {}", target.unwrap().0);
+        info!("Timed out from connecting to remote server {}", target.as_ref().unwrap().0);
         commands.remove_resource::<ConnectToRemoteUdp>();
         (*tsocket, *started, *last_sent) = (None, None, None);
         return;

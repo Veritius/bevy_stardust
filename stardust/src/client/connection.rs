@@ -1,4 +1,4 @@
-use bevy::{prelude::*, ecs::system::SystemParam};
+use bevy::prelude::*;
 
 /// If the client is currently connected to a remote server.
 #[derive(Debug, Default, Clone, Hash, PartialEq, Eq, States)]

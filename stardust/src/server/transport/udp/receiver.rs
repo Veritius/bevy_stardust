@@ -1,4 +1,4 @@
-use std::{collections::BTreeMap, io::ErrorKind};
+use std::collections::BTreeMap;
 use bevy::{prelude::*, tasks::TaskPool};
 use crate::{server::clients::Client, shared::{channels::{components::*, incoming::IncomingNetworkMessages, registry::ChannelRegistry, id::ChannelId}, payload::{Payloads, Payload}}};
 use super::{PACKET_HEADER_SIZE, MAX_PACKET_LENGTH, UdpClient};
@@ -28,9 +28,7 @@ pub(super) fn receive_packets_system(
                 // Read all packets
                 loop {
                     // Check if we've run out of packets
-                    let octets = client_udp.socket.recv(&mut buffer);
-                    if octets.as_ref().is_err_and(|e| e.kind() == ErrorKind::WouldBlock) { break; }
-                    let octets = octets.unwrap();
+                    let Ok(octets) = client_udp.socket.recv(&mut buffer) else { break };
 
                     // Discard packet, too small to be useful.
                     if octets <= 3 { continue; }

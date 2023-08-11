@@ -8,15 +8,17 @@ use bevy_stardust::client::transport::udp::{ClientUdpTransportPlugin, UdpConnect
 
 use bevy_stardust::server::prelude::*;
 use bevy_stardust::server::transport::udp::ServerUdpTransportPlugin;
+use bevy_stardust::shared::scheduling::{NetworkPostUpdateCleanup, NetworkPreUpdateCleanup};
 
 fn main() {
     let mut owner = App::new();
     owner.add_plugins(DefaultPlugins);
+    owner.set_runner(|mut app| loop { app.update() });
 
     owner.insert_sub_app("server", SubApp::new(server(), |_,_| {}));
     owner.insert_sub_app("client", SubApp::new(client(), |_,_| {}));
 
-    loop { owner.update(); }
+    owner.run();
 }
 
 fn client() -> App {
@@ -31,6 +33,10 @@ fn client() -> App {
         let ip = IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1));
         manager.join(SocketAddr::new(ip, 12345));
     });
+
+    app.add_systems(NetworkPreUpdateCleanup, || info!("client pre"));
+    app.add_systems(Update, || info!("client upd"));
+    app.add_systems(NetworkPostUpdateCleanup, || info!("client post"));
 
     app
 }
@@ -48,6 +54,10 @@ fn server() -> App {
 
     // Configure the server
     app.insert_resource(NetworkClientCap(64));
+
+    app.add_systems(NetworkPreUpdateCleanup, || info!("server pre"));
+    app.add_systems(Update, || info!("server upd"));
+    app.add_systems(NetworkPostUpdateCleanup, || info!("server post"));
 
     app
 }
