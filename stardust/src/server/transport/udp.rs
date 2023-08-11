@@ -10,13 +10,13 @@ use std::net::{UdpSocket, SocketAddr};
 use bevy::prelude::*;
 use once_cell::sync::Lazy;
 use semver::{Version, VersionReq};
-use crate::shared::{scheduling::{TransportReadPackets, TransportSendPackets}, hashdiff::UniqueNetworkHash};
+use crate::shared::scheduling::{TransportReadPackets, TransportSendPackets};
 use self::{receiver::receive_packets_system, sender::send_packets_system, listener::{udp_listener_system, UdpListener}};
 
 pub static STARDUST_UDP_CURRENT_VERSION: Version = Version::new(0, 0, 0);
 pub static STARDUST_UDP_VERSION_RANGE: Lazy<VersionReq> = Lazy::new(|| { "=0.0.0".parse::<VersionReq>().unwrap() });
 
-/// A simple transport layer over native UDP sockets, using TCP for a handshake.
+/// A simple transport layer over native UDP sockets.
 pub struct ServerUdpTransportPlugin {
     pub listen_port: u16,
     pub active_port: u16,
@@ -30,12 +30,6 @@ impl Plugin for ServerUdpTransportPlugin {
         
         app.add_systems(TransportReadPackets, receive_packets_system);
         app.add_systems(TransportSendPackets, send_packets_system);
-    }
-
-    fn finish(&self, app: &mut App) {
-        let hash = app.world
-            .get_resource::<UniqueNetworkHash>()
-            .expect("Couldn't access UniqueNetworkHash resource, was this plugin added before StardustSharedPlugin?");
     }
 }
 

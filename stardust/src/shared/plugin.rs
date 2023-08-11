@@ -5,8 +5,7 @@ use crate::{server::plugin::StardustServerPlugin, client::plugin::StardustClient
 use super::{scheduling::{network_pre_update, network_post_update}, channels::systems::panic_on_channel_removal, hashdiff::{UniqueNetworkHasher, UniqueNetworkHash}};
 
 /// Shared information between the client and server.
-/// See the demos for information on how to use this.
-pub struct StardustSharedPlugin {}
+pub struct StardustSharedPlugin;
 impl Plugin for StardustSharedPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(PreUpdate, network_pre_update);
