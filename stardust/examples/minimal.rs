@@ -10,13 +10,11 @@ use bevy_stardust::server::prelude::*;
 use bevy_stardust::server::transport::udp::ServerUdpTransportPlugin;
 
 fn main() {
-    let server = server();
-    let client = client();
-
     let mut owner = App::new();
     owner.add_plugins(DefaultPlugins);
-    owner.insert_sub_app("server", SubApp::new(server, |_,_| {}));
-    owner.insert_sub_app("client", SubApp::new(client, |_,_| {}));
+
+    owner.insert_sub_app("server", SubApp::new(server(), |_,_| {}));
+    owner.insert_sub_app("client", SubApp::new(client(), |_,_| {}));
 
     loop { owner.update(); }
 }

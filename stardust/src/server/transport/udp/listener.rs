@@ -21,9 +21,9 @@ pub(super) struct UdpListener(pub UdpSocket);
 impl UdpListener {
     pub fn new(address: std::net::IpAddr, port: u16) -> Self {
         let socket = UdpSocket::bind(SocketAddr::new(address, port))
-            .expect("Couldn't bind to port");
-        
+            .expect("Failed to create UDP listener, is the port free?");
         socket.set_nonblocking(true).unwrap();
+        info!("Created UdpListener at {}", socket.local_addr().unwrap());
 
         Self(socket)
     }
