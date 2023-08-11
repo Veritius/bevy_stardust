@@ -16,12 +16,10 @@ fn main() {
 /// Creates a new App with client logic, running it on a separate thread.
 fn start_client() {
     let mut app = App::new();
-    app.add_plugins(MinimalPlugins);
-    app.add_plugins(StardustSharedPlugin);
+    apply_shared_data(&mut app);
+
     app.add_plugins(StardustClientPlugin);
     app.add_plugins(ClientUdpTransportPlugin);
-
-    register_channels(&mut app);
 
     thread::spawn(move || app.run());
 }
@@ -29,21 +27,25 @@ fn start_client() {
 /// Creates a new App with server logic, running it on a separate thread.
 fn start_server() {
     let mut app = App::new();
-    app.add_plugins(MinimalPlugins);
-    app.add_plugins(StardustSharedPlugin);
+    apply_shared_data(&mut app);
+
     app.add_plugins(StardustServerPlugin);
     app.add_plugins(ServerUdpTransportPlugin {
         listen_port: 12345,
         active_port: 12345,
     });
     
-    register_channels(&mut app);
 
     thread::spawn(move || app.run());
 }
 
-/// Registers all channels identically on both the client and server.
-fn register_channels(app: &mut App) {
+/// Applies information that is identical on both the client and server to the App.
+fn apply_shared_data(app: &mut App) {
+    // Add plugins
+    app.add_plugins(MinimalPlugins);
+    app.add_plugins(StardustSharedPlugin);
+
+    // Add channel
     app.register_channel::<RandomDataChannel>(ChannelConfig {
         direction: ChannelDirection::Bidirectional,
     }, ());
