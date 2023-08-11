@@ -6,7 +6,7 @@ mod listener;
 mod receiver;
 mod sender;
 
-use std::net::{UdpSocket, SocketAddr};
+use std::net::{UdpSocket, SocketAddr, IpAddr};
 use bevy::prelude::*;
 use once_cell::sync::Lazy;
 use semver::{Version, VersionReq};
@@ -18,13 +18,14 @@ pub static STARDUST_UDP_VERSION_RANGE: Lazy<VersionReq> = Lazy::new(|| { "=0.0.0
 
 /// A simple transport layer over native UDP sockets.
 pub struct ServerUdpTransportPlugin {
+    pub address: IpAddr,
     pub listen_port: u16,
     pub active_port: u16,
 }
 
 impl Plugin for ServerUdpTransportPlugin {
     fn build(&self, app: &mut App) {
-        app.insert_resource(UdpListener::new(self.listen_port));
+        app.insert_resource(UdpListener::new(self.address, self.listen_port));
         app.insert_resource(UdpActivePort(self.active_port));
         app.add_systems(TransportReadPackets, udp_listener_system);
         

@@ -19,8 +19,8 @@ static PLAYER_CAP_LIMIT_RESPONSE: Lazy<String> = Lazy::new(|| { object! { "respo
 pub(super) struct UdpListener(pub UdpSocket);
 
 impl UdpListener {
-    pub fn new(port: u16) -> Self {
-        let socket = UdpSocket::bind(format!("0.0.0.0:{}", port))
+    pub fn new(address: std::net::IpAddr, port: u16) -> Self {
+        let socket = UdpSocket::bind(SocketAddr::new(address, port))
             .expect("Couldn't bind to port");
         
         socket.set_nonblocking(true).unwrap();

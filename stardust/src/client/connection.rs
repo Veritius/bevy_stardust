@@ -11,8 +11,3 @@ pub enum RemoteConnectionStatus {
     /// The client is fully connected with the remote server.
     Connected,
 }
-
-#[derive(SystemParam)]
-pub struct ConnectionManager<'w> {
-    status: Res<'w, State<RemoteConnectionStatus>>,
-}

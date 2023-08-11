@@ -1,8 +1,11 @@
 //! Native UDP transport layer for clients.
 
+mod manager;
 mod receiver;
 mod sender;
 mod attempt;
+
+pub use manager::UdpConnectionManager;
 
 use std::net::UdpSocket;
 

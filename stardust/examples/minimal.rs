@@ -1,19 +1,24 @@
+use std::net::{IpAddr, Ipv4Addr};
+
+use bevy::app::SubApp;
 use bevy::prelude::*;
 
 use bevy_stardust::client::prelude::*;
-use bevy_stardust::client::transport::udp::ClientUdpTransportPlugin;
+use bevy_stardust::client::transport::udp::{ClientUdpTransportPlugin, UdpConnectionManager};
 
 use bevy_stardust::server::prelude::*;
 use bevy_stardust::server::transport::udp::ServerUdpTransportPlugin;
 
 fn main() {
-    let mut server = server();
-    let mut client = client();
+    let server = server();
+    let client = client();
 
-    loop {
-        server.update();
-        client.update();
-    }
+    let mut owner = App::new();
+    owner.add_plugins(DefaultPlugins);
+    owner.insert_sub_app("server", SubApp::new(server, |_,_| {}));
+    owner.insert_sub_app("client", SubApp::new(client, |_,_| {}));
+
+    loop { owner.update(); }
 }
 
 fn client() -> App {
@@ -22,6 +27,12 @@ fn client() -> App {
 
     app.add_plugins(StardustClientPlugin);
     app.add_plugins(ClientUdpTransportPlugin);
+
+    app.add_systems(Startup, |mut manager: UdpConnectionManager| {
+        use std::net::*;
+        let ip = IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1));
+        manager.join(SocketAddr::new(ip, 12345));
+    });
 
     app
 }
@@ -32,6 +43,7 @@ fn server() -> App {
 
     app.add_plugins(StardustServerPlugin);
     app.add_plugins(ServerUdpTransportPlugin {
+        address: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
         listen_port: 12345,
         active_port: 12345,
     });

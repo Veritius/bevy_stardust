@@ -32,6 +32,7 @@ pub(super) fn connection_attempt_system(
     match (&target, *started) {
         (None, None) => { return; },
         (Some(target), None) => {
+            info!("Trying to join remote peer {}", target.0);
             next.set(RemoteConnectionStatus::Connecting);
             *started = Some(Instant::now());
             *tsocket = Some(UdpSocket::bind(target.0).unwrap());
