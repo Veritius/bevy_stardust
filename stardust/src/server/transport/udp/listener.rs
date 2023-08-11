@@ -1,8 +1,16 @@
 use std::{net::{UdpSocket, SocketAddr}, io::ErrorKind, time::Instant};
 use bevy::prelude::*;
+use json::{JsonValue, object};
+use once_cell::sync::Lazy;
 use semver::Version;
-use crate::shared::hashdiff::UniqueNetworkHash;
-use super::{policy::BlockingPolicy, STARDUST_UDP_VERSION_RANGE, get_udp_transport_layer_version_range};
+use crate::{shared::hashdiff::UniqueNetworkHash, server::{clients::Client, settings::NetworkClientCap}};
+use super::{policy::BlockingPolicy, STARDUST_UDP_VERSION_RANGE};
+
+/// Minimum amount of bytes in a packet to even be bothered to be read.
+const MINIMUM_PACKET_LENGTH: usize = 8;
+
+/// Response sent to clients when the server is full.
+static PLAYER_CAP_LIMIT_RESPONSE: Lazy<String> = Lazy::new(|| { object! { "response": "player_cap_reached" }.dump() });
 
 /// Unfiltered socket for listening to UDP packets from unregistered peers.
 #[derive(Resource)]
@@ -53,11 +61,15 @@ pub(super) enum WaitingClientState {
 
 pub(super) fn udp_listener_system(
     mut waiting: Local<WaitingClients>,
+    existing: Query<(), With<Client>>,
+    player_cap: Res<NetworkClientCap>,
     listener: Res<UdpListener>,
     hash: Res<UniqueNetworkHash>,
     policy: Option<Res<BlockingPolicy>>,
 ) {
     let mut buffer = [0u8; 1500];
+    let players = existing.iter().len();
+    let player_cap = player_cap.0 as usize;
 
     loop {
         // Check if we've run out of packets to read
@@ -65,12 +77,13 @@ pub(super) fn udp_listener_system(
         if packet.as_ref().is_err_and(|e| e.kind() == ErrorKind::WouldBlock) { break; }
         let (octets, pkt_addr) = packet.unwrap();
 
-        // Check the sending IP against the blocking policy
+        // Check packet size
+        if octets < MINIMUM_PACKET_LENGTH { continue; }
+
+        // Check the sending IP isn't blocked
         let blocked = policy
             .as_ref()
             .is_some_and(|v| v.addresses.contains(&pkt_addr.ip()));
-
-        // Ignore this packet if the IP is blocked
         if blocked { continue }
 
         // Get relevant information
@@ -85,6 +98,9 @@ pub(super) fn udp_listener_system(
             None => {
                 let new = process_new_client(
                     &data,
+                    &listener.0,
+                    players,
+                    player_cap,
                     &hash,
                     pkt_addr
                 );
@@ -105,6 +121,9 @@ fn process_existing_client(
 
 fn process_new_client(
     data: &str,
+    socket: &UdpSocket,
+    active: usize,
+    maximum: usize,
     hash: &UniqueNetworkHash,
     address: SocketAddr,
 ) -> Option<UdpUnregisteredClient> {
@@ -121,17 +140,38 @@ fn process_new_client(
     if ver == None || pid == None { return None; }
     let (ver, pid) = (ver.unwrap(), pid.unwrap());
 
+    // Check the length of the fields to prevent amplification attacks
+    if ver.len() < 1 { return None; }
+    if pid.len() != 16 { return None; }
+
     // Check version value
     if let Ok(ver) = ver.parse::<Version>() {
-        if !get_udp_transport_layer_version_range().matches(&ver) {
+        if !STARDUST_UDP_VERSION_RANGE.matches(&ver) {
+            send_json(socket, address, object! {
+                "response": "wrong_version",
+                "requires": STARDUST_UDP_VERSION_RANGE.to_string()
+            });
             return None;
         }
     } else {
+        // Silently ignore them, sending a correct version is the responsibility of the client
         return None;
     }
 
     // Check game id hash
-    if pid != hash.hex() { return None; }
+    if pid != hash.hex() {
+        send_json(socket, address, object! {
+            "response": "wrong_pid",
+            "server_has": hash.hex()
+        });
+        return None;
+    }
+
+    // Check player limit
+    if active >= maximum {
+        let _ = socket.send_to(PLAYER_CAP_LIMIT_RESPONSE.as_bytes(), address);
+        return None;
+    }
 
     // Everything checks out
     return Some(UdpUnregisteredClient {
@@ -140,4 +180,9 @@ fn process_new_client(
         since: Instant::now(),
         state: WaitingClientState::RemoveMeThisIsJustSoThereArentErrors,
     })
+}
+
+fn send_json(socket: &UdpSocket, address: SocketAddr, json: JsonValue) {
+    let b = json.dump();
+    let _ = socket.send_to(b.as_bytes(), address);
 }

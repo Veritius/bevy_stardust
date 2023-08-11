@@ -6,20 +6,15 @@ mod listener;
 mod receiver;
 mod sender;
 
-use std::{net::{UdpSocket, SocketAddr}, sync::OnceLock};
+use std::net::{UdpSocket, SocketAddr};
 use bevy::prelude::*;
+use once_cell::sync::Lazy;
 use semver::{Version, VersionReq};
 use crate::shared::{scheduling::{TransportReadPackets, TransportSendPackets}, hashdiff::UniqueNetworkHash};
 use self::{receiver::receive_packets_system, sender::send_packets_system, listener::{udp_listener_system, UdpListener}};
 
 pub static STARDUST_UDP_CURRENT_VERSION: Version = Version::new(0, 0, 0);
-pub static STARDUST_UDP_VERSION_RANGE: OnceLock<VersionReq> = OnceLock::new();
-pub static STARDUST_UDP_VERSION_RANGE_STRING: &'static str = "=0.0.0";
-
-/// TODO: This is ugly, remove this.
-pub fn get_udp_transport_layer_version_range() -> &'static VersionReq {
-    STARDUST_UDP_VERSION_RANGE.get_or_init(|| { STARDUST_UDP_VERSION_RANGE_STRING.parse::<VersionReq>().unwrap() })
-}
+pub static STARDUST_UDP_VERSION_RANGE: Lazy<VersionReq> = Lazy::new(|| { "=0.0.0".parse::<VersionReq>().unwrap() });
 
 /// A simple transport layer over native UDP sockets, using TCP for a handshake.
 pub struct ServerUdpTransportPlugin {
