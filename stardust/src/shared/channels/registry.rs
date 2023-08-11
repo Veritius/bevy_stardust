@@ -11,6 +11,15 @@ pub struct ChannelRegistry {
 }
 
 impl ChannelRegistry {
+    pub(in crate::shared) fn new() -> Self {
+        Self {
+            channel_count: 0,
+            channel_type_map: BTreeMap::new(),
+            outgoing_arc_map: BTreeMap::new(),
+            entity_map: BTreeMap::new(),
+        }    
+    }
+
     pub(super) fn register_channel<T: Channel>(
         &mut self,
         entity: Entity,
@@ -21,7 +30,7 @@ impl ChannelRegistry {
         }
         
         let type_id = TypeId::of::<T>();
-        let channel_id = ChannelId::try_from(self.channel_count - 1).unwrap();
+        let channel_id = ChannelId::try_from(self.channel_count).unwrap();
         self.channel_type_map.insert(type_id, channel_id);
         self.outgoing_arc_map.insert(channel_id, untyped_store);
         self.entity_map.insert(channel_id, entity);

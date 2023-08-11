@@ -79,7 +79,7 @@ pub(super) fn udp_listener_system(
     loop {
         // Check if we've run out of packets to read
         let packet = listener.0.recv_from(&mut buffer);
-        if packet.as_ref().is_err_and(|e| e.kind() == ErrorKind::WouldBlock) { break; }
+        if packet.is_err() { break; } // TODO: Error tolerance?
         let (octets, pkt_addr) = packet.unwrap();
 
         // Check packet size

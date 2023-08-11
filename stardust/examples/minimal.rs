@@ -1,5 +1,3 @@
-use std::thread;
-
 use bevy::prelude::*;
 
 use bevy_stardust::client::prelude::*;
@@ -9,23 +7,26 @@ use bevy_stardust::server::prelude::*;
 use bevy_stardust::server::transport::udp::ServerUdpTransportPlugin;
 
 fn main() {
-    start_server();
-    start_client();
+    let mut server = server();
+    let mut client = client();
+
+    loop {
+        server.update();
+        client.update();
+    }
 }
 
-/// Creates a new App with client logic, running it on a separate thread.
-fn start_client() {
+fn client() -> App {
     let mut app = App::new();
     apply_shared_data(&mut app);
 
     app.add_plugins(StardustClientPlugin);
     app.add_plugins(ClientUdpTransportPlugin);
 
-    thread::spawn(move || app.run());
+    app
 }
 
-/// Creates a new App with server logic, running it on a separate thread.
-fn start_server() {
+fn server() -> App {
     let mut app = App::new();
     apply_shared_data(&mut app);
 
@@ -34,9 +35,11 @@ fn start_server() {
         listen_port: 12345,
         active_port: 12345,
     });
-    
 
-    thread::spawn(move || app.run());
+    // Configure the server
+    app.insert_resource(NetworkClientCap(64));
+
+    app
 }
 
 /// Applies information that is identical on both the client and server to the App.

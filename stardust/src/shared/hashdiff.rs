@@ -36,3 +36,13 @@ impl NetworkHashAppExt for App {
 /// Stores the state of the hasher before a result is finalized
 #[derive(Resource)]
 pub(super) struct UniqueNetworkHasher(pub Box<dyn std::hash::Hasher + Send + Sync + 'static>);
+
+/// Adds the `UniqueNetworkHash` resource to the world.
+pub fn complete_hasher(
+    world: &mut World
+) {
+    let hasher = world.remove_resource::<UniqueNetworkHasher>().unwrap();
+    let int = hasher.0.finish();
+    let hex = format!("{:X}", int);
+    world.insert_resource(UniqueNetworkHash { int, hex });
+}
