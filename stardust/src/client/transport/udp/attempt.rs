@@ -5,7 +5,7 @@ use semver::Version;
 use crate::{shared::hashdiff::UniqueNetworkHash, client::{connection::RemoteConnectionStatus, peers::Server, transport::udp::RemoteServerUdpSocket}};
 
 /// The version of the transport layer.
-const TRANSPORT_LAYER_VERSION: Version = Version::new(0, 1, 0);
+const TRANSPORT_LAYER_VERSION: Version = Version::new(0, 0, 0);
 /// Amount of time the client should wait for a server response before giving up.
 const RESPONSE_TIMEOUT_DURATION: Duration = Duration::from_secs(15);
 /// Time between attempts to resend packets if there is no response.
@@ -74,6 +74,7 @@ pub(super) fn connection_attempt_system(
                     // Check port value
                     let port = parsed["port"].as_u16();
                     if port.is_none() {
+                        failed = true;
                         next.set(RemoteConnectionStatus::Unconnected);
                         break;
                     }
@@ -83,11 +84,14 @@ pub(super) fn connection_attempt_system(
                     let new_address = SocketAddr::new(target.unwrap().0.ip(), port);
                     let new_socket = UdpSocket::bind(new_address)
                         .expect("Unable to bind to SocketAddr despite previously communicating with the server");
+
+                    // Log acceptance
                     info!("Accepted by remote server {}", new_address);
 
-                    // Add addresses to world
+                    // Modify world
                     commands.spawn(Server);
                     commands.insert_resource(RemoteServerUdpSocket(new_socket));
+                    commands.remove_resource::<ConnectToRemoteUdp>();
                     next.set(RemoteConnectionStatus::Connected);
                     (*tsocket, *started, *last_sent) = (None, None, None);
                     return;
@@ -98,6 +102,7 @@ pub(super) fn connection_attempt_system(
                     break;
                 },
                 None | _ => {
+                    info!("Remote server {} sent invalid response", target.as_ref().unwrap().0);
                     break;
                 },
             };

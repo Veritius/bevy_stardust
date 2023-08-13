@@ -8,6 +8,8 @@ pub(super) fn send_packets_system(
     outgoing: OutgoingOctetStringsAccessor,
     clients: Query<(&Client, &UdpClient)>,
 ) {
+    return;
+
     // Create task pool
     let pool = TaskPool::new();
 

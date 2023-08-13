@@ -10,3 +10,11 @@ pub struct Client {
     /// The time this client joined.
     pub joined: Instant,
 }
+
+impl Client {
+    pub fn new() -> Self {
+        Self {
+            joined: Instant::now(),
+        }
+    }
+}

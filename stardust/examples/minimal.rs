@@ -8,7 +8,6 @@ use bevy_stardust::client::transport::udp::{ClientUdpTransportPlugin, UdpConnect
 
 use bevy_stardust::server::prelude::*;
 use bevy_stardust::server::transport::udp::ServerUdpTransportPlugin;
-use bevy_stardust::shared::scheduling::{NetworkPostUpdateCleanup, NetworkPreUpdateCleanup};
 
 fn main() {
     let mut owner = App::new();
@@ -34,10 +33,6 @@ fn client() -> App {
         manager.join(SocketAddr::new(ip, 12345));
     });
 
-    app.add_systems(NetworkPreUpdateCleanup, || info!("client pre"));
-    app.add_systems(Update, || info!("client upd"));
-    app.add_systems(NetworkPostUpdateCleanup, || info!("client post"));
-
     app
 }
 
@@ -54,10 +49,6 @@ fn server() -> App {
 
     // Configure the server
     app.insert_resource(NetworkClientCap(64));
-
-    app.add_systems(NetworkPreUpdateCleanup, || info!("server pre"));
-    app.add_systems(Update, || info!("server upd"));
-    app.add_systems(NetworkPostUpdateCleanup, || info!("server post"));
 
     app
 }
