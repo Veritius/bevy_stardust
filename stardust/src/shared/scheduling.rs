@@ -7,7 +7,7 @@ pub(super) fn add_schedules(app: &mut App) {
     
     app.add_schedule(WriteOctetStrings, Schedule::new());
     app.add_schedule(TransportSendPackets, Schedule::new());
-    app.add_schedule(NetworkPostUpdate, Schedule::new());
+    app.add_schedule(NetworkPostUpdateCleanup, Schedule::new());
 }
 
 /// Runs during Bevy's PreUpdate and is used for receiving packets from peers and processing them.
