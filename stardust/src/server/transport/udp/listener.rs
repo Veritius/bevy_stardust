@@ -1,15 +1,13 @@
-use std::{net::{UdpSocket, SocketAddr}, io::ErrorKind, time::{Instant, Duration}};
+use std::net::{UdpSocket, SocketAddr};
 use bevy::prelude::*;
 use json::{JsonValue, object};
 use once_cell::sync::Lazy;
 use semver::Version;
 use crate::{shared::hashdiff::UniqueNetworkHash, server::{clients::Client, settings::NetworkClientCap}};
-use super::{policy::BlockingPolicy, STARDUST_UDP_VERSION_RANGE, UdpActivePort};
+use super::{policy::BlockingPolicy, STARDUST_UDP_VERSION_RANGE, UdpActivePort, UdpClient};
 
-/// Minimum amount of bytes in a packet to even be bothered to be read.
+/// Minimum amount of bytes in a packet to be read at all.
 const MINIMUM_PACKET_LENGTH: usize = 8;
-/// How long a server will keep a client around before deleting them.
-const TIME_OUT_DURATION: Duration = Duration::from_secs(20);
 
 /// Response sent to clients when the server is full.
 static PLAYER_CAP_LIMIT_RESPONSE: Lazy<String> = Lazy::new(|| { object! { "response": "player_cap_reached" }.dump() });
@@ -29,42 +27,8 @@ impl UdpListener {
     }
 }
 
-#[derive(Default)]
-pub(super) struct WaitingClients(pub Vec<UdpUnregisteredClient>);
-
-impl WaitingClients {
-    pub fn get_existing(&mut self, addr: SocketAddr) -> Option<&mut UdpUnregisteredClient> {
-        let mut index: Option<usize> = None;
-
-        for (idx, cli) in self.0.iter().enumerate() {
-            if cli.address == addr {
-                index = Some(idx);
-                break;
-            }
-        }
-
-        if index.is_none() { return None; }
-        let index = index.unwrap();
-
-        Some(&mut self.0[index])
-    }
-}
-
-pub(super) struct UdpUnregisteredClient {
-    address: SocketAddr,
-    socket: UdpSocket,
-    since: Instant,
-    state: WaitingClientState,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(super) enum WaitingClientState {
-    /// This client should be disconnected.
-    Completed,
-}
-
 pub(super) fn udp_listener_system(
-    mut waiting: Local<WaitingClients>,
+    mut commands: Commands,
     port: Res<UdpActivePort>,
     existing: Query<(), With<Client>>,
     player_cap: Res<NetworkClientCap>,
@@ -93,46 +57,31 @@ pub(super) fn udp_listener_system(
         let slice = &buffer[0..octets];
         let data = String::from_utf8_lossy(slice);
 
-        // Check if we've already received a relevant packet from the client
-        match waiting.get_existing(pkt_addr) {
-            Some(client) => {
-                process_existing_client(
-                    &data,
-                    &listener.0,
-                    client
-                );
-            },
-            None => {
-                let new = process_new_client(
-                    &data,
-                    port.0,
-                    &listener.0,
-                    players,
-                    player_cap,
-                    &hash,
-                    pkt_addr
-                );
-                if new.is_some() { waiting.0.push(new.unwrap()); }
-            },
-        }
+        // Process client data
+        let client = process_new_client(
+            &data,
+            port.0,
+            &listener.0,
+            players,
+            player_cap,
+            &hash,
+            pkt_addr
+        );
 
-        // Clear any clients who are due for it
-        let mut rlist = vec![];
-        for (index, client) in waiting.0.iter().enumerate() {
-            if client.state == WaitingClientState::Completed { return; }
-            if client.since.duration_since(Instant::now()) > TIME_OUT_DURATION { return; }
-            rlist.push(index);
-        }
-    }
-}
+        // Check if something was returned
+        let Some((address, socket)) = client else { continue };
 
-fn process_existing_client(
-    _data: &str,
-    _socket: &UdpSocket,
-    client: &mut UdpUnregisteredClient,
-) {
-    match client.state {
-        WaitingClientState::Completed => {},
+        // Add client to world
+        let ent_id = commands.spawn((
+            Client::new(),
+            UdpClient {
+                address,
+                socket,
+            }
+        )).id();
+
+        // Log client join
+        info!("New client joined via UDP from address {} and was given entity id {:?}", address, ent_id);
     }
 }
 
@@ -144,7 +93,7 @@ fn process_new_client(
     maximum: usize,
     hash: &UniqueNetworkHash,
     address: SocketAddr,
-) -> Option<UdpUnregisteredClient> {
+) -> Option<(SocketAddr, UdpSocket)> {
     // Parse JSON
     let json = json::parse(data);
     if json.is_err() { return None; }
@@ -203,13 +152,8 @@ fn process_new_client(
         "port": port
     });
 
-    // Return client struct
-    return Some(UdpUnregisteredClient {
-        address,
-        socket: UdpSocket::bind(address).unwrap(),
-        since: Instant::now(),
-        state: WaitingClientState::Completed,
-    })
+    // Return client address and socket
+    return Some((address, UdpSocket::bind(address).unwrap()))
 }
 
 fn send_json(socket: &UdpSocket, address: SocketAddr, json: JsonValue) {
