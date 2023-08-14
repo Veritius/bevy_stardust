@@ -12,11 +12,18 @@ pub struct ChannelReader<'w, 's, T: Channel> {
 }
 
 impl<'w, 's, T: Channel> ChannelReader<'w, 's, T> {
-    pub fn read_from_server(&self) -> Option<&Payloads> {
-        let val = &self.channel_registry.get_from_type::<T>();
-        if val.is_none() { return None; }
-        self.server
+    pub fn read_from_server(&self) -> Result<Option<&Payloads>, ChannelReadingError> {
+        if self.server.is_empty() { return Err(ChannelReadingError::NotConnected); }
+        let val = &self.channel_registry.get_from_type::<T>()
+            .expect("Tried to access the data of channel T but it was not registered!");
+        Ok(self.server
             .single()
-            .0.get(&val.unwrap().0)
+            .0.get(&val.0))
     }
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub enum ChannelReadingError {
+    NotConnected,
+    NoMessages,
 }

@@ -125,8 +125,11 @@ impl<T: Channel> OutgoingOctetStrings<T> {
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub enum SendTarget {
+    /// Sends the message to a single peer.
     Single(Entity),
+    /// Sends the message to multiple peers.
     Multiple(Box<[Entity]>),
+    /// Sends the message to all peers.
     Broadcast,
 }
 

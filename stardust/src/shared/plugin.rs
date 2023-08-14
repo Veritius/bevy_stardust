@@ -2,7 +2,7 @@ use std::collections::hash_map::DefaultHasher;
 
 use bevy::prelude::*;
 use crate::{server::plugin::StardustServerPlugin, client::plugin::StardustClientPlugin};
-use super::{scheduling::{network_pre_update, network_post_update, add_schedules}, channels::systems::panic_on_channel_removal, hashdiff::{UniqueNetworkHasher, UniqueNetworkHash, complete_hasher}, prelude::ChannelRegistry};
+use super::{scheduling::{network_pre_update, network_post_update, add_schedules}, channels::systems::panic_on_channel_removal, hashdiff::{UniqueNetworkHasher, complete_hasher}, prelude::ChannelRegistry};
 
 /// Shared information between the client and server.
 pub struct StardustSharedPlugin;
