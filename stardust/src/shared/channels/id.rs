@@ -7,7 +7,7 @@ pub(super) const CHANNEL_ID_LIMIT: u32 = 2u32.pow(24);
 pub trait Channel: TypePath + std::fmt::Debug + Send + Sync + 'static {}
 impl<T: TypePath + std::fmt::Debug + Send + Sync + 'static> Channel for T {}
 
-/// A unique 24-bit channel identifier. Internally a u32 for comparisons and performance.
+/// A unique 24-bit channel identifier. Internally a u32 for comparisons and performance. When sent over the network, it uses 3 bytes.
 #[derive(Clone, Copy, Hash, Reflect, PartialEq, Eq, PartialOrd, Ord)]
 pub struct ChannelId(u32);
 

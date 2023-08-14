@@ -1,8 +1,8 @@
-use std::{time::{Duration, Instant}, net::{SocketAddr, UdpSocket}, ops::Deref};
+use std::{time::{Duration, Instant}, net::{SocketAddr, UdpSocket}, ops::Deref, collections::BTreeMap};
 use bevy::prelude::*;
 use json::object;
 use semver::Version;
-use crate::{shared::hashdiff::UniqueNetworkHash, client::{connection::RemoteConnectionStatus, peers::Server, transport::udp::RemoteServerUdpSocket}};
+use crate::{shared::{hashdiff::UniqueNetworkHash, channels::incoming::IncomingNetworkMessages}, client::{connection::RemoteConnectionStatus, peers::Server, transport::udp::RemoteServerUdpSocket}};
 
 /// The version of the transport layer.
 const TRANSPORT_LAYER_VERSION: Version = Version::new(0, 0, 0);
@@ -81,14 +81,16 @@ pub(super) fn connection_attempt_system(
 
                 // Create socket
                 let new_address = SocketAddr::new(target.unwrap().0.ip(), port);
-                let new_socket = UdpSocket::bind(new_address)
+                let mut new_socket = UdpSocket::bind(new_address)
                     .expect("Unable to bind to SocketAddr despite previously communicating with the server");
+                new_socket.set_nonblocking(true)
+                    .expect("Unable to make socket nonblocking");
 
                 // Log acceptance
                 info!("Accepted by remote server {}", new_address);
 
                 // Modify world
-                commands.spawn(Server);
+                commands.spawn((Server, IncomingNetworkMessages(BTreeMap::new())));
                 commands.insert_resource(RemoteServerUdpSocket(new_socket));
                 commands.remove_resource::<ConnectToRemoteUdp>();
                 next.set(RemoteConnectionStatus::Connected);

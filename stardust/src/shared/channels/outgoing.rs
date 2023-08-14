@@ -48,7 +48,7 @@ impl OutgoingOctetStringAccessorItem {
         self.id
     }
 
-    pub fn octets<'a> (&'a self) -> MutexGuard<'a, OutgoingOctetStringsUntyped> {
+    pub fn data<'a> (&'a self) -> MutexGuard<'a, OutgoingOctetStringsUntyped> {
         self.arc.lock().unwrap()
     }
 }
@@ -73,6 +73,11 @@ impl OutgoingOctetStringsUntyped {
         self.octets.push(octets.into());
         let idx = self.octets.len() - 1;
         self.targets.push((target, idx));
+    }
+
+    /// Counts how many messages need sending
+    pub fn count(&self) -> usize {
+        self.octets.len()
     }
 
     /// Creates an iterator over octets and targets to send them to.

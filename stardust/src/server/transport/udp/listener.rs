@@ -151,9 +151,14 @@ fn process_new_client(
         "response": "accepted",
         "port": port
     });
+    
+    // Create socket
+    let socket = UdpSocket::bind(address).unwrap();
+    socket.set_nonblocking(true)
+        .expect("Should have been able to make socket nonblocking");
 
     // Return client address and socket
-    return Some((address, UdpSocket::bind(address).unwrap()))
+    return Some((address, socket))
 }
 
 fn send_json(socket: &UdpSocket, address: SocketAddr, json: JsonValue) {
