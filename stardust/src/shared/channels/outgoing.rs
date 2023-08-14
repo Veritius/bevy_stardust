@@ -23,10 +23,14 @@ impl OutgoingOctetStringsAccessor<'_> {
             type Item = OutgoingOctetStringAccessorItem;
 
             fn next(&mut self) -> Option<Self::Item> {
+                if self.index >= self.registry.channel_count() { return None; }
                 let id = ChannelId::try_from(self.index);
+                self.index += 1;
+
                 if id.is_err() { return None; }
                 let id = id.unwrap();
                 let arc = self.registry.get_outgoing_arc(id)?.clone();
+
                 Some(OutgoingOctetStringAccessorItem { id, arc })
             }
         }
@@ -77,7 +81,7 @@ impl OutgoingOctetStringsUntyped {
 
     /// Counts how many messages need sending
     pub fn count(&self) -> usize {
-        self.octets.len()
+        self.targets.len()
     }
 
     /// Creates an iterator over octets and targets to send them to.
@@ -86,12 +90,15 @@ impl OutgoingOctetStringsUntyped {
             data: &'a OutgoingOctetStringsUntyped,
             index: usize
         }
-        
+
         impl<'a> Iterator for OutgoingOctetStringsReader<'a> {
             type Item = (&'a SendTarget, &'a OctetString);
 
             fn next(&mut self) -> Option<Self::Item> {
+                if self.index >= self.data.count() { return None; }
                 let (target, index) = self.data.targets.get(self.index)?;
+                self.index += 1;
+
                 let octets = self.data.octets.get(*index)?;
                 Some((target, octets))
             }

@@ -151,9 +151,12 @@ fn process_new_client(
         "response": "accepted",
         "port": port
     });
-    
+
     // Create socket
-    let socket = UdpSocket::bind(address).unwrap();
+    let bind_addr = "0.0.0.0:0".parse::<SocketAddr>().unwrap();
+    let socket = UdpSocket::bind(bind_addr).unwrap();
+    socket.connect(address)
+        .expect("Should have been able to connect to address");
     socket.set_nonblocking(true)
         .expect("Should have been able to make socket nonblocking");
 

@@ -1,19 +1,17 @@
-use bevy::{prelude::*, tasks::TaskPool};
-use crate::{shared::channels::{registry::ChannelRegistry, outgoing::OutgoingOctetStringsAccessor, components::*}, server::{clients::Client, prelude::*}};
+use bevy::prelude::*;
+use crate::{shared::channels::outgoing::OutgoingOctetStringsAccessor, server::{clients::Client, prelude::*}};
 use super::UdpClient;
 
 pub(super) fn send_packets_system(
-    registry: Res<ChannelRegistry>,
-    channels: Query<(&ChannelData, Option<&OrderedChannel>, Option<&ReliableChannel>, Option<&FragmentedChannel>)>,
+    // registry: Res<ChannelRegistry>,
+    // channels: Query<(&ChannelData, Option<&OrderedChannel>, Option<&ReliableChannel>, Option<&FragmentedChannel>)>,
     outgoing: OutgoingOctetStringsAccessor,
     clients: Query<&UdpClient, With<Client>>,
 ) {
     // TODO: Parallelism?
-    return;
 
     // Iterate all channels
-    let iterator = outgoing.all();
-    for idx in iterator {
+    for idx in outgoing.all() {
         // Get channel data
         let channel = idx.id();
         let data = idx.data();
@@ -22,7 +20,9 @@ pub(super) fn send_packets_system(
         if data.count() == 0 { continue }
 
         // Iterate all messages
-        for (target, octets) in data.read() {
+        let octets = data.read();
+        for (target, octets) in octets {
+
             // Assemble payload
             let mut payload = Vec::with_capacity(3 + octets.len());
             for b in channel.as_bytes() { payload.push(b); }
@@ -34,7 +34,7 @@ pub(super) fn send_packets_system(
                 SendTarget::Multiple(targets) => todo!(),
                 SendTarget::Broadcast => {
                     for client in clients.iter() {
-                        let _ = client.socket.send(&payload);
+                        client.socket.send(&payload).unwrap();
                     }
                 },
             }

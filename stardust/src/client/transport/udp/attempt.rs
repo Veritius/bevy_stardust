@@ -79,22 +79,27 @@ pub(super) fn connection_attempt_system(
                 }
                 let port = port.unwrap();
 
-                // Create socket
+                // Take socket from Bevy using ✨memory magic✨
                 let new_address = SocketAddr::new(target.unwrap().0.ip(), port);
-                let mut new_socket = UdpSocket::bind(new_address)
-                    .expect("Unable to bind to SocketAddr despite previously communicating with the server");
-                new_socket.set_nonblocking(true)
-                    .expect("Unable to make socket nonblocking");
+                let mut socket = None;
+                std::mem::swap(&mut *tsocket, &mut socket);
+                let socket = socket.unwrap();
 
                 // Log acceptance
                 info!("Accepted by remote server {}", new_address);
 
+                // Connect socket
+                socket.connect(new_address)
+                    .expect("Unable to connect UdpSocket to address");
+                socket.set_nonblocking(true)
+                    .expect("Unable to make socket nonblocking");
+
                 // Modify world
                 commands.spawn((Server, IncomingNetworkMessages(BTreeMap::new())));
-                commands.insert_resource(RemoteServerUdpSocket(new_socket));
+                commands.insert_resource(RemoteServerUdpSocket(socket));
                 commands.remove_resource::<ConnectToRemoteUdp>();
                 next.set(RemoteConnectionStatus::Connected);
-                (*tsocket, *started, *last_sent) = (None, None, None);
+                (*started, *last_sent) = (None, None);
                 return;
             },
             Some("denied") => {

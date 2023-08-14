@@ -5,9 +5,7 @@ use super::RemoteServerUdpSocket;
 pub(super) fn send_packets_system(
     remote: Option<Res<RemoteServerUdpSocket>>,
     outgoing: OutgoingOctetStringsAccessor,
-) {
-    return; 
-
+) { 
     let Some(remote) = remote else { return };
 
     let iter = outgoing.all();
@@ -31,7 +29,7 @@ pub(super) fn send_packets_system(
             for b in octets.as_slice() { payload.push(*b); }
 
             // Send data
-            let _ = remote.0.send(&payload);
+            remote.0.send(&payload).unwrap();
         }
     }
 }
