@@ -41,6 +41,6 @@ impl Payload {
     pub fn read(&self) -> &[u8] {
         let data = self.data.as_slice();
         let len = data.len();
-        &data[self.ignore_head-1..(len - self.ignore_tail)]
+        &data[self.ignore_head.saturating_sub(1)..(len - self.ignore_tail)]
     }
 }

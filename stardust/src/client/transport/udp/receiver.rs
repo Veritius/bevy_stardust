@@ -25,12 +25,14 @@ pub(super) fn receive_packets_system(
         if octets <= 3 { continue; }
 
         // Get channel ID and check it exists
-        let channel_id = ChannelId::from_bytes(&buffer[0..=3].try_into().unwrap());
+        let channel_id = ChannelId::from_bytes(&buffer[..3].try_into().unwrap());
         if !channel_registry.channel_exists(channel_id) { break; } // Channel doesn't exist
 
         // Clone message data
         let mut payload = Vec::with_capacity(octets-1);
-        payload.clone_from_slice(&buffer[PACKET_HEADER_SIZE..octets]);
+        for oct in &buffer[PACKET_HEADER_SIZE+1..=octets] { payload.push(*oct); }
+
+        info!("Received UDP packet {:?}", &payload);
 
         // Add to map
         let entry = inter_map.entry(channel_id).or_insert(Vec::with_capacity(1));

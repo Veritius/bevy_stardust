@@ -30,6 +30,7 @@ pub(super) fn send_packets_system(
 
             // Send data
             remote.0.send(&payload).unwrap();
+            info!("Sent UDP payload {:?} on channel {:?}", &payload, &id);
         }
     }
 }

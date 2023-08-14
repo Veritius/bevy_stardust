@@ -44,6 +44,8 @@ pub(super) fn receive_packets_system(
                         packet.push(buffer[i]);
                     }
 
+                    println!("Received UDP payload {:?}", &packet);
+
                     map
                         .entry(channel_id)
                         .or_insert(Vec::with_capacity(1))

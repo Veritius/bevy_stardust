@@ -34,6 +34,7 @@ pub(super) fn send_packets_system(
                 SendTarget::Multiple(targets) => todo!(),
                 SendTarget::Broadcast => {
                     for client in clients.iter() {
+                        info!("Sent UDP payload {:?} on channel {:?}", &payload, &channel);
                         client.socket.send(&payload).unwrap();
                     }
                 },

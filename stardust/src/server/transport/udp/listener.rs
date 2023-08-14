@@ -69,7 +69,9 @@ pub(super) fn udp_listener_system(
         );
 
         // Check if something was returned
-        let Some((address, socket)) = client else { continue };
+        let Some(address) = client else { continue };
+        let socket = listener.0.try_clone().unwrap();
+        let _ = socket.connect(address);
 
         // Add client to world
         let ent_id = commands.spawn((
@@ -93,7 +95,7 @@ fn process_new_client(
     maximum: usize,
     hash: &UniqueNetworkHash,
     address: SocketAddr,
-) -> Option<(SocketAddr, UdpSocket)> {
+) -> Option<SocketAddr> {
     // Parse JSON
     let json = json::parse(data);
     if json.is_err() { return None; }
@@ -152,16 +154,8 @@ fn process_new_client(
         "port": port
     });
 
-    // Create socket
-    let bind_addr = "0.0.0.0:0".parse::<SocketAddr>().unwrap();
-    let socket = UdpSocket::bind(bind_addr).unwrap();
-    socket.connect(address)
-        .expect("Should have been able to connect to address");
-    socket.set_nonblocking(true)
-        .expect("Should have been able to make socket nonblocking");
-
     // Return client address and socket
-    return Some((address, socket))
+    return Some(address)
 }
 
 fn send_json(socket: &UdpSocket, address: SocketAddr, json: JsonValue) {

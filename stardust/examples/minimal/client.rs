@@ -28,9 +28,12 @@ fn send_random_data_system_client(
     mut writer: ChannelWriter<RandomDataChannel>,
 ) {
     let mut rng = rand::thread_rng();
-    let mut octets = Vec::with_capacity(256);
+    let mut octets = Vec::with_capacity(4);
 
-    rng.fill_bytes(octets.as_mut());
+    octets.push(5);
+    octets.push(6);
+    octets.push(7);
+    octets.push(8);
     let _ = writer.send(octets);
 }
 
