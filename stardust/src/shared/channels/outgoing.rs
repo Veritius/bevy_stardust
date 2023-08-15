@@ -18,8 +18,6 @@ impl OutgoingOctetStringsAccessor<'_> {
             target: Entity,
             registry: &'a ChannelRegistry,
             channel_idx: u32,
-            channel_guard: Option<RwLockReadGuard<'a, OutgoingOctetStringsUntyped>>,
-            string_iter: Option<std::slice::Iter<'a, (SendTarget, OctetString)>>,
         }
 
         impl<'a> Iterator for OutgoingOctetStringClientIterator<'a> {
@@ -27,24 +25,6 @@ impl OutgoingOctetStringsAccessor<'_> {
 
             fn next(&mut self) -> Option<Self::Item> {
                 let channel_id = TryInto::<ChannelId>::try_into(self.channel_idx).unwrap();
-
-                if self.string_iter.is_none() {
-                    if self.channel_guard.is_none() {
-                        todo!()
-                    }
-                    todo!()
-                }
-
-                let Some(string_iter) = &mut self.string_iter else { panic!() };
-
-                match string_iter.next() {
-                    Some(val) => {
-                        if val.0.excludes(self.target) {
-                            self.next();
-                        }
-                    },
-                    None => todo!(),
-                }
 
                 todo!()
             }
@@ -54,8 +34,6 @@ impl OutgoingOctetStringsAccessor<'_> {
             target: client,
             registry: &self.registry,
             channel_idx: 0,
-            channel_guard: None,
-            string_iter: None,
         }
     }
 
