@@ -5,7 +5,7 @@ use super::{registry::ChannelRegistry, id::ChannelId};
 
 // TODO: This is pretty janky, clean it up a bit.
 
-/// SystemParam that allows accessing `OutgoingOctetStringsUntyped`
+/// SystemParam that allows accessing `OutgoingOctetStringsUntyped`. Accesses are read-only and can be used in parallel.
 #[derive(SystemParam)]
 pub struct OutgoingOctetStringsAccessor<'w> {
     registry: Res<'w, ChannelRegistry>,
@@ -13,27 +13,49 @@ pub struct OutgoingOctetStringsAccessor<'w> {
 
 impl OutgoingOctetStringsAccessor<'_> {
     /// Returns an iterator that only returns octet strings that should be sent to a specific client.
-    pub fn by_client(&self, client: Entity) -> impl Iterator<Item = &OutgoingOctetStringsUntyped> {
+    pub fn by_client(&self, client: Entity) -> impl Iterator<Item = &OctetString> {
         struct OutgoingOctetStringClientIterator<'a> {
+            target: Entity,
             registry: &'a ChannelRegistry,
             channel_idx: u32,
-            strings_idx: u32,
-            guard: Option<RwLockWriteGuard<'a, OutgoingOctetStringsUntyped>>,
+            channel_guard: Option<RwLockReadGuard<'a, OutgoingOctetStringsUntyped>>,
+            string_iter: Option<std::slice::Iter<'a, (SendTarget, OctetString)>>,
         }
 
         impl<'a> Iterator for OutgoingOctetStringClientIterator<'a> {
-            type Item = &'a OutgoingOctetStringsUntyped;
+            type Item = &'a OctetString;
 
             fn next(&mut self) -> Option<Self::Item> {
+                let channel_id = TryInto::<ChannelId>::try_into(self.channel_idx).unwrap();
+
+                if self.string_iter.is_none() {
+                    if self.channel_guard.is_none() {
+                        todo!()
+                    }
+                    todo!()
+                }
+
+                let Some(string_iter) = &mut self.string_iter else { panic!() };
+
+                match string_iter.next() {
+                    Some(val) => {
+                        if val.0.excludes(self.target) {
+                            self.next();
+                        }
+                    },
+                    None => todo!(),
+                }
+
                 todo!()
             }
         }
 
         OutgoingOctetStringClientIterator {
+            target: client,
             registry: &self.registry,
             channel_idx: 0,
-            strings_idx: 0,
-            guard: None,
+            channel_guard: None,
+            string_iter: None,
         }
     }
 
@@ -153,6 +175,22 @@ pub enum SendTarget {
     Multiple(Box<[Entity]>),
     /// Sends the message to all peers.
     Broadcast,
+}
+
+impl SendTarget {
+    /// Returns `true` if `client` is included in `self`.
+    pub fn includes(&self, client: Entity) -> bool {
+        match self {
+            SendTarget::Single(val) => { *val == client },
+            SendTarget::Multiple(vals) => { vals.contains(&client) },
+            SendTarget::Broadcast => { true },
+        }
+    }
+
+    /// Returns `true` if `client` is not included in `self`.
+    pub fn excludes(&self, client: Entity) -> bool {
+        !self.includes(client)
+    }
 }
 
 impl From<Entity> for SendTarget {
