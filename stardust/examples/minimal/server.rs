@@ -1,9 +1,7 @@
 use std::net::{Ipv4Addr, IpAddr};
 use bevy::prelude::*;
 use bevy_stardust::{server::{prelude::*, transport::udp::ServerUdpTransportPlugin}, shared::channels::outgoing::SendTarget};
-use rand::RngCore;
-
-use crate::{apply_shared_data, RandomDataChannel};
+use crate::{RandomDataChannel, apply_shared_data, gen_random_string};
 
 pub(super) fn server() -> App {
     let mut app = App::new();
@@ -27,16 +25,15 @@ pub(super) fn server() -> App {
 }
 
 fn send_random_data_system_server(
+    clients: Query<(), With<Client>>,
     mut writer: ChannelWriter<RandomDataChannel>,
 ) {
-    let mut rng = rand::thread_rng();
-    let mut octets: Vec<u8> = Vec::with_capacity(4);
+    if clients.is_empty() { return; }
+    
+    let string = gen_random_string();
 
-    octets.push(1);
-    octets.push(2);
-    octets.push(3);
-    octets.push(4);
-    let _ = writer.send(SendTarget::Broadcast, octets);
+    info!("Sent data to clients: {string}");
+    let _ = writer.send(SendTarget::Broadcast, string.into_bytes());
 }
 
 fn receive_random_data_system_server(

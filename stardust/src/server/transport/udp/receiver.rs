@@ -40,11 +40,9 @@ pub(super) fn receive_packets_system(
                     // Copy octets from buffer
                     let idx = octets - PACKET_HEADER_SIZE - 1;
                     let mut packet = Vec::with_capacity(idx);
-                    for i in (PACKET_HEADER_SIZE + 1)..idx {
+                    for i in (PACKET_HEADER_SIZE + 1)..=octets {
                         packet.push(buffer[i]);
                     }
-
-                    println!("Received UDP payload {:?}", &packet);
 
                     map
                         .entry(channel_id)

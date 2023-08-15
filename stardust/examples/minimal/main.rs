@@ -4,6 +4,7 @@ mod server;
 use bevy::app::SubApp;
 use bevy::prelude::*;
 use bevy_stardust::shared::prelude::*;
+use rand::seq::SliceRandom;
 
 fn main() {
     let mut owner = App::new();
@@ -31,3 +32,31 @@ fn apply_shared_data(app: &mut App) {
 /// Random data, bidirectionally.
 #[derive(Debug, Reflect)]
 struct RandomDataChannel;
+
+/// The greek alphabet, used for random string generation.
+pub static GREEK_ALPHABET: &'static [&'static str] = &[
+    "Alpha", "Beta", "Gamma",
+    "Delta", "Epsilon", "Zeta",
+    "Eta", "Theta", "Iota",
+    "Kappa", "Lambda", "Mu",
+    "Nu", "Xi", "Omicron",
+    "Pi", "Rho", "Sigma",
+    "Tau", "Upsilon", "Phi",
+    "Chi", "Psi", "Omega",
+];
+
+/// Generates a random string.
+fn gen_random_string() -> String {
+    let mut rng = rand::thread_rng();
+    let mut string = String::new();
+    
+    let mut x = 0;
+    while x <= 8 {
+        let choice = GREEK_ALPHABET.choose(&mut rng).unwrap();
+        let choice = if string.len() != 0 { format!(" {}", choice) } else { choice.to_string() };
+        string.push_str(&choice);
+        x += 1;
+    }
+
+    string
+}

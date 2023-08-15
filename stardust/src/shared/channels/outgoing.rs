@@ -60,54 +60,29 @@ impl OutgoingOctetStringAccessorItem {
 /// Used to write octet strings to remote peers. No associated type or channel information, and only accessible in `TransportSendPackets` for use by transport layers.
 /// 
 /// This is only returned for use in transport layers. Use `OutgoingOctetStrings<T>`, accessible in Bevy systems as a resource.
-pub struct OutgoingOctetStringsUntyped {
-    targets: Vec<(SendTarget, usize)>,
-    octets: Vec<OctetString>,
-}
+pub struct OutgoingOctetStringsUntyped(Vec<(SendTarget, OctetString)>);
 
 impl OutgoingOctetStringsUntyped {
     pub(in crate::shared) fn new() -> Arc<Mutex<Self>> {
-        Arc::new(Mutex::new(Self {
-            targets: Default::default(),
-            octets: Default::default(),
-        }))
+        Arc::new(Mutex::new(Self(vec![])))
     }
 
     pub(in crate) fn send(&mut self, target: SendTarget, octets: impl Into<OctetString>) {
-        self.octets.push(octets.into());
-        let idx = self.octets.len() - 1;
-        self.targets.push((target, idx));
+        self.0.push((target, octets.into()))
+    }
+
+    pub(in crate::shared) fn clear(&mut self) {
+        self.0.clear()
     }
 
     /// Counts how many messages need sending
     pub fn count(&self) -> usize {
-        self.targets.len()
+        self.0.len()
     }
 
     /// Creates an iterator over octets and targets to send them to.
-    pub fn read(&self) -> impl Iterator<Item = (&SendTarget, &OctetString)> {
-        struct OutgoingOctetStringsReader<'a> {
-            data: &'a OutgoingOctetStringsUntyped,
-            index: usize
-        }
-
-        impl<'a> Iterator for OutgoingOctetStringsReader<'a> {
-            type Item = (&'a SendTarget, &'a OctetString);
-
-            fn next(&mut self) -> Option<Self::Item> {
-                if self.index >= self.data.count() { return None; }
-                let (target, index) = self.data.targets.get(self.index)?;
-                self.index += 1;
-
-                let octets = self.data.octets.get(*index)?;
-                Some((target, octets))
-            }
-        }
-
-        OutgoingOctetStringsReader {
-            data: &self,
-            index: 0,
-        }
+    pub fn read(&self) -> impl Iterator<Item = &(SendTarget, OctetString)> {
+        self.0.iter()
     }
 }
 

@@ -11,3 +11,10 @@ pub enum RemoteConnectionStatus {
     /// The client is fully connected with the remote server.
     Connected,
 }
+
+impl RemoteConnectionStatus {
+    /// Returns true if a connection is established.
+    pub fn connected(&self) -> bool {
+        *self == Self::Connected
+    }
+}

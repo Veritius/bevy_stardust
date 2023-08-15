@@ -1,8 +1,6 @@
 use bevy::prelude::*;
-use bevy_stardust::client::{prelude::*, transport::udp::{ClientUdpTransportPlugin, UdpConnectionManager}};
-use rand::RngCore;
-
-use crate::{apply_shared_data, RandomDataChannel};
+use bevy_stardust::client::{prelude::*, transport::udp::{ClientUdpTransportPlugin, UdpConnectionManager}, connection::RemoteConnectionStatus};
+use crate::{RandomDataChannel, apply_shared_data, gen_random_string};
 
 pub(super) fn client() -> App {
     let mut app = App::new();
@@ -25,16 +23,15 @@ pub(super) fn client() -> App {
 }
 
 fn send_random_data_system_client(
+    conn: Res<State<RemoteConnectionStatus>>,
     mut writer: ChannelWriter<RandomDataChannel>,
 ) {
-    let mut rng = rand::thread_rng();
-    let mut octets = Vec::with_capacity(4);
+    if !conn.connected() { return; }
 
-    octets.push(5);
-    octets.push(6);
-    octets.push(7);
-    octets.push(8);
-    let _ = writer.send(octets);
+    let string = gen_random_string();
+
+    info!("Sent data to server: {string}");
+    let _ = writer.send(string.into_bytes());
 }
 
 fn receive_random_data_system_client(

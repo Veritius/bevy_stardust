@@ -81,18 +81,11 @@ pub(super) fn connection_attempt_system(
 
                 // Take socket from Bevy using ✨memory magic✨
                 let new_address = SocketAddr::new(target.unwrap().0.ip(), port);
-                let mut socket = None;
-                std::mem::swap(&mut *tsocket, &mut socket);
+                let socket = std::mem::replace(&mut *tsocket, None);
                 let socket = socket.unwrap();
 
                 // Log acceptance
                 info!("Accepted by remote server {}", new_address);
-
-                // Connect socket
-                socket.connect(new_address)
-                    .expect("Unable to connect UdpSocket to address");
-                socket.set_nonblocking(true)
-                    .expect("Unable to make socket nonblocking");
 
                 // Modify world
                 commands.spawn((Server, IncomingNetworkMessages(BTreeMap::new())));

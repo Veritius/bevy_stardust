@@ -30,9 +30,7 @@ pub(super) fn receive_packets_system(
 
         // Clone message data
         let mut payload = Vec::with_capacity(octets-1);
-        for oct in &buffer[PACKET_HEADER_SIZE+1..=octets] { payload.push(*oct); }
-
-        info!("Received UDP packet {:?}", &payload);
+        for oct in &buffer[PACKET_HEADER_SIZE..=octets] { payload.push(*oct); }
 
         // Add to map
         let entry = inter_map.entry(channel_id).or_insert(Vec::with_capacity(1));
