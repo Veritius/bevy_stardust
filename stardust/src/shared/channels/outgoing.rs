@@ -5,7 +5,7 @@ use super::{registry::ChannelRegistry, id::ChannelId};
 
 // TODO: This is pretty janky, clean it up a bit.
 
-/// SystemParam that allows accessing `OutgoingOctetStringsUntyped`. Accesses are read-only and can be used in parallel.
+/// SystemParam that allows reading `OutgoingOctetStringsUntyped`. Accesses are read-only and can be used in parallel.
 #[derive(SystemParam)]
 pub struct OutgoingOctetStringsAccessor<'w> {
     registry: Res<'w, ChannelRegistry>,
@@ -14,27 +14,7 @@ pub struct OutgoingOctetStringsAccessor<'w> {
 impl OutgoingOctetStringsAccessor<'_> {
     /// Returns an iterator that only returns octet strings that should be sent to a specific client.
     pub fn by_client(&self, client: Entity) -> impl Iterator<Item = &OctetString> {
-        struct OutgoingOctetStringClientIterator<'a> {
-            target: Entity,
-            registry: &'a ChannelRegistry,
-            channel_idx: u32,
-        }
-
-        impl<'a> Iterator for OutgoingOctetStringClientIterator<'a> {
-            type Item = &'a OctetString;
-
-            fn next(&mut self) -> Option<Self::Item> {
-                let channel_id = TryInto::<ChannelId>::try_into(self.channel_idx).unwrap();
-
-                todo!()
-            }
-        }
-
-        OutgoingOctetStringClientIterator {
-            target: client,
-            registry: &self.registry,
-            channel_idx: 0,
-        }
+        make_by_client_iter(self, client)
     }
 
     /// Returns an iterator that returns send targets and octet strings by channel.
@@ -88,7 +68,7 @@ impl OutgoingOctetStringAccessorItem {
 
 /// Used to write octet strings to remote peers. No associated type or channel information, and only accessible in `TransportSendPackets` for use by transport layers.
 /// 
-/// This is only returned for use in transport layers. Use `OutgoingOctetStrings<T>`, accessible in Bevy systems as a resource.
+/// This is only returned for use in transport layers. Use the `ChannelWriter<T>` systemparam.
 pub struct OutgoingOctetStringsUntyped(Vec<(SendTarget, OctetString)>);
 
 impl OutgoingOctetStringsUntyped {
@@ -185,5 +165,30 @@ impl TryFrom<&[Entity]> for SendTarget {
             1 => Ok(Self::Single(value[0].clone())),
             _ => Ok(Self::Multiple(value.iter().cloned().collect::<Box<[Entity]>>()))
         }
+    }
+}
+
+/// Makes an iterator that accesses all octet strings, filtered by client.
+fn make_by_client_iter<'a>(accessor: &'a OutgoingOctetStringsAccessor, client: Entity) -> impl Iterator<Item = &'a OctetString> + 'a {
+    struct OutgoingOctetStringClientIterator<'a> {
+        target: Entity,
+        registry: &'a ChannelRegistry,
+        channel_idx: u32,
+    }
+
+    impl<'a> Iterator for OutgoingOctetStringClientIterator<'a> {
+        type Item = &'a OctetString;
+
+        fn next(&mut self) -> Option<Self::Item> {
+            let channel_id = TryInto::<ChannelId>::try_into(self.channel_idx).unwrap();
+
+            todo!()
+        }
+    }
+
+    OutgoingOctetStringClientIterator {
+        target: client,
+        registry: &accessor.registry,
+        channel_idx: 0,
     }
 }

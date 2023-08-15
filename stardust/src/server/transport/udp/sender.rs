@@ -29,13 +29,11 @@ pub(super) fn send_packets_system(
                 let (port, socket, cls) = port;
                 for cl in cls {
                     // Get client entity
-                    let ret = clients.get(*cl);
-                    if ret.is_err() {
+                    let Ok(ret) = clients.get(*cl) else {
                         error!("Entity {:?} was in PortBindings but was not a client", *cl);
                         port_removals.lock().unwrap().push(*cl);
                         continue;
-                    }
-                    let ret = ret.unwrap();
+                    };
 
                     // Iterate _all_ outgoing octet strings
                     let iter = outgoing.by_client(*cl);
