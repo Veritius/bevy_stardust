@@ -4,7 +4,7 @@ use json::{JsonValue, object};
 use once_cell::sync::Lazy;
 use semver::Version;
 use crate::{shared::hashdiff::UniqueNetworkHash, server::{clients::Client, settings::NetworkClientCap}};
-use super::{policy::BlockingPolicy, STARDUST_UDP_VERSION_RANGE, UdpActivePort, UdpClient};
+use super::{STARDUST_UDP_VERSION_RANGE, policy::BlockingPolicy, UdpClient, ports::PortBindings};
 
 /// Minimum amount of bytes in a packet to be read at all.
 const MINIMUM_PACKET_LENGTH: usize = 8;
@@ -29,7 +29,7 @@ impl UdpListener {
 
 pub(super) fn udp_listener_system(
     mut commands: Commands,
-    port: Res<UdpActivePort>,
+    mut ports: ResMut<PortBindings>,
     existing: Query<(), With<Client>>,
     player_cap: Res<NetworkClientCap>,
     listener: Res<UdpListener>,
@@ -58,47 +58,33 @@ pub(super) fn udp_listener_system(
         let data = String::from_utf8_lossy(slice);
 
         // Process client data
-        let client = process_new_client(
+        process_packet(
+            &mut ports,
+            &mut commands,
             &data,
-            port.0,
             &listener.0,
             players,
             player_cap,
             &hash,
-            pkt_addr
+            pkt_addr,
         );
-
-        // Check if something was returned
-        let Some(address) = client else { continue };
-        let socket = listener.0.try_clone().unwrap();
-        let _ = socket.connect(address);
-
-        // Add client to world
-        let ent_id = commands.spawn((
-            Client::new(),
-            UdpClient {
-                address,
-                socket,
-            }
-        )).id();
-
-        // Log client join
-        info!("New client joined via UDP from address {} and was given entity id {:?}", address, ent_id);
     }
 }
 
-fn process_new_client(
+/// Process packets sent to the listener port, registering clients if need be.
+fn process_packet(
+    bindings: &mut PortBindings,
+    commands: &mut Commands,
     data: &str,
-    port: u16,
     socket: &UdpSocket,
     active: usize,
     maximum: usize,
     hash: &UniqueNetworkHash,
     address: SocketAddr,
-) -> Option<SocketAddr> {
+) {
     // Parse JSON
     let json = json::parse(data);
-    if json.is_err() { return None; }
+    if json.is_err() { return; }
     let json = json.unwrap();
 
     // Get fields from json
@@ -107,17 +93,17 @@ fn process_new_client(
     let pid = json["pid"].as_str();
 
     // Check correctness
-    if req == None || ver == None || pid == None { return None; }
+    if req == None || ver == None || pid == None { return; }
     let (req, ver, pid) = (req.unwrap(), ver.unwrap(), pid.unwrap());
 
     // Check the length of the fields to prevent amplification attacks
-    if req.len() < 3 { return None; }
-    if ver.len() < 1 { return None; }
-    if pid.len() != 16 { return None; }
+    if req.len() < 3 { return; }
+    if ver.len() < 1 { return; }
+    if pid.len() != 16 { return; }
 
     // Check request type
     // Largely useless at the moment
-    if req != "join" { return None; }
+    if req != "join" { return; }
 
     // Check version value
     if let Ok(ver) = ver.parse::<Version>() {
@@ -126,11 +112,11 @@ fn process_new_client(
                 "response": "wrong_version",
                 "requires": STARDUST_UDP_VERSION_RANGE.to_string()
             });
-            return None;
+            return;
         }
     } else {
         // Silently ignore them, sending a correct version is the responsibility of the client
-        return None;
+        return;
     }
 
     // Check game id hash
@@ -139,14 +125,23 @@ fn process_new_client(
             "response": "wrong_pid",
             "server_has": hash.hex()
         });
-        return None;
+        return;
     }
 
     // Check player limit
     if active >= maximum {
         let _ = socket.send_to(PLAYER_CAP_LIMIT_RESPONSE.as_bytes(), address);
-        return None;
+        return;
     }
+
+    // Create entity
+    let ent_id = commands.spawn((
+        Client::new(),
+        UdpClient { address },
+    )).id();
+
+    // Bind a port to the client
+    let port = bindings.add_client(ent_id);
 
     // Respond with acceptance
     send_json(socket, address, object! {
@@ -154,8 +149,8 @@ fn process_new_client(
         "port": port
     });
 
-    // Return client address and socket
-    return Some(address)
+    // Log join
+    info!("New client joined via UDP from address {} and was given entity id {:?}", address, ent_id);
 }
 
 fn send_json(socket: &UdpSocket, address: SocketAddr, json: JsonValue) {

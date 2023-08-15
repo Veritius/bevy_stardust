@@ -11,7 +11,7 @@ pub(super) fn server() -> App {
     app.add_plugins(ServerUdpTransportPlugin {
         address: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
         listen_port: 12345,
-        active_port: 12346,
+        active_ports: 12345..=12355,
     });
 
     // Add our sending and receiving systems
