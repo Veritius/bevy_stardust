@@ -35,6 +35,12 @@ pub struct ServerUdpTransportPlugin {
 
 impl Plugin for ServerUdpTransportPlugin {
     fn build(&self, app: &mut App) {
+        // Panic with a more comprehensible message rather than the OS response
+        if self.active_ports.contains(&self.listen_port) {
+            panic!("Listen port value ({}) is one of the active port values ({} to {} inclusive)",
+                self.listen_port, self.active_ports.start(), self.active_ports.end());
+        }
+
         app.insert_resource(UdpListener::new(self.address, self.listen_port));
         app.insert_resource(PortBindings::new(self.address, self.active_ports.clone()));
 
