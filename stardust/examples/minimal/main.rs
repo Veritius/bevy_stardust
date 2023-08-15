@@ -1,15 +1,24 @@
 mod client;
 mod server;
 
+use std::time::Duration;
 use bevy::app::SubApp;
 use bevy::prelude::*;
 use bevy_stardust::shared::prelude::*;
 use rand::seq::SliceRandom;
 
+/// How many times the loop runs per second.
+const RUN_HZ: f64 = 2.0;
+
 fn main() {
+    let sleep_time = Duration::from_secs_f64(1.0 / RUN_HZ);
+
     let mut owner = App::new();
     owner.add_plugins(DefaultPlugins);
-    owner.set_runner(|mut app| loop { app.update() });
+    owner.set_runner(move |mut app| loop {
+        app.update();
+        std::thread::sleep(sleep_time);
+    });
 
     owner.insert_sub_app("server", SubApp::new(server::server(), |_,_| {}));
     owner.insert_sub_app("client", SubApp::new(client::client(), |_,_| {}));
