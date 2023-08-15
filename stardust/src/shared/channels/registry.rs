@@ -1,4 +1,4 @@
-use std::{collections::BTreeMap, any::TypeId, sync::{Arc, Mutex}};
+use std::{collections::BTreeMap, any::TypeId, sync::{Arc, RwLock}};
 use bevy::prelude::{Resource, Entity};
 use super::{id::{Channel, ChannelId, CHANNEL_ID_LIMIT}, outgoing::OutgoingOctetStringsUntyped};
 
@@ -6,7 +6,7 @@ use super::{id::{Channel, ChannelId, CHANNEL_ID_LIMIT}, outgoing::OutgoingOctetS
 pub struct ChannelRegistry {
     channel_count: u32,
     channel_type_map: BTreeMap<TypeId, ChannelId>,
-    outgoing_arc_map: BTreeMap<ChannelId, Arc<Mutex<OutgoingOctetStringsUntyped>>>,
+    outgoing_arc_map: BTreeMap<ChannelId, Arc<RwLock<OutgoingOctetStringsUntyped>>>,
     entity_map: BTreeMap<ChannelId, Entity>,
 }
 
@@ -23,7 +23,7 @@ impl ChannelRegistry {
     pub(super) fn register_channel<T: Channel>(
         &mut self,
         entity: Entity,
-        untyped_store: Arc<Mutex<OutgoingOctetStringsUntyped>>
+        untyped_store: Arc<RwLock<OutgoingOctetStringsUntyped>>
     ) -> ChannelId {
         if self.channel_count >= CHANNEL_ID_LIMIT {
             panic!("Exceeded channel limit of 2^24 (how did you manage to do this?)");
@@ -62,7 +62,7 @@ impl ChannelRegistry {
         self.channel_count
     }
 
-    pub(super) fn get_outgoing_arc(&self, id: ChannelId) -> Option<Arc<Mutex<OutgoingOctetStringsUntyped>>> {
+    pub(super) fn get_outgoing_arc(&self, id: ChannelId) -> Option<Arc<RwLock<OutgoingOctetStringsUntyped>>> {
         self.outgoing_arc_map.get(&id).cloned()
     }
 }

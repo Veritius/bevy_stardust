@@ -8,11 +8,11 @@ pub(super) fn send_packets_system(
 ) { 
     let Some(remote) = remote else { return };
 
-    let iter = outgoing.all();
+    let iter = outgoing.by_channel();
 
     for outgoing in iter {
         let id = outgoing.id();
-        let outgoing = outgoing.data();
+        let outgoing = outgoing.read();
 
         for (target, octets) in outgoing.read() {
             // Panics if incorrect sendtargets are used.

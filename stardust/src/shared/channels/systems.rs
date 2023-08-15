@@ -19,7 +19,7 @@ pub(in crate::shared) fn clear_octet_buffers_system(
         registry
             .get_outgoing_arc(channel)
             .unwrap()
-            .lock()
+            .write()
             .unwrap()
             .clear();
     }
