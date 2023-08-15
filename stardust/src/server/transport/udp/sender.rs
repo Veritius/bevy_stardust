@@ -29,8 +29,17 @@ pub(super) fn send_packets_system(
 
             // Send to target
             match target {
-                SendTarget::Single(target) => todo!(),
-                SendTarget::Multiple(targets) => todo!(),
+                SendTarget::Single(target) => {
+                    // TODO: Deal with sending packets to clients that don't exist
+                    let Ok(client) = clients.get(*target) else { continue };
+                    client.socket.send(&payload).unwrap();
+                },
+                SendTarget::Multiple(targets) => {
+                    for target in targets.iter() {
+                        let Ok(client) = clients.get(*target) else { continue };
+                        client.socket.send(&payload).unwrap();
+                    }
+                },
                 SendTarget::Broadcast => {
                     for client in clients.iter() {
                         client.socket.send(&payload).unwrap();
