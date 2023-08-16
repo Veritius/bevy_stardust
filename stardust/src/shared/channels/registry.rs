@@ -62,6 +62,10 @@ impl ChannelRegistry {
         self.channel_count
     }
 
+    pub(super) fn get_outgoing_arc_map(&self) -> &BTreeMap<ChannelId, Arc<RwLock<OutgoingOctetStringsUntyped>>> {
+        &self.outgoing_arc_map
+    }
+
     pub(super) fn get_outgoing_arc(&self, id: ChannelId) -> Option<Arc<RwLock<OutgoingOctetStringsUntyped>>> {
         self.outgoing_arc_map.get(&id).cloned()
     }

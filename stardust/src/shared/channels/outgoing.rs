@@ -1,4 +1,4 @@
-use std::{marker::PhantomData, sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard}};
+use std::{marker::PhantomData, sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard}, collections::BTreeMap, ops::Deref};
 use bevy::{prelude::*, ecs::system::SystemParam};
 use crate::shared::{octetstring::OctetString, channels::id::Channel};
 use super::{registry::ChannelRegistry, id::ChannelId};
@@ -13,37 +13,52 @@ pub struct OutgoingOctetStringsAccessor<'w> {
 
 impl OutgoingOctetStringsAccessor<'_> {
     /// Returns an iterator that only returns octet strings that should be sent to a specific client.
-    pub fn by_client(&self, client: Entity) -> impl Iterator<Item = &OctetString> {
-        make_by_client_iter(self, client)
+    pub fn by_client(&self, client: Entity) -> impl Iterator<Item = (ChannelId, &OctetString)> {
+        struct ByClientIterator<'a> {
+            client: Entity,
+            registry: &'a ChannelRegistry,
+            map: &'a BTreeMap<ChannelId, Arc<RwLock<OutgoingOctetStringsUntyped>>>,
+            map_iter: std::collections::btree_map::Iter<'a, ChannelId, Arc<RwLock<OutgoingOctetStringsUntyped>>>,
+            channel: ChannelId,
+            channel_arc: Option<&'a Arc<RwLock<OutgoingOctetStringsUntyped>>>,
+            channel_lock: Option<RwLockReadGuard<'a, OutgoingOctetStringsUntyped>>,
+            string_iter: Option<Box<dyn Iterator<Item = (ChannelId, &'a OctetString)>>>,
+        }
+
+        impl<'a> Iterator for ByClientIterator<'a> {
+            type Item = (ChannelId, &'a OctetString);
+
+            fn next(&mut self) -> Option<Self::Item> {
+                todo!()
+            }
+        }
+
+        let map = self.registry.get_outgoing_arc_map();
+        let map_iter = map.iter();
+
+        ByClientIterator {
+            client,
+            registry: &self.registry,
+            map,
+            map_iter,
+            channel: ChannelId::ZERO,
+            channel_arc: None,
+            channel_lock: None,
+            string_iter: None,
+        }
     }
 
     /// Returns an iterator that returns send targets and octet strings by channel.
     pub fn by_channel(&self) -> impl Iterator<Item = OutgoingOctetStringAccessorItem> + '_ {
-        struct OutgoingOctetStringsAccessorChannelIterator<'a> {
-            registry: &'a ChannelRegistry,
-            index: u32,
-        }
-
-        impl<'a> Iterator for OutgoingOctetStringsAccessorChannelIterator<'a> {
-            type Item = OutgoingOctetStringAccessorItem;
-
-            fn next(&mut self) -> Option<Self::Item> {
-                if self.index >= self.registry.channel_count() { return None; }
-                let id = ChannelId::try_from(self.index);
-                self.index += 1;
-
-                if id.is_err() { return None; }
-                let id = id.unwrap();
-                let arc = self.registry.get_outgoing_arc(id)?.clone();
-
-                Some(OutgoingOctetStringAccessorItem { id, arc })
-            }
-        }
-
-        OutgoingOctetStringsAccessorChannelIterator {
-            registry: &self.registry,
-            index: 0,
-        }
+        self.registry
+            .get_outgoing_arc_map()
+            .iter()
+            .map(|(k,v)| {
+                OutgoingOctetStringAccessorItem {
+                    id: *k,
+                    arc: v.clone(),
+                }
+            })
     }
 }
 
@@ -59,10 +74,6 @@ impl OutgoingOctetStringAccessorItem {
 
     pub fn read<'a>(&'a self) -> RwLockReadGuard<'a, OutgoingOctetStringsUntyped> {
         self.arc.read().unwrap()
-    }
-
-    pub fn write<'a>(&'a mut self) -> RwLockWriteGuard<'a, OutgoingOctetStringsUntyped> {
-        self.arc.write().unwrap()
     }
 }
 
@@ -165,30 +176,5 @@ impl TryFrom<&[Entity]> for SendTarget {
             1 => Ok(Self::Single(value[0].clone())),
             _ => Ok(Self::Multiple(value.iter().cloned().collect::<Box<[Entity]>>()))
         }
-    }
-}
-
-/// Makes an iterator that accesses all octet strings, filtered by client.
-fn make_by_client_iter<'a>(accessor: &'a OutgoingOctetStringsAccessor, client: Entity) -> impl Iterator<Item = &'a OctetString> + 'a {
-    struct OutgoingOctetStringClientIterator<'a> {
-        target: Entity,
-        registry: &'a ChannelRegistry,
-        channel_idx: u32,
-    }
-
-    impl<'a> Iterator for OutgoingOctetStringClientIterator<'a> {
-        type Item = &'a OctetString;
-
-        fn next(&mut self) -> Option<Self::Item> {
-            let channel_id = TryInto::<ChannelId>::try_into(self.channel_idx).unwrap();
-
-            todo!()
-        }
-    }
-
-    OutgoingOctetStringClientIterator {
-        target: client,
-        registry: &accessor.registry,
-        channel_idx: 0,
     }
 }

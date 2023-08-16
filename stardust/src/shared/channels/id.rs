@@ -12,6 +12,8 @@ impl<T: TypePath + std::fmt::Debug + Send + Sync + 'static> Channel for T {}
 pub struct ChannelId(u32);
 
 impl ChannelId {
+    pub const ZERO: Self = Self(0);
+    
     pub fn as_bytes(&self) -> [u8; 3] {
         let [_, a, b, c] = self.0.to_be_bytes();
         [a, b, c]
