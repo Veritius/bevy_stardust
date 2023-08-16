@@ -8,7 +8,7 @@ Stardust is a batteries-included networking crate built for Bevy. Stardust inten
 
 ## Features
 - Tightly integrated with Bevy ECS - everything is part of the `World` and `App`.
-- Effortlessly write networked code as part of your regular Bevy systems - Stardust takes care of the hard stuff, so you can focus on the fun stuff.
+- Effortlessly write networked code as part of your regular Bevy systems.
 - Automatically compartmentalised network messages, separated into 'channels' defined with Bevy components.
 - Runs in parallel - Stardust network code is built off the back of Bevy's scheduler, so your systems run perfectly in parallel.
 - Plugins can effortlessly add their own network code without any changes on your side.
