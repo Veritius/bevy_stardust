@@ -31,7 +31,7 @@ impl PortBindings {
             mgr.sockets.insert(port, BoundUdpSocket::new(socket));
         }
 
-        mgr
+        mgr // the only thing i know for real
     }
 
     /// Returns an iterator of all bound ports and their associated clients.
