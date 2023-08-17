@@ -9,9 +9,9 @@ pub(super) fn server() -> App {
 
     app.add_plugins(StardustServerPlugin);
     app.add_plugins(ServerUdpTransportPlugin {
-        address: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+        address: IpAddr::V4(Ipv4Addr::UNSPECIFIED),
         listen_port: 12345,
-        active_ports: 12346..=12355,
+        active_ports: 12346..=12356,
     });
 
     // Add our sending and receiving systems

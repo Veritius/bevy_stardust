@@ -29,19 +29,20 @@ Creating a channel is done with the `register_channel` function, which can be us
 The second argument is a `Bundle` so components from external crates can be added if need be. These components are used by the transport layer to enable functionality like reliability and ordering. Note that adding a component does not ensure that the transport layer you have chosen does support that functionality.
 
 Stardust has the following components you can add to configure a channel.
-- `OrderedChannel`
+> Note: Items marked with 🟡 means that the related functionality is not yet present.
+- 🟡 `OrderedChannel`
     - Enables ordering. Packets will be sorted so when read, they are in the order they are sent.
     - This by itself does not guarantee that the packets arrive at all, just that they're in order.
-- `ReliableChannel`
+- 🟡 `ReliableChannel`
     - Enables reliability. All packets sent over this channel are requested to be resent if they don't arrive.
     - This is not a fast process. With high latency, a package can arrive several seconds after it's sent.
     - With `OrderedChannel`, this can block all messages on the channel from being read until every packet is retrieved.
-- `ChannelLatestness`
+- 🟡 `ChannelLatestness`
     - Discards messages that are a certain amount of ticks old.
-- `FragmentedChannel`
+- 🟡 `FragmentedChannel`
     - If an octet string is too large to send in one packet, it will be broken into multiple packets for transmission.
     - Fragmentation channels implement their own kind of reliability, for single messages.
-- `CompressedChannel`
+- 🟡 `CompressedChannel`
     - Octet strings in this channel will be run through a compression algorithm before transmission.
     - This can be useful with `FragmentedChannel` if your message is really, really big.
 

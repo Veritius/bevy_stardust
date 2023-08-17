@@ -1,2 +1,2 @@
 # Stardust UDP Transport Layer
-TODO
+Stardust's default transport layer is UDP, included with the crate.

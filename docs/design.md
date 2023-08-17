@@ -1,2 +1,0 @@
-# Stardust's design
-TODO
