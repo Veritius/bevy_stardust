@@ -26,7 +26,7 @@ pub(super) fn receive_packets_system(
 
         // Get channel ID and check it exists
         let channel_id = ChannelId::from_bytes(&buffer[..3].try_into().unwrap());
-        if !channel_registry.channel_exists(channel_id) { break; } // Channel doesn't exist
+        if !channel_registry.channel_exists(channel_id) { continue; } // Channel doesn't exist
 
         // Clone message data
         let mut payload = Vec::with_capacity(octets-1);
