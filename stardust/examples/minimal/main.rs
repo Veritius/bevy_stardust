@@ -5,6 +5,7 @@ use std::time::Duration;
 use bevy::app::SubApp;
 use bevy::prelude::*;
 use bevy_stardust::shared::prelude::*;
+use rand::Rng;
 use rand::seq::SliceRandom;
 
 /// How many times the loop runs per second.
@@ -58,9 +59,11 @@ pub static GREEK_ALPHABET: &'static [&'static str] = &[
 fn gen_random_string() -> String {
     let mut rng = rand::thread_rng();
     let mut string = String::new();
+
+    let len = rng.gen_range(4..=12);
     
     let mut x = 0;
-    while x <= 8 {
+    while x <= len {
         let choice = GREEK_ALPHABET.choose(&mut rng).unwrap();
         let choice = if string.len() != 0 { format!(" {}", choice) } else { choice.to_string() };
         string.push_str(&choice);
