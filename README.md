@@ -26,4 +26,5 @@ Stardust is a batteries-included networking crate built for Bevy. Stardust inten
 - Compression
 - Encryption
 - Randomness
+- Replication
 - `bevy_mod_scripting` support
