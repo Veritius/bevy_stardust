@@ -1,0 +1,17 @@
+{
+    "todo-tree.filtering.excludeGlobs": [
+        "**/node_modules",
+        "**/target"
+    ],
+    "todo-tree.general.tags": [
+        "BUG",
+        "HACK",
+        "FIXME",
+        "TODO",
+        "todo!()",
+        "todo!("
+    ],
+    "todo-tree.general.tagGroups": {
+        "TODO": ["todo!()", "todo!(", "FIXME"]
+    }
+}

@@ -1,7 +1,5 @@
 [workspace]
 resolver="2"
 members = [
-    "client",
-    "server",
-    "shared"
+    "stardust",
 ]

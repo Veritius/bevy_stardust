@@ -1,0 +1,16 @@
+[package]
+name="bevy_stardust"
+version="0.1.0"
+edition="2021"
+authors=["Veritius <veritiusgaming@gmail.com>"]
+
+[features]
+expose_internals=[]
+
+[dependencies]
+bevy = { version = "0.11", default-features=false }
+semver = "1.0.18"
+json = "0.12.4"
+glam = { version = "0.24" }
+rand = "0.8.5"
+once_cell = "1.18.0"
