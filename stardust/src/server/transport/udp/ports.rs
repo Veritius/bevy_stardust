@@ -1,5 +1,5 @@
 use std::{ops::RangeInclusive, net::{UdpSocket, IpAddr}, collections::BTreeMap};
-use bevy::prelude::{Entity, Resource};
+use bevy::prelude::{Entity, Resource, info};
 
 /// Owns UdpSockets and associates Entity ids with them.
 #[derive(Resource)]
@@ -11,9 +11,13 @@ impl PortBindings {
     /// Makes a new `PortBindings`, creating `UdpSocket`s bound to `addr` through `ports`.
     pub fn new(addr: IpAddr, ports: RangeInclusive<u16>) -> Self {
         // Check range of ports is acceptable
-        if ports.end().checked_sub(*ports.start()).is_none() {
+        let port_diff = ports.end().checked_sub(*ports.start());
+        if port_diff.is_none() {
             panic!("Amount of ports used must be at least one");
         }
+
+        // Log port connections
+        info!("Bound to {} ports in range {} to {} inclusive", port_diff.unwrap(), ports.start(), ports.end());
 
         // Create manager
         let mut mgr = Self {
