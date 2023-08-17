@@ -61,7 +61,7 @@ fn main() {
 
 fn sender_system(
     connection: Res<State<RemoteConnectionStatus>>,
-    mut writer: ChannelWriter
+    mut writer: ChannelWriter<MyChannel>,
 ) {
     if !connection.connected() { return; }
 
@@ -93,7 +93,7 @@ fn main() {
 }
 
 fn receiver_system(
-    reader: ChannelReader<RandomDataChannel>,
+    reader: ChannelReader<MyChannel>,
 ) {
     for (client, messages) in reader.read_all() {
         for message in messages.0.iter() {
