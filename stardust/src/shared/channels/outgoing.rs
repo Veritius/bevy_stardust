@@ -1,4 +1,4 @@
-use std::{marker::PhantomData, sync::{Arc, RwLock, RwLockReadGuard}};
+use std::{marker::PhantomData, sync::{Arc, RwLock, RwLockReadGuard}, ops::Deref};
 use bevy::{prelude::*, ecs::system::SystemParam};
 use crate::shared::{octetstring::OctetString, channels::id::Channel};
 use super::{registry::ChannelRegistry, id::ChannelId};
@@ -13,42 +13,47 @@ pub struct OutgoingOctetStringsAccessor<'w> {
 
 impl OutgoingOctetStringsAccessor<'_> {
     /// Returns an iterator that only returns octet strings that should be sent to a specific client.
-    pub fn by_client(&self, client: Entity) -> impl Iterator<Item = (ChannelId, &OctetString)> {
-        self.registry
-            .get_outgoing_arc_map().iter()
-            .map(|(channel, arc)| (channel, arc.read()))
-            .map(|(channel, read)| (channel, read.unwrap()))
-            .map(|(channel, read)| (channel, read));
-
+    pub fn by_client<'a>(&'a self, client: Entity) -> impl Iterator<Item = (ChannelId, &OctetString)> + 'a {
+        // self.registry
         todo!()
     }
 
     /// Returns an iterator that returns send targets and octet strings by channel.
-    pub fn by_channel(&self) -> impl Iterator<Item = OutgoingOctetStringAccessorItem> + '_ {
+    pub fn by_channel<'a>(&'a self) -> impl Iterator<Item = OutgoingOctetStringAccessorItem<'a>> + 'a {
         self.registry
             .get_outgoing_arc_map()
             .iter()
             .map(|(k,v)| {
                 OutgoingOctetStringAccessorItem {
                     id: *k,
-                    arc: v.clone(),
+                    guard: v.read().unwrap(),
                 }
             })
     }
 }
 
-pub struct OutgoingOctetStringAccessorItem {
+pub struct OutgoingOctetStringAccessorItem<'a> {
     id: ChannelId,
-    arc: Arc<RwLock<OutgoingOctetStringsUntyped>>,
+    guard: RwLockReadGuard<'a, OutgoingOctetStringsUntyped>,
 }
 
-impl OutgoingOctetStringAccessorItem {
+impl<'a> OutgoingOctetStringAccessorItem<'a> {
+    /// Returns the ID of the current channel.
     pub fn id(&self) -> ChannelId {
         self.id
     }
 
-    pub fn read<'a>(&'a self) -> RwLockReadGuard<'a, OutgoingOctetStringsUntyped> {
-        self.arc.read().unwrap()
+    /// Returns the `OutgoingOctetStringsUntyped` for the current channel.
+    pub fn strings(&'a self) -> &'a OutgoingOctetStringsUntyped {
+        &self.guard
+    }
+}
+
+impl Deref for OutgoingOctetStringAccessorItem<'_> {
+    type Target = OutgoingOctetStringsUntyped;
+
+    fn deref(&self) -> &Self::Target {
+        self.strings()
     }
 }
 

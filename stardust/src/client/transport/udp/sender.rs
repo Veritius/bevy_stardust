@@ -12,7 +12,7 @@ pub(super) fn send_packets_system(
 
     for outgoing in iter {
         let id = outgoing.id();
-        let outgoing = outgoing.read();
+        let outgoing = outgoing.strings();
 
         for (target, octets) in outgoing.read() {
             // Panics if incorrect sendtargets are used.
