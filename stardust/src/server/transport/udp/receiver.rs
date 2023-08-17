@@ -1,4 +1,4 @@
-use std::{sync::Mutex, collections::BTreeMap};
+use std::{sync::Mutex, collections::BTreeMap, io};
 use bevy::{prelude::*, tasks::TaskPool};
 use crate::{server::clients::Client, shared::{channels::{components::*, incoming::IncomingNetworkMessages, registry::ChannelRegistry, id::ChannelId}, payload::Payload}};
 use super::{PACKET_HEADER_SIZE, MAX_PACKET_LENGTH, UdpClient, ports::PortBindings};
@@ -47,10 +47,23 @@ pub(super) fn receive_packets_system(
                 // Receive packets from this task's socket
                 let mut buffer = [0u8; 1500];
                 loop {
-                    // Early validity checks
-                    let Ok((octets_read, from_address)) = socket.recv_from(&mut buffer) else { break };
+                    // Receive data from socket
+                    let (octets_read, from_address) = match socket.recv_from(&mut buffer) {
+                        Ok(n) => n,
+                        Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => {
+                            // No more data to read
+                            break
+                        }
+                        Err(e) => {
+                            // Something went wrong
+                            error!("IO error {} while reading UDP socket {:?}", e, socket.local_addr().unwrap());
+                            continue
+                        },
+                    };
+
+                    // Check some packet data
                     if !addresses.contains(&from_address) { continue } // Packet isn't from one of the clients associated with this port
-                    if octets_read < MAX_PACKET_LENGTH { continue } // Packet is too small to be of any value
+                    if octets_read < PACKET_HEADER_SIZE { continue } // Packet is too small to be of any value
 
                     // Channel info
                     let channel_id = ChannelId::from_bytes(&buffer[..3].try_into().unwrap());
