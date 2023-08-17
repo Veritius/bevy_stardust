@@ -84,6 +84,9 @@ pub(super) fn connection_attempt_system(
                 let socket = std::mem::replace(&mut *tsocket, None);
                 let socket = socket.unwrap();
 
+                // Change port
+                socket.connect((socket.peer_addr().unwrap().ip(), port)).unwrap();
+
                 // Log acceptance
                 info!("Accepted by remote server {}", new_address);
 

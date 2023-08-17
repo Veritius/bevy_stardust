@@ -150,7 +150,7 @@ fn process_packet(
     });
 
     // Log join
-    info!("New client joined via UDP from address {} and was given entity id {:?}", address, ent_id);
+    info!("New client joined via UDP from address {} and was assigned to socket {} and entity id {:?}", address, port, ent_id);
 }
 
 fn send_json(socket: &UdpSocket, address: SocketAddr, json: JsonValue) {

@@ -1,8 +1,12 @@
-use std::sync::Mutex;
+use std::{sync::Mutex, net::{UdpSocket, SocketAddr}};
 use bevy::{prelude::*, tasks::TaskPool};
 use once_cell::sync::Lazy;
-use crate::{shared::channels::outgoing::OutgoingOctetStringsAccessor, server::clients::Client};
+use crate::{shared::{channels::{outgoing::OutgoingOctetStringsAccessor, id::ChannelId}, octetstring::OctetString}, server::clients::Client};
 use super::{UdpClient, ports::PortBindings};
+
+// TODO
+// Despite the parallelism, this is pretty inefficient.
+// It iterates over things when it doesn't need to several times.
 
 pub(super) fn send_packets_system(
     // registry: Res<ChannelRegistry>,
@@ -26,17 +30,27 @@ pub(super) fn send_packets_system(
     pool.scope(|s| {
         for port in ports.iter() {
             s.spawn(async move {
-                let (port, socket, cls) = port;
+                let (_, socket, cls) = port;
                 for cl in cls {
                     // Get client entity
-                    let Ok(ret) = clients.get(*cl) else {
+                    let Ok(udp_comp) = clients.get(*cl) else {
                         error!("Entity {:?} was in PortBindings but was not a client", *cl);
                         port_removals.lock().unwrap().push(*cl);
                         continue;
                     };
 
-                    // Iterate _all_ outgoing octet strings
-                    let iter = outgoing.by_client(*cl);
+                    // Iterate all channels
+                    let channels = outgoing.by_channel();
+                    for channel in channels {
+                        let channel_id = channel.id();
+                        // Iterate all octet strings
+                        for (target, octets) in channel.strings().read() {
+                            // Check this message is for this client
+                            if target.excludes(*cl) { continue }
+                            // Send packet
+                            send_udp_packet(socket, channel_id, &udp_comp.address, octets)
+                        }
+                    }
                 }
             });
         }
@@ -47,4 +61,16 @@ pub(super) fn send_packets_system(
     for v in lock.iter() {
         ports.remove_client(*v);
     }
+}
+
+fn send_udp_packet(
+    socket: &UdpSocket,
+    channel: ChannelId,
+    address: &SocketAddr,
+    octets: &OctetString,
+) {
+    let mut udp_payload = Vec::with_capacity(1500);
+    for octet in channel.as_bytes() { udp_payload.push(octet); }
+    for octet in octets.as_slice() { udp_payload.push(*octet); }
+    socket.send_to(&udp_payload, address).unwrap();
 }

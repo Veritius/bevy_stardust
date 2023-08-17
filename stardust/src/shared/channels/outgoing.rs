@@ -13,10 +13,9 @@ pub struct OutgoingOctetStringsAccessor<'w> {
 
 impl OutgoingOctetStringsAccessor<'_> {
     /// Returns an iterator that only returns octet strings that should be sent to a specific client.
-    pub fn by_client<'a>(&'a self, client: Entity) -> impl Iterator<Item = (ChannelId, &OctetString)> + 'a {
-        // self.registry
-        todo!()
-    }
+    // pub fn by_client<'a>(&'a self, client: Entity) -> impl Iterator<Item = (ChannelId, &OctetString)> + 'a {
+    //     todo!()
+    // }
 
     /// Returns an iterator that returns send targets and octet strings by channel.
     pub fn by_channel<'a>(&'a self) -> impl Iterator<Item = OutgoingOctetStringAccessorItem<'a>> + 'a {
