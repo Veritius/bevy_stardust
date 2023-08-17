@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use super::{components::ChannelData, registry::ChannelRegistry, id::ChannelId};
+use super::{components::ChannelData, registry::ChannelRegistry, id::ChannelId, incoming::IncomingNetworkMessages};
 
 /// Panics if a channel component is ever removed, since that should never happen.
 pub(in crate::shared) fn panic_on_channel_removal(
@@ -10,7 +10,7 @@ pub(in crate::shared) fn panic_on_channel_removal(
     }
 }
 
-pub(in crate::shared) fn clear_octet_buffers_system(
+pub(in crate::shared) fn clear_outgoing_buffers_system(
     registry: Res<ChannelRegistry>,
 ) {
     let count = registry.channel_count();
@@ -22,5 +22,13 @@ pub(in crate::shared) fn clear_octet_buffers_system(
             .write()
             .unwrap()
             .clear();
+    }
+}
+
+pub(in crate::shared) fn clear_incoming_buffers_system(
+    mut query: Query<&mut IncomingNetworkMessages>,
+) {
+    for mut outgoing in query.iter_mut() {
+        outgoing.clear();
     }
 }

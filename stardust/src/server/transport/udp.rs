@@ -7,7 +7,7 @@ mod receiver;
 mod sender;
 mod ports;
 
-use std::{net::{UdpSocket, SocketAddr, IpAddr}, ops::RangeInclusive};
+use std::{net::{SocketAddr, IpAddr}, ops::RangeInclusive};
 use bevy::prelude::*;
 use once_cell::sync::Lazy;
 use semver::{Version, VersionReq};
@@ -54,7 +54,7 @@ impl Plugin for ServerUdpTransportPlugin {
 /// A client connected with the `ServerUdpTransportPlugin` transport layer.
 /// 
 /// Removing this will silently disconnect the peer with no warning.
-#[derive(Component)]
+#[derive(Debug, Component)]
 pub struct UdpClient {
     address: SocketAddr,
 }

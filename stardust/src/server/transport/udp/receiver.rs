@@ -1,6 +1,6 @@
-use std::{sync::{Mutex, MutexGuard}, collections::BTreeMap};
+use std::{sync::Mutex, collections::BTreeMap};
 use bevy::{prelude::*, tasks::TaskPool};
-use crate::{server::clients::Client, shared::{channels::{components::*, incoming::IncomingNetworkMessages, registry::ChannelRegistry, id::ChannelId}, payload::{Payloads, Payload}}};
+use crate::{server::clients::Client, shared::{channels::{components::*, incoming::IncomingNetworkMessages, registry::ChannelRegistry, id::ChannelId}, payload::Payload}};
 use super::{PACKET_HEADER_SIZE, MAX_PACKET_LENGTH, UdpClient, ports::PortBindings};
 
 pub(super) fn receive_packets_system(
@@ -12,7 +12,7 @@ pub(super) fn receive_packets_system(
     // Create task pool
     let pool = TaskPool::new();
 
-    // Place into map of mutexes to allow mutation by multiple threads
+    // Place query data into map of mutexes to allow mutation by multiple threads
     let mut query_mutex_map = BTreeMap::new();
     for (id, client, udp, incoming) in clients.iter_mut() {
         query_mutex_map.insert(id, Mutex::new((client, udp, incoming)));
@@ -20,23 +20,19 @@ pub(super) fn receive_packets_system(
 
     // Explicit borrows to prevent moves
     let query_mutex_map = &query_mutex_map;
-    let channels = &channels;
+    let _channels = &channels;
     let registry = &registry;
 
-    // Create tasks for all ports
+    // Create tasks for all sockets
     pool.scope(|s| {
         for (_, socket, clients) in ports.iter() {
+            if clients.len() == 0 { continue }
             s.spawn(async move {
                 // Lock mutexes for our port-associated clients
                 let mut locks = query_mutex_map.iter()
                     .filter(|(k,_)| clients.contains(k))
                     .map(|(k,v)| (k, v.lock().unwrap()))
                     .collect::<BTreeMap<_, _>>();
-
-                // Clear incoming message components for all clients
-                for (_, guard) in &mut locks {
-                    guard.2.0.clear();
-                }
 
                 // Create vec of addresses for rapid filtering
                 let addresses = locks.iter()
@@ -47,11 +43,6 @@ pub(super) fn receive_packets_system(
                 let address_map = locks.iter()
                     .map(|(entity, guard)| (guard.1.address, **entity))
                     .collect::<BTreeMap<_, _>>();
-
-                // Storage for messages
-                let mut messages = query_mutex_map.iter()
-                    .map(|(k, _)| (*k, BTreeMap::new()))
-                    .collect::<BTreeMap<_, BTreeMap<ChannelId, Vec<Payload>>>>();
 
                 // Receive packets from this task's socket
                 let mut buffer = [0u8; 1500];
@@ -65,20 +56,16 @@ pub(super) fn receive_packets_system(
                     let channel_id = ChannelId::from_bytes(&buffer[..3].try_into().unwrap());
                     if !registry.channel_exists(channel_id) { continue } // Channel doesn't exist
 
-                    // Copy data to vec and make payload
-                    let mut payload = Vec::with_capacity(octets_read-3);
+                    // Copy data to vec and make Payload
+                    let mut payload = Vec::with_capacity(octets_read - PACKET_HEADER_SIZE);
                     for oct in &buffer[PACKET_HEADER_SIZE..=octets_read] { payload.push(*oct); }
                     let payload = Payload::new(0, 0, payload);
-                    
-                    // Store in messages map
-                    let entity_id = address_map.get(&from_address).unwrap();
-                    let sub_map = messages.get_mut(entity_id).unwrap();
-                    let vec = sub_map.entry(channel_id).or_insert(Vec::with_capacity(1));
-                    vec.push(payload);
-                }
 
-                // Consume messages map and add to IncomingNetworkMessages
-                todo!()
+                    // Place payload in incoming component
+                    let entity_id = address_map.get(&from_address).unwrap();
+                    let incoming = &mut locks.get_mut(entity_id).unwrap().2;
+                    incoming.append(channel_id, payload);
+                }
             });
         }
     });

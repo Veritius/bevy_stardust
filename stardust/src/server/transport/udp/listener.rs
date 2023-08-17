@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use json::{JsonValue, object};
 use once_cell::sync::Lazy;
 use semver::Version;
-use crate::{shared::hashdiff::UniqueNetworkHash, server::{clients::Client, settings::NetworkClientCap}};
+use crate::{shared::{hashdiff::UniqueNetworkHash, channels::incoming::IncomingNetworkMessages}, server::{clients::Client, settings::NetworkClientCap}};
 use super::{STARDUST_UDP_VERSION_RANGE, policy::BlockingPolicy, UdpClient, ports::PortBindings};
 
 /// Minimum amount of bytes in a packet to be read at all.
@@ -138,6 +138,7 @@ fn process_packet(
     let ent_id = commands.spawn((
         Client::new(),
         UdpClient { address },
+        IncomingNetworkMessages::new(),
     )).id();
 
     // Bind a port to the client
@@ -150,7 +151,7 @@ fn process_packet(
     });
 
     // Log join
-    info!("New client joined via UDP from address {} and was assigned to socket {} and entity id {:?}", address, port, ent_id);
+    info!("New client joined via UDP from address {} and was assigned to entity id {:?}", address, ent_id);
 }
 
 fn send_json(socket: &UdpSocket, address: SocketAddr, json: JsonValue) {

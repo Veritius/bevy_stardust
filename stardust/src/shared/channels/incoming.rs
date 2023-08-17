@@ -1,10 +1,33 @@
 use std::collections::BTreeMap;
 use bevy::prelude::*;
-use crate::shared::{channels::id::ChannelId, payload::Payloads};
+use crate::shared::{channels::id::ChannelId, payload::{Payloads, Payload}};
 
 /// Incoming messages from this remote peer.
 #[derive(Component)]
-pub struct IncomingNetworkMessages(pub BTreeMap<ChannelId, Payloads>);
+pub struct IncomingNetworkMessages(BTreeMap<ChannelId, Payloads>);
+
+impl IncomingNetworkMessages {
+    pub fn new() -> Self {
+        Self(BTreeMap::new())
+    }
+
+    pub(super) fn clear(&mut self) {
+        self.0.clear()
+    }
+
+    pub fn append(&mut self, channel: ChannelId, payload: impl Into<Payload>) {
+        let payloads = self.0.entry(channel).or_insert(Payloads::from(Vec::with_capacity(1)));
+        payloads.0.push(payload.into());
+    }
+
+    pub fn read_all(&self) -> impl Iterator<Item = (&ChannelId, &Payloads)> {
+        self.0.iter()
+    }
+
+    pub fn read_channel(&self, channel: ChannelId) -> Option<&Payloads> {
+        self.0.get(&channel)
+    }
+}
 
 impl std::fmt::Debug for IncomingNetworkMessages {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

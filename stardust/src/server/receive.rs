@@ -25,7 +25,7 @@ impl<'w, 's, T: Channel> ChannelReader<'w, 's, T> {
         let Ok((_, data)) = qres else { return Err(ChannelReadingError::NonexistentClient) };
 
         // Return data
-        return Ok(data.0.get(&channel_id))
+        return Ok(data.read_channel(channel_id))
     }
 
     /// Reads messages on this channel from all clients, including their entity ID in the iterator.
@@ -35,7 +35,7 @@ impl<'w, 's, T: Channel> ChannelReader<'w, 's, T> {
         let client_iter = self.clients.iter();
         
         client_iter
-            .map(move |(e, v)| (e, v.0.get(&channel_id)))
+            .map(move |(e, v)| (e, v.read_channel(channel_id)))
             .filter(|(_, v)| v.is_some())
             .map(|(e, v)| (e, v.unwrap()))
     }

@@ -18,7 +18,7 @@ impl<'w, 's, T: Channel> ChannelReader<'w, 's, T> {
             .expect("Tried to access the data of channel T but it was not registered!");
         Ok(self.server
             .single()
-            .0.get(&val.0))
+            .read_channel(val.0))
     }
 }
 

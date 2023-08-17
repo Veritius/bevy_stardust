@@ -1,21 +1,22 @@
 use super::octetstring::OctetString;
 
 /// All [Payload] objects for a channel. If the channel this originated from is ordered, the [Payload]s will be in order.
-pub struct Payloads(pub Box<[Payload]>);
+pub struct Payloads(pub Vec<Payload>);
 
 impl From<Box<[Payload]>> for Payloads {
     fn from(value: Box<[Payload]>) -> Self {
-        Self(value)
+        Self(value.to_vec())
     }
 }
 
 impl From<Vec<Payload>> for Payloads {
     fn from(value: Vec<Payload>) -> Self {
-        Self(value.into_boxed_slice())
+        Self(value)
     }
 }
 
 /// A single network message sent over a channel, free of any additional transmission information when read.
+#[derive(Debug, Clone)]
 pub struct Payload {
     pub(crate) ignore_head: usize,
     pub(crate) ignore_tail: usize,

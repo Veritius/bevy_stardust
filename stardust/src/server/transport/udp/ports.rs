@@ -4,7 +4,6 @@ use bevy::prelude::{Entity, Resource};
 /// Owns UdpSockets and associates Entity ids with them.
 #[derive(Resource)]
 pub(super) struct PortBindings {
-    range: RangeInclusive<u16>,
     sockets: BTreeMap<u16, BoundUdpSocket>,
 }
 
@@ -18,7 +17,6 @@ impl PortBindings {
 
         // Create manager
         let mut mgr = Self {
-            range: ports.clone(),
             sockets: BTreeMap::new(),
         };
 

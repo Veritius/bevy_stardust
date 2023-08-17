@@ -1,6 +1,7 @@
 pub type Octet = u8;
 
 /// A string of octets (aka bytes).
+#[derive(Debug, Clone)]
 pub struct OctetString(Box<[Octet]>);
 
 impl OctetString {

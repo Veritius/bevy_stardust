@@ -2,7 +2,7 @@ use std::collections::hash_map::DefaultHasher;
 
 use bevy::prelude::*;
 use crate::{server::plugin::StardustServerPlugin, client::plugin::StardustClientPlugin};
-use super::{scheduling::{network_pre_update, network_post_update, add_schedules}, channels::systems::*, hashdiff::{UniqueNetworkHasher, complete_hasher}, prelude::{ChannelRegistry, NetworkPostUpdateCleanup}};
+use super::{scheduling::{network_pre_update, network_post_update, add_schedules}, channels::systems::*, hashdiff::{UniqueNetworkHasher, complete_hasher}, prelude::*};
 
 /// Shared information between the client and server.
 pub struct StardustSharedPlugin;
@@ -16,7 +16,10 @@ impl Plugin for StardustSharedPlugin {
         app.add_systems(PostUpdate, network_post_update);
 
         app.add_systems(PreUpdate, panic_on_channel_removal);
-        app.add_systems(NetworkPostUpdateCleanup, clear_octet_buffers_system);
+
+        // Systems for clearing the buffers
+        app.add_systems(NetworkPreUpdateCleanup, clear_incoming_buffers_system);
+        app.add_systems(NetworkPostUpdateCleanup, clear_outgoing_buffers_system);
 
         app.insert_resource(ChannelRegistry::new());
         app.insert_resource(UniqueNetworkHasher(Box::new(DefaultHasher::default())));

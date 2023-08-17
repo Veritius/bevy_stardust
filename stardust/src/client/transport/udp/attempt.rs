@@ -1,4 +1,4 @@
-use std::{time::{Duration, Instant}, net::{SocketAddr, UdpSocket}, ops::Deref, collections::BTreeMap};
+use std::{time::{Duration, Instant}, net::{SocketAddr, UdpSocket}, ops::Deref};
 use bevy::prelude::*;
 use json::object;
 use semver::Version;
@@ -36,7 +36,7 @@ pub(super) fn connection_attempt_system(
             let skt = UdpSocket::bind(format!("0.0.0.0:0")).unwrap();
             let _ = skt.set_nonblocking(true);
             let _ = skt.connect(target.0);
-            info!("Trying to join remote peer {} over socket {}", target.0, skt.local_addr().unwrap());
+            info!("Trying to join remote peer {}", target.0);
             *tsocket = Some(skt);
         },
         (Some(_), Some(_)) => {},
@@ -91,7 +91,7 @@ pub(super) fn connection_attempt_system(
                 info!("Accepted by remote server {}", new_address);
 
                 // Modify world
-                commands.spawn((Server, IncomingNetworkMessages(BTreeMap::new())));
+                commands.spawn((Server, IncomingNetworkMessages::new()));
                 commands.insert_resource(RemoteServerUdpSocket(socket));
                 commands.remove_resource::<ConnectToRemoteUdp>();
                 next.set(RemoteConnectionStatus::Connected);

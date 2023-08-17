@@ -37,15 +37,12 @@ pub(super) fn receive_packets_system(
         entry.push(Payload::new(0, 0, payload));
     }
     
-    // Change Vec<Payload> into Payloads in map
-    let mut final_map = BTreeMap::new();
+    // Write to IncomingNetworkMessages
+    let mut server_messages = server.single_mut();
     loop {
-        let popped = inter_map.pop_first();
-        let Some((id, payload)) = popped else { break };
-        final_map.insert(id, payload.into());
+        let Some((id, payloads)) = inter_map.pop_first() else { break };
+        for payload in payloads {
+            server_messages.append(id, payload);
+        }
     }
-
-    // Set new map and return
-    let mut server_ent = server.single_mut();
-    server_ent.0 = final_map;
 }
