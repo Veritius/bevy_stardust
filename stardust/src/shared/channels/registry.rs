@@ -26,10 +26,16 @@ impl ChannelRegistry {
         untyped_store: Arc<RwLock<OutgoingOctetStringsUntyped>>
     ) -> ChannelId {
         if self.channel_count >= CHANNEL_ID_LIMIT {
-            panic!("Exceeded channel limit of 2^24 (how did you manage to do this?)");
+            panic!("Exceeded channel limit of {}", CHANNEL_ID_LIMIT);
         }
         
+        // Check the channel doesn't already exist
         let type_id = TypeId::of::<T>();
+        if self.channel_type_map.get(&type_id).is_none() {
+            panic!("A channel was registered twice: {}", T::type_path());
+        }
+        
+        // Add to map
         let channel_id = ChannelId::try_from(self.channel_count).unwrap();
         self.channel_type_map.insert(type_id, channel_id);
         self.outgoing_arc_map.insert(channel_id, untyped_store);
