@@ -31,7 +31,7 @@ impl ChannelRegistry {
         
         // Check the channel doesn't already exist
         let type_id = TypeId::of::<T>();
-        if self.channel_type_map.get(&type_id).is_none() {
+        if self.channel_type_map.get(&type_id).is_some() {
             panic!("A channel was registered twice: {}", T::type_path());
         }
         
