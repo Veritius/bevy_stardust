@@ -30,7 +30,7 @@ impl UdpListener {
 pub(super) fn udp_listener_system(
     mut commands: Commands,
     mut ports: ResMut<PortBindings>,
-    existing: Query<(), With<Client>>,
+    existing: Query<&UdpClient, With<Client>>,
     player_cap: Res<NetworkClientCap>,
     listener: Res<UdpListener>,
     hash: Res<UniqueNetworkHash>,
@@ -40,6 +40,9 @@ pub(super) fn udp_listener_system(
     let players = existing.iter().len();
     let player_cap = player_cap.0 as usize;
 
+    let connected_addresses = existing.iter()
+        .map(|z| z.address).collect::<Vec<_>>();
+
     loop {
         // Check if we've run out of packets to read
         let Ok((octets, pkt_addr)) = listener.0.recv_from(&mut buffer) else { break };
@@ -47,11 +50,10 @@ pub(super) fn udp_listener_system(
         // Check packet size
         if octets < MINIMUM_PACKET_LENGTH { continue; }
 
-        // Check the sending IP isn't blocked
-        let blocked = policy
-            .as_ref()
-            .is_some_and(|v| v.addresses.contains(&pkt_addr.ip()));
-        if blocked { continue }
+        // Check the sending IP isn't already connected or blocked
+        if connected_addresses.contains(&pkt_addr) || policy.as_ref().is_some_and(|v| v.addresses.contains(&pkt_addr.ip())) {
+            continue;
+        }
 
         // Get relevant information
         let slice = &buffer[0..octets];
