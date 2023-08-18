@@ -8,6 +8,7 @@ use bevy::reflect::Reflect;
 
 #[allow(non_camel_case_types)]
 
+/// 24-bit integer. 4 bytes in memory, 3 bytes in transport.
 #[derive(Default, Clone, Copy, Reflect, PartialEq, Eq, PartialOrd, Ord)]
 pub struct u24(u32);
 
@@ -18,6 +19,13 @@ impl u24 {
     pub fn bytes(&self) -> [u8; 3] {
         let [_, a, b, c] = self.0.to_be_bytes();
         [a, b, c]
+    }
+
+    pub fn wrapping_add(self, rhs: Self) -> Self {
+        let mut z = self.0.wrapping_add(rhs.0);
+        let c = 2u32.pow(24);
+        if z > c { z -= c + 1; }
+        Self(z)
     }
 }
 
@@ -119,4 +127,10 @@ impl From<u24> for u128 {
 #[non_exhaustive]
 pub enum NIntegerError {
     OutOfRange,
+}
+
+#[test]
+fn u24_wrapping_addition_test() {
+    assert_eq!(u24::MAX.wrapping_add(1.into()), u24::MIN);
+    assert_eq!(u24::try_from(2u32.pow(24)-13).unwrap().wrapping_add(17.into()), 3.into());
 }

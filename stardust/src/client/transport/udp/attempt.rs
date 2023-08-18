@@ -5,7 +5,7 @@ use semver::Version;
 use crate::{shared::{hashdiff::UniqueNetworkHash, channels::incoming::IncomingNetworkMessages}, client::{connection::RemoteConnectionStatus, peers::Server, transport::udp::RemoteServerUdpSocket}};
 
 /// The version of the transport layer.
-const TRANSPORT_LAYER_VERSION: Version = Version::new(0, 0, 0);
+const TRANSPORT_LAYER_VERSION: Version = Version::new(0, 1, 0);
 /// Amount of time the client should wait for a server response before giving up.
 const RESPONSE_TIMEOUT_DURATION: Duration = Duration::from_secs(15);
 /// Time between attempts to resend packets if there is no response.

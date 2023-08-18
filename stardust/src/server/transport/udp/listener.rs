@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use json::{JsonValue, object};
 use once_cell::sync::Lazy;
 use semver::Version;
-use crate::{shared::{hashdiff::UniqueNetworkHash, channels::incoming::IncomingNetworkMessages}, server::{clients::Client, settings::NetworkClientCap}};
+use crate::{shared::{hashdiff::UniqueNetworkHash, channels::incoming::IncomingNetworkMessages}, server::{clients::Client, settings::NetworkClientCap, transport::udp::acks::ClientSequenceData}};
 use super::{STARDUST_UDP_VERSION_RANGE, policy::BlockingPolicy, UdpClient, ports::PortBindings};
 
 /// Minimum amount of bytes in a packet to be read at all.
@@ -138,6 +138,7 @@ fn process_packet(
     let ent_id = commands.spawn((
         Client::new(),
         UdpClient { address },
+        ClientSequenceData::new(),
         IncomingNetworkMessages::new(),
     )).id();
 

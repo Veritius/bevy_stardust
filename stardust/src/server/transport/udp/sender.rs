@@ -1,8 +1,7 @@
-use std::{sync::Mutex, net::{UdpSocket, SocketAddr}};
+use std::{sync::{Mutex, MutexGuard}, net::UdpSocket, collections::BTreeMap};
 use bevy::{prelude::*, tasks::TaskPool};
-use once_cell::sync::Lazy;
 use crate::{shared::{channels::{outgoing::OutgoingOctetStringsAccessor, id::ChannelId}, octetstring::OctetString}, server::clients::Client};
-use super::{UdpClient, ports::PortBindings};
+use super::{UdpClient, ports::PortBindings, acks::ClientSequenceData};
 
 // TODO
 // Despite the parallelism, this is pretty inefficient.
@@ -11,33 +10,38 @@ use super::{UdpClient, ports::PortBindings};
 pub(super) fn send_packets_system(
     // registry: Res<ChannelRegistry>,
     // channels: Query<(&ChannelData, Option<&OrderedChannel>, Option<&ReliableChannel>, Option<&FragmentedChannel>)>,
-    mut ports: ResMut<PortBindings>,
-    clients: Query<&UdpClient, With<Client>>,
+    ports: Res<PortBindings>,
+    mut clients: Query<(Entity, &UdpClient, &mut ClientSequenceData), With<Client>>,
     outgoing: OutgoingOctetStringsAccessor,
 ) {
     // Create task pool
     let pool = TaskPool::new();
 
-    // List of clients to remove in case of a mistake
-    let port_removals = Lazy::new(|| Mutex::new(Vec::with_capacity(1)));
+    // Place query data into map of mutexes to allow mutation by multiple threads
+    let mut query_mutex_map = BTreeMap::new();
+    for (id, udp, seq) in clients.iter_mut() {
+        query_mutex_map.insert(id, Mutex::new((udp, seq)));
+    }
 
     // Intentional borrow to prevent moves
-    let clients = &clients;
     let outgoing = &outgoing;
-    let port_removals = &port_removals;
+    let query_mutex_map = &query_mutex_map;
 
     // Create tasks for all ports
     pool.scope(|s| {
         for port in ports.iter() {
             s.spawn(async move {
-                let (_, socket, cls) = port;
-                for cl in cls {
+                let (_, socket, clients) = port;
+
+                // Take locks for our clients
+                let mut locks = query_mutex_map.iter()
+                    .filter(|(k,_)| clients.contains(k))
+                    .map(|(k,v)| (k, v.lock().unwrap()))
+                    .collect::<BTreeMap<_, _>>();
+
+                for client in clients {
                     // Get client entity
-                    let Ok(udp_comp) = clients.get(*cl) else {
-                        error!("Entity {:?} was in PortBindings but was not a client", *cl);
-                        port_removals.lock().unwrap().push(*cl);
-                        continue;
-                    };
+                    let client_data = locks.get_mut(client).unwrap();
 
                     // Iterate all channels
                     let channels = outgoing.by_channel();
@@ -46,31 +50,31 @@ pub(super) fn send_packets_system(
                         // Iterate all octet strings
                         for (target, octets) in channel.strings().read() {
                             // Check this message is for this client
-                            if target.excludes(*cl) { continue }
+                            if target.excludes(*client) { continue }
+
                             // Send packet
-                            send_udp_packet(socket, channel_id, &udp_comp.address, octets)
+                            send_udp_packet(
+                                socket,
+                                channel_id,
+                                octets,
+                                client_data
+                            );
                         }
                     }
                 }
             });
         }
     });
-
-    // Remove clients if there's an issue
-    let lock = port_removals.lock().unwrap();
-    for v in lock.iter() {
-        ports.remove_client(*v);
-    }
 }
 
 fn send_udp_packet(
     socket: &UdpSocket,
     channel: ChannelId,
-    address: &SocketAddr,
     octets: &OctetString,
+    client_data: &mut MutexGuard<'_, (&UdpClient, Mut<'_, ClientSequenceData>)>
 ) {
     let mut udp_payload = Vec::with_capacity(1500);
     for octet in channel.bytes() { udp_payload.push(octet); }
     for octet in octets.as_slice() { udp_payload.push(*octet); }
-    socket.send_to(&udp_payload, address).unwrap();
+    socket.send_to(&udp_payload, client_data.0.address).unwrap();
 }
