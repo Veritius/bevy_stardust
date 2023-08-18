@@ -45,9 +45,10 @@ impl PortBindings {
     pub fn add_client(&mut self, client: Entity) -> u16 {
         // Find the first smallest vec
         let mut last_len: usize = 0;
-        for (port, socket) in self.sockets.iter() {
+        for (port, socket) in self.sockets.iter_mut() {
             let len = socket.clients.len();
             if len < last_len {
+                socket.clients.push(client);
                 return *port;
             }
             last_len = len;
