@@ -4,7 +4,7 @@ use crate::{server::clients::Client, shared::{channels::{components::*, incoming
 use super::{PACKET_HEADER_SIZE, UdpClient, ports::PortBindings, acks::ClientSequenceData};
 
 pub(super) fn receive_packets_system(
-    mut clients: Query<(Entity, &Client, &UdpClient, &mut ClientSequenceData, &mut IncomingNetworkMessages)>,
+    mut clients: Query<(Entity, &mut Client, &mut UdpClient, &mut ClientSequenceData, &mut IncomingNetworkMessages)>,
     ports: Res<PortBindings>,
     channels: Query<(&ChannelData, Option<&OrderedChannel>, Option<&ReliableChannel>, Option<&FragmentedChannel>)>,
     registry: Res<ChannelRegistry>,
@@ -20,7 +20,7 @@ pub(super) fn receive_packets_system(
 
     // Explicit borrows to prevent moves
     let query_mutex_map = &query_mutex_map;
-    let _channels = &channels;
+    let channels = &channels;
     let registry = &registry;
 
     // Create tasks for all sockets
@@ -65,9 +65,21 @@ pub(super) fn receive_packets_system(
                     if !addresses.contains(&from_address) { continue } // Packet isn't from one of the clients associated with this port
                     if octets_read < PACKET_HEADER_SIZE { continue } // Packet is too small to be of any value
 
-                    // Channel info
+                    // Check channel data
                     let channel_id = ChannelId::from(TryInto::<[u8; 3]>::try_into(&buffer[..3]).unwrap());
                     if !registry.channel_exists(channel_id) { continue } // Channel doesn't exist
+                    let channel_entity = registry.get_from_id(channel_id).unwrap();
+                    let channel_config = channels.get(channel_entity)
+                        .expect("Channel was in registry but didn't have a config entity");
+                    let (channel_config, ordered, reliable, fragmented) =
+                        (channel_config.0.config(), channel_config.1.is_none(), channel_config.2.is_some(), channel_config.3.is_some());
+                    if channel_config.direction == ChannelDirection::ServerToClient {
+                        // Packet went in the wrong direction
+                        let entity_id = address_map.get(&from_address).unwrap();
+                        let hiccups = &mut locks.get_mut(entity_id).unwrap().1;
+                        hiccups.hiccups += 1;
+                        continue
+                    }
 
                     // Copy data to vec and make Payload
                     let mut payload = Vec::with_capacity(octets_read - PACKET_HEADER_SIZE);

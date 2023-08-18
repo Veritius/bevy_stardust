@@ -1,6 +1,6 @@
 use std::{sync::{Mutex, MutexGuard}, net::UdpSocket, collections::BTreeMap};
 use bevy::{prelude::*, tasks::TaskPool};
-use crate::{shared::{channels::{outgoing::OutgoingOctetStringsAccessor, id::ChannelId}, octetstring::OctetString}, server::clients::Client};
+use crate::{shared::{channels::{outgoing::OutgoingOctetStringsAccessor, id::ChannelId}, octetstring::OctetString}, server::{clients::Client, prelude::*}};
 use super::{UdpClient, ports::PortBindings, acks::ClientSequenceData};
 
 // TODO
@@ -8,8 +8,8 @@ use super::{UdpClient, ports::PortBindings, acks::ClientSequenceData};
 // It iterates over things when it doesn't need to several times.
 
 pub(super) fn send_packets_system(
-    // registry: Res<ChannelRegistry>,
-    // channels: Query<(&ChannelData, Option<&OrderedChannel>, Option<&ReliableChannel>, Option<&FragmentedChannel>)>,
+    registry: Res<ChannelRegistry>,
+    channel_entities: Query<(&ChannelData, Option<&OrderedChannel>, Option<&ReliableChannel>, Option<&FragmentedChannel>)>,
     ports: Res<PortBindings>,
     mut clients: Query<(Entity, &UdpClient, &mut ClientSequenceData), With<Client>>,
     outgoing: OutgoingOctetStringsAccessor,
@@ -24,6 +24,8 @@ pub(super) fn send_packets_system(
     }
 
     // Intentional borrow to prevent moves
+    let registry = &registry;
+    let channel_entities = &channel_entities;
     let outgoing = &outgoing;
     let query_mutex_map = &query_mutex_map;
 
@@ -46,7 +48,20 @@ pub(super) fn send_packets_system(
                     // Iterate all channels
                     let channels = outgoing.by_channel();
                     for channel in channels {
+                        // Get channel data
                         let channel_id = channel.id();
+                        let channel_ent = registry.get_from_id(channel_id)
+                            .expect("Tried to send a packet to a channel that did not exist");
+                        let channel_config = channel_entities.get(channel_ent)
+                            .expect("Channel was in registry but the associated entity didn't exist");
+                        let (channel_config, ordered, reliable, fragmented) =
+                            (channel_config.0.config(), channel_config.1.is_none(), channel_config.2.is_some(), channel_config.3.is_some());
+
+                        // Check channel direction
+                        if channel_config.direction == ChannelDirection::ClientToServer {
+                            panic!("Tried to send a message on a client to server channel");
+                        }
+
                         // Iterate all octet strings
                         for (target, octets) in channel.strings().read() {
                             // Check this message is for this client

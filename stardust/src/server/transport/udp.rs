@@ -58,6 +58,7 @@ impl Plugin for ServerUdpTransportPlugin {
 #[derive(Debug, Component)]
 pub struct UdpClient {
     address: SocketAddr,
+    hiccups: u16,
 }
 
 /// The amount of bytes that will always be present in all packages.

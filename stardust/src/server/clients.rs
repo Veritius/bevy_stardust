@@ -1,5 +1,4 @@
 use std::time::Instant;
-
 use bevy::prelude::*;
 
 /// Represents a connected client as an entity.

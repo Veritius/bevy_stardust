@@ -137,7 +137,7 @@ fn process_packet(
     // Create entity
     let ent_id = commands.spawn((
         Client::new(),
-        UdpClient { address },
+        UdpClient { address, hiccups: 0 },
         ClientSequenceData::new(),
         IncomingNetworkMessages::new(),
     )).id();
