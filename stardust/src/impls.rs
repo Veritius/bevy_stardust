@@ -3,3 +3,4 @@ mod json;
 mod pointers;
 mod primitives;
 mod transform;
+mod integers;

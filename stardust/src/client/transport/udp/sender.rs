@@ -25,7 +25,7 @@ pub(super) fn send_packets_system(
 
             // TODO: Figure out a better way to do this
             let mut payload = Vec::with_capacity(3 + octets.len());
-            for b in id.as_bytes() { payload.push(b); }
+            for b in id.bytes() { payload.push(b); }
             for b in octets.as_slice() { payload.push(*b); }
 
             // Send data

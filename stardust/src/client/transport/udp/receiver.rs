@@ -25,7 +25,7 @@ pub(super) fn receive_packets_system(
         if octets <= 3 { continue; }
 
         // Get channel ID and check it exists
-        let channel_id = ChannelId::from_bytes(&buffer[..3].try_into().unwrap());
+        let channel_id = ChannelId::from(TryInto::<[u8;3]>::try_into(&buffer[..3]).unwrap());
         if !channel_registry.channel_exists(channel_id) { continue; } // Channel doesn't exist
 
         // Clone message data

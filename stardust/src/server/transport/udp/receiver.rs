@@ -1,7 +1,7 @@
 use std::{sync::Mutex, collections::BTreeMap, io};
 use bevy::{prelude::*, tasks::TaskPool};
 use crate::{server::clients::Client, shared::{channels::{components::*, incoming::IncomingNetworkMessages, registry::ChannelRegistry, id::ChannelId}, payload::Payload}};
-use super::{PACKET_HEADER_SIZE, MAX_PACKET_LENGTH, UdpClient, ports::PortBindings};
+use super::{PACKET_HEADER_SIZE, UdpClient, ports::PortBindings};
 
 pub(super) fn receive_packets_system(
     mut clients: Query<(Entity, &Client, &UdpClient, &mut IncomingNetworkMessages)>,
@@ -66,7 +66,7 @@ pub(super) fn receive_packets_system(
                     if octets_read < PACKET_HEADER_SIZE { continue } // Packet is too small to be of any value
 
                     // Channel info
-                    let channel_id = ChannelId::from_bytes(&buffer[..3].try_into().unwrap());
+                    let channel_id = ChannelId::from(TryInto::<[u8; 3]>::try_into(&buffer[..3]).unwrap());
                     if !registry.channel_exists(channel_id) { continue } // Channel doesn't exist
 
                     // Copy data to vec and make Payload

@@ -6,6 +6,7 @@ mod listener;
 mod receiver;
 mod sender;
 mod ports;
+mod acks;
 
 use std::{net::{SocketAddr, IpAddr}, ops::RangeInclusive};
 use bevy::prelude::*;
@@ -59,7 +60,5 @@ pub struct UdpClient {
     address: SocketAddr,
 }
 
-/// Maximum packet length that can be sent/received before fragmentation.
-const MAX_PACKET_LENGTH: usize = 1500;
 /// The amount of bytes that will always be present in all packages.
 const PACKET_HEADER_SIZE: usize = 3;

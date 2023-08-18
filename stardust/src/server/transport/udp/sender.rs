@@ -70,7 +70,7 @@ fn send_udp_packet(
     octets: &OctetString,
 ) {
     let mut udp_payload = Vec::with_capacity(1500);
-    for octet in channel.as_bytes() { udp_payload.push(octet); }
+    for octet in channel.bytes() { udp_payload.push(octet); }
     for octet in octets.as_slice() { udp_payload.push(*octet); }
     socket.send_to(&udp_payload, address).unwrap();
 }
