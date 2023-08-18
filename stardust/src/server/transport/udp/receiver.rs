@@ -1,10 +1,10 @@
 use std::{sync::Mutex, collections::BTreeMap, io};
 use bevy::{prelude::*, tasks::TaskPool};
 use crate::{server::clients::Client, shared::{channels::{components::*, incoming::IncomingNetworkMessages, registry::ChannelRegistry, id::ChannelId}, payload::Payload}};
-use super::{PACKET_HEADER_SIZE, UdpClient, ports::PortBindings};
+use super::{PACKET_HEADER_SIZE, UdpClient, ports::PortBindings, acks::ClientSequenceData};
 
 pub(super) fn receive_packets_system(
-    mut clients: Query<(Entity, &Client, &UdpClient, &mut IncomingNetworkMessages)>,
+    mut clients: Query<(Entity, &Client, &UdpClient, &mut ClientSequenceData, &mut IncomingNetworkMessages)>,
     ports: Res<PortBindings>,
     channels: Query<(&ChannelData, Option<&OrderedChannel>, Option<&ReliableChannel>, Option<&FragmentedChannel>)>,
     registry: Res<ChannelRegistry>,
@@ -14,8 +14,8 @@ pub(super) fn receive_packets_system(
 
     // Place query data into map of mutexes to allow mutation by multiple threads
     let mut query_mutex_map = BTreeMap::new();
-    for (id, client, udp, incoming) in clients.iter_mut() {
-        query_mutex_map.insert(id, Mutex::new((client, udp, incoming)));
+    for (id, client, seq, udp, incoming) in clients.iter_mut() {
+        query_mutex_map.insert(id, Mutex::new((client, seq, udp, incoming)));
     }
 
     // Explicit borrows to prevent moves
@@ -76,7 +76,7 @@ pub(super) fn receive_packets_system(
 
                     // Place payload in incoming component
                     let entity_id = address_map.get(&from_address).unwrap();
-                    let incoming = &mut locks.get_mut(entity_id).unwrap().2;
+                    let incoming = &mut locks.get_mut(entity_id).unwrap().3;
                     incoming.append(channel_id, payload);
                 }
             });
