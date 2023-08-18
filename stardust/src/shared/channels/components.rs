@@ -7,6 +7,7 @@ use super::id::ChannelId;
 pub struct ChannelData {
     pub(crate) config: ChannelConfig,
     pub(crate) type_id: TypeId,
+    pub(crate) type_path: &'static str,
     pub(crate) channel_id: ChannelId,
 }
 
@@ -19,6 +20,11 @@ impl ChannelData {
     /// Returns the associated `TypeId` used to access this channel.
     pub fn type_id(&self) -> TypeId {
         self.type_id
+    }
+
+    /// Returns the [TypePath](https://docs.rs/bevy_reflect/0.11.0/bevy_reflect/trait.TypePath.html) fully qualified path.
+    pub fn type_path(&self) -> &'static str {
+        self.type_path
     }
 
     /// Returns the associated `ChannelId` used for network transport.

@@ -31,6 +31,7 @@ impl ChannelSetupAppExt for App {
         self.world.entity_mut(entity_id).insert(ChannelData {
             config,
             type_id,
+            type_path: C::type_path(),
             channel_id,
         });
         

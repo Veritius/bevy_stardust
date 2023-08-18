@@ -54,12 +54,12 @@ pub(super) fn send_packets_system(
                             .expect("Tried to send a packet to a channel that did not exist");
                         let channel_config = channel_entities.get(channel_ent)
                             .expect("Channel was in registry but the associated entity didn't exist");
-                        let (channel_config, ordered, reliable, fragmented) =
-                            (channel_config.0.config(), channel_config.1.is_none(), channel_config.2.is_some(), channel_config.3.is_some());
+                        let (channel_type_path, channel_config, ordered, reliable, fragmented) =
+                            (channel_config.0.type_path(), channel_config.0.config(), channel_config.1.is_none(), channel_config.2.is_some(), channel_config.3.is_some());
 
                         // Check channel direction
                         if channel_config.direction == ChannelDirection::ClientToServer {
-                            panic!("Tried to send a message on a client to server channel");
+                            panic!("Tried to send a message on client to server channel: {}", channel_type_path);
                         }
 
                         // Iterate all octet strings
