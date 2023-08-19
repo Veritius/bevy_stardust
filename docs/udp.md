@@ -5,7 +5,7 @@ Stardust's default transport layer is UDP, included with the crate.
 When the server is created, it binds to a special UDP socket used specifically for listening for new clients that are trying to join. This is referred to as the 'listen socket'.
 
 The client initiates a connection by sending a 'join request' packet to the server's listen socket, consisting of a JSON message.
-```json
+```jsonc
 {
     // From the client
     "request": "join",
@@ -15,7 +15,7 @@ The client initiates a connection by sending a 'join request' packet to the serv
 ```
 
 The server, if it accepts the client, sends a response message and the port the client will now use to communicate.
-```json
+```jsonc
 {
     // From the server
     "response": "accepted",
@@ -26,7 +26,7 @@ The server, if it accepts the client, sends a response message and the port the 
 <details>
 <summary>Other possible responses</summary>
 
-```json
+```jsonc
 // Denied, no reason given
 { "response": "denied" }
 
