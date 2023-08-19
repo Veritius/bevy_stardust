@@ -56,7 +56,7 @@ fn main() {
         direction: ChannelDirection::Bidirectional,
     }, ());
 
-    app.add_systems(WriteOctetStrings, sender_system);
+    app.add_systems(Update, sender_system);
 }
 
 fn sender_system(
