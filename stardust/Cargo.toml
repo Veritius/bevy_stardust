@@ -1,10 +1,11 @@
 [package]
 name="bevy_stardust"
-version="0.1.0"
+version="0.2.0"
 edition="2021"
 authors=["Veritius <veritiusgaming@gmail.com>"]
 readme="../README.md"
 license="MIT"
+documentation="https://github.com/Veritius/bevy_stardust/blob/main/docs/README.md"
 description="A batteries-included networking crate for the Bevy game engine."
 repository="https://github.com/veritius/bevy_stardust/"
 keywords=["bevy", "gamedev", "networking"]

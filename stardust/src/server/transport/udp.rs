@@ -15,8 +15,8 @@ use semver::{Version, VersionReq};
 use crate::shared::scheduling::{TransportReadPackets, TransportSendPackets};
 use self::{receiver::receive_packets_system, sender::send_packets_system, listener::{udp_listener_system, UdpListener}, ports::PortBindings};
 
-pub static STARDUST_UDP_CURRENT_VERSION: Version = Version::new(0, 1, 0);
-pub static STARDUST_UDP_VERSION_RANGE: Lazy<VersionReq> = Lazy::new(|| { "=0.1.0".parse::<VersionReq>().unwrap() });
+pub static STARDUST_UDP_CURRENT_VERSION: Version = Version::new(0, 2, 0);
+pub static STARDUST_UDP_VERSION_RANGE: Lazy<VersionReq> = Lazy::new(|| { "=0.2.0".parse::<VersionReq>().unwrap() });
 
 /// A simple transport layer over native UDP sockets.
 pub struct ServerUdpTransportPlugin {
