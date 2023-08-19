@@ -40,6 +40,12 @@ use bevy_stardust::shared::prelude::*;
 
 #[derive(Debug, Reflect)]
 struct MyChannel;
+
+fn register_channels(app: &mut App) {
+    app.register_channel::<MyChannel>(ChannelConfig {
+        direction: ChannelDirection::Bidirectional,
+    }, ());
+}
 ```
 ```rs
 // On the client
@@ -52,9 +58,7 @@ fn main() {
     app.add_plugins(StardustClientPlugin);
     app.add_plugins(ClientUdpTransportPlugin);
 
-    app.register_channel::<MyChannel>(ChannelConfig {
-        direction: ChannelDirection::Bidirectional,
-    }, ());
+    register_channels(&mut app);
 
     app.add_systems(Update, sender_system);
 }
@@ -83,9 +87,7 @@ fn main() {
         active_ports: 12346..=12356,
     })
 
-    app.register_channel::<MyChannel>(ChannelConfig {
-        direction: ChannelDirection::Bidirectional,
-    }, ());
+    register_channels(&mut app);
 
     app.insert_resource(NetworkClientCap(64));
 
