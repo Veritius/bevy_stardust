@@ -1,7 +1,7 @@
 use std::{sync::{Mutex, MutexGuard}, net::UdpSocket, collections::BTreeMap};
 use bevy::{prelude::*, tasks::TaskPool};
 use crate::{shared::{channels::{outgoing::OutgoingOctetStringsAccessor, id::ChannelId}, octetstring::OctetString}, server::{clients::Client, prelude::*}};
-use super::{UdpClient, ports::PortBindings, acks::ClientSequenceData};
+use super::{UdpClient, ports::PortBindings, acks::{ClientSequenceData, SequenceId}};
 
 // TODO
 // Despite the parallelism, this is pretty inefficient.
@@ -41,6 +41,9 @@ pub(super) fn send_packets_system(
                     .map(|(k,v)| (k, v.lock().unwrap()))
                     .collect::<BTreeMap<_, _>>();
 
+                // Store sent packets for reliability
+                let mut sent_packets = vec![];
+
                 for client in clients {
                     // Get client entity
                     let client_data = locks.get_mut(client).unwrap();
@@ -56,6 +59,8 @@ pub(super) fn send_packets_system(
                             .expect("Channel was in registry but the associated entity didn't exist");
                         let (channel_type_path, channel_config, ordered, reliable, fragmented) =
                             (channel_config.0.type_path(), channel_config.0.config(), channel_config.1.is_none(), channel_config.2.is_some(), channel_config.3.is_some());
+                        
+                        let sending_data = ChannelSendingData { reliable, ordered, fragmented };
 
                         // Check channel direction
                         if channel_config.direction == ChannelDirection::ClientToServer {
@@ -68,10 +73,13 @@ pub(super) fn send_packets_system(
                             if target.excludes(*client) { continue }
 
                             // Send packet
-                            send_udp_packet(
+                            send_octet_string(
                                 socket,
                                 channel_id,
                                 octets,
+                                sending_data,
+                                &mut sent_packets,
+                                *client,
                                 client_data
                             );
                         }
@@ -82,14 +90,44 @@ pub(super) fn send_packets_system(
     });
 }
 
-fn send_udp_packet(
+// Data useful to `send_udp_packets`. Not necessary, but makes life easier.
+#[derive(Clone, Copy)]
+struct ChannelSendingData {
+    pub reliable: bool,
+    pub ordered: bool,
+    pub fragmented: bool,
+}
+
+fn send_octet_string(
     socket: &UdpSocket,
     channel: ChannelId,
     octets: &OctetString,
+    settings: ChannelSendingData,
+    reliable: &mut Vec<(Entity, SequenceId, OctetString)>,
+    client_id: Entity,
     client_data: &mut MutexGuard<'_, (&UdpClient, Mut<'_, ClientSequenceData>)>
 ) {
+    // Allocate vec for storing payload data
     let mut udp_payload = Vec::with_capacity(1500);
+
+    // Write channel ID
     for octet in channel.bytes() { udp_payload.push(octet); }
+
+    // Write sequence ID if needed
+    let mut sequence: SequenceId = 0.into(); // should get overwritten anyway
+    if settings.ordered || settings.reliable {
+        sequence = client_data.1.next();
+        for octet in sequence.bytes() { udp_payload.push(octet); }
+    }
+
+    // Write octet string
+    if octets.as_slice().len() > 1500 - udp_payload.len() { panic!("Packet was too big. Fragmenting is not currently supported, try sending your data in multiple pieces."); }
     for octet in octets.as_slice() { udp_payload.push(*octet); }
+
+    // Send data to remote peer
     socket.send_to(&udp_payload, client_data.0.address).unwrap();
+
+    // Store octet string for reliability
+    if !settings.reliable { return }
+    reliable.push((client_id, sequence, octets.clone()));
 }

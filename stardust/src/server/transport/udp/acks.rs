@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use crate::shared::integers::u24;
 
-type SequenceId = u24;
+pub type SequenceId = u24;
 
 /// Sequence information for one client.
 /// 
@@ -25,6 +25,12 @@ impl ClientSequenceData {
         let new = self.local_sequence.wrapping_add(1.into());
         self.local_sequence = new;
         return new;
+    }
+
+    /// Returns a bitfield of acknowledgements.
+    pub fn acks(&self) -> u32 {
+        todo!();
+        0
     }
 
     /// Checks if `new` is greater than the current remote value, replacing it if true.
