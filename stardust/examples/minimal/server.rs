@@ -16,7 +16,7 @@ pub(super) fn server() -> App {
 
     // Add our sending and receiving systems
     app.add_systems(ReadOctetStrings, receive_random_data_system_server);
-    app.add_systems(WriteOctetStrings, send_random_data_system_server);
+    app.add_systems(Update, send_random_data_system_server);
 
     // Configure the server
     app.insert_resource(NetworkClientCap(64));

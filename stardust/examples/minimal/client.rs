@@ -11,7 +11,7 @@ pub(super) fn client() -> App {
 
     // Add our sending and receiving systems
     app.add_systems(ReadOctetStrings, receive_random_data_system_client);
-    app.add_systems(WriteOctetStrings, send_random_data_system_client);
+    app.add_systems(Update, send_random_data_system_client);
 
     app.add_systems(Startup, |mut manager: UdpConnectionManager| {
         use std::net::*;

@@ -4,8 +4,7 @@ pub(super) fn add_schedules(app: &mut App) {
     app.add_schedule(TransportReadPackets, Schedule::new());
     app.add_schedule(ReadOctetStrings, Schedule::new());
     app.add_schedule(NetworkPreUpdateCleanup, Schedule::new());
-    
-    app.add_schedule(WriteOctetStrings, Schedule::new());
+
     app.add_schedule(TransportSendPackets, Schedule::new());
     app.add_schedule(NetworkPostUpdateCleanup, Schedule::new());
 }
@@ -39,14 +38,9 @@ pub struct NetworkPreUpdateCleanup;
 pub struct NetworkPostUpdate;
 
 pub(super) fn network_post_update(world: &mut World) {
-    world.run_schedule(WriteOctetStrings);
     world.run_schedule(TransportSendPackets);
     world.run_schedule(NetworkPostUpdateCleanup);
 }
-
-/// Bevy systems write octet strings to be sent over the network.
-#[derive(Debug, Clone, Hash, PartialEq, Eq, ScheduleLabel)]
-pub struct WriteOctetStrings;
 
 /// The transport layer fragments and sends packets over the network.
 /// 
