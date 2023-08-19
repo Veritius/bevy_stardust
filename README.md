@@ -12,7 +12,7 @@ Stardust is a batteries-included networking crate built for Bevy. Stardust inten
 - Automatically compartmentalised network messages, separated into 'channels' defined with Bevy components.
 - Runs in parallel - Stardust network code is built off the back of Bevy's scheduler, so your systems run perfectly in parallel.
 - Plugins can effortlessly add their own network code without any changes on your side.
-- Use any transport layer to send messages over the internet, including UDP, WebRTC, even [signal flags](https://en.wikipedia.org/wiki/International_maritime_signal_flags) - without changing any of your systems.
+- Use any transport layer to send messages over the Internet, including UDP, WebRTC, even [signal flags](https://en.wikipedia.org/wiki/International_maritime_signal_flags) - without changing any of your systems.
 <!-- - Replicate components, even those from other crates, with a single line of code. -->
 <!-- - Control replication on a per-entity basis with components and bundles. -->
 
