@@ -5,6 +5,7 @@ edition="2021"
 authors=["Veritius <veritiusgaming@gmail.com>"]
 readme="../README.md"
 license="MIT"
+description="A batteries-included networking crate for the Bevy game engine."
 repository="https://github.com/veritius/bevy_stardust/"
 keywords=["bevy", "gamedev", "networking"]
 
