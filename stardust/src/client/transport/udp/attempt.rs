@@ -2,7 +2,7 @@ use std::{time::{Duration, Instant}, net::{SocketAddr, UdpSocket}, ops::Deref};
 use bevy::prelude::*;
 use json::object;
 use semver::Version;
-use crate::{shared::{hashdiff::UniqueNetworkHash, channels::incoming::IncomingNetworkMessages}, client::{connection::RemoteConnectionStatus, peers::Server, transport::udp::RemoteServerUdpSocket}};
+use crate::{shared::{hashdiff::UniqueNetworkHash, channels::incoming::IncomingNetworkMessages, reliability::PeerSequenceData}, client::{connection::RemoteConnectionStatus, peers::Server, transport::udp::RemoteServerUdpSocket}};
 
 /// The version of the transport layer.
 const TRANSPORT_LAYER_VERSION: Version = Version::new(0, 2, 0);
@@ -91,7 +91,11 @@ pub(super) fn connection_attempt_system(
                 info!("Accepted by remote server {}", new_address);
 
                 // Modify world
-                commands.spawn((Server, IncomingNetworkMessages::new()));
+                commands.spawn((
+                    Server,
+                    PeerSequenceData::new(),
+                    IncomingNetworkMessages::new(),
+                ));
                 commands.insert_resource(RemoteServerUdpSocket(socket));
                 commands.remove_resource::<ConnectToRemoteUdp>();
                 next.set(RemoteConnectionStatus::Connected);

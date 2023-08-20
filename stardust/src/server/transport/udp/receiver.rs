@@ -1,10 +1,10 @@
 use std::{sync::Mutex, collections::BTreeMap, io};
 use bevy::{prelude::*, tasks::TaskPool};
-use crate::{server::clients::Client, shared::{channels::{components::*, incoming::IncomingNetworkMessages, registry::ChannelRegistry, id::ChannelId}, payload::Payload}};
-use super::{PACKET_HEADER_SIZE, UdpClient, ports::PortBindings, acks::ClientSequenceData};
+use crate::{server::clients::Client, shared::{channels::{components::*, incoming::IncomingNetworkMessages, registry::ChannelRegistry, id::ChannelId}, payload::Payload, reliability::PeerSequenceData}};
+use super::{PACKET_HEADER_SIZE, UdpClient, ports::PortBindings};
 
 pub(super) fn receive_packets_system(
-    mut clients: Query<(Entity, &mut Client, &mut UdpClient, &mut ClientSequenceData, &mut IncomingNetworkMessages)>,
+    mut clients: Query<(Entity, &mut Client, &mut UdpClient, &mut PeerSequenceData, &mut IncomingNetworkMessages)>,
     ports: Res<PortBindings>,
     channels: Query<(&ChannelData, Option<&OrderedChannel>, Option<&ReliableChannel>, Option<&FragmentedChannel>)>,
     registry: Res<ChannelRegistry>,

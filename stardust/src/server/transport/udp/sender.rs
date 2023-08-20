@@ -1,7 +1,7 @@
 use std::{sync::{Mutex, MutexGuard}, net::UdpSocket, collections::BTreeMap};
 use bevy::{prelude::*, tasks::TaskPool};
-use crate::{shared::{channels::{outgoing::OutgoingOctetStringsAccessor, id::ChannelId}, octetstring::OctetString}, server::{clients::Client, prelude::*}};
-use super::{UdpClient, ports::PortBindings, acks::{ClientSequenceData, SequenceId}};
+use crate::{shared::{channels::{outgoing::OutgoingOctetStringsAccessor, id::ChannelId}, octetstring::OctetString, reliability::{PeerSequenceData, SequenceId}}, server::{clients::Client, prelude::*}};
+use super::{UdpClient, ports::PortBindings};
 
 // TODO
 // Despite the parallelism, this is pretty inefficient.
@@ -11,7 +11,7 @@ pub(super) fn send_packets_system(
     registry: Res<ChannelRegistry>,
     channel_entities: Query<(&ChannelData, Option<&OrderedChannel>, Option<&ReliableChannel>, Option<&FragmentedChannel>)>,
     ports: Res<PortBindings>,
-    mut clients: Query<(Entity, &UdpClient, &mut ClientSequenceData), With<Client>>,
+    mut clients: Query<(Entity, &UdpClient, &mut PeerSequenceData), With<Client>>,
     outgoing: OutgoingOctetStringsAccessor,
 ) {
     // Create task pool
@@ -105,7 +105,7 @@ fn send_octet_string(
     settings: ChannelSendingData,
     reliable: &mut Vec<(Entity, SequenceId, OctetString)>,
     client_id: Entity,
-    client_data: &mut MutexGuard<'_, (&UdpClient, Mut<'_, ClientSequenceData>)>
+    client_data: &mut MutexGuard<'_, (&UdpClient, Mut<'_, PeerSequenceData>)>
 ) {
     // Allocate vec for storing payload data
     let mut udp_payload = Vec::with_capacity(1500);
