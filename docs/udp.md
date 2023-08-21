@@ -9,7 +9,7 @@ The client initiates a connection by sending a 'join request' packet to the serv
 {
     // From the client
     "request": "join",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "pid": "42B2EC801C40258A"
 }
 ```
