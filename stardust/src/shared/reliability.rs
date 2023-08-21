@@ -2,7 +2,7 @@
 //! Functions based on the assumption a lot of messages are being sent every frame.
 
 use bevy::prelude::*;
-use bitvec::prelude::BitVec;
+use fixedbitset::FixedBitSet;
 use super::integers::u24;
 
 pub type SequenceId = u24;
@@ -21,14 +21,13 @@ pub struct PeerSequenceData {
     pub local_sequence: SequenceId,
     pub remote_sequence: SequenceId,
     highest_remote_sequence_this_frame: SequenceId,
-    received: BitVec,
+    received: FixedBitSet,
 }
 
 impl PeerSequenceData {
     pub fn new() -> Self {
         // I reckon 4096 reliable packets each tick is probably the most that'll happen.
-        let mut received = BitVec::with_capacity(4096);
-        received.fill(false);
+        let received = FixedBitSet::with_capacity(4096);
 
         Self {
             local_sequence: 0.into(),
@@ -42,6 +41,7 @@ impl PeerSequenceData {
     pub fn next(&mut self) -> SequenceId {
         let new = self.local_sequence.wrapping_add(1.into());
         self.local_sequence = new;
+        dbg!(&self.received);
         return new;
     }
 
@@ -53,11 +53,11 @@ impl PeerSequenceData {
 
     /// Marks a packet as received. Expands the bitvec if it's too small.
     pub fn mark_received(&mut self, sequence: SequenceId) {
-        let seq = self.remote_sequence.wrapping_sub(sequence).into();
-        if seq > self.received.capacity() {
-            self.received.resize(seq, false);
+        let seq: usize = sequence.wrapping_sub(self.remote_sequence).into();
+        if seq > self.received.len() {
+            self.received.grow(seq);
         }
-        *self.received.get_mut(seq).unwrap() = true;
+        self.received.insert(seq);
     }
 
     /// Run after all packets from this client are read.
@@ -68,7 +68,7 @@ impl PeerSequenceData {
             highest: usize,
             index: usize,
             sequence: SequenceId,
-            bits: BitVec,
+            bits: FixedBitSet,
         }
 
         impl Iterator for MissingPacketIterator {
@@ -81,7 +81,7 @@ impl PeerSequenceData {
                     if self.index > self.highest { break None; }
 
                     // Get the value and increment index
-                    let v = *self.bits.get(self.index).unwrap();
+                    let v = self.bits.contains(self.index);
 
                     // Next iteration of loop
                     if v == true {
@@ -105,7 +105,7 @@ impl PeerSequenceData {
         self.remote_sequence = self.highest_remote_sequence_this_frame;
 
         // Check if any packets weren't received
-        if self.received[..recv_amt].all() { return None; }
+        if self.received.is_clear() { return None; }
         
         // Build iterator, cloning data
         let iterator = MissingPacketIterator {
@@ -116,16 +116,9 @@ impl PeerSequenceData {
         };
 
         // Clear bit vector
-        self.received.iter_mut().for_each(|mut z| z.set(false));
+        self.received.clear();
 
         // Return iterator
         Some(iterator)
-    }
-
-    /// Checks if `new` is greater than the current remote value, replacing it if true.
-    pub fn update_remote(&mut self, new: SequenceId) {
-        if sequence_more_recent_than(self.remote_sequence, new) {
-            self.remote_sequence = new;
-        }
     }
 }

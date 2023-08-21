@@ -59,9 +59,9 @@ pub(super) fn receive_packets_system(
     let complete = server_seq.complete();
     if complete.is_some() {
         let complete = complete.unwrap().collect::<Vec<_>>();
-        println!("Missed packets: {:?}", &complete);
+        println!("Server missed packets: {:?}", &complete);
     }
-    
+
     // Write to IncomingNetworkMessages
     loop {
         let Some((id, payload)) = pending.pop() else { break };

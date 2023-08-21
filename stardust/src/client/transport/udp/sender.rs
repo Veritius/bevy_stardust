@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use rand::Rng;
 use crate::{shared::{prelude::*, channels::outgoing::OutgoingOctetStringsAccessor, reliability::PeerSequenceData, integers::u24}, client::peers::Server};
 use super::RemoteServerUdpSocket;
 
@@ -56,7 +57,11 @@ pub(super) fn send_packets_system(
             for b in octets.as_slice() { payload.push(*b); }
 
             // Send data
-            remote.0.send(&payload).unwrap();
+            if rand::thread_rng().gen_range(0.0..1.0) > 0.2 {
+                remote.0.send(&payload).unwrap();
+            } else {
+                info!("Intentionally failed to send a packet.");
+            }
         }
     }
 }
