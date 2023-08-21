@@ -14,7 +14,7 @@ The client initiates a connection by sending a 'join request' packet to the serv
 }
 ```
 
-The server, if it accepts the client, sends a response message and the port the client will now use to communicate.
+The server, if it accepts the client, spawns the client entity and sends a response message and the port the client will now use to communicate.
 ```jsonc
 {
     // From the server
@@ -44,6 +44,8 @@ The server, if it accepts the client, sends a response message and the port the 
 { "response": "wrong_pid", "srv_pid": "42B2EC801C40258A" }
 ```
 </details>
+
+The negotiation stage prevents the use of a "protocol id" value being sent with every packet. By first checking it when negotiating, then adding the client to an allow-list when they're accepted, we save a few bytes.
 
 ## Scheduling
 The UDP transport layer runs entirely within the Bevy scheduler, as regular Bevy systems. The receiving system runs in the `TransportReadPackets` schedule, and the sending system runs in the `TransportWritePackets` schedule. This creates a steady pattern of read-write-read-write-read-write (etc).
