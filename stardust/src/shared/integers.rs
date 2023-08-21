@@ -29,10 +29,7 @@ impl u24 {
     }
 
     pub fn wrapping_sub(self, rhs: Self) -> Self {
-        let mut z = self.0.wrapping_sub(rhs.0);
-        let c = 2u32.pow(24);
-        if z > c { z -= c + 1 }
-        Self(z)
+        Self(self.0.checked_sub(rhs.0).unwrap_or_else(|| { todo!() }))
     }
 }
 
@@ -152,7 +149,9 @@ pub enum NIntegerError {
 }
 
 #[test]
-fn u24_wrapping_addition_test() {
+fn u24_wrapping_test() {
     assert_eq!(u24::MAX.wrapping_add(1.into()), u24::MIN);
-    assert_eq!(u24::try_from(2u32.pow(24)-13).unwrap().wrapping_add(17.into()), 3.into());
+    assert_eq!(u24::from(16u16).wrapping_add(1u16.into()), u24::from(17u16));
+    // assert_eq!(u24::MIN.wrapping_sub(1.into()), u24::MAX);
+    assert_eq!(u24::from(16u16).wrapping_sub(1u16.into()), u24::from(15u16));
 }

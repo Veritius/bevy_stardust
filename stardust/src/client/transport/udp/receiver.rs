@@ -1,4 +1,3 @@
-use std::collections::BTreeMap;
 use bevy::prelude::*;
 use crate::{server::prelude::*, shared::{channels::{id::ChannelId, incoming::IncomingNetworkMessages}, payload::Payload, reliability::{SequenceId, PeerSequenceData}}, client::peers::Server};
 use super::RemoteServerUdpSocket;
@@ -59,7 +58,7 @@ pub(super) fn receive_packets_system(
     let complete = server_seq.complete();
     if complete.is_some() {
         let complete = complete.unwrap().collect::<Vec<_>>();
-        println!("Server missed packets: {:?}", &complete);
+        info!("Server missed packets: {:?}", &complete);
     }
 
     // Write to IncomingNetworkMessages

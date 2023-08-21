@@ -36,7 +36,7 @@ fn apply_shared_data(app: &mut App) {
     // Add channel
     app.register_channel::<RandomDataChannel>(ChannelConfig {
         direction: ChannelDirection::Bidirectional,
-    }, (ReliableChannel));
+    }, ReliableChannel);
 }
 
 /// Random data, bidirectionally.

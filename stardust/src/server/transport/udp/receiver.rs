@@ -111,7 +111,7 @@ pub(super) fn receive_packets_system(
                     let complete = lock.2.complete();
                     if complete.is_some() {
                         let complete = complete.unwrap().collect::<Vec<_>>();
-                        println!("Client {:?} missed packets: {:?}", **client, &complete);
+                        info!("Client {:?} missed packets: {:?}", **client, &complete);
                     }
                 }
             });

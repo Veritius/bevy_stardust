@@ -39,10 +39,9 @@ impl PeerSequenceData {
 
     /// Returns the next sequence ID, advancing the local sequence value.
     pub fn next(&mut self) -> SequenceId {
-        let new = self.local_sequence.wrapping_add(1.into());
-        self.local_sequence = new;
-        dbg!(&self.received);
-        return new;
+        let old = self.local_sequence;
+        self.local_sequence = self.local_sequence.wrapping_add(1.into());
+        return old;
     }
 
     /// Sets the highest remote sequence value for this frame if it's larger.
@@ -82,15 +81,18 @@ impl PeerSequenceData {
 
                     // Get the value and increment index
                     let v = self.bits.contains(self.index);
+                    print!("At index {} out of {}, with value {v}", self.index, self.highest);
 
                     // Next iteration of loop
                     if v == true {
+                        println!("");
                         self.index += 1;
                         continue;
                     }
 
                     // Figure out the sequence ID
                     let val = self.sequence.wrapping_add(self.index.try_into().unwrap());
+                    println!(" and seq id {:?}", val);
                     self.index += 1;
                     break Some(val)
                 }
