@@ -38,7 +38,7 @@ The server, if it accepts the client, spawns the client entity and sends a respo
 
 // The client has a different version of the Stardust UDP protocol
 // This response may be removed in future.
-{ "response": "wrong_version", "requires": "=0.1.0" }
+{ "response": "wrong_version", "requires": "=0.2.0" }
 
 // The client's unique hash value doesn't match the server
 { "response": "wrong_pid", "srv_pid": "42B2EC801C40258A" }
