@@ -1,6 +1,6 @@
 use std::{sync::Mutex, collections::BTreeMap, io};
 use bevy::{prelude::*, tasks::TaskPool};
-use crate::{server::clients::Client, shared::{channels::{components::*, incoming::IncomingNetworkMessages, registry::ChannelRegistry, id::ChannelId}, payload::Payload, reliability::PeerSequenceData}};
+use crate::{server::clients::Client, shared::{channels::{components::*, incoming::IncomingNetworkMessages, registry::ChannelRegistry, id::ChannelId}, payload::Payload, reliability::{PeerSequenceData, SequenceId}}};
 use super::{PACKET_HEADER_SIZE, UdpClient, ports::PortBindings};
 
 pub(super) fn receive_packets_system(
@@ -76,20 +76,34 @@ pub(super) fn receive_packets_system(
                     if channel_config.direction == ChannelDirection::ServerToClient {
                         // Packet went in the wrong direction
                         let entity_id = address_map.get(&from_address).unwrap();
-                        let hiccups = &mut locks.get_mut(entity_id).unwrap().1;
-                        hiccups.hiccups += 1;
+                        let client = &mut locks.get_mut(entity_id).unwrap().1;
+                        client.hiccups += 1;
                         continue
                     }
 
+                    // Get client lock
+                    let entity_id: &Entity = address_map.get(&from_address).unwrap();
+                    let guard = locks.get_mut(entity_id).unwrap();
+
+                    // Any bytes that don't need to be cloned
+                    let mut cutoff = PACKET_HEADER_SIZE;
+
+                    // Reliability stuff
+                    guard.2.set_remote_sequence([buffer[3], buffer[4], buffer[5]].into());
+                    if reliable {
+                        if octets_read < 9 { continue; } // Reliable message without reliability data
+                        let sequence: SequenceId = [buffer[6], buffer[7], buffer[8]].into();
+                        guard.2.mark_received(sequence);
+                        cutoff += 3;
+                    }
+
                     // Copy data to vec and make Payload
-                    let mut payload = Vec::with_capacity(octets_read - PACKET_HEADER_SIZE);
-                    for oct in &buffer[PACKET_HEADER_SIZE..=octets_read] { payload.push(*oct); }
+                    let mut payload = Vec::with_capacity(octets_read - cutoff);
+                    for oct in &buffer[cutoff..=octets_read] { payload.push(*oct); }
                     let payload = Payload::new(0, 0, payload);
 
                     // Place payload in incoming component
-                    let entity_id = address_map.get(&from_address).unwrap();
-                    let incoming = &mut locks.get_mut(entity_id).unwrap().3;
-                    incoming.append(channel_id, payload);
+                    guard.3.append(channel_id, payload);
                 }
             });
         }

@@ -52,7 +52,7 @@ impl PeerSequenceData {
     }
 
     /// Marks a packet as received. Expands the bitvec if it's too small.
-    pub fn received(&mut self, sequence: SequenceId) {
+    pub fn mark_received(&mut self, sequence: SequenceId) {
         let seq = self.remote_sequence.wrapping_sub(sequence).into();
         if seq > self.received.capacity() {
             self.received.resize(seq, false);
