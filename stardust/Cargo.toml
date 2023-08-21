@@ -12,6 +12,7 @@ keywords=["bevy", "gamedev", "networking"]
 
 [dependencies]
 bevy = { version = "0.11", default-features=false }
+bitvec = "1.0.1"
 semver = "1.0.18"
 json = "0.12.4"
 glam = { version = "0.24" }

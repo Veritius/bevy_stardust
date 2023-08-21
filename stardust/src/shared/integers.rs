@@ -27,6 +27,13 @@ impl u24 {
         if z > c { z -= c + 1; }
         Self(z)
     }
+
+    pub fn wrapping_sub(self, rhs: Self) -> Self {
+        let mut z = self.0.wrapping_sub(rhs.0);
+        let c = 2u32.pow(24);
+        if z > c { z -= c + 1 }
+        Self(z)
+    }
 }
 
 impl Debug for u24 {
@@ -104,6 +111,15 @@ impl TryFrom<u128> for u24 {
     }
 }
 
+impl TryFrom<usize> for u24 {
+    type Error = NIntegerError;
+
+    fn try_from(value: usize) -> Result<Self, Self::Error> {
+        if value > 2usize.pow(24) { return Err(NIntegerError::OutOfRange) }
+        Ok(Self(value as u32))
+    }
+}
+
 impl From<u24> for u32 {
     fn from(value: u24) -> Self {
         value.0
@@ -119,6 +135,12 @@ impl From<u24> for u64 {
 impl From<u24> for u128 {
     fn from(value: u24) -> Self {
         value.0 as u128
+    }
+}
+
+impl From<u24> for usize {
+    fn from(value: u24) -> Self {
+        value.0 as usize
     }
 }
 
