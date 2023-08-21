@@ -1,11 +1,12 @@
 use std::{sync::{Mutex, MutexGuard}, net::UdpSocket, collections::BTreeMap};
 use bevy::{prelude::*, tasks::TaskPool};
-use crate::{shared::{channels::{outgoing::OutgoingOctetStringsAccessor, id::ChannelId}, octetstring::OctetString, reliability::{PeerSequenceData, SequenceId}}, server::{clients::Client, prelude::*}};
+use crate::{shared::{channels::{outgoing::OutgoingOctetStringsAccessor, id::ChannelId}, octetstring::OctetString, reliability::{PeerSequenceData, SequenceId}, integers::u24}, server::{clients::Client, prelude::*}};
 use super::{UdpClient, ports::PortBindings};
 
 // TODO
 // Despite the parallelism, this is pretty inefficient.
 // It iterates over things when it doesn't need to several times.
+// 21/08/2023 - now it iterates over even more things it doesn't need to!
 
 pub(super) fn send_packets_system(
     registry: Res<ChannelRegistry>,
@@ -48,6 +49,20 @@ pub(super) fn send_packets_system(
                     // Get client entity
                     let client_data = locks.get_mut(client).unwrap();
 
+                    // Count the amount of reliable messages we're going to be sending
+                    let mut reliable_amount: usize = 0;
+                    for channel in outgoing.by_channel() {
+                        // Check if this channel is marked reliable
+                        if channel_entities.get(registry.get_from_id(channel.id()).unwrap()).unwrap().2.is_none() { continue; }
+                        for (target, _) in channel.read() {
+                            if target.excludes(*client) { continue; }
+                            reliable_amount += 1;
+                        }
+                    }
+
+                    // Get the highest sequence id that will be sent, for reliability purposes
+                    let highest_sequence_id = client_data.1.local_sequence.wrapping_add(TryInto::<u24>::try_into(reliable_amount).unwrap());
+
                     // Iterate all channels
                     let channels = outgoing.by_channel();
                     for channel in channels {
@@ -78,6 +93,7 @@ pub(super) fn send_packets_system(
                                 channel_id,
                                 octets,
                                 sending_data,
+                                highest_sequence_id,
                                 &mut sent_packets,
                                 *client,
                                 client_data
@@ -103,6 +119,7 @@ fn send_octet_string(
     channel: ChannelId,
     octets: &OctetString,
     settings: ChannelSendingData,
+    highest: u24,
     reliable: &mut Vec<(Entity, SequenceId, OctetString)>,
     client_id: Entity,
     client_data: &mut MutexGuard<'_, (&UdpClient, Mut<'_, PeerSequenceData>)>
@@ -113,9 +130,12 @@ fn send_octet_string(
     // Write channel ID
     for octet in channel.bytes() { udp_payload.push(octet); }
 
-    // Write sequence ID if needed
+    // Write highest sequence ID
+    for octet in highest.bytes() { udp_payload.push(octet);}
+
+    // Write packet sequence ID for reliable channels
     let mut sequence: SequenceId = 0.into(); // should get overwritten anyway
-    if settings.ordered || settings.reliable {
+    if settings.reliable {
         sequence = client_data.1.next();
         for octet in sequence.bytes() { udp_payload.push(octet); }
     }

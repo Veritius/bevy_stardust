@@ -105,6 +105,15 @@ pub(super) fn receive_packets_system(
                     // Place payload in incoming component
                     guard.3.append(channel_id, payload);
                 }
+
+                // Check reliability data for everyone
+                for (client, lock) in locks.iter_mut() {
+                    let complete = lock.2.complete();
+                    if complete.is_some() {
+                        let complete = complete.unwrap().collect::<Vec<_>>();
+                        println!("Client {:?} missed packets: {:?}", **client, &complete);
+                    }
+                }
             });
         }
     });
