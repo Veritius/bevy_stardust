@@ -52,9 +52,7 @@ Usage example:
 #[derive(Debug)]
 struct MyChannel;
 
-let config = ChannelConfig { direction: ChannelDirection::Bidirectional };
-let components = ReliableChannel;
-app.register_channel::<MyChannel>(config, components);
+app.register_channel::<MyChannel>(ReliableChannel);
 ```
 
 ## Writing systems
