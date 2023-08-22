@@ -10,7 +10,7 @@ use super::{UdpClient, ports::PortBindings};
 
 pub(super) fn send_packets_system(
     registry: Res<ChannelRegistry>,
-    channel_entities: Query<(&ChannelData, Option<&OrderedChannel>, Option<&ReliableChannel>, Option<&FragmentedChannel>)>,
+    channel_entities: Query<(&ChannelData, Option<&DirectionalChannel>, Option<&OrderedChannel>, Option<&ReliableChannel>, Option<&FragmentedChannel>)>,
     ports: Res<PortBindings>,
     mut clients: Query<(Entity, &UdpClient, &mut PeerSequenceData), With<Client>>,
     outgoing: OutgoingOctetStringsAccessor,
@@ -72,13 +72,13 @@ pub(super) fn send_packets_system(
                             .expect("Tried to send a packet to a channel that did not exist");
                         let channel_config = channel_entities.get(channel_ent)
                             .expect("Channel was in registry but the associated entity didn't exist");
-                        let (channel_type_path, channel_config, ordered, reliable, fragmented) =
-                            (channel_config.0.type_path(), channel_config.0.config(), channel_config.1.is_none(), channel_config.2.is_some(), channel_config.3.is_some());
+                        let (channel_type_path, direction, ordered, reliable, fragmented) =
+                            (channel_config.0.type_path(), channel_config.1, channel_config.2.is_none(), channel_config.3.is_some(), channel_config.4.is_some());
                         
                         let sending_data = ChannelSendingData { reliable, ordered, fragmented };
 
                         // Check channel direction
-                        if channel_config.direction == ChannelDirection::ClientToServer {
+                        if direction.is_some_and(|v| *v == DirectionalChannel::ClientToServer) {
                             panic!("Tried to send a message on client to server channel: {}", channel_type_path);
                         }
 

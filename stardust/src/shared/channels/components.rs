@@ -5,18 +5,12 @@ use super::id::ChannelId;
 /// An entity representing a channel.
 #[derive(Component)]
 pub struct ChannelData {
-    pub(crate) config: ChannelConfig,
     pub(crate) type_id: TypeId,
     pub(crate) type_path: &'static str,
     pub(crate) channel_id: ChannelId,
 }
 
 impl ChannelData {
-    /// Returns the `ChannelConfig` of this channel.
-    pub fn config(&self) -> ChannelConfig {
-        self.config
-    }
-
     /// Returns the associated `TypeId` used to access this channel.
     pub fn type_id(&self) -> TypeId {
         self.type_id
@@ -33,19 +27,9 @@ impl ChannelData {
     }
 }
 
-/// Defines required channel information.
-#[derive(Debug, Default, Hash, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub struct ChannelConfig {
-    /// Defines the direction of the channel, discarding messages going in the wrong direction.
-    pub direction: ChannelDirection,
-}
-
-/// Configures the direction of a channel.
-#[derive(Debug, Default, Hash, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub enum ChannelDirection {
-    /// The client and server can both send messages on this channel.
-    #[default]
-    Bidirectional,
+/// Marks this channel as directional.
+#[derive(Debug, Component, Hash, Clone, Copy, PartialEq, Eq)]
+pub enum DirectionalChannel {
     /// Only the server can send messages on this channel.
     ServerToClient,
     /// Only a client can send a message on this channel.
@@ -53,23 +37,23 @@ pub enum ChannelDirection {
 }
 
 /// Marks this channel as ordered - messages sent in this channel will arrive in the exact order they are sent. Messages may not arrive, use [ReliableChannel] to ensure they do.
-#[derive(Component, Default, Clone, Copy)]
+#[derive(Component, Default, Hash, Clone, Copy)]
 pub struct OrderedChannel;
 
 /// Marks this channel as reliable - messages sent in this channel are guaranteed to arrive eventually.
-#[derive(Component, Default, Clone, Copy)]
+#[derive(Component, Default, Hash, Clone, Copy)]
 pub struct ReliableChannel;
 
 /// Discards packets in this channel that are older than a certain amount of ticks.
-#[derive(Component, Default, Clone, Copy)]
+#[derive(Component, Default, Hash, Clone, Copy)]
 pub struct ChannelLatestness(u32);
 
 /// If large octet strings should be broken into smaller packets for transmission. Specific to a channel, may or may not add overhead.
-#[derive(Component, Default, Clone, Copy)]
+#[derive(Component, Default, Hash, Clone, Copy)]
 pub struct FragmentedChannel;
 
 /// If messages on this channel should be compressed before transport. This uses the network more efficiently but takes processing on both ends of the connection. Useful with [ChannelFragmentation].
-#[derive(Component, Default, Clone, Copy)]
+#[derive(Component, Default, Hash, Clone, Copy, PartialEq, Eq)]
 pub enum CompressedChannel {
     /// Compression is slow but the results are smaller.
     High,

@@ -88,7 +88,6 @@ flowchart TD
 ## Negative acknowledgement reliability
 Due to the way the UDP transport layer executes, a solution like [Glenn Fiedler's bitfield ack system](https://gafferongames.com/post/reliability_ordering_and_congestion_avoidance_over_udp/) is not possible, as it would use more data in each packet than actual payload. Therefore, we have to make the peer only send data about lost packets.
 
-
 Each reliably-sent packet is given a 24-bit 'sequence id', a globally-unique id for reliable packets. This sequence ID is created in an incrementing fashion using `local_sequence` by the sending peer.
 
 Each peer on the connection stores two values. `local_sequence` stores the current sequence ID, incrementing every time a new reliable message needs to be sent. `remote_sequence` is the highest sequence ID value from the last frame, and is only updated at the end of receiving packets.

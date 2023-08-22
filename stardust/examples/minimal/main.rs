@@ -34,9 +34,7 @@ fn apply_shared_data(app: &mut App) {
     app.add_plugins(StardustSharedPlugin);
 
     // Add channel
-    app.register_channel::<RandomDataChannel>(ChannelConfig {
-        direction: ChannelDirection::Bidirectional,
-    }, ReliableChannel);
+    app.register_channel::<RandomDataChannel>(ReliableChannel);
 }
 
 /// Random data, bidirectionally.

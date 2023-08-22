@@ -6,7 +6,7 @@ use super::{PACKET_HEADER_SIZE, UdpClient, ports::PortBindings};
 pub(super) fn receive_packets_system(
     mut clients: Query<(Entity, &mut Client, &mut UdpClient, &mut PeerSequenceData, &mut IncomingNetworkMessages)>,
     ports: Res<PortBindings>,
-    channels: Query<(&ChannelData, Option<&OrderedChannel>, Option<&ReliableChannel>, Option<&FragmentedChannel>)>,
+    channels: Query<(Option<&DirectionalChannel>, Option<&OrderedChannel>, Option<&ReliableChannel>, Option<&FragmentedChannel>)>,
     registry: Res<ChannelRegistry>,
 ) {
     // Create task pool
@@ -71,9 +71,11 @@ pub(super) fn receive_packets_system(
                     let channel_entity = registry.get_from_id(channel_id).unwrap();
                     let channel_config = channels.get(channel_entity)
                         .expect("Channel was in registry but didn't have a config entity");
-                    let (channel_config, ordered, reliable, fragmented) =
-                        (channel_config.0.config(), channel_config.1.is_none(), channel_config.2.is_some(), channel_config.3.is_some());
-                    if channel_config.direction == ChannelDirection::ServerToClient {
+                    let (direction, ordered, reliable, fragmented) =
+                        (channel_config.0, channel_config.1.is_none(), channel_config.2.is_some(), channel_config.3.is_some());
+
+                    // Check channel direction
+                    if direction.is_some_and(|v| *v == DirectionalChannel::ServerToClient) {
                         // Packet went in the wrong direction
                         let entity_id = address_map.get(&from_address).unwrap();
                         let client = &mut locks.get_mut(entity_id).unwrap().1;

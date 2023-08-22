@@ -24,16 +24,17 @@ Adding these plugins is required before any further setup, like adding channels.
 ### Channels
 Channels are used to compartmentalise network messages for better parallelism and to better suit the ECS design. They are primarily accessed using generic type APIs, though untyped APIs exist for use by transport layers. The generic type you use when creating the channel can then be used to refer back to it as a system parameter.
 
-Creating a channel is done with the `register_channel` function, which can be used on the `App`. `register_channel` has one generic type for your channel, and two arguments to configure it. The first argument is the same type for every channel, a `ChannelConfig`. The second argument is an `impl Bundle`, which is used to add components to an entity storing configuration data.
-
-The second argument is a `Bundle` so components from external crates can be added if need be. These components are used by the transport layer to enable functionality like reliability and ordering. Note that adding a component does not ensure that the transport layer you have chosen does support that functionality.
+Creating a channel is done with the `register_channel` function, which can be used on the `App`. `register_channel` has one generic type for your channel type, and a `impl Bundle + Hash` argument. The `Bundle` is used to to configure the channel, such as setting direction and reliability.
 
 Stardust has the following components you can add to configure a channel.
 > Note: Items marked with 🟡 means that the related functionality is not yet present.
-- 🟡 `OrderedChannel`
+- `DirectionalChannel`
+    - Enables channel directionality. Packets flowing in the wrong direction will be ignored.
+    - With the UDP transport layer, this will panic if it occurs on the client.
+- `OrderedChannel`
     - Enables ordering. Packets will be sorted so when read, they are in the order they are sent.
     - This by itself does not guarantee that the packets arrive at all, just that they're in order.
-- 🟡 `ReliableChannel`
+- `ReliableChannel`
     - Enables reliability. All packets sent over this channel are requested to be resent if they don't arrive.
     - This is not a fast process. With high latency, a package can arrive several seconds after it's sent.
     - With `OrderedChannel`, this can block all messages on the channel from being read until every packet is retrieved.
@@ -57,6 +58,6 @@ app.register_channel::<MyChannel>(config, components);
 ```
 
 ## Writing systems
-Systems that use networking functionality must be in the following two schedules: `ReadOctetStrings` and `WriteOctetStrings`.
+Systems that use networking functionality must be in the following two schedules: `ReadOctetStrings` for systems that read octet strings and `Update` for systems that write them.
 
 TODO

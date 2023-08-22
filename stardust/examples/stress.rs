@@ -34,21 +34,10 @@ fn apply_shared_data(app: &mut App) {
     app.add_plugins(MinimalPlugins);
     app.add_plugins(StardustSharedPlugin);
 
-    app.register_channel::<UnorderedUnreliableChannel>(ChannelConfig {
-        direction: ChannelDirection::Bidirectional,
-    }, ());
-
-    app.register_channel::<OrderedUnreliableChannel>(ChannelConfig {
-        direction: ChannelDirection::Bidirectional,
-    }, ());
-
-    app.register_channel::<UnorderedReliableChannel>(ChannelConfig {
-        direction: ChannelDirection::Bidirectional,
-    }, ());
-
-    app.register_channel::<OrderedReliableChannel>(ChannelConfig {
-        direction: ChannelDirection::Bidirectional,
-    }, ());
+    app.register_channel::<UnorderedUnreliableChannel>(());
+    app.register_channel::<OrderedUnreliableChannel>(());
+    app.register_channel::<UnorderedReliableChannel>(());
+    app.register_channel::<OrderedReliableChannel>(());
 }
 
 /// The greek alphabet, used for random string generation.
