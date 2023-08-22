@@ -1,6 +1,5 @@
 use std::{sync::{Mutex, MutexGuard}, net::UdpSocket, collections::BTreeMap};
 use bevy::{prelude::*, tasks::TaskPool};
-use rand::Rng;
 use crate::{shared::{channels::{outgoing::OutgoingOctetStringsAccessor, id::ChannelId}, octetstring::OctetString, reliability::{PeerSequenceData, SequenceId}}, server::{clients::Client, prelude::*}};
 use super::{UdpClient, ports::PortBindings};
 
@@ -101,6 +100,9 @@ pub(super) fn send_packets_system(
                             );
                         }
                     }
+
+                    // Sanity check
+                    assert_eq!(highest_sequence_id, client_data.1.local_sequence);
                 }
             });
         }
@@ -146,11 +148,7 @@ fn send_octet_string(
     for octet in octets.as_slice() { udp_payload.push(*octet); }
 
     // Send data to remote peer
-    if rand::thread_rng().gen_range(0.0..1.0) > 0.2 {
-        socket.send_to(&udp_payload, client_data.0.address).unwrap();
-    } else {
-        info!("Intentionally failed to send a packet.");
-    }
+    socket.send_to(&udp_payload, client_data.0.address).unwrap();
 
     // Store octet string for reliability
     if !settings.reliable { return }

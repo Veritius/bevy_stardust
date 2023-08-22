@@ -57,11 +57,10 @@ pub(super) fn send_packets_system(
             for b in octets.as_slice() { payload.push(*b); }
 
             // Send data
-            if rand::thread_rng().gen_range(0.0..1.0) > 0.0 {
-                remote.0.send(&payload).unwrap();
-            } else {
-                info!("Intentionally failed to send a packet.");
-            }
+            remote.0.send(&payload).unwrap();
         }
     }
+
+    // Sanity check
+    assert_eq!(highest_sequence_id, server_seq.local_sequence);
 }
