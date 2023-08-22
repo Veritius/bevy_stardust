@@ -1,10 +1,12 @@
+//! Octet strings, arbitrary-sized sets of octets for transmission.
+
 use std::sync::Arc;
 
 pub type Octet = u8;
 
-/// A pointer to a string of octets (aka bytes). Cheap to clone.
+/// A string of octets (aka bytes).
 /// 
-/// This type can be cloned freely, and will always point to the same space in memory.
+/// This type can be cloned freely and cheaply, and will always point to the same space in memory.
 /// Internally, it uses an `Arc` to count references, dropping the data when all copies are dropped.
 #[derive(Debug, Clone)]
 pub struct OctetString(Arc<Vec<Octet>>);

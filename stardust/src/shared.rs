@@ -1,3 +1,5 @@
+//! Shared code.
+
 pub mod prelude;
 
 pub mod plugin;

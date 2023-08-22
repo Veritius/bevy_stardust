@@ -1,3 +1,5 @@
+//! The unique value generated when adding channels.
+
 use bevy::prelude::*;
 
 /// A unique value generated when adding things like channels.

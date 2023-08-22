@@ -1,3 +1,5 @@
+//! The client plugin.
+
 use bevy::prelude::*;
 use super::connection::RemoteConnectionStatus;
 

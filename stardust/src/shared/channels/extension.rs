@@ -1,7 +1,7 @@
 use std::any::TypeId;
 use bevy::prelude::*;
 use crate::shared::{channels::outgoing::{OutgoingOctetStringsUntyped, OutgoingOctetStrings}, hashdiff::NetworkHashAppExt};
-use super::{id::Channel, components::ChannelData, registry::ChannelRegistry};
+use super::{id::Channel, config::ChannelData, registry::ChannelRegistry};
 
 pub trait ChannelSetupAppExt {
     /// Registers a channel with type `T` and the config and components given.

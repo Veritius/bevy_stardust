@@ -1,6 +1,6 @@
 use std::{sync::Mutex, collections::BTreeMap, io};
 use bevy::{prelude::*, tasks::TaskPool};
-use crate::{server::clients::Client, shared::{channels::{components::*, incoming::IncomingNetworkMessages, registry::ChannelRegistry, id::ChannelId}, payload::Payload, reliability::{PeerSequenceData, SequenceId}}};
+use crate::{server::clients::Client, shared::{channels::{config::*, incoming::IncomingNetworkMessages, registry::ChannelRegistry, id::ChannelId}, payload::Payload, reliability::{PeerSequenceData, SequenceId}}};
 use super::{PACKET_HEADER_SIZE, UdpClient, ports::PortBindings};
 
 pub(super) fn receive_packets_system(

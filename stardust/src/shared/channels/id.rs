@@ -1,8 +1,11 @@
+//! Types and traits for accessing channels.
+
 use std::ops::Deref;
 use bevy::reflect::{Reflect, TypePath};
 use crate::shared::integers::{u24, NIntegerError};
 
-pub(super) const CHANNEL_ID_LIMIT: u32 = 2u32.pow(24);
+/// The maximum amount of channels that can exist.
+pub const CHANNEL_ID_LIMIT: u32 = 2u32.pow(24);
 
 pub trait Channel: TypePath + std::fmt::Debug + Send + Sync + 'static {}
 impl<T: TypePath + std::fmt::Debug + Send + Sync + 'static> Channel for T {}

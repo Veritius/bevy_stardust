@@ -1,3 +1,5 @@
+//! Reading systemparams for the server.
+
 use std::marker::PhantomData;
 use bevy::{prelude::*, ecs::system::SystemParam};
 use crate::shared::{channels::{id::Channel, registry::ChannelRegistry, incoming::IncomingNetworkMessages}, payload::Payloads};

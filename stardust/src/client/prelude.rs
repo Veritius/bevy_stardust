@@ -1,3 +1,7 @@
+//! Common imports for client-side network code.
+//! 
+//! `use bevy_stardust::client::prelude::*`
+
 pub use crate::shared::prelude::*;
 pub use crate::client::plugin::StardustClientPlugin;
 pub use crate::client::receive::*;

@@ -1,3 +1,5 @@
+//! Transport layer agnostic config values.
+
 use bevy::prelude::*;
 
 /// Soft limit for connected network clients.

@@ -1,3 +1,5 @@
+//! Sending systemparams for the server.
+
 use std::marker::PhantomData;
 use bevy::prelude::*;
 use bevy::ecs::system::SystemParam;

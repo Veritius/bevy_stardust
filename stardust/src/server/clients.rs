@@ -1,3 +1,5 @@
+//! Components for client entities.
+
 use std::time::Instant;
 use bevy::prelude::*;
 

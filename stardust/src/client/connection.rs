@@ -1,3 +1,5 @@
+//! Connection status information.
+
 use bevy::prelude::*;
 
 /// If the client is currently connected to a remote server.

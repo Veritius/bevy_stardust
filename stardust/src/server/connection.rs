@@ -1,3 +1,5 @@
+//! Connection management systemparam and events.
+
 use bevy::{prelude::*, ecs::system::SystemParam};
 
 #[derive(SystemParam)]

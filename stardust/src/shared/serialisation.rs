@@ -1,3 +1,5 @@
+//! Serialisation types.
+
 use super::octetstring::Octet;
 
 /// The default writer allocation amount, in bytes.

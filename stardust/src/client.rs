@@ -1,3 +1,5 @@
+//! Client-side code.
+
 pub mod prelude;
 
 pub mod connection;

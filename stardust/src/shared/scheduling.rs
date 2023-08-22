@@ -1,3 +1,5 @@
+//! Schedules used in Stardust.
+
 use bevy::{prelude::*, ecs::schedule::ScheduleLabel};
 
 pub(super) fn add_schedules(app: &mut App) {

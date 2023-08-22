@@ -1,3 +1,5 @@
+//! Payloads data.
+
 use super::octetstring::OctetString;
 
 /// All [Payload] objects for a channel. If the channel this originated from is ordered, the [Payload]s will be in order.
@@ -15,7 +17,7 @@ impl From<Vec<Payload>> for Payloads {
     }
 }
 
-/// A single network message sent over a channel, free of any additional transmission information when read.
+/// An `OctetString` with a certain amount of bytes hidden from its head and tail.
 #[derive(Debug, Clone)]
 pub struct Payload {
     pub(crate) ignore_head: usize,

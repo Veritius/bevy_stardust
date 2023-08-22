@@ -1,3 +1,5 @@
+//! Plugin for dedicated servers.
+
 use bevy::prelude::*;
 use super::connection::{TryDisconnectEvent, PlayerConnectedEvent, PlayerDisconnectedEvent};
 

@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use super::{components::ChannelData, registry::ChannelRegistry, id::ChannelId, incoming::IncomingNetworkMessages};
+use super::{config::ChannelData, registry::ChannelRegistry, id::ChannelId, incoming::IncomingNetworkMessages};
 
 /// Panics if a channel component is ever removed, since that should never happen.
 pub(in crate::shared) fn panic_on_channel_removal(

@@ -1,5 +1,6 @@
-use std::collections::hash_map::DefaultHasher;
+//! Shared plugin for Stardust.
 
+use std::collections::hash_map::DefaultHasher;
 use bevy::prelude::*;
 use crate::{server::plugin::StardustServerPlugin, client::plugin::StardustClientPlugin};
 use super::{scheduling::{network_pre_update, network_post_update, add_schedules}, channels::systems::*, hashdiff::{UniqueNetworkHasher, complete_hasher}, prelude::*};

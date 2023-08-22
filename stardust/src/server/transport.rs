@@ -1,6 +1,3 @@
-//! Transport layers.
-
-/// Things for implementing your own transport layer.
-pub mod ext;
+//! Transport layers included with Stardust.
 
 pub mod udp;

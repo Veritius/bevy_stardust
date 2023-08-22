@@ -1,3 +1,5 @@
+//! The channel registry.
+
 use std::{collections::BTreeMap, any::TypeId, sync::{Arc, RwLock}};
 use bevy::prelude::{Resource, Entity};
 use super::{id::{Channel, ChannelId, CHANNEL_ID_LIMIT}, outgoing::OutgoingOctetStringsUntyped};

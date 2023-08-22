@@ -1,8 +1,13 @@
+//! Incoming network message data attached to clients.
+
 use std::collections::BTreeMap;
 use bevy::prelude::*;
 use crate::shared::{channels::id::ChannelId, payload::{Payloads, Payload}};
 
 /// Incoming messages from this remote peer.
+/// 
+/// Don't use this unless you are writing a transport layer.
+/// Instead, use the `ChannelReader` systemparam.
 #[derive(Component)]
 pub struct IncomingNetworkMessages(BTreeMap<ChannelId, Payloads>);
 

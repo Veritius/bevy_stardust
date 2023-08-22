@@ -1,3 +1,5 @@
+//! Components for setting up a channel
+
 use std::any::TypeId;
 use bevy::prelude::*;
 use super::id::ChannelId;

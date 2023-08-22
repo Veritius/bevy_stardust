@@ -1,3 +1,5 @@
+//! Types for writing octet strings.
+
 use std::{marker::PhantomData, sync::{Arc, RwLock, RwLockReadGuard}, ops::Deref};
 use bevy::{prelude::*, ecs::system::SystemParam};
 use crate::shared::{octetstring::OctetString, channels::id::Channel};
