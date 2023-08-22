@@ -114,7 +114,6 @@ impl PeerSequenceData {
     /// Marks a packet as received using its sequence ID. Resizes the storage vector if it's too small.
     pub fn mark_received(&mut self, sequence: SequenceId) {
         let idx: usize = sequence.wrapping_sub(self.remote_sequence).into();
-        dbg!(self.remote_sequence, sequence, idx);
         if idx >= self.bitstore.len() { self.bitstore.grow(idx); }
         self.bitstore.set(idx, true);
     }
