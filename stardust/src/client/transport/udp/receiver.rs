@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use crate::{server::prelude::*, shared::{channels::{id::ChannelId, incoming::IncomingNetworkMessages}, payload::Payload, reliability::{SequenceId, PeerSequenceData}}, client::peers::Server};
 use super::RemoteServerUdpSocket;
 
-const PACKET_HEADER_SIZE: usize = 6;
+const PACKET_HEADER_SIZE: usize = 5;
 
 pub(super) fn receive_packets_system(
     remote: Option<Res<RemoteServerUdpSocket>>,
@@ -40,10 +40,10 @@ pub(super) fn receive_packets_system(
 
         // Reliability stuff
         if reliable {
-            if octets_read < 9 { continue; } // Reliable message without reliability data
+            if octets_read < 7 { continue; } // Reliable message without reliability data
             let sequence: SequenceId = [buffer[5], buffer[6]].into();
             server_seq.mark_received(sequence);
-            cutoff += 3;
+            cutoff += 2;
         }
 
         // Clone message data

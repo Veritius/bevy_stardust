@@ -91,10 +91,10 @@ pub(super) fn receive_packets_system(
                     // Reliability stuff
                     guard.2.try_highest([buffer[3], buffer[4]].into());
                     if reliable {
-                        if octets_read < 9 { continue; } // Reliable message without reliability data
+                        if octets_read < 7 { continue; } // Reliable message without reliability data
                         let sequence: SequenceId = [buffer[5], buffer[6]].into();
                         guard.2.mark_received(sequence);
-                        cutoff += 3;
+                        cutoff += 2;
                     }
 
                     // Copy data to vec and make Payload
