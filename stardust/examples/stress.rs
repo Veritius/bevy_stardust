@@ -35,9 +35,9 @@ fn apply_shared_data(app: &mut App) {
     app.add_plugins(StardustSharedPlugin);
 
     app.register_channel::<UnorderedUnreliableChannel>(());
-    app.register_channel::<OrderedUnreliableChannel>(());
-    app.register_channel::<UnorderedReliableChannel>(());
-    app.register_channel::<OrderedReliableChannel>(());
+    app.register_channel::<OrderedUnreliableChannel>(OrderedChannel);
+    app.register_channel::<UnorderedReliableChannel>(ReliableChannel);
+    app.register_channel::<OrderedReliableChannel>((OrderedChannel, ReliableChannel));
 }
 
 /// The greek alphabet, used for random string generation.
