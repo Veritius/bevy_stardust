@@ -1,5 +1,5 @@
 use std::{sync::{Mutex, MutexGuard}, net::UdpSocket, collections::BTreeMap};
-use bevy::{prelude::*, tasks::TaskPool};
+use bevy::{prelude::*, tasks::TaskPoolBuilder};
 use crate::{shared::{channels::{outgoing::OutgoingOctetStringsAccessor, id::ChannelId}, octetstring::OctetString, reliability::{PeerSequenceData, SequenceId}}, server::{clients::Client, prelude::*}};
 use super::{UdpClient, ports::PortBindings};
 
@@ -16,7 +16,9 @@ pub(super) fn send_packets_system(
     outgoing: OutgoingOctetStringsAccessor,
 ) {
     // Create task pool
-    let pool = TaskPool::new();
+    let pool = TaskPoolBuilder::new()
+        .thread_name("UdpSendPacketsPool".to_string())
+        .build();
 
     // Place query data into map of mutexes to allow mutation by multiple threads
     let mut query_mutex_map = BTreeMap::new();

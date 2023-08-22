@@ -1,5 +1,5 @@
 use std::{sync::Mutex, collections::BTreeMap, io};
-use bevy::{prelude::*, tasks::TaskPool};
+use bevy::{prelude::*, tasks::TaskPoolBuilder};
 use crate::{server::clients::Client, shared::{channels::{config::*, incoming::IncomingNetworkMessages, registry::ChannelRegistry, id::ChannelId}, payload::Payload, reliability::{PeerSequenceData, SequenceId}}};
 use super::{PACKET_HEADER_SIZE, UdpClient, ports::PortBindings};
 
@@ -10,7 +10,9 @@ pub(super) fn receive_packets_system(
     registry: Res<ChannelRegistry>,
 ) {
     // Create task pool
-    let pool = TaskPool::new();
+    let pool = TaskPoolBuilder::new()
+        .thread_name("UdpReadPacketsPool".to_string())
+        .build();
 
     // Place query data into map of mutexes to allow mutation by multiple threads
     let mut query_mutex_map = BTreeMap::new();
