@@ -1,6 +1,7 @@
 //! Example that measures the performance of Stardust.
 
 const TEST_DURATION: Duration = Duration::from_secs(30);
+const REPEAT_AMOUNT: usize = 1024;
 
 use std::time::{Duration, Instant};
 use rand::{Rng, seq::SliceRandom};
@@ -93,6 +94,7 @@ mod client {
     use bevy_stardust::client::transport::udp::ClientUdpTransportPlugin;
     use bevy_stardust::client::transport::udp::UdpConnectionManager;
     use bevy_stardust::shared::channels::id::Channel;
+    use crate::REPEAT_AMOUNT;
     use crate::channels::*;
     use crate::apply_shared_data;
     use crate::gen_random_string;
@@ -130,7 +132,7 @@ mod client {
     
         let string = gen_random_string();
 
-        for _ in 0..32 {
+        for _ in 0..REPEAT_AMOUNT {
             let _ = writer.send(string.clone().into_bytes());
         }
     }
@@ -156,6 +158,7 @@ mod server {
     use bevy_stardust::server::transport::udp::ServerUdpTransportPlugin;
     use bevy_stardust::shared::channels::id::Channel;
 
+    use crate::REPEAT_AMOUNT;
     use crate::channels::*;
     use crate::apply_shared_data;
     use crate::gen_random_string;
@@ -196,7 +199,7 @@ mod server {
         
         let string = gen_random_string();
 
-        for _ in 0..32 {
+        for _ in 0..REPEAT_AMOUNT {
             let _ = writer.send(SendTarget::Broadcast, string.clone().into_bytes());
         }
     }
