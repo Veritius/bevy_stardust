@@ -1,7 +1,7 @@
 use std::{sync::{Mutex, MutexGuard}, net::UdpSocket, collections::BTreeMap};
 use bevy::{prelude::*, tasks::TaskPool};
 use rand::Rng;
-use crate::{shared::{channels::{outgoing::OutgoingOctetStringsAccessor, id::ChannelId}, octetstring::OctetString, reliability::{PeerSequenceData, SequenceId}, integers::u24}, server::{clients::Client, prelude::*}};
+use crate::{shared::{channels::{outgoing::OutgoingOctetStringsAccessor, id::ChannelId}, octetstring::OctetString, reliability::{PeerSequenceData, SequenceId}}, server::{clients::Client, prelude::*}};
 use super::{UdpClient, ports::PortBindings};
 
 // TODO
@@ -51,7 +51,7 @@ pub(super) fn send_packets_system(
                     let client_data = locks.get_mut(client).unwrap();
 
                     // Count the amount of reliable messages we're going to be sending
-                    let mut reliable_amount: usize = 0;
+                    let mut reliable_amount: u16 = 0;
                     for channel in outgoing.by_channel() {
                         // Check if this channel is marked reliable
                         if channel_entities.get(registry.get_from_id(channel.id()).unwrap()).unwrap().2.is_none() { continue; }
@@ -62,7 +62,7 @@ pub(super) fn send_packets_system(
                     }
 
                     // Get the highest sequence id that will be sent, for reliability purposes
-                    let highest_sequence_id = client_data.1.local_sequence.wrapping_add(TryInto::<u24>::try_into(reliable_amount).unwrap());
+                    let highest_sequence_id = client_data.1.local_sequence.wrapping_add(reliable_amount.into());
 
                     // Iterate all channels
                     let channels = outgoing.by_channel();
@@ -120,7 +120,7 @@ fn send_octet_string(
     channel: ChannelId,
     octets: &OctetString,
     settings: ChannelSendingData,
-    highest: u24,
+    highest: SequenceId,
     reliable: &mut Vec<(Entity, SequenceId, OctetString)>,
     client_id: Entity,
     client_data: &mut MutexGuard<'_, (&UdpClient, Mut<'_, PeerSequenceData>)>

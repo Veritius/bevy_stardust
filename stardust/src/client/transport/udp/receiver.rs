@@ -36,12 +36,12 @@ pub(super) fn receive_packets_system(
         let mut cutoff = PACKET_HEADER_SIZE;
 
         // Read highest sequence ID value
-        server_seq.set_remote_sequence([buffer[3], buffer[4], buffer[5]].into());
+        server_seq.try_highest([buffer[3], buffer[4]].into());
 
         // Reliability stuff
         if reliable {
             if octets_read < 9 { continue; } // Reliable message without reliability data
-            let sequence: SequenceId = [buffer[6], buffer[7], buffer[8]].into();
+            let sequence: SequenceId = [buffer[5], buffer[6]].into();
             server_seq.mark_received(sequence);
             cutoff += 3;
         }
@@ -55,11 +55,9 @@ pub(super) fn receive_packets_system(
         pending.push((channel_id, payload));
     }
 
-    let complete = server_seq.complete();
-    if complete.is_some() {
-        let complete = complete.unwrap().collect::<Vec<_>>();
-        info!("Server missed packets: {:?}", &complete);
-    }
+    // Get packets that were missed
+    let missed = server_seq.complete_cycle().collect::<Vec<_>>();
+    info!("Missed packets from server: {:?}", &missed);
 
     // Write to IncomingNetworkMessages
     loop {

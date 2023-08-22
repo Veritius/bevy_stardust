@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use rand::Rng;
-use crate::{shared::{prelude::*, channels::outgoing::OutgoingOctetStringsAccessor, reliability::PeerSequenceData, integers::u24}, client::peers::Server};
+use crate::{shared::{prelude::*, channels::outgoing::OutgoingOctetStringsAccessor, reliability::PeerSequenceData}, client::peers::Server};
 use super::RemoteServerUdpSocket;
 
 pub(super) fn send_packets_system(
@@ -14,7 +14,7 @@ pub(super) fn send_packets_system(
     let mut server_seq = server.single_mut();
 
     // Reliability information
-    let mut reliable_amount: usize = 0;
+    let mut reliable_amount: u16 = 0;
     for channel in outgoing.by_channel() {
         if channels.get(registry.get_from_id(channel.id()).unwrap()).unwrap().2.is_none() { continue; }
         for (_, _) in channel.read() {
@@ -22,7 +22,7 @@ pub(super) fn send_packets_system(
         }
     }
 
-    let highest_sequence_id = server_seq.local_sequence.wrapping_add(TryInto::<u24>::try_into(reliable_amount).unwrap());
+    let highest_sequence_id = server_seq.local_sequence.wrapping_add(1.into());
 
     for outgoing in outgoing.by_channel() {
         // Get channel data
@@ -57,7 +57,7 @@ pub(super) fn send_packets_system(
             for b in octets.as_slice() { payload.push(*b); }
 
             // Send data
-            if rand::thread_rng().gen_range(0.0..1.0) > 0.2 {
+            if rand::thread_rng().gen_range(0.0..1.0) > 0.0 {
                 remote.0.send(&payload).unwrap();
             } else {
                 info!("Intentionally failed to send a packet.");

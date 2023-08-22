@@ -89,10 +89,10 @@ pub(super) fn receive_packets_system(
                     let mut cutoff = PACKET_HEADER_SIZE;
 
                     // Reliability stuff
-                    guard.2.set_remote_sequence([buffer[3], buffer[4], buffer[5]].into());
+                    guard.2.try_highest([buffer[3], buffer[4]].into());
                     if reliable {
                         if octets_read < 9 { continue; } // Reliable message without reliability data
-                        let sequence: SequenceId = [buffer[6], buffer[7], buffer[8]].into();
+                        let sequence: SequenceId = [buffer[5], buffer[6]].into();
                         guard.2.mark_received(sequence);
                         cutoff += 3;
                     }
@@ -108,11 +108,8 @@ pub(super) fn receive_packets_system(
 
                 // Check reliability data for everyone
                 for (client, lock) in locks.iter_mut() {
-                    let complete = lock.2.complete();
-                    if complete.is_some() {
-                        let complete = complete.unwrap().collect::<Vec<_>>();
-                        info!("Client {:?} missed packets: {:?}", **client, &complete);
-                    }
+                    let missed = lock.2.complete_cycle().collect::<Vec<_>>();
+                    info!("Missed packets from client {:?}: {:?}", **client, &missed);
                 }
             });
         }
