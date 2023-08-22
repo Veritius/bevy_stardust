@@ -49,7 +49,7 @@ Stardust has the following components you can add to configure a channel.
 
 Usage example:
 ```rs
-#[derive(Debug)]
+#[derive(Debug, TypePath)]
 struct MyChannel;
 
 app.register_channel::<MyChannel>(ReliableChannel);
