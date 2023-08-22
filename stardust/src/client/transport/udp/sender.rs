@@ -22,7 +22,7 @@ pub(super) fn send_packets_system(
         }
     }
 
-    let highest_sequence_id = server_seq.local_sequence.wrapping_add(1.into());
+    let highest_sequence_id = server_seq.local_sequence.wrapping_add(reliable_amount.into());
 
     for outgoing in outgoing.by_channel() {
         // Get channel data
