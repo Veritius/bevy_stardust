@@ -58,8 +58,9 @@ Each packet consists of a 7 byte header at minimum, containing the channel ID an
 Ack data is always present to ensure the functionality of reliability.
 
 - 3 byte channel id
-- 3 byte highest reliability sequence id (see [here](#negative-acknowledgement-reliability))
-- 3 byte reliability sequence id (optional)
+- 2 byte highest reliability sequence id (see [here](#negative-acknowledgement-reliability))
+- 2 byte missed packet sequence id
+- 2 byte reliability sequence id (optional)
 - 3 byte ordering sequence id (optional)
 - 3 byte fragment id (optional)
 - n byte payload

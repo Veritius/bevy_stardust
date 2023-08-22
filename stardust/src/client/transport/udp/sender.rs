@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use crate::{shared::{prelude::*, channels::outgoing::OutgoingOctetStringsAccessor, reliability::PeerSequenceData}, client::peers::Server};
+use crate::{shared::{prelude::*, channels::outgoing::OutgoingOctetStringsAccessor, reliability::{PeerSequenceData, MissedPackets}}, client::peers::Server};
 use super::RemoteServerUdpSocket;
 
 pub(super) fn send_packets_system(

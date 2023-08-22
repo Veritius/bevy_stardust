@@ -107,9 +107,8 @@ pub(super) fn receive_packets_system(
                 }
 
                 // Check reliability data for everyone
-                for (client, lock) in locks.iter_mut() {
-                    let missed = lock.2.complete_cycle().collect::<Vec<_>>();
-                    info!("Missed packets from client {:?}: {:?}", **client, &missed);
+                for lock in locks.values_mut() {
+                    lock.2.complete_cycle();
                 }
             });
         }

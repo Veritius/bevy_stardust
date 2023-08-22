@@ -55,9 +55,8 @@ pub(super) fn receive_packets_system(
         pending.push((channel_id, payload));
     }
 
-    // Get packets that were missed
-    let missed = server_seq.complete_cycle().collect::<Vec<_>>();
-    info!("Missed packets from server: {:?}", &missed);
+    // Complete reliability cycle
+    server_seq.complete_cycle();
 
     // Write to IncomingNetworkMessages
     loop {

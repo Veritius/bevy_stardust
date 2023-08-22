@@ -78,11 +78,12 @@ impl Into<usize> for SequenceId {
 }
 
 /// Stores sequence data for reliability functionality.
-#[derive(Debug, Component)]
+#[derive(Component)]
 pub struct PeerSequenceData {
     pub local_sequence: SequenceId,
     pub remote_sequence: SequenceId,
     pub cycle_latest_remote: SequenceId,
+    pub missed_packets: Option<MissedPackets>,
     bitstore: FixedBitSet,
 }
 
@@ -92,6 +93,7 @@ impl PeerSequenceData {
             local_sequence: 0.into(),
             remote_sequence: 0.into(),
             cycle_latest_remote: 0.into(),
+            missed_packets: None,
             // 2048 reliable messages in one cycle is probably the most that'll happen.
             bitstore: FixedBitSet::with_capacity(2048),
         }
@@ -118,48 +120,63 @@ impl PeerSequenceData {
         self.bitstore.set(idx, true);
     }
 
-    /// Complete one reliability cycle, returning an iterator of all missed packets and updating `remote_sequence`.
-    pub fn complete_cycle(&mut self) -> impl Iterator<Item = SequenceId> {
+    /// Complete one reliability cycle, updating `remote_sequence` and setting `missed_packets`.
+    pub fn complete_cycle(&mut self) {
         // Get statistics values
-        let difference = self.cycle_latest_remote.wrapping_sub(self.remote_sequence);
+        let difference: usize = self.cycle_latest_remote.wrapping_sub(self.remote_sequence).into();
 
         // Construct iterator
-        let iter = MissedPacketIterator {
-            bitstore: self.bitstore.clone(),
-            offset: self.remote_sequence,
-            index: 0,
-            highest: difference.into(),
-        };
+        if self.bitstore.count_ones(..) != difference {
+            self.missed_packets = Some(MissedPackets {
+                bitstore: self.bitstore.clone(),
+                offset: self.remote_sequence,
+                highest: difference.try_into().unwrap(),
+            });
+        } else {
+            self.missed_packets = None;
+        }
 
         // Reset state for the next cycle
         self.remote_sequence = self.cycle_latest_remote;
         self.bitstore.clear();
-
-        // Return iterator
-        iter
     }
 }
 
-struct MissedPacketIterator {
+#[derive(Clone)]
+pub struct MissedPackets {
     bitstore: FixedBitSet,
     offset: SequenceId,
-    index: u16,
     highest: u16,
 }
 
-impl Iterator for MissedPacketIterator {
+impl MissedPackets {
+    pub fn iter<'a>(&'a self) -> impl Iterator<Item = SequenceId> + Clone + Send + Sync + 'a {
+        MissedPacketsIterator {
+            missed: &self,
+            index: 0,
+        }
+    }
+}
+
+#[derive(Clone)]
+struct MissedPacketsIterator<'a> {
+    missed: &'a MissedPackets,
+    index: u16,
+}
+
+impl Iterator for MissedPacketsIterator<'_> {
     type Item = SequenceId;
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {
-            if self.index == self.highest { return None; }
+            if self.index == self.missed.highest { return None; }
 
-            if self.bitstore[self.index as usize] == true {
+            if self.missed.bitstore[self.index as usize] == true {
                 self.index += 1;
                 continue;
             }
 
-            let true_seq = self.offset.wrapping_add(self.index.into());
+            let true_seq = self.missed.offset.wrapping_add(self.index.into());
             self.index += 1;
             return Some(true_seq)
         }
