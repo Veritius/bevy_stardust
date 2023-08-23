@@ -44,9 +44,7 @@ use bevy_stardust::shared::prelude::*;
 struct MyChannel;
 
 fn register_channels(app: &mut App) {
-    app.register_channel::<MyChannel>(ChannelConfig {
-        direction: ChannelDirection::Bidirectional,
-    }, ());
+    app.register_channel::<MyChannel>((ReliableChannel, OrderedChannel));
 }
 ```
 ```rs
