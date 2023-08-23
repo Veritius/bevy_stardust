@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use json::{JsonValue, object};
 use once_cell::sync::Lazy;
 use semver::Version;
-use crate::{shared::{hashdiff::UniqueNetworkHash, channels::incoming::IncomingNetworkMessages, reliability::PeerSequenceData}, server::{clients::Client, settings::NetworkClientCap}};
+use crate::{shared::{hashdiff::UniqueNetworkHash, channels::incoming::IncomingNetworkMessages, reliability::PeerSequenceData}, server::{clients::Client, settings::NetworkClientCap, prelude::PlayerConnectedEvent}};
 use super::{STARDUST_UDP_VERSION_RANGE, policy::BlockingPolicy, UdpClient, ports::PortBindings};
 
 /// Minimum amount of bytes in a packet to be read at all.
@@ -30,6 +30,7 @@ impl UdpListener {
 pub(super) fn udp_listener_system(
     mut commands: Commands,
     mut ports: ResMut<PortBindings>,
+    mut events: EventWriter<PlayerConnectedEvent>,
     existing: Query<&UdpClient, With<Client>>,
     player_cap: Res<NetworkClientCap>,
     listener: Res<UdpListener>,
@@ -63,6 +64,7 @@ pub(super) fn udp_listener_system(
         process_packet(
             &mut ports,
             &mut commands,
+            &mut events,
             &data,
             &listener.0,
             players,
@@ -77,6 +79,7 @@ pub(super) fn udp_listener_system(
 fn process_packet(
     bindings: &mut PortBindings,
     commands: &mut Commands,
+    events: &mut EventWriter<PlayerConnectedEvent>,
     data: &str,
     socket: &UdpSocket,
     active: usize,
@@ -152,6 +155,9 @@ fn process_packet(
         "response": "accepted",
         "port": port
     });
+
+    // Add event
+    events.send(PlayerConnectedEvent(ent_id));
 
     // Log join
     info!("New client joined via UDP from address {} and was assigned to entity id {:?}", address, ent_id);
