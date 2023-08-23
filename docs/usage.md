@@ -56,6 +56,24 @@ app.register_channel::<MyChannel>(ReliableChannel);
 ```
 
 ## Writing systems
-Systems that use networking functionality must be in the following two schedules: `ReadOctetStrings` for systems that read octet strings and `Update` for systems that write them.
+SystemParams like `ChannelReader<T>` and `ChannelWriter<T>` have two versions for the client and server respectively. While they have the same name, they are in different namespaces and have different functionality. Make sure you're using the right one!
 
-TODO
+### Reading
+Reading systems must be in the `ReadOctetStrings` schedule to function.
+
+To read from a channel, add `ChannelReader<T>` as a system parameter, and use an appropriate function: `read_all` and `read_client` on the server, and `read_all_from_server` on the client. All functions will panic if `T` does not exist.
+
+Both functions return an iterator with an `Item` of `&Payloads`. A `Payloads` object is a simple tuple struct holding a `Vec<Payload>`.
+
+A `Payload` object contains an `OctetString`, which is basically just an `Arc` of bytes. Octet strings are pre-processed by transport layers, and are free of any extra data. You can use `read` to access a slice of the octet string.
+
+Note that `Payload`s may have bytes hidden from both the head and tail. You can increase the amount with `hide` but you can't unhide bytes.
+
+`Payload` objects can be cloned freely. Holding them will keep the `OctetString` in memory, so make sure to destroy them when you're no longer using them.
+
+### Writing
+Writing systems can be any schedule that runs before `TransportWritePackets`, such as `Update`.
+
+To write to a channel, add `ChannelWriter<T>` as a system parameter. Both the server and the client have a function called `send` that takes any `impl Into<OctetString>`, but the server has an additional `SendTarget` argument, specifying who should receive the message.
+
+Send exactly what you intend to be received - the transport layer deals with all processing before sending it over the network.
