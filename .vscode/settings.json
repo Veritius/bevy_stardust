@@ -1,6 +1,6 @@
 {
     "todo-tree.filtering.excludeGlobs": [
-        "**/node_modules",
+        "Cargo.lock",
         "**/target"
     ],
     "todo-tree.general.tags": [
