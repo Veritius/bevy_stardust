@@ -4,7 +4,7 @@
 use bevy::prelude::*;
 use fixedbitset::FixedBitSet;
 
-pub const MAX_RELIABLE_MESSAGES_PER_CYCLE: usize = 2usize.pow(16);
+pub const _MAX_RELIABLE_MESSAGES_PER_CYCLE: usize = 2usize.pow(16);
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub struct SequenceId(u16);
@@ -150,7 +150,7 @@ pub struct MissedPackets {
 }
 
 impl MissedPackets {
-    pub fn iter<'a>(&'a self) -> impl Iterator<Item = SequenceId> + Clone + Send + Sync + 'a {
+    pub fn _iter<'a>(&'a self) -> impl Iterator<Item = SequenceId> + Clone + Send + Sync + 'a {
         MissedPacketsIterator {
             missed: &self,
             index: 0,

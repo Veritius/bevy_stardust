@@ -1,4 +1,4 @@
-use std::{ops::RangeInclusive, net::{UdpSocket, IpAddr}, collections::BTreeMap};
+use std::{net::{UdpSocket, IpAddr}, collections::BTreeMap};
 use bevy::prelude::{Entity, Resource, info};
 
 /// Owns UdpSockets and associates Entity ids with them.
@@ -8,16 +8,15 @@ pub(super) struct PortBindings {
 }
 
 impl PortBindings {
-    /// Makes a new `PortBindings`, creating `UdpSocket`s bound to `addr` through `ports`.
-    pub fn new(addr: IpAddr, ports: RangeInclusive<u16>) -> Self {
+    /// Makes a new `PortBindings`, creating `UdpSocket`s bound to all in `ports`
+    pub fn new(addr: IpAddr, ports: &[u16]) -> Self {
         // Check range of ports is acceptable
-        let port_diff = ports.end().checked_sub(*ports.start());
-        if port_diff.is_none() {
+        if ports.len() == 0 {
             panic!("Amount of ports used must be at least one");
         }
 
         // Log port connections
-        info!("Bound to {} ports in range {} to {} inclusive", port_diff.unwrap(), ports.start(), ports.end());
+        info!("Bound to ports {:?}, total of {}", ports, ports.len());
 
         // Create manager
         let mut mgr = Self {
@@ -26,6 +25,7 @@ impl PortBindings {
 
         // Create ports from range
         for port in ports {
+            let port = *port;
             let socket = UdpSocket::bind((addr, port)).unwrap();
             socket.set_nonblocking(true).unwrap();
             mgr.sockets.insert(port, BoundUdpSocket::new(socket));
@@ -68,7 +68,7 @@ impl PortBindings {
     }
 
     /// Disassociates a client from its bound socket, if present.
-    pub fn remove_client(&mut self, client: Entity) {
+    pub fn _remove_client(&mut self, client: Entity) {
         for bound in self.sockets.values_mut() {
             let mut bound_iter = bound.clients.iter().enumerate();
             let target = loop {

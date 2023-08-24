@@ -77,7 +77,7 @@ pub(super) fn send_packets_system(
                         let (channel_type_path, direction, ordered, reliable, fragmented) =
                             (channel_config.0.type_path(), channel_config.1, channel_config.2.is_none(), channel_config.3.is_some(), channel_config.4.is_some());
                         
-                        let sending_data = ChannelSendingData { reliable, ordered, fragmented };
+                        let sending_data = ChannelSendingData { reliable, _ordered: ordered, _fragmented: fragmented };
 
                         // Check channel direction
                         if direction.is_some_and(|v| *v == DirectionalChannel::ClientToServer) {
@@ -115,8 +115,8 @@ pub(super) fn send_packets_system(
 #[derive(Clone, Copy)]
 struct ChannelSendingData {
     pub reliable: bool,
-    pub ordered: bool,
-    pub fragmented: bool,
+    pub _ordered: bool,
+    pub _fragmented: bool,
 }
 
 fn send_octet_string(

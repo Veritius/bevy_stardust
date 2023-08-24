@@ -28,9 +28,9 @@ pub(super) fn receive_packets_system(
         let channel_id = ChannelId::from(TryInto::<[u8;3]>::try_into(&buffer[..3]).unwrap());
         if !channel_registry.channel_exists(channel_id) { continue; } // Channel doesn't exist
         let channel_ent = channel_registry.get_from_id(channel_id).unwrap();
-        let (channel_data, ordered, reliable, fragmented) =
+        let (_channel_data, ordered, reliable, fragmented) =
             channels.get(channel_ent).unwrap();
-        let (ordered, reliable, fragmented) =
+        let (_ordered, reliable, _fragmented) =
             (ordered.is_some(), reliable.is_some(), fragmented.is_some());
 
         let mut cutoff = PACKET_HEADER_SIZE;

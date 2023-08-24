@@ -1,4 +1,3 @@
-use std::net::{Ipv4Addr, IpAddr};
 use bevy::prelude::*;
 use bevy_stardust::{server::{prelude::*, transport::udp::ServerUdpTransportPlugin}, shared::channels::outgoing::SendTarget};
 use crate::{RandomDataChannel, apply_shared_data, gen_random_string};
@@ -9,9 +8,9 @@ pub(super) fn server() -> App {
 
     app.add_plugins(StardustServerPlugin);
     app.add_plugins(ServerUdpTransportPlugin {
-        address: IpAddr::V4(Ipv4Addr::UNSPECIFIED),
+        address: None,
         listen_port: 12345,
-        active_ports: 12346..=12356,
+        active_ports: (12346..=12356).collect::<Vec<_>>(),
     });
 
     // Add our sending and receiving systems

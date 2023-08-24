@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use crate::{shared::{prelude::*, channels::outgoing::OutgoingOctetStringsAccessor, reliability::{PeerSequenceData, MissedPackets}}, client::peers::Server};
+use crate::{shared::{prelude::*, channels::outgoing::OutgoingOctetStringsAccessor, reliability::PeerSequenceData}, client::peers::Server};
 use super::RemoteServerUdpSocket;
 
 pub(super) fn send_packets_system(
@@ -26,9 +26,9 @@ pub(super) fn send_packets_system(
     for outgoing in outgoing.by_channel() {
         // Get channel data
         let id = outgoing.id();
-        let (channel_data, ordered, reliable, fragmented) =
+        let (_channel_data, ordered, reliable, fragmented) =
             channels.get(registry.get_from_id(id).unwrap()).unwrap();
-        let (ordered, reliable, fragmented) =
+        let (_ordered, reliable, _fragmented) =
             (ordered.is_some(), reliable.is_some(), fragmented.is_some());
 
         for (target, octets) in outgoing.strings().read() {

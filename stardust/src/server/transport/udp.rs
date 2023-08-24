@@ -7,7 +7,7 @@ mod receiver;
 mod sender;
 mod ports;
 
-use std::{net::{SocketAddr, IpAddr}, ops::RangeInclusive};
+use std::net::{SocketAddr, IpAddr};
 use bevy::prelude::*;
 use once_cell::sync::Lazy;
 use semver::{Version, VersionReq};
@@ -19,33 +19,41 @@ pub static STARDUST_UDP_VERSION_RANGE: Lazy<VersionReq> = Lazy::new(|| { "=0.2.0
 
 /// A simple transport layer over native UDP sockets.
 pub struct ServerUdpTransportPlugin {
-    /// The address to use. You can use `IpAddr::UNSPECIFIED` to have the OS assign one for you.
-    pub address: IpAddr,
+    /// The address to use to connect. Use `None` if you want the OS to allocate one for you.
+    /// 
+    /// *Note: This is the local address within your system, and will not be the IP used by clients to connect over the Internet.*
+    pub address: Option<IpAddr>,
 
     /// The port that will be used by new clients to join the game.
     pub listen_port: u16,
 
-    /// The range of ports that will be used for communication with connected clients.
-    /// Clients will be automatically allocated to use a port once they join.
+    /// The ports that will be used in the dynamic port allocator system.
     /// 
-    /// Larger ranges (may) perform better, but use more ports.
-    /// If you have a small amount of players, you can keep this to 1.
-    pub active_ports: RangeInclusive<u16>,
+    /// Higher values improve performance with high player counts, to an extent.
+    pub active_ports: Vec<u16>,
 }
 
 impl Plugin for ServerUdpTransportPlugin {
     fn build(&self, app: &mut App) {
+        // Clone vec for mutability, sort it and remove duplicate values
+        let mut active_cloned = self.active_ports.clone();
+        active_cloned.sort_unstable();
+        active_cloned.dedup();
+
         // Panic with a more comprehensible message rather than the OS response
         if self.active_ports.contains(&self.listen_port) {
-            panic!("Listen port value ({}) is one of the active port values ({} to {} inclusive)",
-                self.listen_port, self.active_ports.start(), self.active_ports.end());
+            panic!("Listen port value ({}) is one of the active port values ({:?})",
+                self.listen_port, self.active_ports);
         }
-
-        app.insert_resource(UdpListener::new(self.address, self.listen_port));
-        app.insert_resource(PortBindings::new(self.address, self.active_ports.clone()));
-
-        app.add_systems(TransportReadPackets, udp_listener_system);
         
+        // Add resources
+        let address = if self.address.is_some() { self.address.unwrap() }
+            else { IpAddr::V4(std::net::Ipv4Addr::UNSPECIFIED) };
+        app.insert_resource(UdpListener::new(address, self.listen_port));
+        app.insert_resource(PortBindings::new(address, &self.active_ports));
+
+        // Add systems
+        app.add_systems(TransportReadPackets, udp_listener_system);
         app.add_systems(TransportReadPackets, receive_packets_system);
         app.add_systems(TransportSendPackets, send_packets_system);
     }

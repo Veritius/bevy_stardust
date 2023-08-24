@@ -73,7 +73,7 @@ pub(super) fn receive_packets_system(
                     let channel_entity = registry.get_from_id(channel_id).unwrap();
                     let channel_config = channels.get(channel_entity)
                         .expect("Channel was in registry but didn't have a config entity");
-                    let (direction, ordered, reliable, fragmented) =
+                    let (direction, _ordered, reliable, _fragmented) =
                         (channel_config.0, channel_config.1.is_none(), channel_config.2.is_some(), channel_config.3.is_some());
 
                     // Check channel direction

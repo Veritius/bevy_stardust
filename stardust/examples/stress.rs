@@ -144,15 +144,12 @@ mod client {
         let Ok(Some(payloads)) = payloads else { return };
     
         for payload in payloads.0.iter() {
-            let string = String::from_utf8_lossy(payload.read());
+            let _ = payload.read();
         }
     }
 }
 
 mod server {
-    use std::net::IpAddr;
-    use std::net::Ipv4Addr;
-
     use bevy::prelude::*;
     use bevy_stardust::server::prelude::*;
     use bevy_stardust::server::transport::udp::ServerUdpTransportPlugin;
@@ -169,9 +166,9 @@ mod server {
 
         app.add_plugins(StardustServerPlugin);
         app.add_plugins(ServerUdpTransportPlugin {
-            address: IpAddr::V4(Ipv4Addr::UNSPECIFIED),
+            address: None,
             listen_port: 12345,
-            active_ports: 12346..=12356,
+            active_ports: (12346..=12356).collect::<Vec<_>>(),
         });
 
         // Add our sending and receiving systems
@@ -208,9 +205,9 @@ mod server {
         reader: ChannelReader<T>,
     ) {
         let iter = reader.read_all();
-        for (client, messages) in iter {
+        for (_, messages) in iter {
             for message in messages.0.iter() {
-                let string = String::from_utf8_lossy(message.read());
+                let _ = message.read();
             }
         }
     }
