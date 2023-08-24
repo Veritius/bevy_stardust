@@ -30,7 +30,7 @@ impl ChannelData {
 }
 
 /// Marks this channel as directional.
-#[derive(Debug, Component, Hash, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Component, Hash, Reflect, Clone, Copy, PartialEq, Eq)]
 pub enum DirectionalChannel {
     /// Only the server can send messages on this channel.
     ServerToClient,
@@ -39,23 +39,23 @@ pub enum DirectionalChannel {
 }
 
 /// Marks this channel as ordered - messages sent in this channel will arrive in the exact order they are sent. Messages may not arrive, use [ReliableChannel] to ensure they do.
-#[derive(Component, Default, Hash, Clone, Copy)]
+#[derive(Component, Default, Hash, Reflect, Clone, Copy)]
 pub struct OrderedChannel;
 
 /// Marks this channel as reliable - messages sent in this channel are guaranteed to arrive eventually.
-#[derive(Component, Default, Hash, Clone, Copy)]
+#[derive(Component, Default, Hash, Reflect, Clone, Copy)]
 pub struct ReliableChannel;
 
 /// Discards packets in this channel that are older than a certain amount of ticks.
-#[derive(Component, Default, Hash, Clone, Copy)]
+#[derive(Component, Default, Hash, Reflect, Clone, Copy)]
 pub struct ChannelLatestness(u32);
 
 /// If large octet strings should be broken into smaller packets for transmission. Specific to a channel, may or may not add overhead.
-#[derive(Component, Default, Hash, Clone, Copy)]
+#[derive(Component, Default, Hash, Reflect, Clone, Copy)]
 pub struct FragmentedChannel;
 
 /// If messages on this channel should be compressed before transport. This uses the network more efficiently but takes processing on both ends of the connection. Useful with [ChannelFragmentation].
-#[derive(Component, Default, Hash, Clone, Copy, PartialEq, Eq)]
+#[derive(Component, Default, Hash, Reflect, Clone, Copy, PartialEq, Eq)]
 pub enum CompressedChannel {
     /// Compression is slow but the results are smaller.
     High,

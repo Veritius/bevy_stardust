@@ -23,7 +23,7 @@ impl ChannelSetupAppExt for App {
         self.insert_resource(OutgoingOctetStrings::<C>::new(store));
 
         // Change hash value
-        self.add_net_hash_value(("channel", C::type_path())); // TODO: Check components
+        self.net_hash_value(("channel", C::type_path())); // TODO: Check components
 
         // Spawn config entity
         let type_id = TypeId::of::<C>();
