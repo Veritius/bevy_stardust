@@ -1,3 +1,5 @@
+//! The `Stardust` plugin.
+
 use bevy::prelude::*;
 
 use crate::scheduling::*;

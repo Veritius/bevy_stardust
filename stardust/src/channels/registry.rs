@@ -4,6 +4,7 @@ use std::{collections::BTreeMap, any::TypeId, sync::{Arc, RwLock}};
 use bevy::prelude::{Resource, Entity};
 use super::{id::{Channel, ChannelId, CHANNEL_ID_LIMIT}, outgoing::OutgoingOctetStringsUntyped};
 
+/// Stores information related to type ids.
 #[derive(Resource)]
 pub struct ChannelRegistry {
     channel_count: u32,

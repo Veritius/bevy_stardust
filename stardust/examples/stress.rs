@@ -91,8 +91,8 @@ mod client {
     use bevy_stardust::client::connection::RemoteConnectionStatus;
     use bevy_stardust::prelude::client::*;
     use bevy_stardust::scheduling::*;
-    use bevy_stardust::setup::NetworkMode;
-    use bevy_stardust::setup::Stardust;
+    use bevy_stardust::plugin::NetworkMode;
+    use bevy_stardust::plugin::Stardust;
     use bevy_stardust::transports::udp::prelude::*;
 
     use crate::REPEAT_AMOUNT;
@@ -157,8 +157,8 @@ mod server {
     use bevy_stardust::channels::outgoing::SendTarget;
     use bevy_stardust::scheduling::*;
     use bevy_stardust::prelude::server::*;
-    use bevy_stardust::setup::NetworkMode;
-    use bevy_stardust::setup::Stardust;
+    use bevy_stardust::plugin::NetworkMode;
+    use bevy_stardust::plugin::Stardust;
     use bevy_stardust::transports::udp::prelude::ServerUdpTransportPlugin;
 
     use crate::REPEAT_AMOUNT;

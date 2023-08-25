@@ -7,6 +7,13 @@ use crate::octets::varints::{u24, NIntegerError};
 /// The maximum amount of channels that can exist.
 pub const CHANNEL_ID_LIMIT: u32 = 2u32.pow(24);
 
+/// Identifier for a channel. Used to access writing and reading functionality.
+/// Automatically implemented, just derive `Debug` and `Reflect` (or `TypePath`).
+/// 
+/// ```rs
+/// #[derive(Debug, Reflect)]
+/// pub struct MyChannel;
+/// ```
 pub trait Channel: TypePath + std::fmt::Debug + Send + Sync + 'static {}
 impl<T: TypePath + std::fmt::Debug + Send + Sync + 'static> Channel for T {}
 

@@ -1,3 +1,5 @@
+//! Adds `register_channel` to the `App`.
+
 use std::any::TypeId;
 use bevy::prelude::*;
 use crate::{channels::outgoing::*, protocol::NetworkHashAppExt};
