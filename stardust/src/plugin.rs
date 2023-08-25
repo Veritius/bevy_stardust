@@ -1,4 +1,4 @@
-//! The `Stardust` plugin.
+//! The Stardust core plugin.
 
 use bevy::prelude::*;
 
@@ -10,8 +10,13 @@ use crate::channels::systems::*;
 use crate::client::build_dedi_client;
 use crate::server::build_dedi_server;
 
-/// The Stardust networking plugin.
-pub struct Stardust(pub NetworkMode);
+/// The Stardust core networking plugin.
+pub enum Stardust {
+    /// Connects remote clients and maintains an authoritative copy of the World.
+    DedicatedServer,
+    /// Connects to and is dependent on remote servers.
+    DedicatedClient,
+}
 
 impl Plugin for Stardust {
     fn build(&self, app: &mut App) {
@@ -33,21 +38,24 @@ impl Plugin for Stardust {
         app.add_systems(PreStartup, complete_hasher);
 
         // Insert network mode resource
-        app.insert_resource(self.0.clone());
+        app.insert_resource(match self {
+            Self::DedicatedServer => PeerMode::DedicatedServer,
+            Self::DedicatedClient => PeerMode::DedicatedClient,
+        });
 
         // Add mode-specific functionality
-        match self.0 {
-            NetworkMode::DedicatedServer => build_dedi_server(app),
-            NetworkMode::DedicatedClient => build_dedi_client(app),
+        match self {
+            Self::DedicatedServer => build_dedi_server(app),
+            Self::DedicatedClient => build_dedi_client(app),
         }
     }
 }
 
-/// Whether this App is a server or a client.
+/// How this instance of the App is running.
 #[derive(Debug, Resource, Clone, Copy, PartialEq, Eq)]
-pub enum NetworkMode {
-    /// Connects remote clients and maintains an 'authoritative' view of the world.
+pub enum PeerMode {
+    /// Connects remote clients and maintains an authoritative copy of the World.
     DedicatedServer,
-    /// Connects to remote servers and is dependent on them to function.
+    /// Connects to and is dependent on remote servers.
     DedicatedClient,
 }

@@ -51,11 +51,11 @@ fn register_channels(app: &mut App) {
 // On the client
 
 use bevy::prelude::*;
-use bevy_stardust::client::prelude::*;
+use bevy_stardust::prelude::*;
 
 fn main() {
     let mut app = App::new();
-    app.add_plugins(StardustClientPlugin);
+    app.add_plugins(Stardust::DedicatedClient);
     app.add_plugins(ClientUdpTransportPlugin);
 
     register_channels(&mut app);
@@ -76,11 +76,11 @@ fn sender_system(
 // On the server
 
 use bevy::prelude::*;
-use bevy_stardust::server::prelude::*;
+use bevy_stardust::prelude::*;
 
 fn main() {
     let mut app = App::new();
-    app.add_plugins(StardustServerPlugin);
+    app.add_plugins(Stardust::DedicatedServer);
     app.add_plugins(ServerUdpTransportPlugin {
         address: IpAddr::V4(Ipv4Addr::UNSPECIFIED),
         listen_port: 12345,

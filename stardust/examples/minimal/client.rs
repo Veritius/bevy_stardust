@@ -1,11 +1,11 @@
 use bevy::prelude::*;
-use bevy_stardust::{prelude::client::*, scheduling::*, transports::udp::prelude::*, client::{connection::RemoteConnectionStatus, send::ChannelWriter}, plugin::{NetworkMode, Stardust}};
+use bevy_stardust::{prelude::client::*, scheduling::*, transports::udp::prelude::*, client::{connection::RemoteConnectionStatus, send::ChannelWriter}, plugin::Stardust};
 use crate::{apply_shared_data, gen_random_string, RandomDataChannel};
 
 pub(super) fn client() -> App {
     let mut app = App::new();
 
-    app.add_plugins(Stardust(NetworkMode::DedicatedClient));
+    app.add_plugins(Stardust::DedicatedClient);
     app.add_plugins(ClientUdpTransportPlugin);
 
     apply_shared_data(&mut app);

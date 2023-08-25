@@ -9,17 +9,11 @@
 Please note that for all setup, the order of operations does matter. Registering channel A before channel B on the server, and vice versa on the client, will prevent the client from joining the server.
 
 ### Plugins
-Clients need the following plugins to function:
-- `StardustSharedPlugin`
-- `StardustClientPlugin`
-- A transport layer plugin. If in doubt, you can use the included UDP transport layer, called `ClientUdpTransportPlugin`
+Your average `App` will have two plugins: the core plugin and a transport layer.
 
-Servers need the following plugins to function:
-- `StardustSharedPlugin`
-- `StardustServerPlugin`
-- A transport layer plugin. If in doubt, you can use the included UDP transport layer, called `ServerUdpTransportPlugin`
+The core plugin is an enum, and determines how your game will function. Using `DedicatedServer` will create an app that listens for connections from remote clients, and maintains an authoritative copy of the World. Using `DedicatedClient` will create an app that joins remote servers and is dependent on their authoritative copy.
 
-Adding these plugins is required before any further setup, like adding channels.
+Currently, you cannot have an app that can operate as a client or a server. This may or may not be added in future.
 
 ### Channels
 Channels are used to compartmentalise network messages for better parallelism and to better suit the ECS design. They are primarily accessed using generic type APIs, though untyped APIs exist for use by transport layers. The generic type you use when creating the channel can then be used to refer back to it as a system parameter.
