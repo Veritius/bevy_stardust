@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use bevy_stardust::{scheduling::*, transports::udp::prelude::*, client::{connection::RemoteConnectionStatus, send::ChannelWriter, prelude::*}, setup::{NetworkMode, Stardust}};
+use bevy_stardust::{prelude::client::*, scheduling::*, transports::udp::prelude::*, client::{connection::RemoteConnectionStatus, send::ChannelWriter}, setup::{NetworkMode, Stardust}};
 use crate::{apply_shared_data, gen_random_string, RandomDataChannel};
 
 pub(super) fn client() -> App {

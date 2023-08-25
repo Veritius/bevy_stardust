@@ -6,7 +6,7 @@ const REPEAT_AMOUNT: usize = 1024;
 use std::time::{Duration, Instant};
 use rand::{Rng, seq::SliceRandom};
 use bevy::{prelude::*, app::SubApp};
-use bevy_stardust::channels::{config::{ReliableChannel, OrderedChannel}, extension::ChannelSetupAppExt};
+use bevy_stardust::prelude::*;
 
 use channels::*;
 
@@ -89,7 +89,7 @@ mod client {
     use bevy::prelude::*;
     use bevy_stardust::channels::id::Channel;
     use bevy_stardust::client::connection::RemoteConnectionStatus;
-    use bevy_stardust::client::prelude::*;
+    use bevy_stardust::prelude::client::*;
     use bevy_stardust::scheduling::*;
     use bevy_stardust::setup::NetworkMode;
     use bevy_stardust::setup::Stardust;
@@ -156,7 +156,7 @@ mod server {
     use bevy_stardust::channels::id::Channel;
     use bevy_stardust::channels::outgoing::SendTarget;
     use bevy_stardust::scheduling::*;
-    use bevy_stardust::server::prelude::*;
+    use bevy_stardust::prelude::server::*;
     use bevy_stardust::setup::NetworkMode;
     use bevy_stardust::setup::Stardust;
     use bevy_stardust::transports::udp::prelude::ServerUdpTransportPlugin;

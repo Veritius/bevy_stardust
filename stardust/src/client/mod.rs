@@ -1,6 +1,4 @@
-//! Client-side code.
-
-pub mod prelude;
+//! Code for writing
 
 pub mod connection;
 pub mod receive;
