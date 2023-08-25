@@ -19,7 +19,7 @@ impl<T: TypePath + std::fmt::Debug + Send + Sync + 'static> Channel for T {}
 
 /// A unique 24-bit channel identifier.
 #[derive(Debug, Clone, Copy, Hash, Reflect, PartialEq, Eq, PartialOrd, Ord)]
-pub struct ChannelId(u24);
+pub struct ChannelId(pub u24);
 
 impl Deref for ChannelId {
     type Target = u24;

@@ -24,8 +24,14 @@ pub(super) fn receive_packets_system(
         // Discard packet, too small to be useful.
         if octets_read <= 6 { continue; }
 
-        // Check channel ID and get config
+        // Check channel ID
         let channel_id = ChannelId::from(TryInto::<[u8;3]>::try_into(&buffer[..3]).unwrap());
+        if channel_id.0 == 0.into() {
+            todo!()
+        }
+
+        // Shift channel ID back and get config
+        let channel_id = ChannelId(channel_id.0 - 1.into());
         if !channel_registry.channel_exists(channel_id) { continue; } // Channel doesn't exist
         let channel_ent = channel_registry.get_from_id(channel_id).unwrap();
         let (_channel_data, ordered, reliable, fragmented) =

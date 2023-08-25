@@ -1,6 +1,6 @@
 use std::{sync::Mutex, collections::BTreeMap, io};
 use bevy::{prelude::*, tasks::TaskPoolBuilder};
-use crate::{channels::{config::*, registry::ChannelRegistry, incoming::IncomingNetworkMessages, id::ChannelId}, octets::payload::Payload, prelude::server::Client};
+use crate::{channels::{config::*, registry::ChannelRegistry, incoming::IncomingNetworkMessages, id::ChannelId}, octets::{payload::Payload, varints::u24}, prelude::server::Client};
 use super::{PACKET_HEADER_SIZE, UdpClient, ports::PortBindings};
 
 pub(super) fn receive_packets_system(
@@ -67,8 +67,15 @@ pub(super) fn receive_packets_system(
                     if !addresses.contains(&from_address) { continue } // Packet isn't from one of the clients associated with this port
                     if octets_read < PACKET_HEADER_SIZE { continue } // Packet is too small to be of any value
 
-                    // Check channel data
+                    // Check channel id
                     let channel_id = ChannelId::from(TryInto::<[u8; 3]>::try_into(&buffer[..3]).unwrap());
+                    if channel_id.0 == 0.into() {
+                        // This is a special packet
+                        todo!()
+                    }
+
+                    // Get channel config
+                    let channel_id = ChannelId(channel_id.0 - 1.into()); // Shift the channel ID back
                     if !registry.channel_exists(channel_id) { continue } // Channel doesn't exist
                     let channel_entity = registry.get_from_id(channel_id).unwrap();
                     let channel_config = channels.get(channel_entity)

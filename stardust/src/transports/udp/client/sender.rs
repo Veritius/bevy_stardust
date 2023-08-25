@@ -33,7 +33,9 @@ pub(super) fn send_packets_system(
             let mut payload = Vec::with_capacity(3 + octets.len());
 
             // Always present information
-            for b in id.bytes() { payload.push(b); }
+            let cid = (id.0 + 1.into())
+                .expect("Too many channels! The transport layer imposes a restriction of 2^24-1.");
+            for b in cid.bytes() { payload.push(b); }
 
             // The payload itself
             for b in octets.as_slice() { payload.push(*b); }

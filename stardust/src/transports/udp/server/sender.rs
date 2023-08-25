@@ -1,6 +1,6 @@
 use std::{sync::{Mutex, MutexGuard}, net::UdpSocket, collections::BTreeMap};
 use bevy::{prelude::*, tasks::TaskPoolBuilder};
-use crate::{channels::{outgoing::OutgoingOctetStringsAccessor, id::ChannelId, registry::ChannelRegistry, config::*}, octets::octetstring::OctetString, prelude::server::Client};
+use crate::{channels::{outgoing::OutgoingOctetStringsAccessor, id::ChannelId, registry::ChannelRegistry, config::*}, octets::{octetstring::OctetString, varints::u24}, prelude::server::Client};
 use super::{UdpClient, ports::PortBindings};
 
 // TODO
@@ -59,7 +59,12 @@ pub(super) fn send_packets_system(
                             .expect("Channel was in registry but the associated entity didn't exist");
                         let (channel_type_path, direction, ordered, reliable, fragmented) =
                             (channel_config.0.type_path(), channel_config.1, channel_config.2.is_none(), channel_config.3.is_some(), channel_config.4.is_some());
-                        
+
+                        // The number sent over the network is shifted by 1 due to
+                        // the fact that value 0 is reserved for messages sent by the transport layer
+                        let channel_id_shift = (channel_id.0 + 1.into())
+                            .expect("Too many channels! The transport layer imposes a restriction of 2^24-1.");
+
                         let sending_data = ChannelSendingData { reliable, _ordered: ordered, _fragmented: fragmented };
 
                         // Check channel direction
@@ -75,7 +80,7 @@ pub(super) fn send_packets_system(
                             // Send packet
                             send_octet_string(
                                 socket,
-                                channel_id,
+                                channel_id_shift,
                                 octets,
                                 sending_data,
                                 *client,
@@ -102,7 +107,7 @@ struct ChannelSendingData {
 
 fn send_octet_string(
     socket: &UdpSocket,
-    channel: ChannelId,
+    channel: u24,
     octets: &OctetString,
     settings: ChannelSendingData,
     client_id: Entity,

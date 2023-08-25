@@ -97,6 +97,6 @@ The term 'sequence ID' is used to refer to a 16-bit number representing the orde
 ## Negative acknowledgement reliability
 Since the UDP transport layer operates in a receive-send loop, a sliding window solution like [Glenn Fiedler's](https://gafferongames.com/post/reliability_ordering_and_congestion_avoidance_over_udp/) imposes a limit on the amount of reliable packets sent every tick, with larger windows becoming prohibitively expensive. Instead, a round-robin negative acknowledgement system is used.
 
-By attaching only the id of a missed packet to each sent packet, the size of a packet header can be minimised. However, negative acknowledgment requires a constant message flow to ensure functionality. Since missed IDs are attached to unreliable packets as well, this should f
+By attaching only the id of a missed packet to each sent packet, the size of a packet header can be minimised. However, negative acknowledgment requires a constant message flow to ensure functionality. The UDP transport layer will automatically send a heartbeat packet ensuring everything is working.
 
 ## Ordering
