@@ -2,7 +2,8 @@
 
 use std::marker::PhantomData;
 use bevy::{prelude::*, ecs::system::SystemParam};
-use crate::shared::{channels::{id::Channel, registry::ChannelRegistry, incoming::IncomingNetworkMessages}, payload::Payloads};
+use crate::{channels::{id::Channel, registry::ChannelRegistry, incoming::IncomingNetworkMessages}, octets::payload::Payloads};
+
 use super::clients::Client;
 
 /// Added to a Bevy system to read network messages over channel `T`.

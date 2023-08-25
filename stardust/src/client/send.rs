@@ -1,7 +1,8 @@
 //! Sending systemparams for the client.
 
 use bevy::{prelude::*, ecs::system::SystemParam};
-use crate::shared::{channels::{id::Channel, outgoing::{OutgoingOctetStrings, SendTarget}}, octetstring::OctetString};
+use crate::{channels::{id::Channel, outgoing::*}, octets::octetstring::OctetString};
+
 use super::peers::Server;
 
 #[derive(SystemParam)]

@@ -1,13 +1,14 @@
 use bevy::prelude::*;
-use bevy_stardust::client::{prelude::*, transport::udp::{ClientUdpTransportPlugin, UdpConnectionManager}, connection::RemoteConnectionStatus};
-use crate::{RandomDataChannel, apply_shared_data, gen_random_string};
+use bevy_stardust::{scheduling::*, transports::udp::prelude::*, client::{connection::RemoteConnectionStatus, send::ChannelWriter, prelude::*}, setup::{NetworkMode, Stardust}};
+use crate::{apply_shared_data, gen_random_string, RandomDataChannel};
 
 pub(super) fn client() -> App {
     let mut app = App::new();
-    apply_shared_data(&mut app);
 
-    app.add_plugins(StardustClientPlugin);
+    app.add_plugins(Stardust(NetworkMode::DedicatedClient));
     app.add_plugins(ClientUdpTransportPlugin);
+
+    apply_shared_data(&mut app);
 
     // Add our sending and receiving systems
     app.add_systems(ReadOctetStrings, receive_random_data_system_client);

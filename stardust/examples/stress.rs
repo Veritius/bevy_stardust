@@ -5,9 +5,8 @@ const REPEAT_AMOUNT: usize = 1024;
 
 use std::time::{Duration, Instant};
 use rand::{Rng, seq::SliceRandom};
-
 use bevy::{prelude::*, app::SubApp};
-use bevy_stardust::shared::prelude::*;
+use bevy_stardust::channels::{config::{ReliableChannel, OrderedChannel}, extension::ChannelSetupAppExt};
 
 use channels::*;
 
@@ -33,7 +32,6 @@ fn main() {
 
 fn apply_shared_data(app: &mut App) {
     app.add_plugins(MinimalPlugins);
-    app.add_plugins(StardustSharedPlugin);
 
     app.register_channel::<UnorderedUnreliableChannel>(());
     app.register_channel::<OrderedUnreliableChannel>(OrderedChannel);
@@ -89,11 +87,14 @@ mod channels {
 
 mod client {
     use bevy::prelude::*;
+    use bevy_stardust::channels::id::Channel;
     use bevy_stardust::client::connection::RemoteConnectionStatus;
     use bevy_stardust::client::prelude::*;
-    use bevy_stardust::client::transport::udp::ClientUdpTransportPlugin;
-    use bevy_stardust::client::transport::udp::UdpConnectionManager;
-    use bevy_stardust::shared::channels::id::Channel;
+    use bevy_stardust::scheduling::*;
+    use bevy_stardust::setup::NetworkMode;
+    use bevy_stardust::setup::Stardust;
+    use bevy_stardust::transports::udp::prelude::*;
+
     use crate::REPEAT_AMOUNT;
     use crate::channels::*;
     use crate::apply_shared_data;
@@ -101,10 +102,11 @@ mod client {
 
     pub(super) fn client() -> App {
         let mut app = App::new();
-        apply_shared_data(&mut app);
 
-        app.add_plugins(StardustClientPlugin);
+        app.add_plugins(Stardust(NetworkMode::DedicatedClient));
         app.add_plugins(ClientUdpTransportPlugin);
+
+        apply_shared_data(&mut app);
 
         app.add_systems(ReadOctetStrings, receive_random_data_system_client::<UnorderedUnreliableChannel>);
         app.add_systems(ReadOctetStrings, receive_random_data_system_client::<OrderedUnreliableChannel>);
@@ -151,9 +153,13 @@ mod client {
 
 mod server {
     use bevy::prelude::*;
+    use bevy_stardust::channels::id::Channel;
+    use bevy_stardust::channels::outgoing::SendTarget;
+    use bevy_stardust::scheduling::*;
     use bevy_stardust::server::prelude::*;
-    use bevy_stardust::server::transport::udp::ServerUdpTransportPlugin;
-    use bevy_stardust::shared::channels::id::Channel;
+    use bevy_stardust::setup::NetworkMode;
+    use bevy_stardust::setup::Stardust;
+    use bevy_stardust::transports::udp::prelude::ServerUdpTransportPlugin;
 
     use crate::REPEAT_AMOUNT;
     use crate::channels::*;
@@ -162,14 +168,15 @@ mod server {
 
     pub(super) fn server() -> App {
         let mut app = App::new();
-        apply_shared_data(&mut app);
 
-        app.add_plugins(StardustServerPlugin);
+        app.add_plugins(Stardust(NetworkMode::DedicatedServer));
         app.add_plugins(ServerUdpTransportPlugin {
             address: None,
             listen_port: 12345,
             active_ports: (12346..=12356).collect::<Vec<_>>(),
         });
+
+        apply_shared_data(&mut app);
 
         // Add our sending and receiving systems
         app.add_systems(ReadOctetStrings, receive_random_data_system_server::<UnorderedUnreliableChannel>);

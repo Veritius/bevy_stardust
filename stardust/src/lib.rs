@@ -1,10 +1,13 @@
 //! # bevy_stardust
 //! A networking crate for the Bevy game engine.
 
+pub mod setup;
+
 pub mod client;
 pub mod server;
-pub mod shared;
 
-// pub mod replication; // ignore this for the time being
-
-mod impls;
+pub mod protocol;
+pub mod octets;
+pub mod channels;
+pub mod scheduling;
+pub mod transports;

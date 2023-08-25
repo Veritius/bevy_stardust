@@ -3,9 +3,10 @@
 use std::marker::PhantomData;
 use bevy::prelude::*;
 use bevy::ecs::system::SystemParam;
-use crate::shared::channels::id::Channel;
-use crate::shared::channels::outgoing::{OutgoingOctetStrings, SendTarget};
-use crate::shared::octetstring::OctetString;
+
+use crate::channels::id::Channel;
+use crate::channels::outgoing::{OutgoingOctetStrings, SendTarget};
+use crate::octets::octetstring::OctetString;
 
 /// Sends messages over a network channel to clients.
 #[derive(SystemParam)]

@@ -4,7 +4,8 @@ mod server;
 use std::time::Duration;
 use bevy::app::SubApp;
 use bevy::prelude::*;
-use bevy_stardust::shared::prelude::*;
+use bevy_stardust::channels::config::*;
+use bevy_stardust::channels::extension::ChannelSetupAppExt;
 use rand::Rng;
 use rand::seq::SliceRandom;
 
@@ -31,7 +32,6 @@ fn main() {
 fn apply_shared_data(app: &mut App) {
     // Add plugins
     app.add_plugins(MinimalPlugins);
-    app.add_plugins(StardustSharedPlugin);
 
     // Add channel
     app.register_channel::<RandomDataChannel>(ReliableChannel);
