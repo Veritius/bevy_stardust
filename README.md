@@ -20,8 +20,6 @@ Stardust is a batteries-included networking crate built for Bevy, with a focus o
 *Note: While you can use any transport layer, Stardust by itself only supports native UDP.*
 
 ### Planned features
-- Reliability
-- Ordering
 - Fragmentation
 - Error checking
 - Compression
