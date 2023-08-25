@@ -20,9 +20,6 @@ The server, if it accepts the client, informs the client of its acceptance and i
 {
     // From the server
     "response": "accepted", // "I am letting you join"
-    "config": { // "This is how to configure your UDP transport layer to talk to me"
-        "reliability": "bitfield" // "Use bitfields for reliability"
-    },
     "port": 12345 // "Use this port to talk to me"
 }
 ```
