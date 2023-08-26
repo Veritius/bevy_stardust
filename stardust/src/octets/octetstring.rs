@@ -41,3 +41,9 @@ impl From<Box<[Octet]>> for OctetString {
         Self(Arc::new(value.into_vec()))
     }
 }
+
+impl From<String> for OctetString {
+    fn from(value: String) -> Self {
+        value.into_bytes().into()
+    }
+}
