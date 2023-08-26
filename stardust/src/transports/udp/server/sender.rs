@@ -37,6 +37,7 @@ pub(super) fn send_packets_system(
         for port in ports.iter() {
             s.spawn(async move {
                 let (_, socket, clients) = port;
+                let mut buffer = Vec::with_capacity(1500);
 
                 // Take locks for our clients
                 let mut locks = query_mutex_map.iter()
@@ -79,6 +80,7 @@ pub(super) fn send_packets_system(
 
                             // Send packet
                             send_octet_string(
+                                &mut buffer,
                                 socket,
                                 channel_id_shift,
                                 octets,
@@ -106,6 +108,7 @@ struct ChannelSendingData {
 }
 
 fn send_octet_string(
+    buffer: &mut Vec<u8>,
     socket: &UdpSocket,
     channel: u24,
     octets: &OctetString,
@@ -113,11 +116,8 @@ fn send_octet_string(
     client_id: Entity,
     client_data: &mut MutexGuard<'_, &UdpClient>
 ) {
-    // Allocate vec for storing payload data
-    let mut udp_payload = Vec::with_capacity(1500);
-
     // Write channel ID
-    for octet in channel.bytes() { udp_payload.push(octet); }
+    for octet in channel.bytes() { buffer.push(octet); }
 
     // Write highest sequence ID
     // for octet in highest.bytes() { udp_payload.push(octet);}
@@ -130,11 +130,11 @@ fn send_octet_string(
     // }
 
     // Write octet string
-    if octets.as_slice().len() > 1500 - udp_payload.len() { panic!("Packet was too big. Fragmenting is not currently supported, try sending your data in multiple pieces."); }
-    for octet in octets.as_slice() { udp_payload.push(*octet); }
+    if octets.as_slice().len() > 1500 - buffer.len() { panic!("Packet was too big. Fragmenting is not currently supported, try sending your data in multiple pieces."); }
+    for octet in octets.as_slice() { buffer.push(*octet); }
 
     // Send data to remote peer
-    socket.send_to(&udp_payload, client_data.address).unwrap();
+    socket.send_to(&buffer, client_data.address).unwrap();
 
     // // Store octet string for reliability
     // if !settings.reliable { return }

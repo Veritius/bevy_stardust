@@ -69,4 +69,4 @@ pub struct UdpClient {
 }
 
 /// The amount of bytes that will always be present in all packages.
-const PACKET_HEADER_SIZE: usize = 5;
+const PACKET_HEADER_SIZE: usize = 3;

@@ -7,10 +7,11 @@ pub(super) fn send_packets_system(
     outgoing: OutgoingOctetStringsAccessor,
     registry: Res<ChannelRegistry>,
     channels: Query<(&ChannelData, Option<&OrderedChannel>, Option<&ReliableChannel>, Option<&FragmentedChannel>)>,
-    mut server: Query<(), With<Server>>,
+    // mut server: Query<(), With<Server>>,
 ) { 
     let Some(remote) = remote else { return };
-    let mut server_seq = server.single_mut();
+    let mut buffer = Vec::with_capacity(1500);
+    // let mut server_seq = server.single_mut();
 
     for outgoing in outgoing.by_channel() {
         // Get channel data
@@ -28,20 +29,16 @@ pub(super) fn send_packets_system(
                 SendTarget::Multiple(_) => unimplemented!(),
                 SendTarget::Broadcast => unimplemented!(),
             }
-
-            // TODO: Figure out a better way to do this
-            let mut payload = Vec::with_capacity(3 + octets.len());
-
             // Always present information
             let cid = (id.0 + 1.into())
                 .expect("Too many channels! The transport layer imposes a restriction of 2^24-1.");
-            for b in cid.bytes() { payload.push(b); }
+            for b in cid.bytes() { buffer.push(b); }
 
             // The payload itself
-            for b in octets.as_slice() { payload.push(*b); }
+            for b in octets.as_slice() { buffer.push(*b); }
 
             // Send data
-            remote.0.send(&payload).unwrap();
+            remote.0.send(&buffer).unwrap();
         }
     }
 
