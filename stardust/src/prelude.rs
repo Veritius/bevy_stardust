@@ -3,7 +3,6 @@
 //! You can use the modules `client` and `server` for client- and server-related preludes as well.
 
 pub use crate::setup::*;
-pub use crate::state::*;
 pub use crate::channels::extension::ChannelSetupAppExt;
 pub use crate::channels::registry::ChannelRegistry;
 pub use crate::channels::id::{Channel, ChannelId};

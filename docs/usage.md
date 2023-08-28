@@ -70,44 +70,6 @@ app.register_channel::<MyChannel>(ReliableChannel);
 ## Writing systems
 SystemParams like `ChannelReader<T>` and `ChannelWriter<T>` have two versions for the client and server respectively. While they have the same name, they are in different namespaces and have different functionality. Make sure you're using the right one!
 
-### State machine
-Stardust uses a state machine used to determine what the app is currently doing, accessible with `Res<State<MultiplayerState>>`.
-
-```mermaid
-flowchart TD
-    Disconnected
-        Disconnected-->Singleplayer
-        Disconnected-->StartingServer
-        Disconnected-->ConnectingClient
-    Singleplayer
-        Singleplayer-->Disconnected
-        Singleplayer-->StartingServer
-        Singleplayer-->ConnectingClient
-    StartingServer
-        StartingServer-->RunningServer
-        StartingServer-->Disconnected
-    RunningServer
-        RunningServer-->Disconnected
-    ConnectingClient
-        ConnectingClient-->Disconnected
-        ConnectingClient-->ConnectedClient
-    ConnectedClient
-        ConnectedClient-->Disconnected
-```
-
-This is all possible states Stardust can be in, and all the state changes that are possible. There are only six states an app can be in, with some nuance.
-
-- `Disconnected` means that the app has no current connection. This is useful for if you have a main menu, or some other interface for setting up multiplayer.
-    - All apps start in this state by default, with the exception of `DedicatedServer`, which defaults to `StartingServer`. 
-- `Singleplayer` is for when the app is in a 'singleplayer' mode, where there may still be simulation, but there is no multiplayer connections. There isn't really much of a reason for this state to exist, but it could still be useful.
-    - `Singleplayer` can change to `StartingServer` or `ConnectingClient` without changing to `Disconnected`. The reason this exists is for 'sudden multiplayer', like Dark Souls and Watch Dogs 2's invasion mechanics.
-- `StartingServer` is used for setting up the server, ie binding to sockets and polling authentication services. This is its own state so it can happen across ticks.
-- `RunningServer` is a state representing that the server is running. This includes accepting remote connections, etc. The server should be listening to and sending data in this state.
-- `ConnectingClient` is used for when the app is trying to join a remote server. This isn't necessarily success, just that there is an ongoing attempt.
-- `ConnectedClient` is used for when the app is connected to a remote server. The client should be listening to and sending data in this state.
-
-States that don't make sense with the app `MultiplayerMode` and impossible state changes will panic.
-
 ### Reading
 Reading systems must be in the `ReadOctetStrings` schedule to function.
 

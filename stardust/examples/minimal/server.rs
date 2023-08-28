@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use bevy_stardust::{prelude::server::*, scheduling::*, transports::udp::prelude::ServerUdpTransportPlugin, channels::outgoing::SendTarget, setup::{StardustPlugin, MultiplayerMode}};
+use bevy_stardust::{prelude::server::*, scheduling::*, transports::udp::prelude::ServerUdpTransportPlugin, channels::outgoing::SendTarget, setup::StardustPlugin};
 use semver::{Version, VersionReq};
 use crate::{RandomDataChannel, apply_shared_data, gen_random_string};
 
@@ -9,7 +9,6 @@ pub(super) fn server() -> App {
     app.add_plugins(StardustPlugin {
         version: Version::new(0, 0, 0),
         allows: VersionReq::STAR,
-        mode: MultiplayerMode::DedicatedServer,
     });
     app.add_plugins(ServerUdpTransportPlugin {
         address: None,

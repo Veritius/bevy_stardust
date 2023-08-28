@@ -107,7 +107,6 @@ mod client {
         app.add_plugins(StardustPlugin {
             version: Version::new(0, 0, 0),
             allows: VersionReq::STAR,
-            mode: MultiplayerMode::DedicatedClient,
         });
         app.add_plugins(ClientUdpTransportPlugin);
 
@@ -178,7 +177,6 @@ mod server {
         app.add_plugins(StardustPlugin {
             version: Version::new(0, 0, 0),
             allows: VersionReq::STAR,
-            mode: MultiplayerMode::DedicatedServer,
         });
         app.add_plugins(ServerUdpTransportPlugin {
             address: None,
