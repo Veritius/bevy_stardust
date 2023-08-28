@@ -91,7 +91,7 @@ mod client {
     use bevy_stardust::client::connection::RemoteConnectionStatus;
     use bevy_stardust::prelude::client::*;
     use bevy_stardust::scheduling::*;
-    use bevy_stardust::plugin::Stardust;
+    use bevy_stardust::plugin::StardustPlugin;
     use bevy_stardust::transports::udp::prelude::*;
 
     use crate::REPEAT_AMOUNT;
@@ -102,7 +102,7 @@ mod client {
     pub(super) fn client() -> App {
         let mut app = App::new();
 
-        app.add_plugins(Stardust::DedicatedClient);
+        app.add_plugins(StardustPlugin::DedicatedClient);
         app.add_plugins(ClientUdpTransportPlugin);
 
         apply_shared_data(&mut app);
@@ -156,7 +156,7 @@ mod server {
     use bevy_stardust::channels::outgoing::SendTarget;
     use bevy_stardust::scheduling::*;
     use bevy_stardust::prelude::server::*;
-    use bevy_stardust::plugin::Stardust;
+    use bevy_stardust::plugin::StardustPlugin;
     use bevy_stardust::transports::udp::prelude::ServerUdpTransportPlugin;
 
     use crate::REPEAT_AMOUNT;
@@ -167,7 +167,7 @@ mod server {
     pub(super) fn server() -> App {
         let mut app = App::new();
 
-        app.add_plugins(Stardust::DedicatedServer);
+        app.add_plugins(StardustPlugin::DedicatedServer);
         app.add_plugins(ServerUdpTransportPlugin {
             address: None,
             listen_port: 12345,

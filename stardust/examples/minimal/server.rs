@@ -1,11 +1,11 @@
 use bevy::prelude::*;
-use bevy_stardust::{prelude::server::*, scheduling::*, transports::udp::prelude::ServerUdpTransportPlugin, channels::outgoing::SendTarget, plugin::Stardust};
+use bevy_stardust::{prelude::server::*, scheduling::*, transports::udp::prelude::ServerUdpTransportPlugin, channels::outgoing::SendTarget, plugin::StardustPlugin};
 use crate::{RandomDataChannel, apply_shared_data, gen_random_string};
 
 pub(super) fn server() -> App {
     let mut app = App::new();
 
-    app.add_plugins(Stardust::DedicatedServer);
+    app.add_plugins(StardustPlugin::DedicatedServer);
     app.add_plugins(ServerUdpTransportPlugin {
         address: None,
         listen_port: 12345,
