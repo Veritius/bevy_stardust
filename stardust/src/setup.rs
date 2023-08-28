@@ -4,12 +4,13 @@ use bevy::prelude::*;
 use semver::Version;
 use semver::VersionReq;
 
-use crate::client::build_client;
 use crate::prelude::NetworkMode;
 use crate::scheduling::*;
 use crate::protocol::*;
 use crate::channels::registry::ChannelRegistry;
 use crate::channels::systems::*;
+
+use crate::client::build_client;
 use crate::server::build_server;
 
 /// The Stardust multiplayer plugin.
