@@ -60,7 +60,7 @@ pub(crate) fn state_machine_checker(
     state: Res<State<MultiplayerState>>,
 ) {
     // The mode should never change
-    if mode.is_changed() { panic!("The MultiplayerMode enum was changed. This **should never happen!**"); }
+    if mode.is_changed() && !mode.is_added() { panic!("The MultiplayerMode enum was changed. This should never happen!"); }
 
     // Nothing's changed, move on
     if !state.is_changed() { return; }
@@ -76,17 +76,11 @@ pub(crate) fn state_machine_checker(
         (MultiplayerMode::DedicatedServer, MultiplayerState::JoiningRemote) |
         (MultiplayerMode::DedicatedServer, MultiplayerState::JoinedRemote) |
         (MultiplayerMode::DedicatedClient, MultiplayerState::Singleplayer) |
-        (MultiplayerMode::DedicatedClient, MultiplayerState::JoiningRemote) |
-        (MultiplayerMode::DedicatedClient, MultiplayerState::JoinedRemote) |
-        (MultiplayerMode::ClientAndHost, MultiplayerState::Disconnected) |
-        (MultiplayerMode::ClientAndHost, MultiplayerState::StartingServer) |
-        (MultiplayerMode::ClientAndHost, MultiplayerState::RunningServer) |
-        (MultiplayerMode::ClientAndHost, MultiplayerState::JoiningRemote) |
-        (MultiplayerMode::ClientAndHost, MultiplayerState::JoinedRemote) |
-        (MultiplayerMode::ClientWithSingleplayer, MultiplayerState::Disconnected) |
-        (MultiplayerMode::ClientWithSingleplayer, MultiplayerState::Singleplayer) |
-        (MultiplayerMode::ClientWithSingleplayer, MultiplayerState::JoiningRemote) |
-        (MultiplayerMode::ClientWithSingleplayer, MultiplayerState::JoinedRemote) =>
+        (MultiplayerMode::DedicatedClient, MultiplayerState::StartingServer) |
+        (MultiplayerMode::DedicatedClient, MultiplayerState::RunningServer) |
+        (MultiplayerMode::ClientAndHost, MultiplayerState::Singleplayer) |
+        (MultiplayerMode::ClientWithSingleplayer, MultiplayerState::StartingServer) |
+        (MultiplayerMode::ClientWithSingleplayer, MultiplayerState::RunningServer) =>
             panic!("Invalid MultiplayerState: {:?} can never be {:?}", *mode, state.get()),
         _ => {}
     }
