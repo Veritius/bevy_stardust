@@ -1,7 +1,8 @@
 //! # bevy_stardust
 //! A networking crate for the Bevy game engine.
 
-pub mod plugin;
+pub mod setup;
+pub mod state;
 pub mod prelude;
 
 pub mod client;

@@ -1,5 +1,5 @@
 <h1><p align="center">✨ bevy_stardust</p></h1>
-Stardust is a batteries-included networking crate built for Bevy, with a focus on extensibility and parallelism.
+Stardust is an opinionated, batteries-included networking crate built for Bevy, with a focus on extensibility and parallelism.
 <br></br>
 
 ![License](https://img.shields.io/github/license/veritius/bevy_stardust)

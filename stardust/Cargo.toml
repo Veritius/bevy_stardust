@@ -12,16 +12,16 @@ keywords=["bevy", "gamedev", "networking"]
 
 [features]
 default = ["udp"]
-udp = ["dep:fixedbitset", "dep:semver", "dep:json"]
+udp = ["dep:fixedbitset", "dep:json"]
 
 [dependencies]
 # Mandatory dependencies
 bevy = { version = "0.11", default-features=false }
 glam = "0.24"
 rand = "0.8.5"
+semver = "1.0.18"
 once_cell = "1.18.0"
 
 # UDP transport layer dependencies
 fixedbitset = { version = "0.4.2", optional = true }
-semver = { version = "1.0.18", optional = true }
 json = { version = "0.12.4", optional = true }

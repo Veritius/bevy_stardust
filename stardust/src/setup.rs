@@ -1,6 +1,8 @@
 //! The Stardust core plugin.
 
 use bevy::prelude::*;
+use semver::Version;
+use semver::VersionReq;
 
 use crate::scheduling::*;
 use crate::protocol::*;
@@ -9,8 +11,63 @@ use crate::channels::systems::*;
 
 use crate::client::build_dedi_client;
 use crate::server::build_dedi_server;
+use crate::state::MultiplayerState;
 
-/// The Stardust core networking plugin, with variants defining how the multiplayer will operate.
+/// The Stardust multiplayer plugin.
+pub struct StardustPlugin {
+    /// The version of your game. Used to prevent older/newer clients from joining.
+    pub version: Version,
+    /// The versions of the game this app can connect to.
+    pub allows: VersionReq,
+    /// How the multiplayer in your game operates.
+    /// See the [MultiplayerMode] documentation for more.
+    pub mode: MultiplayerMode,
+}
+
+impl Plugin for StardustPlugin {
+    fn build(&self, app: &mut App) {
+        // Scheduling stuff
+        add_schedules(app);
+        app.add_systems(PreUpdate, network_pre_update);
+        app.add_systems(PostUpdate, network_post_update);
+
+        // Systems that check for things that shouldn't happen
+        app.add_systems(PreUpdate, panic_on_channel_removal);
+
+        // Systems for clearing the buffers
+        app.add_systems(NetworkPreUpdateCleanup, clear_incoming_buffers_system);
+        app.add_systems(NetworkPostUpdateCleanup, clear_outgoing_buffers_system);
+
+        // Channel and hasher things
+        app.insert_resource(ChannelRegistry::new());
+        app.insert_resource(UniqueNetworkHasher::new());
+        app.add_systems(PreStartup, complete_hasher);
+
+        // Add some resources
+        app.add_state::<MultiplayerState>();
+        app.insert_resource(self.mode.clone());
+
+        // Log mode choice
+        info!("Stardust initialised as a {}", match self.mode {
+            MultiplayerMode::DedicatedServer => "dedicated server",
+            MultiplayerMode::DedicatedClient => "dedicated client",
+            MultiplayerMode::ClientAndHost => "client and host",
+            MultiplayerMode::ClientWithSingleplayer => "client with singleplayer",
+            MultiplayerMode::ClientAndHostWithSingleplayer => "client and host with singleplayer",
+        });
+
+        // Add mode-specific functionality
+        match self.mode {
+            MultiplayerMode::DedicatedServer => build_dedi_server(app),
+            MultiplayerMode::DedicatedClient => build_dedi_client(app),
+            MultiplayerMode::ClientAndHost => todo!(),
+            MultiplayerMode::ClientWithSingleplayer => todo!(),
+            MultiplayerMode::ClientAndHostWithSingleplayer => todo!(),
+        }
+    }
+}
+
+/// How the multiplayer functionality in the game will work.
 /// 
 /// You can use the following table to identify what you should use.
 /// 
@@ -21,7 +78,10 @@ use crate::server::build_dedi_server;
 /// | Yes      | Yes      | No                  | ClientAndHost                 |
 /// | No       | Yes      | Yes                 | ClientWithSingleplayer        |
 /// | Yes      | Yes      | Yes                 | ClientAndHostWithSingleplayer |
-pub enum StardustPlugin {
+/// 
+/// Note that having multiple transport layers and running in server mode is fine.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Reflect, Resource)]
+pub enum MultiplayerMode {
     /// Accepts remote peers and maintains an authoritative copy of the World.
     /// 
     /// Choose this if:
@@ -58,7 +118,7 @@ pub enum StardustPlugin {
     ClientAndHostWithSingleplayer,
 }
 
-impl StardustPlugin {
+impl MultiplayerMode {
     /// Chooses a multiplayer mode from the following values:
     /// - Can the app host servers?
     /// - Can the app join servers?
@@ -75,44 +135,6 @@ impl StardustPlugin {
             (true, false, true) => panic!("Invalid value while making plugin: can't be a singleplayer host"),
             (false, false, true) => panic!("Invalid value while making plugin: can't be singleplayer only"),
             (false, false, false) => panic!("Invalid value while making plugin: can't be none of the above"),
-        }
-    }
-}
-
-impl Plugin for StardustPlugin {
-    fn build(&self, app: &mut App) {
-        // Scheduling stuff
-        add_schedules(app);
-        app.add_systems(PreUpdate, network_pre_update);
-        app.add_systems(PostUpdate, network_post_update);
-
-        // Systems that check for things that shouldn't happen
-        app.add_systems(PreUpdate, panic_on_channel_removal);
-
-        // Systems for clearing the buffers
-        app.add_systems(NetworkPreUpdateCleanup, clear_incoming_buffers_system);
-        app.add_systems(NetworkPostUpdateCleanup, clear_outgoing_buffers_system);
-
-        // Channel and hasher things
-        app.insert_resource(ChannelRegistry::new());
-        app.insert_resource(UniqueNetworkHasher::new());
-        app.add_systems(PreStartup, complete_hasher);
-
-        info!("Stardust initialised as a {}", match self {
-            Self::DedicatedServer => "dedicated server",
-            Self::DedicatedClient => "dedicated client",
-            Self::ClientAndHost => "client and host",
-            Self::ClientWithSingleplayer => "client with singleplayer",
-            Self::ClientAndHostWithSingleplayer => "client and host with singleplayer",
-        });
-
-        // Add mode-specific functionality
-        match self {
-            Self::DedicatedServer => build_dedi_server(app),
-            Self::DedicatedClient => build_dedi_client(app),
-            Self::ClientAndHost => todo!(),
-            Self::ClientWithSingleplayer => todo!(),
-            Self::ClientAndHostWithSingleplayer => todo!(),
         }
     }
 }

@@ -1,11 +1,16 @@
 use bevy::prelude::*;
-use bevy_stardust::{prelude::server::*, scheduling::*, transports::udp::prelude::ServerUdpTransportPlugin, channels::outgoing::SendTarget, plugin::StardustPlugin};
+use bevy_stardust::{prelude::server::*, scheduling::*, transports::udp::prelude::ServerUdpTransportPlugin, channels::outgoing::SendTarget, setup::{StardustPlugin, MultiplayerMode}};
+use semver::{Version, VersionReq};
 use crate::{RandomDataChannel, apply_shared_data, gen_random_string};
 
 pub(super) fn server() -> App {
     let mut app = App::new();
 
-    app.add_plugins(StardustPlugin::DedicatedServer);
+    app.add_plugins(StardustPlugin {
+        version: Version::new(0, 0, 0),
+        allows: VersionReq::STAR,
+        mode: MultiplayerMode::DedicatedServer,
+    });
     app.add_plugins(ServerUdpTransportPlugin {
         address: None,
         listen_port: 12345,
