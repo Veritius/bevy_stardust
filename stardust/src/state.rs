@@ -1,10 +1,10 @@
 use bevy::{prelude::*, reflect::Reflect};
+use crate::setup::MultiplayerMode;
 
 /// What state the game is in, networking-wise.
 /// 
 /// Some states will not occur, based on the `MultiplayerMode`
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash, Reflect, States)]
-#[non_exhaustive]
 pub enum MultiplayerState {
     /// Not currently hosting or connected to anything.
     #[default]
@@ -50,5 +50,44 @@ impl MultiplayerState {
             Self::JoiningRemote | Self::JoinedRemote => true,
             _ => false,
         }
+    }
+}
+
+/// Checks for invalid state changes and state values.
+pub(crate) fn state_machine_checker(
+    mode: Res<MultiplayerMode>,
+    mut last_state: Local<Option<MultiplayerState>>,
+    state: Res<State<MultiplayerState>>,
+) {
+    // The mode should never change
+    if mode.is_changed() { panic!("The MultiplayerMode enum was changed. This **should never happen!**"); }
+
+    // Nothing's changed, move on
+    if !state.is_changed() { return; }
+
+    if last_state.is_none() {
+        // Update last_state. This only happens once.
+        *last_state = Some(state.get().clone());
+    }
+
+    match (*mode, state.get()) {
+        (MultiplayerMode::DedicatedServer, MultiplayerState::Disconnected) |
+        (MultiplayerMode::DedicatedServer, MultiplayerState::Singleplayer) |
+        (MultiplayerMode::DedicatedServer, MultiplayerState::JoiningRemote) |
+        (MultiplayerMode::DedicatedServer, MultiplayerState::JoinedRemote) |
+        (MultiplayerMode::DedicatedClient, MultiplayerState::Singleplayer) |
+        (MultiplayerMode::DedicatedClient, MultiplayerState::JoiningRemote) |
+        (MultiplayerMode::DedicatedClient, MultiplayerState::JoinedRemote) |
+        (MultiplayerMode::ClientAndHost, MultiplayerState::Disconnected) |
+        (MultiplayerMode::ClientAndHost, MultiplayerState::StartingServer) |
+        (MultiplayerMode::ClientAndHost, MultiplayerState::RunningServer) |
+        (MultiplayerMode::ClientAndHost, MultiplayerState::JoiningRemote) |
+        (MultiplayerMode::ClientAndHost, MultiplayerState::JoinedRemote) |
+        (MultiplayerMode::ClientWithSingleplayer, MultiplayerState::Disconnected) |
+        (MultiplayerMode::ClientWithSingleplayer, MultiplayerState::Singleplayer) |
+        (MultiplayerMode::ClientWithSingleplayer, MultiplayerState::JoiningRemote) |
+        (MultiplayerMode::ClientWithSingleplayer, MultiplayerState::JoinedRemote) =>
+            panic!("Invalid MultiplayerState: {:?} can never be {:?}", *mode, state.get()),
+        _ => {}
     }
 }

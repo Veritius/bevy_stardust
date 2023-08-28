@@ -4,6 +4,7 @@ use bevy::prelude::*;
 use semver::Version;
 use semver::VersionReq;
 
+use crate::state::*;
 use crate::scheduling::*;
 use crate::protocol::*;
 use crate::channels::registry::ChannelRegistry;
@@ -11,7 +12,6 @@ use crate::channels::systems::*;
 
 use crate::client::build_dedi_client;
 use crate::server::build_dedi_server;
-use crate::state::MultiplayerState;
 
 /// The Stardust multiplayer plugin.
 pub struct StardustPlugin {
@@ -32,7 +32,7 @@ impl Plugin for StardustPlugin {
         app.add_systems(PostUpdate, network_post_update);
 
         // Systems that check for things that shouldn't happen
-        app.add_systems(PreUpdate, panic_on_channel_removal);
+        app.add_systems(PreUpdate, (panic_on_channel_removal, state_machine_checker));
 
         // Systems for clearing the buffers
         app.add_systems(NetworkPreUpdateCleanup, clear_incoming_buffers_system);
@@ -46,6 +46,12 @@ impl Plugin for StardustPlugin {
         // Add some resources
         app.add_state::<MultiplayerState>();
         app.insert_resource(self.mode.clone());
+
+        if self.mode == MultiplayerMode::DedicatedServer {
+            // Dedicated servers always start in StartingServer
+            app.world.resource_mut::<NextState<MultiplayerState>>().set(MultiplayerState::StartingServer);
+            apply_state_transition::<MultiplayerState>(&mut app.world);
+        }
 
         // Log mode choice
         info!("Stardust initialised as a {}", match self.mode {
