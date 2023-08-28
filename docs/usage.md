@@ -16,22 +16,10 @@ The core plugin looks like this:
 pub struct StardustPlugin {
     pub version: Version,
     pub allows: VersionReq,
-    pub mode: MultiplayerMode,
 }
 ```
 
 `version` and `allows` are pretty simple. `allows` is the versions of the game that your app can connect to, or accept connections from. `version` is the current version of the app. These two values are used to compare against incoming connections, preventing different versions of the game from joining eachother. Keeping these values correct is **very important**.
-
-`mode` defines what kind of multiplayer you want. For example, if you were running a dedicated server, you would use `MultiplayerMode::DedicatedServer`. This value will enable or disable certain features and functionality from your app, and can change how other plugins will function.
-
-You can use the following table to idenfity what value you want to use here.
-| Can host | Can join | Can be singleplayer | Variant                       |
-| -------- | -------- | ------------------- | ----------------------------- |
-| Yes      | No       | No                  | DedicatedServer               |
-| No       | Yes      | No                  | DedicatedClient               |
-| Yes      | Yes      | No                  | ClientAndHost                 |
-| No       | Yes      | Yes                 | ClientWithSingleplayer        |
-| Yes      | Yes      | Yes                 | ClientAndHostWithSingleplayer |
 
 ### Channels
 Channels are used to compartmentalise network messages for better parallelism and to better suit the ECS design. They are primarily accessed using generic type APIs, though untyped APIs exist for use by transport layers. The generic type you use when creating the channel can then be used to refer back to it as a system parameter.
