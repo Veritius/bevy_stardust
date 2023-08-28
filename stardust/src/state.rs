@@ -1,3 +1,5 @@
+//! Multiplayer state machine. See /docs/states.md in the repo for more.
+
 use bevy::{prelude::*, reflect::Reflect};
 use crate::setup::MultiplayerMode;
 
