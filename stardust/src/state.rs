@@ -91,3 +91,34 @@ pub(crate) fn state_machine_checker(
         _ => {}
     }
 }
+
+/// Conditional for systems. Only returns `true` if this app is currently hosting or connected to a remote server.
+pub fn is_connected() -> impl Fn(Res<'_, State<MultiplayerState>>) -> bool + Clone {
+    move |state: Res<State<MultiplayerState>>| {
+        match state.get() {
+            MultiplayerState::RunningServer => true,
+            MultiplayerState::JoinedRemote => true,
+            _ => false,
+        }
+    }
+}
+
+/// Conditional for systems. Only returns `true` if this app is currently acting as a client.
+pub fn is_client() -> impl Fn(Res<'_, State<MultiplayerState>>) -> bool + Clone {
+    move |state: Res<State<MultiplayerState>>| {
+        match state.get() {
+            MultiplayerState::JoinedRemote => true,
+            _ => false,
+        }
+    }
+}
+
+/// Conditional for systems. Only returns `true` if this app is currently acting as a server.
+pub fn is_server() -> impl Fn(Res<'_, State<MultiplayerState>>) -> bool + Clone {
+    move |state: Res<State<MultiplayerState>>| {
+        match state.get() {
+            MultiplayerState::RunningServer => true,
+            _ => false,
+        }
+    }
+}
