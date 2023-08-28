@@ -1,4 +1,4 @@
-//! Multiplayer state machine. See /docs/states.md in the repo for more.
+//! Multiplayer state machine.
 
 use bevy::{prelude::*, reflect::Reflect};
 use crate::setup::MultiplayerMode;
@@ -20,9 +20,9 @@ pub enum MultiplayerState {
     RunningServer,
 
     /// Trying to join a server.
-    JoiningRemote,
+    ConnectingClient,
     /// Connected to a server.
-    JoinedRemote,
+    ConnectedClient,
 }
 
 impl MultiplayerState {
@@ -49,7 +49,7 @@ impl MultiplayerState {
 
     pub fn is_client(&self) -> bool {
         match self {
-            Self::JoiningRemote | Self::JoinedRemote => true,
+            Self::ConnectingClient | Self::ConnectedClient => true,
             _ => false,
         }
     }
@@ -75,8 +75,8 @@ pub(crate) fn state_machine_checker(
     match (*mode, state.get()) {
         (MultiplayerMode::DedicatedServer, MultiplayerState::Disconnected) |
         (MultiplayerMode::DedicatedServer, MultiplayerState::Singleplayer) |
-        (MultiplayerMode::DedicatedServer, MultiplayerState::JoiningRemote) |
-        (MultiplayerMode::DedicatedServer, MultiplayerState::JoinedRemote) |
+        (MultiplayerMode::DedicatedServer, MultiplayerState::ConnectingClient) |
+        (MultiplayerMode::DedicatedServer, MultiplayerState::ConnectedClient) |
         (MultiplayerMode::DedicatedClient, MultiplayerState::Singleplayer) |
         (MultiplayerMode::DedicatedClient, MultiplayerState::StartingServer) |
         (MultiplayerMode::DedicatedClient, MultiplayerState::RunningServer) |
@@ -93,7 +93,7 @@ pub fn is_connected() -> impl Fn(Res<'_, State<MultiplayerState>>) -> bool + Clo
     move |state: Res<State<MultiplayerState>>| {
         match state.get() {
             MultiplayerState::RunningServer => true,
-            MultiplayerState::JoinedRemote => true,
+            MultiplayerState::ConnectedClient => true,
             _ => false,
         }
     }
@@ -103,7 +103,7 @@ pub fn is_connected() -> impl Fn(Res<'_, State<MultiplayerState>>) -> bool + Clo
 pub fn is_client() -> impl Fn(Res<'_, State<MultiplayerState>>) -> bool + Clone {
     move |state: Res<State<MultiplayerState>>| {
         match state.get() {
-            MultiplayerState::JoinedRemote => true,
+            MultiplayerState::ConnectedClient => true,
             _ => false,
         }
     }
