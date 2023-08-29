@@ -22,12 +22,12 @@ pub struct NetworkPeer {
     pub connected: Instant,
 }
 
-/// A `Uuid` value associated with this peer. This could be an account value, or some other identifier.
+/// A `Uuid` value associated with a `NetworkPeer`. This could be an account value, or some other identifier.
 /// It's useful if you want to keep track of clients even if they disconnect.
 /// 
 /// The internal `Uuid` value cannot be mutated, but can be read freely.
 /// This is guaranteed to have the same ABI representation as `Uuid`.
-#[derive(Debug, Component, PartialEq, Eq, Reflect)]
+#[derive(Debug, Component, Clone, Copy, PartialEq, Eq, Hash, Reflect)]
 #[repr(transparent)]
 pub struct PeerUuid(Uuid);
 
