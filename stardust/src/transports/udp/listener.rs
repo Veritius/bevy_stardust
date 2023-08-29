@@ -4,6 +4,7 @@ use json::{JsonValue, object};
 use once_cell::sync::Lazy;
 use semver::Version;
 use crate::channels::incoming::IncomingNetworkMessages;
+use crate::prelude::*;
 use crate::prelude::server::*;
 use crate::protocol::UniqueNetworkHash;
 use crate::transports::udp::TRANSPORT_LAYER_REQUIRE;
@@ -33,7 +34,7 @@ impl UdpListener {
 pub(super) fn udp_listener_system(
     mut commands: Commands,
     mut ports: ResMut<PortBindings>,
-    mut events: EventWriter<PlayerConnectedEvent>,
+    mut events: EventWriter<PeerConnectedEvent>,
     existing: Query<&UdpPeer, With<Client>>,
     player_cap: Res<NetworkClientCap>,
     listener: Res<UdpListener>,
@@ -81,7 +82,7 @@ pub(super) fn udp_listener_system(
 fn process_packet(
     bindings: &mut PortBindings,
     commands: &mut Commands,
-    events: &mut EventWriter<PlayerConnectedEvent>,
+    events: &mut EventWriter<PeerConnectedEvent>,
     data: &str,
     socket: &UdpSocket,
     active: usize,
@@ -158,7 +159,7 @@ fn process_packet(
     });
 
     // Add event
-    events.send(PlayerConnectedEvent(ent_id));
+    events.send(PeerConnectedEvent(ent_id));
 
     // Log join
     info!("New client joined via UDP from address {} and was assigned to entity id {:?}", address, ent_id);

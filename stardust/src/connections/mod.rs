@@ -1,5 +1,4 @@
 //! Connection-related functionality.
 
-mod peer;
-
-pub use peer::*;
+pub mod peer;
+pub mod events;
