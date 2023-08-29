@@ -1,6 +1,6 @@
 use std::net::IpAddr;
 use bevy::{prelude::*, ecs::system::SystemParam};
-use crate::transports::udp::{UdpTransportMode, ProcessingMode};
+use crate::transports::udp::{UdpTransportState, ProcessingMode, UdpConnectionError};
 use super::{listener::UdpListener, ports::PortBindings};
 
 /// Interface for using the UDP transport layer in server mode.
@@ -8,20 +8,32 @@ use super::{listener::UdpListener, ports::PortBindings};
 pub struct UdpServerManager<'w, 's> {
     commands: Commands<'w, 's>,
     processing_mode: Res<'w, ProcessingMode>,
-    state: Res<'w, State<UdpTransportMode>>,
-    next: ResMut<'w, NextState<UdpTransportMode>>,
+    state: Res<'w, State<UdpTransportState>>,
+    next: ResMut<'w, NextState<UdpTransportState>>,
 }
 
 impl UdpServerManager<'_, '_> {
     /// Starts hosting a server based on `config`.
-    pub fn start_server(&mut self, config: ServerConfig) -> Result<(), UdpServerError> {
+    pub fn start_server(&mut self, config: ServerConfig) -> Result<(), UdpConnectionError> {
         // Check state
-        if *self.state.get() != UdpTransportMode::Disabled {
+        if *self.state.get() != UdpTransportState::Disabled {
             return match self.state.get() {
-                UdpTransportMode::Client => Err(UdpServerError::RunningAsClient),
-                UdpTransportMode::Server => Err(UdpServerError::RunningAsServer),
+                UdpTransportState::Client => Err(UdpConnectionError::ClientExists),
+                UdpTransportState::Server => Err(UdpConnectionError::ServerExists),
                 _ => panic!()
             }
+        }
+
+        // Check next state
+        match self.next.0 {
+            Some(value) => {
+                return match value {
+                    UdpTransportState::Client => Err(UdpConnectionError::ClientExists),
+                    UdpTransportState::Server => Err(UdpConnectionError::ServerExists),
+                    UdpTransportState::Disabled => panic!(),
+                }
+            },
+            None => {},
         }
 
         // Get address
@@ -29,29 +41,29 @@ impl UdpServerManager<'_, '_> {
 
         // Check listen port
         if config.active_ports.contains(&config.listen_port) {
-            return Err(UdpServerError::ListenPortInActivePorts)
+            return Err(UdpConnectionError::BadListenPort)
         }
 
         // Create listener
         let listener = match UdpListener::new(address, config.listen_port) {
             Ok(value) => value,
-            Err(error) => { return Err(UdpServerError::IoError(error.kind())) },
+            Err(error) => { return Err(UdpConnectionError::IoError(error.kind())) },
         };
 
         // Check if we're in single processing mode
         if *self.processing_mode == ProcessingMode::Single {
             self.commands.insert_resource(listener);
-            self.next.set(UdpTransportMode::Server);
+            self.next.set(UdpTransportState::Server);
             return Ok(())
         }
 
         // Deduplicate active ports set and bind to them
         let mut ports = config.active_ports.clone();
         ports.sort_unstable(); ports.dedup();
-        if ports.len() == 0 { return Err(UdpServerError::ActivePortsEmpty); }
+        if ports.len() == 0 { return Err(UdpConnectionError::EmptyActivePorts); }
         let bindings = match PortBindings::new(address, &ports) {
             Ok(values) => values,
-            Err(error) => { return Err(UdpServerError::IoError(error.kind())) },
+            Err(error) => { return Err(UdpConnectionError::IoError(error.kind())) },
         };
 
         // Add resources
@@ -59,7 +71,7 @@ impl UdpServerManager<'_, '_> {
         self.commands.insert_resource(bindings);
 
         // Change state
-        self.next.set(UdpTransportMode::Server);
+        self.next.set(UdpTransportState::Server);
 
         // Everything worked
         Ok(())
@@ -96,19 +108,4 @@ pub struct ServerConfig {
     /// Higher values improve how well the server scales to player count, to an extent.
     /// The highest you should set this is the amount of logical CPU cores that are on the system.
     pub active_ports: Vec<u16>,
-}
-
-/// An error related to the UDP server.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum UdpServerError {
-    /// Some kind of IO-related error.
-    IoError(std::io::ErrorKind),
-    /// Tried to start the server, but layer is in client mode.
-    RunningAsClient,
-    /// Tried to start the server, but it was already running.
-    RunningAsServer,
-    /// The listen port was in the active ports list.
-    ListenPortInActivePorts,
-    /// The list of active ports was empty.
-    ActivePortsEmpty,
 }

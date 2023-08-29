@@ -46,16 +46,16 @@ impl UdpTransportPlugin {
 impl Plugin for UdpTransportPlugin {
     fn build(&self, app: &mut App) {
         // Add states
-        app.add_state::<UdpTransportMode>();
+        app.add_state::<UdpTransportState>();
 
         // Add resources
         app.insert_resource(self.mode.clone());
 
         // Add systems
         app.add_systems(TransportReadPackets, udp_receive_packets_system
-            .run_if(not(in_state(UdpTransportMode::Disabled))));
+            .run_if(not(in_state(UdpTransportState::Disabled))));
         app.add_systems(TransportSendPackets, udp_send_packets_system
-            .run_if(not(in_state(UdpTransportMode::Disabled))));
+            .run_if(not(in_state(UdpTransportState::Disabled))));
     }
 }
 
@@ -67,17 +67,36 @@ pub enum ProcessingMode {
     #[default]
     Best,
     /// Runs all IO on a single thread.
-    /// This is suited to clients.
+    /// This is best suited to clients.
     Single,
     /// Runs all IO on multiple threads by breaking the load into tasks.
-    /// This is suited to servers.
+    /// This is best suited to servers.
     Taskpool,
 }
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Reflect, States)]
-enum UdpTransportMode {
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash, Reflect, States)]
+enum UdpTransportState {
     #[default]
     Disabled,
     Client,
     Server,
+}
+
+/// An error caused by an operation in the UDP transport layer.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum UdpConnectionError {
+    /// Some kind of IO-related error.
+    /// This can be caused while binding to ports.
+    IoError(std::io::ErrorKind),
+    /// The transport layer was running in client mode when it should not have been.
+    ClientExists,
+    /// The transport layer was running in server mode when it should not have been.
+    ServerExists,
+    /// The transport layer was disconnected when it should not have been.
+    Disconnected,
+    /// The listen port was invalid.
+    /// This can be caused by the listen port being in the active ports set.
+    BadListenPort,
+    /// The active ports set was empty.
+    EmptyActivePorts,
 }
