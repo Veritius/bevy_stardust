@@ -1,11 +1,10 @@
 //! Native UDP transport layer for clients.
 
-mod manager;
+pub mod manager;
+
 mod receiver;
 mod sender;
 mod attempt;
-
-pub use manager::UdpClientManager;
 
 use std::net::UdpSocket;
 use bevy::prelude::{Plugin, App, Resource, OnTransition};

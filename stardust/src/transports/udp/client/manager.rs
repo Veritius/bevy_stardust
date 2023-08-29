@@ -1,17 +1,23 @@
 use std::net::SocketAddr;
-
 use bevy::{prelude::*, ecs::system::SystemParam};
+use crate::transports::udp::UdpTransportMode;
 
-use super::attempt::ConnectToRemoteUdp;
-
-/// Allows modifying the UDP connection.
+/// Interface for using the UDP transport layer in client mode.
 #[derive(SystemParam)]
 pub struct UdpClientManager<'w, 's> {
     commands: Commands<'w, 's>,
+    state: Res<'w, State<UdpTransportMode>>,
+    next: ResMut<'w, NextState<UdpTransportMode>>,
 }
 
 impl UdpClientManager<'_, '_> {
-    pub fn join(&mut self, address: SocketAddr) {
-        self.commands.insert_resource(ConnectToRemoteUdp(address));
+    /// Try to connect to a remote server.
+    pub fn connect(&mut self, address: SocketAddr) {
+        todo!()
+    }
+
+    /// Disconnect from a remote server if connected to one.
+    pub fn disconnect(&mut self) {
+        todo!()
     }
 }

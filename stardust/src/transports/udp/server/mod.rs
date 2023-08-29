@@ -1,14 +1,12 @@
 //! Native UDP transport layer for servers.
 
 pub mod policy;
+pub mod manager;
 
 mod listener;
 mod receiver;
 mod sender;
 mod ports;
-mod manager;
-
-pub use manager::UdpServerManager;
 
 use std::net::{SocketAddr, IpAddr};
 use bevy::prelude::*;

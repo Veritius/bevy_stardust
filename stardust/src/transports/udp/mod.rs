@@ -10,8 +10,8 @@ use bevy::prelude::*;
 use crate::{prelude::*, scheduling::*};
 use self::{receiving::udp_receive_packets_system, sending::udp_send_packets_system};
 
-pub use client::UdpClientManager;
-pub use server::UdpServerManager;
+pub use client::manager::*;
+pub use server::manager::*;
 
 /// The UDP transport plugin. Use the systemparams ([UdpServerManager] and [UdpClientManager]) to set up connections.
 #[derive(Debug)]
