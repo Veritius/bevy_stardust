@@ -100,10 +100,7 @@ mod client {
     use bevy_stardust::client::connection::RemoteConnectionStatus;
     use bevy_stardust::prelude::client::*;
     use bevy_stardust::scheduling::*;
-    use bevy_stardust::setup::*;
-    use bevy_stardust::transports::udp::UdpTransportPlugin;
-    use semver::Version;
-    use semver::VersionReq;
+    use bevy_stardust::transports::udp::*;
 
     use crate::REPEAT_AMOUNT;
     use crate::channels::*;
@@ -126,10 +123,10 @@ mod client {
         app.add_systems(Update, send_random_data_system_client::<UnorderedReliableChannel>);
         app.add_systems(Update, send_random_data_system_client::<OrderedReliableChannel>);
 
-        app.add_systems(Startup, |mut manager: UdpConnectionManager| {
+        app.add_systems(Startup, |mut manager: UdpClientManager| {
             use std::net::*;
             let ip = IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1));
-            manager.join(SocketAddr::new(ip, 12345));
+            manager.connect(SocketAddr::new(ip, 12345));
         });
         
         app
