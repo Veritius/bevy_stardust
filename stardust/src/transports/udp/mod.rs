@@ -4,15 +4,24 @@ mod client;
 mod server;
 
 mod peer;
+mod ports;
+mod listener;
+mod attempt;
 mod sending;
 mod receiving;
 
 use bevy::prelude::*;
+use once_cell::sync::Lazy;
+use semver::{Version, VersionReq};
 use crate::{prelude::*, scheduling::*};
-use self::{receiving::udp_receive_packets_system, sending::udp_send_packets_system};
+use self::{receiving::*, sending::*};
 
-pub use client::manager::*;
-pub use server::manager::*;
+// Expose managers
+pub use client::*;
+pub use server::*;
+
+static TRANSPORT_LAYER_VERSION: Lazy<Version> = Lazy::new(|| "0.2.0".parse::<Version>().unwrap());
+static TRANSPORT_LAYER_REQUIRE: Lazy<VersionReq> = Lazy::new(|| "=0.2.0".parse::<VersionReq>().unwrap());
 
 /// The UDP transport plugin. Use the systemparams ([UdpServerManager] and [UdpClientManager]) to set up connections.
 #[derive(Debug)]
@@ -52,11 +61,21 @@ impl Plugin for UdpTransportPlugin {
         // Add resources
         app.insert_resource(self.mode.clone());
 
-        // Add systems
-        app.add_systems(TransportReadPackets, udp_receive_packets_system
-            .run_if(not(in_state(UdpTransportState::Disabled))));
-        app.add_systems(TransportSendPackets, udp_send_packets_system
-            .run_if(not(in_state(UdpTransportState::Disabled))));
+        // Add reading systems
+        app.add_systems(TransportReadPackets, udp_receive_packets_system_pooled
+            .run_if(not(in_state(UdpTransportState::Disabled)))
+            .run_if(resource_exists_and_equals(ProcessingMode::Taskpool)));
+        app.add_systems(TransportReadPackets, udp_receive_packets_system_single
+            .run_if(not(in_state(UdpTransportState::Disabled)))
+            .run_if(resource_exists_and_equals(ProcessingMode::Single)));
+
+        // Add writing systems
+        app.add_systems(TransportSendPackets, udp_send_packets_system_pooled
+            .run_if(not(in_state(UdpTransportState::Disabled)))
+            .run_if(resource_exists_and_equals(ProcessingMode::Taskpool)));
+        app.add_systems(TransportSendPackets, udp_send_packets_system_single
+            .run_if(not(in_state(UdpTransportState::Disabled)))
+            .run_if(resource_exists_and_equals(ProcessingMode::Single)));
     }
 }
 

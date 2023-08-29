@@ -6,8 +6,9 @@ use semver::Version;
 use crate::channels::incoming::IncomingNetworkMessages;
 use crate::prelude::server::*;
 use crate::protocol::UniqueNetworkHash;
-
-use super::{STARDUST_UDP_VERSION_RANGE, policy::BlockingPolicy, UdpClient, ports::PortBindings};
+use crate::transports::udp::TRANSPORT_LAYER_REQUIRE;
+use super::peer::UdpPeer;
+use super::ports::PortBindings;
 
 /// Minimum amount of bytes in a packet to be read at all.
 const MINIMUM_PACKET_LENGTH: usize = 8;
@@ -33,11 +34,10 @@ pub(super) fn udp_listener_system(
     mut commands: Commands,
     mut ports: ResMut<PortBindings>,
     mut events: EventWriter<PlayerConnectedEvent>,
-    existing: Query<&UdpClient, With<Client>>,
+    existing: Query<&UdpPeer, With<Client>>,
     player_cap: Res<NetworkClientCap>,
     listener: Res<UdpListener>,
     hash: Res<UniqueNetworkHash>,
-    policy: Option<Res<BlockingPolicy>>,
 ) {
     let mut buffer = [0u8; 1500];
     let players = existing.iter().len();
@@ -54,7 +54,7 @@ pub(super) fn udp_listener_system(
         if octets < MINIMUM_PACKET_LENGTH { continue; }
 
         // Check the sending IP isn't already connected or blocked
-        if connected_addresses.contains(&pkt_addr) || policy.as_ref().is_some_and(|v| v.addresses.contains(&pkt_addr.ip())) {
+        if connected_addresses.contains(&pkt_addr) /* || policy.as_ref().is_some_and(|v| v.addresses.contains(&pkt_addr.ip())) */ {
             continue;
         }
 
@@ -114,10 +114,10 @@ fn process_packet(
 
     // Check version value
     if let Ok(ver) = ver.parse::<Version>() {
-        if !STARDUST_UDP_VERSION_RANGE.matches(&ver) {
+        if !TRANSPORT_LAYER_REQUIRE.matches(&ver) {
             send_json(socket, address, object! {
                 "response": "wrong_version",
-                "requires": STARDUST_UDP_VERSION_RANGE.to_string()
+                "requires": TRANSPORT_LAYER_REQUIRE.to_string()
             });
             return;
         }
@@ -144,7 +144,7 @@ fn process_packet(
     // Create entity
     let ent_id = commands.spawn((
         Client::new(),
-        UdpClient { address, hiccups: 0 },
+        UdpPeer { address, hiccups: 0 },
         IncomingNetworkMessages::new(),
     )).id();
 

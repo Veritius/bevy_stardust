@@ -2,8 +2,7 @@ use std::{time::{Duration, Instant}, net::{SocketAddr, UdpSocket}, ops::Deref};
 use bevy::prelude::*;
 use json::object;
 use semver::Version;
-
-use crate::{client::{peers::Server, connection::RemoteConnectionStatus}, channels::incoming::IncomingNetworkMessages, protocol::UniqueNetworkHash, transports::udp::client::RemoteServerUdpSocket};
+use crate::{client::{peers::Server, connection::RemoteConnectionStatus}, channels::incoming::IncomingNetworkMessages, protocol::UniqueNetworkHash};
 
 /// The version of the transport layer.
 const TRANSPORT_LAYER_VERSION: Version = Version::new(0, 2, 0);
@@ -96,7 +95,7 @@ pub(super) fn connection_attempt_system(
                     Server,
                     IncomingNetworkMessages::new(),
                 ));
-                commands.insert_resource(RemoteServerUdpSocket(socket));
+                // commands.insert_resource(RemoteServerUdpSocket(socket));
                 commands.remove_resource::<ConnectToRemoteUdp>();
                 next.set(RemoteConnectionStatus::Connected);
                 (*started, *last_sent) = (None, None);

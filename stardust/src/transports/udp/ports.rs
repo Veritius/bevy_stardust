@@ -1,3 +1,5 @@
+//! Dynamic port binding system.
+
 use std::{net::{UdpSocket, IpAddr}, collections::BTreeMap};
 use bevy::prelude::{Entity, Resource, info};
 
