@@ -8,6 +8,8 @@ use super::PACKET_HEADER_SIZE;
 use super::peer::UdpPeer;
 use super::ports::PortBindings;
 
+// TODO: A lot of code is repeated here.
+
 /// Receives octet strings using a sequential strategy.
 pub(super) fn udp_receive_packets_system_single(
     mut peers: Query<(Entity, &mut UdpPeer, &mut IncomingNetworkMessages), With<NetworkPeer>>,
@@ -55,7 +57,6 @@ pub(super) fn udp_receive_packets_system_single(
                 },
             };
 
-            
             // Simple validity checks
             if !addresses.contains(&from_address) { continue } // Not from a client associated with this socket
             if octets_read < PACKET_HEADER_SIZE { continue } // Packet is too small to be of any value
