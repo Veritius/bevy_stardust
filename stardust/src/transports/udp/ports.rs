@@ -3,8 +3,12 @@
 use std::{net::{UdpSocket, IpAddr}, collections::BTreeMap};
 use bevy::prelude::{Entity, Resource, info};
 
+/// A single port for receiving packets.
+#[derive(Debug, Resource)]
+pub(super) struct ListenPort(pub UdpSocket);
+
 /// Owns UdpSockets and associates Entity ids with them.
-#[derive(Resource)]
+#[derive(Debug, Resource)]
 pub(super) struct PortBindings {
     sockets: BTreeMap<u16, BoundUdpSocket>,
 }
@@ -86,6 +90,7 @@ impl PortBindings {
     }
 }
 
+#[derive(Debug)]
 struct BoundUdpSocket {
     pub socket: UdpSocket,
     pub clients: Vec<Entity>,
