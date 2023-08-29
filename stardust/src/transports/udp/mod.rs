@@ -3,6 +3,7 @@
 mod client;
 mod server;
 
+mod peer;
 mod sending;
 mod receiving;
 
