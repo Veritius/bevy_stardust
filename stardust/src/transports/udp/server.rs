@@ -94,17 +94,14 @@ pub struct ServerConfig {
     /// The address to use to connect. Use `None` if you want the OS to allocate one for you.
     /// 
     /// Note: This is the local address within your system, and will not be the IP used by clients to connect over the Internet.
-    /// That value is usually assigned by your ISP, and you can quickly see it by viewing this website: https://icanhazip.com/
     pub address: Option<IpAddr>,
 
     /// The port that will be used by new clients to join the game.
-    /// 
-    /// If `ProcessingMode` is `Single`, this will also be the active port.
     pub listen_port: u16,
 
-    /// The ports that will be used in the dynamic port allocator system.
-    /// This is not used in `ProcessingMode::Single`, and you can leave it empty if so.
+    /// The ports that will be used in the dynamic port allocator system. Requires at least one value.
     /// 
+    /// In `ProcessingMode::Taskpool` you can add multiple values.
     /// Higher values improve how well the server scales to player count, to an extent.
     /// The highest you should set this is the amount of logical CPU cores that are on the system.
     pub active_ports: Vec<u16>,

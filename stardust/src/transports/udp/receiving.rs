@@ -25,10 +25,76 @@ pub(super) fn udp_receive_packets_system_single(
         })
         .collect::<BTreeMap<_, _>>();
 
+    let addresses = peers.iter()
+        .map(|(_, udp_peer, _)| udp_peer.address.clone())
+        .collect::<Vec<_>>();
+
     // Map addresses to peer entity's components
-    let peer_addresses = peers.iter_mut()
+    let mut peer_addresses = peers.iter_mut()
         .map(|(id, udp, incoming)| (udp.address.clone(), (udp, id, incoming)))
         .collect::<BTreeMap<SocketAddr, _>>();
+
+    // Buffer for storing bytes
+    let mut buffer = [0u8; 1500];
+
+    // Read from all ports
+    for (_, socket, _) in ports.iter() {
+        // Read from all sockets
+        loop {
+            // Read packet
+            let (octets_read, from_address) = match socket.recv_from(&mut buffer) {
+                Ok(n) => n,
+                Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock => {
+                    // No more data to read
+                    break
+                }
+                Err(e) => {
+                    // Something went wrong
+                    error!("IO error while reading UDP socket {:?}: {}", socket.local_addr().unwrap(), e);
+                    continue
+                },
+            };
+
+            
+            // Simple validity checks
+            if !addresses.contains(&from_address) { continue } // Not from a client associated with this socket
+            if octets_read < PACKET_HEADER_SIZE { continue } // Packet is too small to be of any value
+
+            // Check channel id
+            let channel_id = ChannelId::from(TryInto::<[u8; 3]>::try_into(&buffer[..3]).unwrap());
+            if channel_id.0 == 0.into() {
+                // This is a special packet
+                todo!()
+            }
+
+            // Get channel config
+            let channel_id = ChannelId(channel_id.0 - 1.into()); // Shift the channel ID back
+            if !registry.channel_exists(channel_id) { continue } // Channel doesn't exist
+            let (direction, ordered, reliable, fragmented) = channel_map.get(&channel_id).unwrap();
+
+            // Check channel direction
+            if direction.is_some_and(|v| *v == DirectionalChannel::ServerToClient) {
+                // Packet went in the wrong direction
+                let (udp_peer, _, _) = peer_addresses.get_mut(&from_address).unwrap();
+                udp_peer.hiccups += 1;
+                continue
+            }
+
+            // Get components
+            let (_, _, messages) = peer_addresses.get_mut(&from_address).unwrap();
+
+            // Any bytes that don't need to be cloned
+            let cutoff = PACKET_HEADER_SIZE;
+
+            // Copy data to vec and make Payload
+            let mut payload = Vec::with_capacity(octets_read - cutoff);
+            for oct in &buffer[cutoff..=octets_read] { payload.push(*oct); }
+            let payload = Payload::new(0, 0, payload);
+
+            // Place payload in incoming component
+            messages.append(channel_id, payload);
+        }
+    }
 }
 
 /// Receives octet strings using a taskpool strategy.
