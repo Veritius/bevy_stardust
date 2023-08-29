@@ -4,6 +4,8 @@
 
 pub use crate::setup::*;
 pub use crate::connections::*;
+pub use crate::octets::octetstring::*;
+pub use crate::octets::payload::*;
 pub use crate::channels::extension::ChannelSetupAppExt;
 pub use crate::channels::registry::ChannelRegistry;
 pub use crate::channels::id::{Channel, ChannelId};
