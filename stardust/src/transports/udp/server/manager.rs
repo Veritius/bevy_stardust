@@ -1,12 +1,13 @@
 use std::net::IpAddr;
 use bevy::{prelude::*, ecs::system::SystemParam};
-use crate::transports::udp::UdpTransportMode;
+use crate::transports::udp::{UdpTransportMode, ProcessingMode};
 use super::{listener::UdpListener, ports::PortBindings};
 
 /// Interface for using the UDP transport layer in server mode.
 #[derive(SystemParam)]
 pub struct UdpServerManager<'w, 's> {
     commands: Commands<'w, 's>,
+    processing_mode: Res<'w, ProcessingMode>,
     state: Res<'w, State<UdpTransportMode>>,
     next: ResMut<'w, NextState<UdpTransportMode>>,
 }
@@ -36,6 +37,13 @@ impl UdpServerManager<'_, '_> {
             Ok(value) => value,
             Err(error) => { return Err(UdpServerError::IoError(error.kind())) },
         };
+
+        // Check if we're in single processing mode
+        if *self.processing_mode == ProcessingMode::Single {
+            self.commands.insert_resource(listener);
+            self.next.set(UdpTransportMode::Server);
+            return Ok(())
+        }
 
         // Deduplicate active ports set and bind to them
         let mut ports = config.active_ports.clone();
