@@ -64,18 +64,18 @@ impl Plugin for UdpTransportPlugin {
         // Add reading systems
         app.add_systems(TransportReadPackets, udp_receive_packets_system_pooled
             .run_if(not(in_state(UdpTransportState::Disabled)))
-            .run_if(resource_exists_and_equals(ProcessingMode::Taskpool)));
+            .run_if(processing_mode_is(ProcessingMode::Taskpool)));
         app.add_systems(TransportReadPackets, udp_receive_packets_system_single
             .run_if(not(in_state(UdpTransportState::Disabled)))
-            .run_if(resource_exists_and_equals(ProcessingMode::Single)));
+            .run_if(processing_mode_is(ProcessingMode::Single)));
 
         // Add writing systems
         app.add_systems(TransportSendPackets, udp_send_packets_system_pooled
             .run_if(not(in_state(UdpTransportState::Disabled)))
-            .run_if(resource_exists_and_equals(ProcessingMode::Taskpool)));
+            .run_if(processing_mode_is(ProcessingMode::Taskpool)));
         app.add_systems(TransportSendPackets, udp_send_packets_system_single
             .run_if(not(in_state(UdpTransportState::Disabled)))
-            .run_if(resource_exists_and_equals(ProcessingMode::Single)));
+            .run_if(processing_mode_is(ProcessingMode::Single)));
     }
 }
 
@@ -119,4 +119,18 @@ pub enum UdpConnectionError {
     BadListenPort,
     /// The active ports set was empty.
     EmptyActivePorts,
+}
+
+fn processing_mode_is(target: ProcessingMode) -> impl Fn(Res<ProcessingMode>, Res<State<UdpTransportState>>) -> bool + Clone {
+    move |mode: Res<ProcessingMode>, state: Res<State<UdpTransportState>>| -> bool {
+        let resolved = match (*mode, state.get()) {
+            (ProcessingMode::Best, UdpTransportState::Disabled) => ProcessingMode::Best,
+            (ProcessingMode::Best, UdpTransportState::Client) => ProcessingMode::Single,
+            (ProcessingMode::Best, UdpTransportState::Server) => ProcessingMode::Taskpool,
+            (ProcessingMode::Single, _) => ProcessingMode::Single,
+            (ProcessingMode::Taskpool, _) => ProcessingMode::Taskpool,
+        };
+
+        resolved == target
+    }
 }
