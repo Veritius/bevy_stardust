@@ -27,7 +27,7 @@ pub struct NetworkPeer {
 /// 
 /// The internal `Uuid` value cannot be mutated, but can be read freely.
 /// This is guaranteed to have the same ABI representation as `Uuid`.
-#[derive(Debug, Component, Clone, Copy, PartialEq, Eq, Hash, Reflect)]
+#[derive(Debug, Component, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Reflect)]
 #[repr(transparent)]
 pub struct PeerUuid(Uuid);
 
