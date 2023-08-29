@@ -6,16 +6,6 @@ use crate::{RandomDataChannel, apply_shared_data, gen_random_string};
 pub(super) fn server() -> App {
     let mut app = App::new();
 
-    app.add_plugins(StardustPlugin {
-        version: Version::new(0, 0, 0),
-        allows: VersionReq::STAR,
-    });
-    app.add_plugins(ServerUdpTransportPlugin {
-        address: None,
-        listen_port: 12345,
-        active_ports: (12346..=12356).collect::<Vec<_>>(),
-    });
-
     apply_shared_data(&mut app);
 
     // Add our sending and receiving systems

@@ -1,7 +1,10 @@
 //! Transport layer that operates over native UDP sockets.
 
-pub mod prelude;
-pub mod plugin;
+use bevy::prelude::*;
 
-mod client;
-mod server;
+pub struct UdpTransportPlugin;
+impl Plugin for UdpTransportPlugin {
+    fn build(&self, app: &mut App) {
+        
+    }
+}

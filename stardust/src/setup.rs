@@ -4,14 +4,10 @@ use bevy::prelude::*;
 use semver::Version;
 use semver::VersionReq;
 
-use crate::prelude::NetworkMode;
 use crate::scheduling::*;
 use crate::protocol::*;
 use crate::channels::registry::ChannelRegistry;
 use crate::channels::systems::*;
-
-use crate::client::build_client;
-use crate::server::build_server;
 
 /// The Stardust multiplayer plugin.
 pub struct StardustPlugin {
@@ -27,13 +23,6 @@ impl Plugin for StardustPlugin {
         add_schedules(app);
         app.add_systems(PreUpdate, network_pre_update);
         app.add_systems(PostUpdate, network_post_update);
-
-        // Add states
-        app.add_state::<NetworkMode>();
-
-        // Mode specific
-        build_client(app);
-        build_server(app);
 
         // Systems that check for things that shouldn't happen
         app.add_systems(PreUpdate, panic_on_channel_removal);

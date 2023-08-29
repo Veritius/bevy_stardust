@@ -6,6 +6,8 @@ use bevy::app::SubApp;
 use bevy::prelude::*;
 use bevy_stardust::channels::config::*;
 use bevy_stardust::channels::extension::ChannelSetupAppExt;
+use bevy_stardust::setup::StardustPlugin;
+use bevy_stardust::transports::udp::prelude::UdpTransportPlugin;
 use rand::Rng;
 use rand::seq::SliceRandom;
 
@@ -30,8 +32,15 @@ fn main() {
 
 /// Applies information that is identical on both the client and server to the App.
 fn apply_shared_data(app: &mut App) {
-    // Add plugins
+    // Add Bevy plugins
     app.add_plugins(MinimalPlugins);
+
+    // Add Stardust plugins
+    app.add_plugins(StardustPlugin {
+        version: Version::new(0, 0, 0),
+        allows: VersionReq::STAR,
+    });
+    app.add_plugins(UdpTransportPlugin);
 
     // Add channel
     app.register_channel::<RandomDataChannel>(ReliableChannel);

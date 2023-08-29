@@ -9,7 +9,7 @@ pub(super) struct PortBindings {
 
 impl PortBindings {
     /// Makes a new `PortBindings`, creating `UdpSocket`s bound to all in `ports`
-    pub fn new(addr: IpAddr, ports: &[u16]) -> Self {
+    pub fn new(addr: IpAddr, ports: &[u16]) -> Result<Self, std::io::Error> {
         // Check range of ports is acceptable
         if ports.len() == 0 {
             panic!("Amount of ports used must be at least one");
@@ -26,12 +26,12 @@ impl PortBindings {
         // Create ports from range
         for port in ports {
             let port = *port;
-            let socket = UdpSocket::bind((addr, port)).unwrap();
-            socket.set_nonblocking(true).unwrap();
+            let socket = UdpSocket::bind((addr, port))?;
+            socket.set_nonblocking(true)?;
             mgr.sockets.insert(port, BoundUdpSocket::new(socket));
         }
 
-        mgr // the only thing i know for real
+        Ok(mgr) // the only thing i know for real
     }
 
     /// Returns an iterator of all bound ports and their associated clients.

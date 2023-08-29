@@ -16,17 +16,16 @@ const MINIMUM_PACKET_LENGTH: usize = 8;
 static PLAYER_CAP_LIMIT_RESPONSE: Lazy<String> = Lazy::new(|| { object! { "response": "player_cap_reached" }.dump() });
 
 /// Unfiltered socket for listening to UDP packets from unregistered peers.
-#[derive(Resource)]
+#[derive(Debug, Resource)]
 pub(super) struct UdpListener(pub UdpSocket);
 
 impl UdpListener {
-    pub fn new(address: std::net::IpAddr, port: u16) -> Self {
-        let socket = UdpSocket::bind(SocketAddr::new(address, port))
-            .expect("Failed to create UDP listener, is the port free?");
-        socket.set_nonblocking(true).unwrap();
+    pub fn new(address: std::net::IpAddr, port: u16) -> Result<Self, std::io::Error> {
+        let socket = UdpSocket::bind(SocketAddr::new(address, port))?;
+        socket.set_nonblocking(true)?;
         info!("Created UdpListener at {}", socket.local_addr().unwrap());
 
-        Self(socket)
+        Ok(Self(socket))
     }
 }
 

@@ -31,8 +31,17 @@ fn main() {
 }
 
 fn apply_shared_data(app: &mut App) {
+    // Add Bevy plugins
     app.add_plugins(MinimalPlugins);
 
+    // Add Stardust plugins
+    app.add_plugins(StardustPlugin {
+        version: Version::new(0, 0, 0),
+        allows: VersionReq::STAR,
+    });
+    app.add_plugins(UdpTransportPlugin);
+
+    // Register channels
     app.register_channel::<UnorderedUnreliableChannel>(());
     app.register_channel::<OrderedUnreliableChannel>(OrderedChannel);
     app.register_channel::<UnorderedReliableChannel>(ReliableChannel);
@@ -104,12 +113,6 @@ mod client {
     pub(super) fn client() -> App {
         let mut app = App::new();
 
-        app.add_plugins(StardustPlugin {
-            version: Version::new(0, 0, 0),
-            allows: VersionReq::STAR,
-        });
-        app.add_plugins(ClientUdpTransportPlugin);
-
         apply_shared_data(&mut app);
 
         app.add_systems(ReadOctetStrings, receive_random_data_system_client::<UnorderedUnreliableChannel>);
@@ -173,16 +176,6 @@ mod server {
 
     pub(super) fn server() -> App {
         let mut app = App::new();
-
-        app.add_plugins(StardustPlugin {
-            version: Version::new(0, 0, 0),
-            allows: VersionReq::STAR,
-        });
-        app.add_plugins(ServerUdpTransportPlugin {
-            address: None,
-            listen_port: 12345,
-            active_ports: (12346..=12356).collect::<Vec<_>>(),
-        });
 
         apply_shared_data(&mut app);
 

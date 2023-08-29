@@ -4,7 +4,6 @@
 pub mod setup;
 pub mod prelude;
 
-pub mod state;
 pub mod client;
 pub mod server;
 
