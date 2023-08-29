@@ -9,6 +9,6 @@ pub struct UdpServerManager<'w, 's> {
 
 impl UdpServerManager<'_, '_> {
     pub fn join(&mut self, address: SocketAddr) {
-        self.commands.insert_resource(ConnectToRemoteUdp(address));
+        
     }
 }

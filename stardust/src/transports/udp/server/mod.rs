@@ -8,6 +8,8 @@ mod sender;
 mod ports;
 mod manager;
 
+pub use manager::UdpServerManager;
+
 use std::net::{SocketAddr, IpAddr};
 use bevy::prelude::*;
 use once_cell::sync::Lazy;

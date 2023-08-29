@@ -6,9 +6,10 @@ const REPEAT_AMOUNT: usize = 1024;
 use std::time::{Duration, Instant};
 use rand::{Rng, seq::SliceRandom};
 use bevy::{prelude::*, app::SubApp};
-use bevy_stardust::prelude::*;
+use bevy_stardust::{prelude::*, transports::udp::UdpTransportPlugin};
 
 use channels::*;
+use semver::{Version, VersionReq};
 
 fn main() {
     let mut owner = App::new();
@@ -39,7 +40,6 @@ fn apply_shared_data(app: &mut App) {
         version: Version::new(0, 0, 0),
         allows: VersionReq::STAR,
     });
-    app.add_plugins(UdpTransportPlugin);
 
     // Register channels
     app.register_channel::<UnorderedUnreliableChannel>(());
@@ -101,7 +101,7 @@ mod client {
     use bevy_stardust::prelude::client::*;
     use bevy_stardust::scheduling::*;
     use bevy_stardust::setup::*;
-    use bevy_stardust::transports::udp::prelude::*;
+    use bevy_stardust::transports::udp::UdpTransportPlugin;
     use semver::Version;
     use semver::VersionReq;
 
@@ -114,6 +114,8 @@ mod client {
         let mut app = App::new();
 
         apply_shared_data(&mut app);
+
+        app.add_plugins(UdpTransportPlugin::single());
 
         app.add_systems(ReadOctetStrings, receive_random_data_system_client::<UnorderedUnreliableChannel>);
         app.add_systems(ReadOctetStrings, receive_random_data_system_client::<OrderedUnreliableChannel>);
@@ -165,7 +167,7 @@ mod server {
     use bevy_stardust::scheduling::*;
     use bevy_stardust::prelude::server::*;
     use bevy_stardust::setup::*;
-    use bevy_stardust::transports::udp::prelude::ServerUdpTransportPlugin;
+    use bevy_stardust::transports::udp::UdpTransportPlugin;
     use semver::Version;
     use semver::VersionReq;
 
@@ -178,6 +180,8 @@ mod server {
         let mut app = App::new();
 
         apply_shared_data(&mut app);
+
+        app.add_plugins(UdpTransportPlugin::scalable());
 
         // Add our sending and receiving systems
         app.add_systems(ReadOctetStrings, receive_random_data_system_server::<UnorderedUnreliableChannel>);

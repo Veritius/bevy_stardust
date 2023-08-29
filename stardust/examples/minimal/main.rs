@@ -7,9 +7,10 @@ use bevy::prelude::*;
 use bevy_stardust::channels::config::*;
 use bevy_stardust::channels::extension::ChannelSetupAppExt;
 use bevy_stardust::setup::StardustPlugin;
-use bevy_stardust::transports::udp::prelude::UdpTransportPlugin;
+use bevy_stardust::transports::udp::UdpTransportPlugin;
 use rand::Rng;
 use rand::seq::SliceRandom;
+use semver::{Version, VersionReq};
 
 /// How many times the loop runs per second.
 const RUN_HZ: f64 = 2.0;
@@ -40,7 +41,7 @@ fn apply_shared_data(app: &mut App) {
         version: Version::new(0, 0, 0),
         allows: VersionReq::STAR,
     });
-    app.add_plugins(UdpTransportPlugin);
+    app.add_plugins(UdpTransportPlugin::best_guess());
 
     // Add channel
     app.register_channel::<RandomDataChannel>(ReliableChannel);

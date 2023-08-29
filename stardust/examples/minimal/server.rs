@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use bevy_stardust::{prelude::server::*, scheduling::*, transports::udp::prelude::ServerUdpTransportPlugin, channels::outgoing::SendTarget, setup::StardustPlugin};
+use bevy_stardust::{prelude::server::*, scheduling::*, channels::outgoing::SendTarget, setup::StardustPlugin};
 use semver::{Version, VersionReq};
 use crate::{RandomDataChannel, apply_shared_data, gen_random_string};
 
