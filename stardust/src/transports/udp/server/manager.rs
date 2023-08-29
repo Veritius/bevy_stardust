@@ -1,7 +1,6 @@
 use std::net::IpAddr;
 use bevy::{prelude::*, ecs::system::SystemParam};
 use crate::transports::udp::UdpTransportMode;
-
 use super::{listener::UdpListener, ports::PortBindings};
 
 /// Interface for using the UDP transport layer in server mode.
@@ -40,7 +39,7 @@ impl UdpServerManager<'_, '_> {
 
         // Deduplicate active ports set and bind to them
         let mut ports = config.active_ports.clone();
-        ports.sort(); ports.dedup();
+        ports.sort_unstable(); ports.dedup();
         if ports.len() == 0 { return Err(UdpServerError::ActivePortsEmpty); }
         let bindings = match PortBindings::new(address, &ports) {
             Ok(values) => values,
