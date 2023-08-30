@@ -43,6 +43,18 @@ impl PeerUuid {
     }
 }
 
+impl From<Uuid> for PeerUuid {
+    fn from(value: Uuid) -> Self {
+        Self(value)
+    }
+}
+
+impl From<PeerUuid> for Uuid {
+    fn from(value: PeerUuid) -> Self {
+        value.0
+    }
+}
+
 /// A "display name" for a network peer, useful for more user-facing logging.
 /// 
 /// This is not intended for identifying peers. Instead, use the `Entity` id or the `PeerUuid` component.
