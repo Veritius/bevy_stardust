@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use bevy::tasks::TaskPoolBuilder;
 use crate::channels::incoming::IncomingNetworkMessages;
 use crate::prelude::*;
-use super::PACKET_HEADER_SIZE;
+use super::{PACKET_HEADER_SIZE, PACKET_MAX_BYTES};
 use super::peer::UdpPeer;
 use super::ports::PortBindings;
 
@@ -37,7 +37,7 @@ pub(super) fn udp_receive_packets_system_single(
         .collect::<BTreeMap<SocketAddr, _>>();
 
     // Buffer for storing bytes
-    let mut buffer = [0u8; 1500];
+    let mut buffer = [0u8; PACKET_MAX_BYTES];
 
     // Read from all ports
     for (_, socket, _) in ports.iter() {
@@ -140,7 +140,7 @@ pub(super) fn udp_receive_packets_system_pooled(
             // Spawn task
             s.spawn(async move {
                 // Allocate a buffer for storing incoming data
-                let mut buffer = [0u8; 1500];
+                let mut buffer = [0u8; PACKET_MAX_BYTES];
 
                 // Lock mutexes for our port-associated clients
                 let mut locks = query_mutex_map.iter()

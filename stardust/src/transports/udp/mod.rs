@@ -23,6 +23,7 @@ pub use server::*;
 static TRANSPORT_LAYER_VERSION: Lazy<Version> = Lazy::new(|| "0.2.0".parse::<Version>().unwrap());
 static TRANSPORT_LAYER_REQUIRE: Lazy<VersionReq> = Lazy::new(|| "=0.2.0".parse::<VersionReq>().unwrap());
 const PACKET_HEADER_SIZE: usize = 5;
+const PACKET_MAX_BYTES: usize = 1472;
 
 /// The UDP transport plugin. Use the systemparams ([UdpServerManager] and [UdpClientManager]) to set up connections.
 #[derive(Debug)]
