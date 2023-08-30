@@ -36,12 +36,9 @@ impl PeerUuid {
     pub fn new(uuid: Uuid) -> Self {
         Self(uuid)
     }
-}
 
-impl Deref for PeerUuid {
-    type Target = Uuid;
-
-    fn deref(&self) -> &Self::Target {
+    /// Gets the `Uuid` value.
+    pub fn get(&self) -> &Uuid {
         &self.0
     }
 }
