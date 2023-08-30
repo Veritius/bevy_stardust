@@ -1,6 +1,6 @@
 //! "Peers" aka other computers over the network.
 
-use std::{time::Instant, ops::Deref};
+use std::time::Instant;
 use bevy::{prelude::*, utils::Uuid};
 
 /// Another peer that this peer is aware of, representing someone else over the Internet.
@@ -40,5 +40,17 @@ impl PeerUuid {
     /// Gets the `Uuid` value.
     pub fn get(&self) -> &Uuid {
         &self.0
+    }
+}
+
+/// A "display name" for a network peer, useful for more user-facing logging.
+/// 
+/// This is not intended for identifying peers. Instead, use the `Entity` id or the `PeerUuid` component.
+#[derive(Debug, Component, Clone, PartialEq, Eq, Hash, Reflect)]
+pub struct PeerDisplayName(pub String);
+
+impl std::fmt::Display for PeerDisplayName {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
     }
 }
