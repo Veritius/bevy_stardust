@@ -1,6 +1,6 @@
 //! "Peers" aka other computers over the network.
 
-use std::time::Instant;
+use std::{time::Instant, ops::Deref};
 use bevy::{prelude::*, utils::Uuid};
 
 /// Another peer that this peer is aware of, representing someone else over the Internet.
@@ -36,9 +36,12 @@ impl PeerUuid {
     pub fn new(uuid: Uuid) -> Self {
         Self(uuid)
     }
+}
 
-    /// Gets the `Uuid` value.
-    pub fn get(&self) -> &Uuid {
+impl Deref for PeerUuid {
+    type Target = Uuid;
+
+    fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
