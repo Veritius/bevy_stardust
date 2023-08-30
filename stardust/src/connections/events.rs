@@ -1,6 +1,6 @@
 //! Connection events, like players leaving or joining.
 
-use bevy::prelude::*;
+use bevy::{prelude::*, utils::Uuid};
 
 /// An event sent to disconnect a peer.
 #[derive(Event)]
@@ -12,4 +12,9 @@ pub struct PeerConnectedEvent(pub Entity);
 
 /// Raised when a peer disconnects.
 #[derive(Event)]
-pub struct PeerDisconnectedEvent(pub Entity);
+pub struct PeerDisconnectedEvent {
+    /// The entity id of the peer.
+    pub entity_id: Entity,
+    /// The peer's `PeerUuid` value, if it had one.
+    pub uuid: Option<Uuid>,
+}
