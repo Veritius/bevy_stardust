@@ -1,6 +1,5 @@
 use bevy::prelude::*;
-use bevy_stardust::{prelude::client::*, scheduling::*, client::{connection::RemoteConnectionStatus, send::ChannelWriter}, transports::udp::UdpClientManager};
-use semver::{Version, VersionReq};
+use bevy_stardust::{prelude::client::*, scheduling::*, client::send::ChannelWriter, transports::udp::UdpClientManager};
 use crate::{apply_shared_data, gen_random_string, RandomDataChannel};
 
 pub(super) fn client() -> App {
@@ -15,17 +14,15 @@ pub(super) fn client() -> App {
     app.add_systems(Startup, |mut manager: UdpClientManager| {
         use std::net::*;
         let ip = IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1));
-        manager.connect(SocketAddr::new(ip, 12345));
+        let _ = manager.connect(SocketAddr::new(ip, 12345));
     });
 
     app
 }
 
 fn send_random_data_system_client(
-    conn: Res<State<RemoteConnectionStatus>>,
     mut writer: ChannelWriter<RandomDataChannel>,
 ) {
-    if !conn.connected() { return; }
 
     let string = gen_random_string();
 

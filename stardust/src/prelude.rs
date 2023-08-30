@@ -15,7 +15,6 @@ pub use crate::channels::config::*;
 /// Client-side prelude.
 pub mod client {
     pub use crate::client;
-    pub use client::connection::RemoteConnectionStatus;
     pub use client::peers::Server;
     pub use client::receive::ChannelReader;
     pub use client::send::ChannelWriter;

@@ -97,7 +97,6 @@ mod channels {
 mod client {
     use bevy::prelude::*;
     use bevy_stardust::channels::id::Channel;
-    use bevy_stardust::client::connection::RemoteConnectionStatus;
     use bevy_stardust::prelude::client::*;
     use bevy_stardust::scheduling::*;
     use bevy_stardust::transports::udp::*;
@@ -133,11 +132,8 @@ mod client {
     }
 
     fn send_random_data_system_client<T: Channel>(
-        conn: Res<State<RemoteConnectionStatus>>,
         mut writer: ChannelWriter<T>,
     ) {
-        if !conn.connected() { return; }
-    
         let string = gen_random_string();
 
         for _ in 0..REPEAT_AMOUNT {

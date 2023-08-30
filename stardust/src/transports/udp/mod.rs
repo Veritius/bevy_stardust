@@ -5,8 +5,6 @@ mod server;
 
 mod peer;
 mod ports;
-mod listener;
-mod attempt;
 mod sending;
 mod receiving;
 

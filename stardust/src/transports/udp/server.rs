@@ -1,7 +1,7 @@
 use std::net::IpAddr;
 use bevy::{prelude::*, ecs::system::SystemParam};
 use crate::transports::udp::{UdpTransportState, ProcessingMode, UdpConnectionError};
-use super::{listener::UdpListener, ports::PortBindings};
+use super::{ports::PortBindings};
 
 /// Interface for using the UDP transport layer in server mode.
 #[derive(SystemParam)]
@@ -45,17 +45,18 @@ impl UdpServerManager<'_, '_> {
         }
 
         // Create listener
-        let listener = match UdpListener::new(address, config.listen_port) {
-            Ok(value) => value,
-            Err(error) => { return Err(UdpConnectionError::IoError(error.kind())) },
-        };
+        todo!();
+        // let listener = match UdpListener::new(address, config.listen_port) {
+        //     Ok(value) => value,
+        //     Err(error) => { return Err(UdpConnectionError::IoError(error.kind())) },
+        // };
 
         // Check if we're in single processing mode
-        if *self.processing_mode == ProcessingMode::Single {
-            self.commands.insert_resource(listener);
-            self.next.set(UdpTransportState::Server);
-            return Ok(())
-        }
+        // if *self.processing_mode == ProcessingMode::Single {
+        //     self.commands.insert_resource(listener);
+        //     self.next.set(UdpTransportState::Server);
+        //     return Ok(())
+        // }
 
         // Deduplicate active ports set and bind to them
         let mut ports = config.active_ports.clone();
@@ -67,7 +68,7 @@ impl UdpServerManager<'_, '_> {
         };
 
         // Add resources
-        self.commands.insert_resource(listener);
+        // self.commands.insert_resource(listener);
         self.commands.insert_resource(bindings);
 
         // Change state
