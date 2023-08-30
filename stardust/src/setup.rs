@@ -4,6 +4,7 @@ use bevy::prelude::*;
 use semver::Version;
 use semver::VersionReq;
 
+use crate::prelude::*;
 use crate::scheduling::*;
 use crate::protocol::*;
 use crate::channels::registry::ChannelRegistry;
@@ -23,6 +24,11 @@ impl Plugin for StardustPlugin {
         add_schedules(app);
         app.add_systems(PreUpdate, network_pre_update);
         app.add_systems(PostUpdate, network_post_update);
+
+        // Add events
+        app.add_event::<DisconnectPeerEvent>();
+        app.add_event::<PeerDisconnectedEvent>();
+        app.add_event::<PeerConnectedEvent>();
 
         // Systems that check for things that shouldn't happen
         app.add_systems(PreUpdate, panic_on_channel_removal);

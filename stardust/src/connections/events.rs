@@ -1,3 +1,5 @@
+//! Connection events, like players leaving or joining.
+
 use bevy::prelude::*;
 
 /// An event sent to disconnect a peer.
