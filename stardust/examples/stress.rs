@@ -122,10 +122,10 @@ mod client {
         app.add_systems(Update, send_random_data_system_client::<UnorderedReliableChannel>);
         app.add_systems(Update, send_random_data_system_client::<OrderedReliableChannel>);
 
-        app.add_systems(Startup, |mut manager: UdpClientManager| {
+        app.add_systems(Startup, |mut manager: UdpConnectionManager| {
             use std::net::*;
             let ip = IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1));
-            manager.connect(SocketAddr::new(ip, 12345));
+            manager.join_server(SocketAddr::new(ip, 12345));
         });
         
         app

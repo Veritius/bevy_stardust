@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use bevy_stardust::{prelude::client::*, scheduling::*, client::send::ChannelWriter, transports::udp::UdpClientManager};
+use bevy_stardust::{prelude::client::*, scheduling::*, client::send::ChannelWriter, transports::udp::UdpConnectionManager};
 use crate::{apply_shared_data, gen_random_string, RandomDataChannel};
 
 pub(super) fn client() -> App {
@@ -11,10 +11,10 @@ pub(super) fn client() -> App {
     app.add_systems(ReadOctetStrings, receive_random_data_system_client);
     app.add_systems(Update, send_random_data_system_client);
 
-    app.add_systems(Startup, |mut manager: UdpClientManager| {
+    app.add_systems(Startup, |mut manager: UdpConnectionManager| {
         use std::net::*;
         let ip = IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1));
-        let _ = manager.connect(SocketAddr::new(ip, 12345));
+        let _ = manager.join_server(SocketAddr::new(ip, 12345));
     });
 
     app

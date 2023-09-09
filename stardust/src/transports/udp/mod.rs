@@ -1,8 +1,6 @@
 //! Transport layer that operates over native UDP sockets.
 
-mod client;
-mod server;
-
+mod manager;
 mod peer;
 mod ports;
 mod sending;
@@ -14,9 +12,8 @@ use semver::{Version, VersionReq};
 use crate::{prelude::*, scheduling::*};
 use self::{receiving::*, sending::*};
 
-// Expose managers
-pub use client::*;
-pub use server::*;
+// Expose manager
+pub use manager::*;
 
 static TRANSPORT_LAYER_VERSION: Lazy<Version> = Lazy::new(|| "0.2.0".parse::<Version>().unwrap());
 static TRANSPORT_LAYER_REQUIRE: Lazy<VersionReq> = Lazy::new(|| "=0.2.0".parse::<VersionReq>().unwrap());
@@ -100,25 +97,6 @@ enum UdpTransportState {
     Disabled,
     Client,
     Server,
-}
-
-/// An error caused by an operation in the UDP transport layer.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum UdpConnectionError {
-    /// Some kind of IO-related error.
-    /// This can be caused while binding to ports.
-    IoError(std::io::ErrorKind),
-    /// The transport layer was running in client mode when it should not have been.
-    ClientExists,
-    /// The transport layer was running in server mode when it should not have been.
-    ServerExists,
-    /// The transport layer was disconnected when it should not have been.
-    Disconnected,
-    /// The listen port was invalid.
-    /// This can be caused by the listen port being in the active ports set.
-    BadListenPort,
-    /// The active ports set was empty.
-    EmptyActivePorts,
 }
 
 fn processing_mode_is(target: ProcessingMode) -> impl Fn(Res<ProcessingMode>, Res<State<UdpTransportState>>) -> bool + Clone {
