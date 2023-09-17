@@ -12,6 +12,11 @@ impl UdpConnectionManager {
         todo!()
     }
 
+    /// Returns true if in server mode.
+    pub fn is_server(&self) -> bool {
+        todo!()
+    }
+
     /// Set whether a server will allow new connections.
     /// Only works when a server is running.
     pub fn allow_clients(&mut self, yes: bool) {
@@ -20,6 +25,11 @@ impl UdpConnectionManager {
 
     /// Start a client.
     pub fn start_client(&mut self, address: Option<IpAddr>, active: Vec<u16>) -> Result<IpAddr> {
+        todo!()
+    }
+
+    /// Returns true if in client mode.
+    pub fn is_client(&self) -> bool {
         todo!()
     }
 
@@ -35,6 +45,11 @@ impl UdpConnectionManager {
 
     /// Stop the server or client.
     pub fn stop_multiplayer(&mut self) {
+        todo!()
+    }
+
+    /// Returns true if a fully initialised client or server is open.
+    pub fn is_active(&self) -> bool {
         todo!()
     }
 }
