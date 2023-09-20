@@ -24,6 +24,8 @@ impl UniqueNetworkHash {
     }
 }
 
+/// Extends Bevy's `App` struct to make creating a [UniqueNetworkHash].
+/// Don't implement this yourself.
 pub trait NetworkHashAppExt {
     /// Add a value to adjust the [UniqueNetworkHash].
     /// 
