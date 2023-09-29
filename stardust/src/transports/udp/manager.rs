@@ -8,6 +8,10 @@ pub struct UdpConnectionManager;
 
 impl UdpConnectionManager {
     /// Begins hosting a server.
+    /// 
+    /// - If `address` is `None` the IP will be chosen by the operating system.
+    /// - If using `ProcessingMode::Single`, `active` can be empty as `listen` will be used for communication.
+    /// - If using `ProcessingMode::Taskpool`, `active` must have at least `1` element and cannot include `listen`.
     pub fn start_server(&mut self, address: Option<IpAddr>, listen: u16, active: Vec<u16>) -> Result<IpAddr> {
         todo!()
     }
@@ -24,7 +28,7 @@ impl UdpConnectionManager {
     }
 
     /// Start a client.
-    pub fn start_client(&mut self, address: Option<IpAddr>, active: Vec<u16>) -> Result<IpAddr> {
+    pub fn start_client(&mut self, address: Option<IpAddr>, active: u16) -> Result<IpAddr> {
         todo!()
     }
 
