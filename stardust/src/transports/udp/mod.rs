@@ -57,7 +57,7 @@ impl Plugin for UdpTransportPlugin {
 
         // Add resources
         app.insert_resource(self.mode.clone());
-        app.insert_resource(NetActionBlocker::Nothing);
+        app.insert_resource(StateChangeBlocker::Nothing);
     }
 }
 
@@ -92,24 +92,29 @@ pub enum UdpTransportState {
 }
 
 #[derive(Debug, Resource, PartialEq, Eq)]
-enum NetActionBlocker {
+enum StateChangeBlocker {
     Nothing,
     StartingClient,
     StartingServer,
+    StoppingClient,
+    StoppingServer,
 }
 
-impl NetActionBlocker {
+impl StateChangeBlocker {
     pub fn blocked(&self) -> bool {
         *self != Self::Nothing
     }
 }
 
-impl std::fmt::Display for NetActionBlocker {
+impl std::fmt::Display for StateChangeBlocker {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            NetActionBlocker::Nothing => f.write_str("nothing"),
-            NetActionBlocker::StartingClient => f.write_str("client starting"),
-            NetActionBlocker::StartingServer => f.write_str("server starting"),
+            StateChangeBlocker::Nothing => f.write_str("nothing"),
+            StateChangeBlocker::StartingClient => f.write_str("client starting"),
+            StateChangeBlocker::StartingServer => f.write_str("server starting"),
+            StateChangeBlocker::StoppingClient => f.write_str("client stopping"),
+            StateChangeBlocker::StoppingServer => f.write_str("server stopping"),
+            
         }
     }
 }

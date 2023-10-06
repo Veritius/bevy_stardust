@@ -3,14 +3,14 @@ use std::net::{SocketAddr, IpAddr};
 use bevy::prelude::*;
 use bevy::ecs::system::SystemParam;
 
-use super::{NetActionBlocker, UdpTransportState};
+use super::{StateChangeBlocker, UdpTransportState};
 
 /// Manages the UDP transport layer.
 #[derive(SystemParam)]
 pub struct UdpConnectionManager<'w, 's> {
     commands: Commands<'w, 's>,
     state: Res<'w, State<UdpTransportState>>,
-    blocker: ResMut<'w, NetActionBlocker>,
+    blocker: ResMut<'w, StateChangeBlocker>,
 }
 
 impl<'w, 's> UdpConnectionManager<'w, 's> {
@@ -54,6 +54,9 @@ impl<'w, 's> UdpConnectionManager<'w, 's> {
         // Check if we're blocked by something
         if self.blocker.blocked() { bail!("blocked: {}", *self.blocker); }
 
+        // Mark as blocked
+        *self.blocker = StateChangeBlocker::StartingClient;
+
         // All good
         return Ok(())
     }
@@ -61,7 +64,12 @@ impl<'w, 's> UdpConnectionManager<'w, 's> {
     /// Stop the client, informing the remote server if one is present, and return to standby.
     /// If there is nothing to disconnect from, this function will do nothing.
     pub fn client_disconnect(&mut self) {
-        
+        // Check we're in the right conditions to do this
+        if *self.state.get() != UdpTransportState::Client { return; }
+        if self.blocker.blocked() { return; }
+
+        // Mark as blocked
+        *self.blocker = StateChangeBlocker::StoppingClient;
     }
 
     /// Start listening for connections as a server.
@@ -74,6 +82,9 @@ impl<'w, 's> UdpConnectionManager<'w, 's> {
         // Check if we're blocked by something
         if self.blocker.blocked() { bail!("blocked: {}", *self.blocker); }
 
+        // Mark as blocked
+        *self.blocker = StateChangeBlocker::StartingServer;
+
         // All good
         return Ok(())
     }
@@ -81,7 +92,12 @@ impl<'w, 's> UdpConnectionManager<'w, 's> {
     /// Stop the server, informing clients of the disconnection, and return to standby.
     /// If there is no server to stop, this function will do nothing.
     pub fn stop_server(&mut self) {
+        // Check we're in the right conditions to do this
+        if *self.state.get() != UdpTransportState::Server { return; }
+        if self.blocker.blocked() { return; }
 
+        // Mark as blocked
+        *self.blocker = StateChangeBlocker::StoppingServer;
     }
 
     /// Closes active connections and disconnects from any bound ports.
