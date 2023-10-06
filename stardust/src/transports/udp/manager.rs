@@ -1,12 +1,15 @@
-use anyhow::Result;
+use anyhow::{Result, bail};
 use std::net::{SocketAddr, IpAddr};
 use bevy::prelude::*;
 use bevy::ecs::system::SystemParam;
+
+use super::NetActionBlocker;
 
 /// Manages the UDP transport layer.
 #[derive(SystemParam)]
 pub struct UdpConnectionManager<'w, 's> {
     commands: Commands<'w, 's>,
+    blocker: ResMut<'w, NetActionBlocker>,
 }
 
 impl<'w, 's> UdpConnectionManager<'w, 's> {
@@ -24,8 +27,12 @@ impl<'w, 's> UdpConnectionManager<'w, 's> {
     /// If you are using `ProcessingMode::Taskpool`, you can pass multiple values, with higher amounts of ports improving parallel performance.
     /// The highest you should set this is the number of logical cores on your system, but you can allocate less if needed.
     /// Values that are higher than the number of logical cores on your system will not give any extra parallelism benefits.
-    pub fn start_multiplayer(&mut self, address: Option<SocketAddr>, ports: &[u16]) {
+    pub fn start_multiplayer(&mut self, address: Option<SocketAddr>, ports: &[u16]) -> Result<()> {
+        // Check if we're blocked by something
+        if self.blocker.blocked() { bail!("blocked: {}", *self.blocker); }
 
+        // All good
+        return Ok(())
     }
 
     /// Try to connect to `remote` as a client.
