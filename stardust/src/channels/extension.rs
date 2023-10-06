@@ -15,6 +15,9 @@ impl ChannelSetupAppExt for App {
         &mut self,
         components: impl Bundle + std::hash::Hash,
     ) {
+        // Change hash value
+        self.net_hash_value(("channel", C::type_path(), &components));
+
         // Create config entity and get registry type
         let entity_id = self.world.spawn(components).id();
         let mut registry = self.world.resource_mut::<ChannelRegistry>();
@@ -23,9 +26,6 @@ impl ChannelSetupAppExt for App {
         let store = OutgoingOctetStringsUntyped::new();
         let channel_id = registry.register_channel::<C>(entity_id, store.clone());
         self.insert_resource(OutgoingOctetStrings::<C>::new(store));
-
-        // Change hash value
-        self.net_hash_value(("channel", C::type_path())); // TODO: Check components
 
         // Spawn config entity
         let type_id = TypeId::of::<C>();
