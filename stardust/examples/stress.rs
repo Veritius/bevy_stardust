@@ -125,7 +125,7 @@ mod client {
         app.add_systems(Startup, |mut manager: UdpConnectionManager| {
             use std::net::*;
             let ip = IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1));
-            manager.join_server(SocketAddr::new(ip, 12345));
+            manager.start_server();
         });
         
         app

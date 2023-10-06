@@ -14,7 +14,7 @@ pub(super) fn client() -> App {
     app.add_systems(Startup, |mut manager: UdpConnectionManager| {
         use std::net::*;
         let ip = IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1));
-        let _ = manager.join_server(SocketAddr::new(ip, 12345));
+        let _ = manager.start_client(SocketAddr::new(ip, 12345));
     });
 
     app

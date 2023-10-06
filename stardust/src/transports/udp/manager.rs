@@ -1,59 +1,55 @@
 use anyhow::Result;
 use std::net::{SocketAddr, IpAddr};
+use bevy::prelude::*;
 use bevy::ecs::system::SystemParam;
 
-/// Manages the UDP connection system.
+/// Manages the UDP transport layer.
 #[derive(SystemParam)]
-pub struct UdpConnectionManager;
+pub struct UdpConnectionManager<'w, 's> {
+    commands: Commands<'w, 's>,
+}
 
-impl UdpConnectionManager {
-    /// Begins hosting a server.
+impl<'w, 's> UdpConnectionManager<'w, 's> {
+    /// Binds to a set of ports and sets the transport layer to standby.
+    /// To actually start connecting, use `start_server` or `start_client`.
     /// 
-    /// - If `address` is `None` the IP will be chosen by the operating system.
-    /// - If using `ProcessingMode::Single`, `active` can be empty as `listen` will be used for communication.
-    /// - If using `ProcessingMode::Taskpool`, `active` must have at least `1` element and cannot include `listen`.
-    pub fn start_server(&mut self, address: Option<IpAddr>, listen: u16, active: Vec<u16>) -> Result<IpAddr> {
-        todo!()
+    /// `address` is the IP address that the transport layer will try to use.
+    /// A value of `Some` will ask the OS to use that IP specifically, and a value of `None` will let the OS choose.
+    /// This IP is only within the local area network, and does not affect your remote IP, if connected to the Internet.
+    /// 
+    /// `ports` is the set of ports that will be used for connection purposes.
+    /// There must always be at least one value in the passed set.
+    /// If you are using `ProcessingMode::Single` this should only have one value, otherwise unnecessary ports will be bound.
+    /// 
+    /// If you are using `ProcessingMode::Taskpool`, you can pass multiple values, with higher amounts of ports improving parallel performance.
+    /// The highest you should set this is the number of logical cores on your system, but you can allocate less if needed.
+    /// Values that are higher than the number of logical cores on your system will not give any extra parallelism benefits.
+    pub fn start_multiplayer(&mut self, address: Option<SocketAddr>, ports: &[u16]) {
+
     }
 
-    /// Returns true if in server mode.
-    pub fn is_server(&self) -> bool {
-        todo!()
+    /// Try to connect to `remote` as a client.
+    pub fn start_client(&mut self, remote: SocketAddr) {
+
     }
 
-    /// Set whether a server will allow new connections.
-    /// Only works when a server is running.
-    pub fn allow_clients(&mut self, yes: bool) {
-        todo!()
+    /// Stop the client, informing the remote server if one is present, and return to standby.
+    pub fn client_disconnect(&mut self) {
+
     }
 
-    /// Start a client.
-    pub fn start_client(&mut self, address: Option<IpAddr>, active: u16) -> Result<IpAddr> {
-        todo!()
+    /// Start listening for connections as a server.
+    pub fn start_server(&mut self) {
+
     }
 
-    /// Returns true if in client mode.
-    pub fn is_client(&self) -> bool {
-        todo!()
+    /// Stop the server, informing clients of the disconnection, and return to standby.
+    pub fn stop_server(&mut self) {
+
     }
 
-    /// Join a server, as a client.
-    pub fn join_server(&mut self, remote: SocketAddr) {
-        todo!()
-    }
-
-    /// Leave a server, as a client.
-    pub fn leave_server(&mut self) {
-        todo!()
-    }
-
-    /// Stop the server or client.
+    /// Closes active connections and disconnects from any bound ports.
     pub fn stop_multiplayer(&mut self) {
-        todo!()
-    }
-
-    /// Returns true if a fully initialised client or server is open.
-    pub fn is_active(&self) -> bool {
         todo!()
     }
 }

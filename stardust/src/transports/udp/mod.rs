@@ -20,7 +20,7 @@ static TRANSPORT_LAYER_REQUIRE: Lazy<VersionReq> = Lazy::new(|| "=0.2.0".parse::
 const PACKET_HEADER_SIZE: usize = 5;
 const PACKET_MAX_BYTES: usize = 1472;
 
-/// The UDP transport plugin. Use the systemparams ([UdpServerManager] and [UdpClientManager]) to set up connections.
+/// The UDP transport plugin. Use the [UdpConnectionManager] systemparam to set up connections while in a system.
 #[derive(Debug)]
 pub struct UdpTransportPlugin {
     /// How the transport layer should process IO. See [ProcessingMode's documentation](ProcessingMode) for more.
@@ -57,22 +57,6 @@ impl Plugin for UdpTransportPlugin {
 
         // Add resources
         app.insert_resource(self.mode.clone());
-
-        // Add reading systems
-        app.add_systems(TransportReadPackets, udp_receive_packets_system_pooled
-            .run_if(not(in_state(UdpTransportState::Disabled)))
-            .run_if(processing_mode_is(ProcessingMode::Taskpool)));
-        app.add_systems(TransportReadPackets, udp_receive_packets_system_single
-            .run_if(not(in_state(UdpTransportState::Disabled)))
-            .run_if(processing_mode_is(ProcessingMode::Single)));
-
-        // Add writing systems
-        app.add_systems(TransportSendPackets, udp_send_packets_system_pooled
-            .run_if(not(in_state(UdpTransportState::Disabled)))
-            .run_if(processing_mode_is(ProcessingMode::Taskpool)));
-        app.add_systems(TransportSendPackets, udp_send_packets_system_single
-            .run_if(not(in_state(UdpTransportState::Disabled)))
-            .run_if(processing_mode_is(ProcessingMode::Single)));
     }
 }
 
@@ -91,24 +75,17 @@ pub enum ProcessingMode {
     Taskpool,
 }
 
+/// The current state of the transport layer.
+/// Under no circumstances should you mutate this. Instead, use the [UdpConnectionManager] systemparam.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash, Reflect, States)]
-enum UdpTransportState {
+pub enum UdpTransportState {
+    /// Nothing going on.
     #[default]
-    Disabled,
+    Offline,
+    /// Standing by, with ports allocated, but no active connection.
+    Standby,
+    /// Running as a client and connected to a server.
     Client,
+    /// Running as a server and listening for connections.
     Server,
-}
-
-fn processing_mode_is(target: ProcessingMode) -> impl Fn(Res<ProcessingMode>, Res<State<UdpTransportState>>) -> bool + Clone {
-    move |mode: Res<ProcessingMode>, state: Res<State<UdpTransportState>>| -> bool {
-        let resolved = match (*mode, state.get()) {
-            (ProcessingMode::Best, UdpTransportState::Disabled) => ProcessingMode::Best,
-            (ProcessingMode::Best, UdpTransportState::Client) => ProcessingMode::Single,
-            (ProcessingMode::Best, UdpTransportState::Server) => ProcessingMode::Taskpool,
-            (ProcessingMode::Single, _) => ProcessingMode::Single,
-            (ProcessingMode::Taskpool, _) => ProcessingMode::Taskpool,
-        };
-
-        resolved == target
-    }
 }
