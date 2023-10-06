@@ -2,6 +2,7 @@
 
 use std::{net::{UdpSocket, IpAddr}, collections::BTreeMap};
 use bevy::prelude::{Entity, Resource, info};
+use anyhow::Result;
 
 /// Owns UdpSockets and associates Entity ids with them.
 #[derive(Debug, Resource)]
@@ -11,7 +12,7 @@ pub(super) struct PortBindings {
 
 impl PortBindings {
     /// Makes a new `PortBindings`, creating `UdpSocket`s bound to all in `ports`
-    pub fn new(addr: IpAddr, ports: &[u16]) -> Result<Self, std::io::Error> {
+    pub fn new(addr: IpAddr, ports: &[u16]) -> Result<Self> {
         // Check range of ports is acceptable
         if ports.len() == 0 {
             panic!("Amount of ports used must be at least one");

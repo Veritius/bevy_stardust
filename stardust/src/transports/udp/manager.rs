@@ -1,15 +1,16 @@
-use anyhow::{Result, bail};
-use std::net::SocketAddr;
+use anyhow::{Result, bail, Context};
+use std::net::{SocketAddr, IpAddr, Ipv4Addr};
 use bevy::prelude::*;
 use bevy::ecs::system::SystemParam;
-use super::{StateChangeBlocker, UdpTransportState};
+use super::{StateChangeBlocker, UdpTransportState, ports::PortBindings};
 
 /// Manages the UDP transport layer.
 #[derive(SystemParam)]
 pub struct UdpConnectionManager<'w, 's> {
-    commands: Commands<'w, 's>,
     state: Res<'w, State<UdpTransportState>>,
     blocker: ResMut<'w, StateChangeBlocker>,
+    next_state: ResMut<'w, NextState<UdpTransportState>>,
+    commands: Commands<'w, 's>,
 }
 
 impl<'w, 's> UdpConnectionManager<'w, 's> {
@@ -27,7 +28,7 @@ impl<'w, 's> UdpConnectionManager<'w, 's> {
     /// If you are using `ProcessingMode::Taskpool`, you can pass multiple values, with higher amounts of ports improving parallel performance.
     /// The highest you should set this is the number of logical cores on your system, but you can allocate less if needed.
     /// Values that are higher than the number of logical cores on your system will not give any extra parallelism benefits.
-    pub fn start_multiplayer(&mut self, address: Option<SocketAddr>, ports: &[u16]) -> Result<()> {
+    pub fn start_multiplayer(&mut self, address: Option<IpAddr>, ports: &[u16]) -> Result<()> {
         // Check we're in the right state to do this
         if *self.state.get() != UdpTransportState::Offline {
             bail!("can only start multiplayer when offline");
@@ -39,7 +40,14 @@ impl<'w, 's> UdpConnectionManager<'w, 's> {
         // Check ports slice length
         if ports.len() == 0 { bail!("ports slice must have at least 1 item"); }
 
+        // Bind ports
+        let ip_addr = if address.is_none() { IpAddr::V4(Ipv4Addr::UNSPECIFIED) } else { address.unwrap() };
+        let bindings = PortBindings::new(ip_addr, ports);
+        if bindings.is_err() { bail!("failed to bind ports: {}", bindings.unwrap_err()); }
+        self.commands.insert_resource(bindings.unwrap());
+
         // All good
+        self.next_state.set(UdpTransportState::Standby);
         return Ok(())
     }
 
