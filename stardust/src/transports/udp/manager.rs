@@ -1,8 +1,7 @@
 use anyhow::{Result, bail};
-use std::net::{SocketAddr, IpAddr};
+use std::net::SocketAddr;
 use bevy::prelude::*;
 use bevy::ecs::system::SystemParam;
-
 use super::{StateChangeBlocker, UdpTransportState};
 
 /// Manages the UDP transport layer.
