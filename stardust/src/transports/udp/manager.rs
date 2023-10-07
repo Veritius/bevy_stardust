@@ -21,13 +21,9 @@ impl<'w, 's> UdpConnectionManager<'w, 's> {
     /// A value of `Some` will ask the OS to use that IP specifically, and a value of `None` will let the OS choose.
     /// This IP is only within the local area network, and does not affect your remote IP, if connected to the Internet.
     /// 
-    /// `ports` is the set of ports that will be used for connection purposes.
-    /// There must always be at least one value in the passed set.
-    /// If you are using `ProcessingMode::Single` this should only have one value, otherwise unnecessary ports will be bound.
-    /// 
-    /// If you are using `ProcessingMode::Taskpool`, you can pass multiple values, with higher amounts of ports improving parallel performance.
-    /// The highest you should set this is the number of logical cores on your system, but you can allocate less if needed.
-    /// Values that are higher than the number of logical cores on your system will not give any extra parallelism benefits.
+    /// `ports` is the set of ports that will be used for connection purposes. There must be at least one value passed.
+    /// More values will improve parallelism, to a point. In almost all cases, the amount of values passed should be at most the amount of logical cores on the system.
+    /// Additionally, if acting as a client, it's best to allocate only one port.
     pub fn start_multiplayer(&mut self, address: Option<IpAddr>, ports: &[u16]) -> Result<()> {
         // Check we're in the right state to do this
         if *self.state.get() != UdpTransportState::Offline {
@@ -93,6 +89,7 @@ impl<'w, 's> UdpConnectionManager<'w, 's> {
         *self.blocker = StateChangeBlocker::StartingServer;
 
         // All good
+        self.next_state.set(UdpTransportState::Server);
         return Ok(())
     }
 

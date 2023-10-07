@@ -111,7 +111,7 @@ mod client {
 
         apply_shared_data(&mut app);
 
-        app.add_plugins(UdpTransportPlugin::single());
+        app.add_plugins(UdpTransportPlugin);
 
         app.add_systems(ReadOctetStrings, receive_random_data_system_client::<UnorderedUnreliableChannel>);
         app.add_systems(ReadOctetStrings, receive_random_data_system_client::<OrderedUnreliableChannel>);
@@ -174,7 +174,7 @@ mod server {
 
         apply_shared_data(&mut app);
 
-        app.add_plugins(UdpTransportPlugin::scalable());
+        app.add_plugins(UdpTransportPlugin);
 
         // Add our sending and receiving systems
         app.add_systems(ReadOctetStrings, receive_random_data_system_server::<UnorderedUnreliableChannel>);

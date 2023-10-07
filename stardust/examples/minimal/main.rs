@@ -41,7 +41,7 @@ fn apply_shared_data(app: &mut App) {
         version: Version::new(0, 0, 0),
         allows: VersionReq::STAR,
     });
-    app.add_plugins(UdpTransportPlugin::best_guess());
+    app.add_plugins(UdpTransportPlugin);
 
     // Add channel
     app.register_channel::<RandomDataChannel>(ReliableChannel);

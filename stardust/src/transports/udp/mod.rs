@@ -22,33 +22,7 @@ const PACKET_MAX_BYTES: usize = 1472;
 
 /// The UDP transport plugin. Use the [UdpConnectionManager] systemparam to set up connections while in a system.
 #[derive(Debug)]
-pub struct UdpTransportPlugin {
-    /// How the transport layer should process IO. See [ProcessingMode's documentation](ProcessingMode) for more.
-    pub mode: ProcessingMode,
-}
-
-impl UdpTransportPlugin {
-    /// Configures the plugin to be good enough for most uses.
-    pub fn best_guess() -> Self {
-        Self {
-            mode: ProcessingMode::Best,
-        }
-    }
-
-    /// Configures the plugin to perform well with a single peer.
-    pub fn single() -> Self {
-        Self {
-            mode: ProcessingMode::Single,
-        }
-    }
-
-    /// Configures the plugin to work well with multiple peers.
-    pub fn scalable() -> Self {
-        Self {
-            mode: ProcessingMode::Taskpool,
-        }
-    }
-}
+pub struct UdpTransportPlugin;
 
 impl Plugin for UdpTransportPlugin {
     fn build(&self, app: &mut App) {
@@ -56,24 +30,8 @@ impl Plugin for UdpTransportPlugin {
         app.add_state::<UdpTransportState>();
 
         // Add resources
-        app.insert_resource(self.mode.clone());
         app.insert_resource(StateChangeBlocker::Nothing);
     }
-}
-
-/// How the UDP transport layer will utilise threading.
-#[derive(Debug, Default, Resource, Clone, Copy, PartialEq, Eq, Reflect)]
-pub enum ProcessingMode {
-    /// Picks the best processing mode for you.
-    /// This will (likely) be `Single` on clients and `Taskpool` on servers.
-    #[default]
-    Best,
-    /// Runs all IO on a single thread.
-    /// This is best suited to clients.
-    Single,
-    /// Runs all IO on multiple threads by breaking the load into tasks.
-    /// This is best suited to servers.
-    Taskpool,
 }
 
 /// The current state of the transport layer.
@@ -114,7 +72,6 @@ impl std::fmt::Display for StateChangeBlocker {
             StateChangeBlocker::StartingServer => f.write_str("server starting"),
             StateChangeBlocker::StoppingClient => f.write_str("client stopping"),
             StateChangeBlocker::StoppingServer => f.write_str("server stopping"),
-            
         }
     }
 }
