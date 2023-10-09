@@ -5,6 +5,7 @@ mod peer;
 mod ports;
 mod sending;
 mod receiving;
+mod pending;
 
 use bevy::prelude::*;
 use once_cell::sync::Lazy;

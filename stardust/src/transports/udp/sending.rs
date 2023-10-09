@@ -7,14 +7,14 @@ use crate::octets::varints::u24;
 use crate::prelude::*;
 use crate::channels::outgoing::OutgoingOctetStringsAccessor;
 use crate::transports::udp::{PACKET_HEADER_SIZE, PACKET_MAX_BYTES};
-use super::peer::UdpPeer;
+use super::peer::EstablishedUdpPeer;
 use super::ports::PortBindings;
 
 /// Sends octet strings using a taskpool strategy.
 pub(super) fn send_packets_system(
     registry: Res<ChannelRegistry>,
     channels: Query<(&ChannelData, Option<&DirectionalChannel>, Option<&ReliableChannel>, Option<&OrderedChannel>, Option<&FragmentedChannel>)>,
-    mut peers: Query<(Entity, &mut UdpPeer), With<NetworkPeer>>,
+    mut peers: Query<(Entity, &mut EstablishedUdpPeer), With<NetworkPeer>>,
     ports: Option<Res<PortBindings>>,
     outgoing: OutgoingOctetStringsAccessor,
 ) {
@@ -102,7 +102,7 @@ fn send_octets(
     buffer: &mut [u8; PACKET_MAX_BYTES],
     channel: u24,
     string: &OctetString,
-    udp_peer: &mut UdpPeer,
+    udp_peer: &mut EstablishedUdpPeer,
 ) {
     // Store the current buffer element we're at
     let mut index: usize = 0;

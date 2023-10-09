@@ -11,8 +11,7 @@ pub struct UdpConnectionManager<'w, 's> {
 }
 
 impl<'w, 's> UdpConnectionManager<'w, 's> {
-    /// Binds to a set of ports and sets the transport layer to standby.
-    /// To actually start connecting, use `start_server` or `start_client`.
+    /// Binds to a set of ports, allowing connections to be established.
     /// 
     /// `address` is the IP address that the transport layer will try to use.
     /// A value of `Some` will ask the OS to use that IP specifically, and a value of `None` will let the OS choose.
@@ -31,6 +30,17 @@ impl<'w, 's> UdpConnectionManager<'w, 's> {
     /// Inform all peers of shutdown and disconnect all ports.
     pub fn shutdown(&mut self) {
         self.commands.insert_resource(ManagerAction::Shutdown);
+    }
+
+    /// Enables listening for new remote connections.
+    /// This is useful in a client/server architecture where you want to act as a server.
+    pub fn enable_listening(&mut self) {
+        todo!()
+    }
+
+    /// Tries to connect to a remote peer.
+    pub fn connect_to_remote(&mut self) {
+        todo!()
     }
 }
 

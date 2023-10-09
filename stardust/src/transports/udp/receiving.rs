@@ -11,13 +11,13 @@ use crate::prelude::server::Client;
 use crate::protocol::UniqueNetworkHash;
 use crate::transports::udp::{TRANSPORT_LAYER_REQUIRE, TRANSPORT_LAYER_REQUIRE_STR};
 use super::{PACKET_HEADER_SIZE, PACKET_MAX_BYTES, UdpTransportState};
-use super::peer::UdpPeer;
+use super::peer::EstablishedUdpPeer;
 use super::ports::PortBindings;
 
 /// Receives octet strings using a taskpool strategy.
 pub(super) fn receive_packets_system(
     mut commands: Commands,
-    mut peers: Query<(Entity, &NetworkPeer, &mut UdpPeer, &mut IncomingNetworkMessages)>,
+    mut peers: Query<(Entity, &NetworkPeer, &mut EstablishedUdpPeer, &mut IncomingNetworkMessages)>,
     state: Res<State<UdpTransportState>>,
     ports: Option<ResMut<PortBindings>>,
     channels: Query<(Option<&DirectionalChannel>, Option<&OrderedChannel>, Option<&ReliableChannel>, Option<&FragmentedChannel>)>,
@@ -171,7 +171,7 @@ pub(super) fn receive_packets_system(
     for (idx, address) in new_clients.lock().unwrap().iter() {
         let entity = commands.spawn((
             NetworkPeer { connected: Instant::now() },
-            UdpPeer {
+            EstablishedUdpPeer {
                 address: address.clone(),
                 hiccups: 0,
             },
