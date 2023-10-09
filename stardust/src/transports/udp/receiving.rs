@@ -9,13 +9,17 @@ use super::peer::UdpPeer;
 use super::ports::PortBindings;
 
 /// Receives octet strings using a taskpool strategy.
-pub(super) fn udp_receive_packets_system(
+pub(super) fn receive_packets_system(
     mut commands: Commands,
     mut peers: Query<(Entity, &NetworkPeer, &mut UdpPeer, &mut IncomingNetworkMessages)>,
-    ports: Res<PortBindings>,
+    ports: Option<Res<PortBindings>>,
     channels: Query<(Option<&DirectionalChannel>, Option<&OrderedChannel>, Option<&ReliableChannel>, Option<&FragmentedChannel>)>,
     registry: Res<ChannelRegistry>,
 ) {
+    // Check optional resources
+    if ports.is_none() { return; }
+    let ports = ports.unwrap();
+
     // Create task pool
     let pool = TaskPoolBuilder::new()
         .thread_name("UdpReadPacketsPool".to_string())

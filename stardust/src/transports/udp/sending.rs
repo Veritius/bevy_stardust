@@ -11,13 +11,17 @@ use super::peer::UdpPeer;
 use super::ports::PortBindings;
 
 /// Sends octet strings using a taskpool strategy.
-pub(super) fn udp_send_packets_system(
+pub(super) fn send_packets_system(
     registry: Res<ChannelRegistry>,
     channels: Query<(&ChannelData, Option<&DirectionalChannel>, Option<&ReliableChannel>, Option<&OrderedChannel>, Option<&FragmentedChannel>)>,
     mut peers: Query<(Entity, &mut UdpPeer), With<NetworkPeer>>,
-    ports: Res<PortBindings>,
+    ports: Option<Res<PortBindings>>,
     outgoing: OutgoingOctetStringsAccessor,
 ) {
+    // Check optional resources
+    if ports.is_none() { return; }
+    let ports = ports.unwrap();
+
     // Create task pool
     let pool = TaskPoolBuilder::new()
         .thread_name("UdpSendPacketsPool".to_string())
