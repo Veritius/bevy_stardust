@@ -78,18 +78,48 @@ pub(super) enum ManagerAction {
 pub(super) fn apply_manager_action_system(
     mut commands: Commands,
     state: Res<State<UdpTransportState>>,
+    mut next_state: ResMut<NextState<UdpTransportState>>,
     action: Option<Res<ManagerAction>>,
 ) {
     if action.is_none() { return; }
+    commands.remove_resource::<ManagerAction>();
     
     match action.unwrap().clone() {
-        ManagerAction::StartMultiplayer { address, ports } => todo!(),
-        ManagerAction::StopMultiplayer => todo!(),
+        ManagerAction::StartMultiplayer { address, ports } => {
+            // Check state
+            if *state.get() != UdpTransportState::Offline {
+                error!("Failed to start multiplayer: already started");
+                return;
+            }
+
+            // Bind ports and check if the OS said no
+            match PortBindings::new(address, &ports) {
+                Ok(ports) => {
+                    commands.insert_resource(ports);
+                },
+                Err(err) => {
+                    error!("Failed to start multiplayer: {}", err);
+                    return;
+                },
+            }
+
+            info!("Started multiplayer with {address}:{ports:?}");
+            next_state.set(UdpTransportState::Standby);
+        },
+        ManagerAction::StopMultiplayer => {
+            // Check state
+            if *state.get() == UdpTransportState::Offline {
+                error!("Failed to stop multiplayer: already stopped");
+                return;
+            }
+
+            // OS will close the ports for us
+            commands.remove_resource::<PortBindings>();
+            next_state.set(UdpTransportState::Offline);
+        },
         ManagerAction::StartClient { remote } => todo!(),
         ManagerAction::StopClient => todo!(),
         ManagerAction::StartServer => todo!(),
         ManagerAction::StopServer => todo!(),
     }
-
-    commands.remove_resource::<ManagerAction>();
 }
