@@ -7,6 +7,7 @@ use json::{JsonValue, object};
 use semver::Version;
 use crate::channels::incoming::IncomingNetworkMessages;
 use crate::prelude::*;
+use crate::prelude::server::Client;
 use crate::protocol::UniqueNetworkHash;
 use crate::transports::udp::{TRANSPORT_LAYER_REQUIRE, TRANSPORT_LAYER_REQUIRE_STR};
 use super::{PACKET_HEADER_SIZE, PACKET_MAX_BYTES, UdpTransportState};
@@ -105,36 +106,27 @@ pub(super) fn receive_packets_system(
                     // Check channel id
                     let channel_id = ChannelId::from(TryInto::<[u8; 3]>::try_into(&buffer[..3]).unwrap());
 
-                    // Process join attempt packet
-                    if channel_id.0 == 0.into() {
-                        // Check state
-                        match state {
-                            UdpTransportState::Standby => { todo!() },
-                            UdpTransportState::Client => { return; }, // Zero packets are ignored in this state 
-                            // Handle acceptances
-                            UdpTransportState::Server => {
-                                // Connected peers shouldn't be sending these packets
-                                if addresses.contains(&from_address) {
-                                    let entity_id: &Entity = address_map.get(&from_address).unwrap();
-                                    let guard = locks.get_mut(entity_id).unwrap();
-                                    guard.1.hiccups += 1;
-                                }
+                    // Process zero packet if a server
+                    if channel_id.0 == 0.into() && *state == UdpTransportState::Server {
+                        // Connected peers shouldn't be sending these packets
+                        if addresses.contains(&from_address) {
+                            let entity_id: &Entity = address_map.get(&from_address).unwrap();
+                            let guard = locks.get_mut(entity_id).unwrap();
+                            guard.1.hiccups += 1;
+                        }
 
-                                // Actually read their packet
-                                let accepted = server_read_zero_packet(
-                                    &socket,
-                                    &from_address,
-                                    &buffer,
-                                    octets_read,
-                                    &hash.hex,
-                                );
+                        // Actually read their packet
+                        let accepted = server_read_zero_packet(
+                            &socket,
+                            &from_address,
+                            &buffer,
+                            octets_read,
+                            &hash.hex(),
+                        );
 
-                                // Add client
-                                if accepted {
-                                    new_clients.lock().unwrap().push((port, from_address.clone()));
-                                }
-                            },
-                            _ => panic!()
+                        // Add client
+                        if accepted {
+                            new_clients.lock().unwrap().push((port, from_address.clone()));
                         }
                     }
 
@@ -183,6 +175,7 @@ pub(super) fn receive_packets_system(
                 address: address.clone(),
                 hiccups: 0,
             },
+            Client,
         )).id();
         let new_port = ports.add_client(entity);
         let socket = ports.port(*idx).unwrap().0;

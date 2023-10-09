@@ -8,8 +8,8 @@ use std::hash::{Hash, Hasher, SipHasher};
 /// A unique value generated during `App` creation, used to ensure two clients have consistent network setups.
 #[derive(Resource)]
 pub struct UniqueNetworkHash {
-    pub(super) int: u64,
-    pub(super) hex: String,
+    int: u64,
+    hex: String,
 }
 
 impl UniqueNetworkHash {

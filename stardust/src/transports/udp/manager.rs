@@ -1,9 +1,11 @@
 use std::marker::PhantomData;
 use std::net::{SocketAddr, IpAddr, Ipv4Addr};
+use std::time::Duration;
 use bevy::prelude::*;
 use bevy::ecs::system::{SystemParam, SystemBuffer};
 
 use super::UdpTransportState;
+use super::client::TryConnectToRemote;
 use super::ports::PortBindings;
 
 /// Manages the UDP transport layer.
@@ -38,8 +40,8 @@ impl<'w, 's> UdpConnectionManager<'w, 's> {
     }
 
     /// Try to connect to `remote` as a client.
-    pub fn start_client(&mut self, remote: SocketAddr) {
-        self.commands.insert_resource(ManagerAction::StartClient { remote });
+    pub fn start_client(&mut self, remote: SocketAddr, timeout: Duration) {
+        self.commands.insert_resource(ManagerAction::StartClient { remote, timeout });
     }
 
     /// Start listening for connections as a server.
@@ -63,6 +65,7 @@ pub(super) enum ManagerAction {
     StopMultiplayer,
     StartClient {
         remote: SocketAddr,
+        timeout: Duration,
     },
     StartServer,
     StopConnection,
@@ -110,8 +113,29 @@ pub(super) fn apply_manager_action_system(
             commands.remove_resource::<PortBindings>();
             next_state.set(UdpTransportState::Offline);
         },
-        ManagerAction::StartClient { remote } => todo!(),
-        ManagerAction::StartServer => todo!(),
+        ManagerAction::StartClient { remote, timeout } => {
+            // Check current state
+            if *state.get() != UdpTransportState::Standby {
+                warn!("Didn't start server: wrong state ({:?})", *state.get());
+                return;
+            }
+
+            // Add connection resource
+            commands.insert_resource(TryConnectToRemote {
+                address: remote,
+                timeout,
+            });
+        },
+        ManagerAction::StartServer => {
+            // Check current state
+            if *state.get() != UdpTransportState::Standby {
+                warn!("Didn't start server: wrong state ({:?})", *state.get());
+                return;
+            }
+
+            // Set the new state
+            next_state.set(UdpTransportState::Server);
+        },
         ManagerAction::StopConnection => todo!(),
     }
 }
