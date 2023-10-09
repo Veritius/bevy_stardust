@@ -30,7 +30,9 @@ impl<'w, 's> UdpConnectionManager<'w, 's> {
     /// Additionally, if acting as a client, it's best to allocate only one port.
     pub fn start_multiplayer(&mut self, address: Option<IpAddr>, ports: &[u16]) {
         let address = if address.is_some() { address.unwrap() } else { IpAddr::V4(Ipv4Addr::UNSPECIFIED) };
-        let ports = ports.iter().map(|f| f.clone()).collect::<Vec<_>>();
+        let mut ports = ports.iter().map(|f| f.clone()).collect::<Vec<_>>();
+        ports.sort_unstable();
+        ports.dedup();
         self.commands.insert_resource(ManagerAction::StartMultiplayer { address, ports });
     }
 
