@@ -107,7 +107,7 @@ pub(super) fn receive_packets_system(
                     let channel_id = ChannelId::from(TryInto::<[u8; 3]>::try_into(&buffer[..3]).unwrap());
 
                     // Process zero packet if a server
-                    if channel_id.0 == 0.into() && *state == UdpTransportState::Server {
+                    if channel_id.0 == 0.into() /* && *state == UdpTransportState::Server */ {
                         // Connected peers shouldn't be sending these packets
                         if addresses.contains(&from_address) {
                             let entity_id: &Entity = address_map.get(&from_address).unwrap();

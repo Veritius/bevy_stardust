@@ -5,14 +5,12 @@ mod peer;
 mod ports;
 mod sending;
 mod receiving;
-mod client;
 
 use bevy::prelude::*;
 use once_cell::sync::Lazy;
 use semver::{Version, VersionReq};
 use crate::{prelude::*, scheduling::*};
 use self::{receiving::*, sending::*};
-use self::client::*;
 
 // Expose manager
 pub use manager::*;
@@ -36,15 +34,10 @@ impl Plugin for UdpTransportPlugin {
 
         // Add systems
         app.add_systems(PostUpdate, apply_manager_action_system);
-        app.add_systems(Update, client_acceptance_system
-            .run_if(in_state(UdpTransportState::Standby))
-            .run_if(resource_exists::<TryConnectToRemote>()));
         app.add_systems(TransportReadPackets, receive_packets_system
-            .run_if(not(in_state(UdpTransportState::Offline)))
-            .run_if(not(in_state(UdpTransportState::Standby))));
+            .run_if(not(in_state(UdpTransportState::Offline))));
         app.add_systems(TransportSendPackets, send_packets_system
-            .run_if(not(in_state(UdpTransportState::Offline)))
-            .run_if(not(in_state(UdpTransportState::Standby))));
+            .run_if(not(in_state(UdpTransportState::Offline))));
     }
 }
 
@@ -55,10 +48,6 @@ pub enum UdpTransportState {
     /// Nothing going on.
     #[default]
     Offline,
-    /// Standing by, with ports allocated, but no active connection.
-    Standby,
-    /// Running as a client and connected to a server.
-    Client,
-    /// Running as a server and listening for connections.
-    Server,
+    /// Bou
+    Active,
 }
