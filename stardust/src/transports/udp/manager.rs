@@ -83,12 +83,12 @@ pub(super) fn apply_manager_action_system(
 ) {
     if action.is_none() { return; }
     commands.remove_resource::<ManagerAction>();
-    
+
     match action.unwrap().clone() {
         ManagerAction::StartMultiplayer { address, ports } => {
             // Check state
             if *state.get() != UdpTransportState::Offline {
-                error!("Failed to start multiplayer: already started");
+                info!("Failed to start multiplayer: already started");
                 return;
             }
 
@@ -109,7 +109,7 @@ pub(super) fn apply_manager_action_system(
         ManagerAction::StopMultiplayer => {
             // Check state
             if *state.get() == UdpTransportState::Offline {
-                error!("Failed to stop multiplayer: already stopped");
+                info!("Failed to stop multiplayer: already stopped");
                 return;
             }
 
