@@ -6,5 +6,5 @@ use bevy::prelude::*;
 pub(super) struct PendingConnection {
     pub address: SocketAddr,
     pub started: Instant,
-    pub timeout: Duration,
+    pub timeout: Option<Duration>,
 }

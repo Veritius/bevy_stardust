@@ -37,8 +37,8 @@ impl Plugin for UdpTransportPlugin {
         app.add_systems(PostUpdate, apply_manager_action_system);
         app.add_systems(TransportReadPackets, receive_packets_system
             .run_if(not(in_state(UdpTransportState::Offline))));
-        app.add_systems(TransportSendPackets, send_packets_system
-            .run_if(not(in_state(UdpTransportState::Offline))));
+        // app.add_systems(TransportSendPackets, send_packets_system
+        //     .run_if(not(in_state(UdpTransportState::Offline))));
     }
 }
 
@@ -46,9 +46,9 @@ impl Plugin for UdpTransportPlugin {
 /// Under no circumstances should you mutate this. Instead, use the [UdpConnectionManager] systemparam.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash, Reflect, States)]
 pub enum UdpTransportState {
-    /// Nothing going on.
+    /// Nothing going on. No ports are bound.
     #[default]
     Offline,
-    /// Bou
+    /// Ports are bound and there may be running connections.
     Active,
 }

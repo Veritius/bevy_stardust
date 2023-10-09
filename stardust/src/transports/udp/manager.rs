@@ -1,13 +1,17 @@
-use std::net::{IpAddr, Ipv4Addr};
+use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+use std::time::{Duration, Instant};
 use bevy::prelude::*;
 use bevy::ecs::system::SystemParam;
 use super::UdpTransportState;
+use super::pending::PendingConnection;
 use super::ports::PortBindings;
 
 /// Manages the UDP transport layer.
 #[derive(SystemParam)]
 pub struct UdpConnectionManager<'w, 's> {
     commands: Commands<'w, 's>,
+    state: Res<'w, State<UdpTransportState>>,
+    ports: Option<ResMut<'w, PortBindings>>,
 }
 
 impl<'w, 's> UdpConnectionManager<'w, 's> {
@@ -38,9 +42,28 @@ impl<'w, 's> UdpConnectionManager<'w, 's> {
         todo!()
     }
 
-    /// Tries to connect to a remote peer.
-    pub fn connect_to_remote(&mut self) {
-        todo!()
+    /// Try to connect to a remote peer.
+    /// 
+    /// `address` is the address that will be used to start the connection. The actual address used during an active connection may change.
+    /// `timeout` is how long the transport layer will try to establish a connection before giving up. If `None` it will never stop trying.
+    pub fn connect_to_remote(&mut self, address: SocketAddr, timeout: Option<Duration>) {
+        // Check the state and warn if incorrect
+        if *self.state.get() == UdpTransportState::Offline {
+            warn!("Couldn't connect to remote server: transport layer is offline");
+            return;
+        }
+
+        // Create entity to store connection attempt
+        let pending = self.commands.spawn((
+            PendingConnection {
+                address,
+                started: Instant::now(),
+                timeout,
+            },
+        )).id();
+
+        // If the state isn't Offline then this resource exists, so we can do this
+        self.ports.as_mut().unwrap().add_client(pending);
     }
 }
 
