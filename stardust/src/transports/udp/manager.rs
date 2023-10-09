@@ -42,21 +42,15 @@ impl<'w, 's> UdpConnectionManager<'w, 's> {
         self.commands.insert_resource(ManagerAction::StartClient { remote });
     }
 
-    /// Stop the client, informing the remote server if one is present, and return to standby.
-    /// If there is nothing to disconnect from, this function will do nothing.
-    pub fn stop_client(&mut self) {
-        self.commands.insert_resource(ManagerAction::StopClient);
-    }
-
     /// Start listening for connections as a server.
     pub fn start_server(&mut self) {
         self.commands.insert_resource(ManagerAction::StartServer);
     }
 
-    /// Stop the server, informing clients of the disconnection, and return to standby.
-    /// If there is no server to stop, this function will do nothing.
-    pub fn stop_server(&mut self) {
-        self.commands.insert_resource(ManagerAction::StopServer);
+    /// Stop the server or client, informing peers of the disconnection, and return to standby.
+    /// If there is no connection to stop, this function will do nothing.
+    pub fn stop_connection(&mut self) {
+        self.commands.insert_resource(ManagerAction::StopConnection);
     }
 }
 
@@ -70,9 +64,8 @@ pub(super) enum ManagerAction {
     StartClient {
         remote: SocketAddr,
     },
-    StopClient,
     StartServer,
-    StopServer,
+    StopConnection,
 }
 
 pub(super) fn apply_manager_action_system(
@@ -88,7 +81,7 @@ pub(super) fn apply_manager_action_system(
         ManagerAction::StartMultiplayer { address, ports } => {
             // Check state
             if *state.get() != UdpTransportState::Offline {
-                info!("Failed to start multiplayer: already started");
+                info!("Didn't start multiplayer: already started");
                 return;
             }
 
@@ -109,7 +102,7 @@ pub(super) fn apply_manager_action_system(
         ManagerAction::StopMultiplayer => {
             // Check state
             if *state.get() == UdpTransportState::Offline {
-                info!("Failed to stop multiplayer: already stopped");
+                info!("Didn't stop multiplayer: already stopped");
                 return;
             }
 
@@ -118,8 +111,7 @@ pub(super) fn apply_manager_action_system(
             next_state.set(UdpTransportState::Offline);
         },
         ManagerAction::StartClient { remote } => todo!(),
-        ManagerAction::StopClient => todo!(),
         ManagerAction::StartServer => todo!(),
-        ManagerAction::StopServer => todo!(),
+        ManagerAction::StopConnection => todo!(),
     }
 }
