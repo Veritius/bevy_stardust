@@ -1,15 +1,17 @@
-use anyhow::{Result, bail, Context};
+use std::marker::PhantomData;
 use std::net::{SocketAddr, IpAddr, Ipv4Addr};
 use bevy::prelude::*;
-use bevy::ecs::system::SystemParam;
-use super::{StateChangeBlocker, UdpTransportState, ports::PortBindings};
+use bevy::ecs::system::{SystemParam, SystemBuffer};
+
+use super::UdpTransportState;
+use super::ports::PortBindings;
 
 /// Manages the UDP transport layer.
+/// 
+/// Actions applied with this systemparam are deferred, and applied at `PostUpdate`.
+/// When multiple actions are applied in different systems, the result will be whatever is processed last, ie non-deterministic.
 #[derive(SystemParam)]
 pub struct UdpConnectionManager<'w, 's> {
-    state: Res<'w, State<UdpTransportState>>,
-    blocker: ResMut<'w, StateChangeBlocker>,
-    next_state: ResMut<'w, NextState<UdpTransportState>>,
     commands: Commands<'w, 's>,
 }
 
@@ -24,88 +26,70 @@ impl<'w, 's> UdpConnectionManager<'w, 's> {
     /// `ports` is the set of ports that will be used for connection purposes. There must be at least one value passed.
     /// More values will improve parallelism, to a point. In almost all cases, the amount of values passed should be at most the amount of logical cores on the system.
     /// Additionally, if acting as a client, it's best to allocate only one port.
-    pub fn start_multiplayer(&mut self, address: Option<IpAddr>, ports: &[u16]) -> Result<()> {
-        // Check we're in the right state to do this
-        if *self.state.get() != UdpTransportState::Offline {
-            bail!("can only start multiplayer when offline");
-        }
+    pub fn start_multiplayer(&mut self, address: Option<IpAddr>, ports: &[u16]) {
+        let address = if address.is_some() { address.unwrap() } else { IpAddr::V4(Ipv4Addr::UNSPECIFIED) };
+        let ports = ports.iter().map(|f| f.clone()).collect::<Vec<_>>();
+        self.commands.insert_resource(ManagerAction::StartMultiplayer { address, ports });
+    }
 
-        // Check if we're blocked by something
-        if self.blocker.blocked() { bail!("blocked: {}", *self.blocker); }
-
-        // Check ports slice length
-        if ports.len() == 0 { bail!("ports slice must have at least 1 item"); }
-
-        // Bind ports
-        let ip_addr = if address.is_none() { IpAddr::V4(Ipv4Addr::UNSPECIFIED) } else { address.unwrap() };
-        let bindings = PortBindings::new(ip_addr, ports);
-        if bindings.is_err() { bail!("failed to bind ports: {}", bindings.unwrap_err()); }
-        self.commands.insert_resource(bindings.unwrap());
-
-        // All good
-        self.next_state.set(UdpTransportState::Standby);
-        return Ok(())
+    /// Closes active connections and disconnects from any bound ports.
+    pub fn stop_multiplayer(&mut self) {
+        self.commands.insert_resource(ManagerAction::StopMultiplayer);
     }
 
     /// Try to connect to `remote` as a client.
-    pub fn start_client(&mut self, remote: SocketAddr) -> Result<()> {
-        // Check we're in the right state to do this
-        if *self.state.get() != UdpTransportState::Standby {
-            bail!("can only start a client when in standby");
-        }
-
-        // Check if we're blocked by something
-        if self.blocker.blocked() { bail!("blocked: {}", *self.blocker); }
-
-        // Mark as blocked
-        *self.blocker = StateChangeBlocker::StartingClient;
-
-        // All good
-        return Ok(())
+    pub fn start_client(&mut self, remote: SocketAddr) {
+        self.commands.insert_resource(ManagerAction::StartClient { remote });
     }
 
     /// Stop the client, informing the remote server if one is present, and return to standby.
     /// If there is nothing to disconnect from, this function will do nothing.
-    pub fn client_disconnect(&mut self) {
-        // Check we're in the right conditions to do this
-        if *self.state.get() != UdpTransportState::Client { return; }
-        if self.blocker.blocked() { return; }
-
-        // Mark as blocked
-        *self.blocker = StateChangeBlocker::StoppingClient;
+    pub fn stop_client(&mut self) {
+        self.commands.insert_resource(ManagerAction::StopClient);
     }
 
     /// Start listening for connections as a server.
-    pub fn start_server(&mut self) -> Result<()> {
-        // Check we're in the right state to do this
-        if *self.state.get() != UdpTransportState::Standby {
-            bail!("can only start a server when in standby");
-        }
-
-        // Check if we're blocked by something
-        if self.blocker.blocked() { bail!("blocked: {}", *self.blocker); }
-
-        // Mark as blocked
-        *self.blocker = StateChangeBlocker::StartingServer;
-
-        // All good
-        self.next_state.set(UdpTransportState::Server);
-        return Ok(())
+    pub fn start_server(&mut self) {
+        self.commands.insert_resource(ManagerAction::StartServer);
     }
 
     /// Stop the server, informing clients of the disconnection, and return to standby.
     /// If there is no server to stop, this function will do nothing.
     pub fn stop_server(&mut self) {
-        // Check we're in the right conditions to do this
-        if *self.state.get() != UdpTransportState::Server { return; }
-        if self.blocker.blocked() { return; }
+        self.commands.insert_resource(ManagerAction::StopServer);
+    }
+}
 
-        // Mark as blocked
-        *self.blocker = StateChangeBlocker::StoppingServer;
+#[derive(Debug, Clone, Resource)]
+pub(super) enum ManagerAction {
+    StartMultiplayer {
+        address: IpAddr,
+        ports: Vec<u16>,
+    },
+    StopMultiplayer,
+    StartClient {
+        remote: SocketAddr,
+    },
+    StopClient,
+    StartServer,
+    StopServer,
+}
+
+pub(super) fn apply_manager_action_system(
+    mut commands: Commands,
+    state: Res<State<UdpTransportState>>,
+    action: Option<Res<ManagerAction>>,
+) {
+    if action.is_none() { return; }
+    
+    match action.unwrap().clone() {
+        ManagerAction::StartMultiplayer { address, ports } => todo!(),
+        ManagerAction::StopMultiplayer => todo!(),
+        ManagerAction::StartClient { remote } => todo!(),
+        ManagerAction::StopClient => todo!(),
+        ManagerAction::StartServer => todo!(),
+        ManagerAction::StopServer => todo!(),
     }
 
-    /// Closes active connections and disconnects from any bound ports.
-    pub fn stop_multiplayer(&mut self) {
-        todo!()
-    }
+    commands.remove_resource::<ManagerAction>();
 }

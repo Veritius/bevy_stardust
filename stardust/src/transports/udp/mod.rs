@@ -29,8 +29,8 @@ impl Plugin for UdpTransportPlugin {
         // Add states
         app.add_state::<UdpTransportState>();
 
-        // Add resources
-        app.insert_resource(StateChangeBlocker::Nothing);
+        // Add systems
+        app.add_systems(PostUpdate, apply_manager_action_system);
     }
 }
 
@@ -47,31 +47,4 @@ pub enum UdpTransportState {
     Client,
     /// Running as a server and listening for connections.
     Server,
-}
-
-#[derive(Debug, Resource, PartialEq, Eq)]
-enum StateChangeBlocker {
-    Nothing,
-    StartingClient,
-    StartingServer,
-    StoppingClient,
-    StoppingServer,
-}
-
-impl StateChangeBlocker {
-    pub fn blocked(&self) -> bool {
-        *self != Self::Nothing
-    }
-}
-
-impl std::fmt::Display for StateChangeBlocker {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            StateChangeBlocker::Nothing => f.write_str("nothing"),
-            StateChangeBlocker::StartingClient => f.write_str("client starting"),
-            StateChangeBlocker::StartingServer => f.write_str("server starting"),
-            StateChangeBlocker::StoppingClient => f.write_str("client stopping"),
-            StateChangeBlocker::StoppingServer => f.write_str("server stopping"),
-        }
-    }
 }
