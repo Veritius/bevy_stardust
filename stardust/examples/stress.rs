@@ -36,10 +36,7 @@ fn apply_shared_data(app: &mut App) {
     app.add_plugins(MinimalPlugins);
 
     // Add Stardust plugins
-    app.add_plugins(StardustPlugin {
-        version: Version::new(0, 0, 0),
-        allows: VersionReq::STAR,
-    });
+    app.add_plugins(StardustPlugin);
 
     // Register channels
     app.register_channel::<UnorderedUnreliableChannel>(());

@@ -16,7 +16,9 @@ use self::{receiving::*, sending::*};
 pub use manager::*;
 
 static TRANSPORT_LAYER_VERSION: Lazy<Version> = Lazy::new(|| "0.2.0".parse::<Version>().unwrap());
-static TRANSPORT_LAYER_REQUIRE: Lazy<VersionReq> = Lazy::new(|| "=0.2.0".parse::<VersionReq>().unwrap());
+static TRANSPORT_LAYER_REQUIRE: Lazy<VersionReq> = Lazy::new(|| TRANSPORT_LAYER_REQUIRE_STR.parse::<VersionReq>().unwrap());
+static TRANSPORT_LAYER_REQUIRE_STR: &str = "=0.2.0";
+
 const PACKET_HEADER_SIZE: usize = 5;
 const PACKET_MAX_BYTES: usize = 1472;
 
@@ -31,6 +33,10 @@ impl Plugin for UdpTransportPlugin {
 
         // Add systems
         app.add_systems(PostUpdate, apply_manager_action_system);
+        app.add_systems(TransportReadPackets, receive_packets_system
+            .run_if(not(in_state(UdpTransportState::Offline))));
+        // app.add_systems(TransportSendPackets, send_packets_system
+        //     .run_if(not(in_state(UdpTransportState::Offline))));
     }
 }
 

@@ -11,12 +11,8 @@ use crate::channels::registry::ChannelRegistry;
 use crate::channels::systems::*;
 
 /// The Stardust multiplayer plugin.
-pub struct StardustPlugin {
-    /// The version of your game. Used to prevent older/newer clients from joining.
-    pub version: Version,
-    /// The versions of the game this app can connect to.
-    pub allows: VersionReq,
-}
+/// Adds the core functionality of Stardust, but does not add a transport layer.
+pub struct StardustPlugin;
 
 impl Plugin for StardustPlugin {
     fn build(&self, app: &mut App) {

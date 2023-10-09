@@ -10,7 +10,6 @@ The client initiates a connection by sending a 'join request' packet to the serv
     // From the client
     "request": "join", // "I'd like to join the game"
     "layer_version": "0.2.0", // "I'm using UDP transport layer 0.2.0"
-    "game_version": "0.1.0", // "My game is version 0.1.0"
     "pid": "42B2EC801C40258A", // "My protocol id is X"
 }
 ```
@@ -37,11 +36,8 @@ The server, if it accepts the client, informs the client of its acceptance and i
 // Server is full
 { "response": "player_cap_reached" }
 
-// The client's game is outdated
-{ "response": "wrong_game_version", "requires": "=0.1.0" }
-
 // The client's transport layer is outdated
-{ "response": "wrong_transport_version" }
+{ "response": "wrong_transport_version", "requires": "=0.2.0" }
 
 // The client's unique hash value doesn't match the server
 { "response": "wrong_pid", "srv_pid": "42B2EC801C40258A" }

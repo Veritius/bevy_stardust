@@ -44,6 +44,14 @@ impl PortBindings {
             .map(|(port, bound)| (*port, &bound.socket, bound.clients.as_slice()))
     }
 
+    /// Returns a bound port by its port number.
+    pub fn port(&self, port: u16) -> Option<(&UdpSocket, &[Entity])> {
+        let socket = self.sockets.get(&port);
+        if socket.is_none() { return None; }
+        let socket = socket.unwrap();
+        Some((&socket.socket, &socket.clients))
+    }
+
     /// Associates a client with a bound socket, then returns the port.
     pub fn add_client(&mut self, client: Entity) -> u16 {
         // Find the first smallest vec
