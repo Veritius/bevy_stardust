@@ -13,7 +13,7 @@ use super::ports::PortBindings;
 /// Sends octet strings using a taskpool strategy.
 pub(super) fn send_packets_system(
     registry: Res<ChannelRegistry>,
-    channels: Query<(&ChannelData, Option<&DirectionalChannel>, Option<&ReliableChannel>, Option<&OrderedChannel>, Option<&FragmentedChannel>)>,
+    channels: Query<(&ChannelData, Option<&ReliableChannel>, Option<&OrderedChannel>, Option<&FragmentedChannel>)>,
     mut peers: Query<(Entity, &mut EstablishedUdpPeer), With<NetworkPeer>>,
     ports: Option<Res<PortBindings>>,
     outgoing: OutgoingOctetStringsAccessor,
@@ -39,7 +39,7 @@ pub(super) fn send_packets_system(
         .map(|v| {
             let ent = registry.get_from_id(v).unwrap();
             let q = channels.get(ent).unwrap();
-            (v, (q.0, q.1, q.2.is_some(), q.3.is_some(), q.4.is_some()))
+            (v, (q.0, q.1.is_some(), q.2.is_some(), q.3.is_some()))
         })
         .collect::<BTreeMap<_, _>>();
 
@@ -71,16 +71,10 @@ pub(super) fn send_packets_system(
 
                     for channel in outgoing.by_channel() {
                         let channel_id = channel.id();
-                        let (channel_data, direction, _ordered, _reliable, _fragmented) = channels.get(&channel_id).unwrap();
+                        let (channel_data, _ordered, _reliable, _fragmented) = channels.get(&channel_id).unwrap();
 
                         // Shift the channel ID by 1
                         let channel_shf_id = (channel_id.0 + 1.into()).unwrap();
-
-                        // Check channel direction
-                        if direction.is_some_and(|v| *v == DirectionalChannel::ClientToServer) {
-                            panic!("Tried to send a message on client to server channel: {}", channel_data.type_path());
-                            // TODO: Maybe write an error to the console?
-                        }
 
                         // Iterate all octet strings
                         for (target, octets) in channel.strings().read() {

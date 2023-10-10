@@ -29,15 +29,6 @@ impl ChannelData {
     }
 }
 
-/// Marks this channel as directional.
-#[derive(Debug, Component, Hash, Reflect, Clone, Copy, PartialEq, Eq)]
-pub enum DirectionalChannel {
-    /// Only the server can send messages on this channel.
-    ServerToClient,
-    /// Only a client can send a message on this channel.
-    ClientToServer,
-}
-
 /// Marks this channel as ordered - messages sent in this channel will arrive in the exact order they are sent. Messages may not arrive, use [ReliableChannel] to ensure they do.
 #[derive(Component, Default, Hash, Reflect, Clone, Copy)]
 pub struct OrderedChannel;

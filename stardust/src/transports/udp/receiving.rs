@@ -22,7 +22,7 @@ pub(super) fn receive_packets_system(
     mut active_peers: Query<(Entity, &NetworkPeer, &mut EstablishedUdpPeer, &mut IncomingNetworkMessages)>,
     pending_peers: Query<(Entity, &PendingConnection)>,
     registry: Res<ChannelRegistry>,
-    channels: Query<(Option<&DirectionalChannel>, Option<&OrderedChannel>, Option<&ReliableChannel>, Option<&FragmentedChannel>)>,
+    channels: Query<(Option<&OrderedChannel>, Option<&ReliableChannel>, Option<&FragmentedChannel>)>,
     ports: Res<PortBindings>,
     hash: Res<UniqueNetworkHash>,
 ) {
@@ -61,7 +61,7 @@ pub(super) fn receive_packets_system(
         .map(|v| {
             let ent = registry.get_from_id(v).unwrap();
             let q = channels.get(ent).unwrap();
-            (v, (q.0, q.1.is_some(), q.2.is_some(), q.3.is_some()))
+            (v, (q.0.is_some(), q.1.is_some(), q.2.is_some()))
         })
         .collect::<BTreeMap<ChannelId, _>>();
 
