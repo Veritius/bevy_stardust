@@ -1,5 +1,8 @@
 //! Transport layer that operates over native UDP sockets.
 
+#[cfg(target_arch = "wasm32")]
+compile_error!("The UDP transport layer does not support wasm.");
+
 mod manager;
 mod peer;
 mod ports;
@@ -52,6 +55,3 @@ pub enum UdpTransportState {
     /// Ports are bound and there may be running connections.
     Active,
 }
-
-#[cfg(all(target_arch = "wasm32", feature="udp"))]
-compile_error!("The UDP transport layer does not support wasm.");
