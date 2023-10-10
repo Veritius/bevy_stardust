@@ -25,7 +25,8 @@ pub(super) fn receive_packets_system(
     ports: Res<PortBindings>,
     hash: Res<UniqueNetworkHash>,
 ) {
-    let mut taskpool = TaskPoolBuilder::default()
+    // Create task pool for parallel accesses
+    let taskpool = TaskPoolBuilder::default()
         .thread_name("UDP pkt receive".to_string())
         .build();
 
@@ -33,6 +34,7 @@ pub(super) fn receive_packets_system(
     let new_clients: Mutex<Vec<(u16, SocketAddr)>> = Mutex::new(Vec::new());
 
     // Place query data into map of mutexes to allow mutation by multiple threads
+    // This doesn't block since each key-value pair will only be accessed by one thread each.
     let mut query_mutex_map = BTreeMap::new();
     for (id, client, udp, incoming) in active_peers.iter_mut() {
         query_mutex_map.insert(id, Mutex::new((client, udp, incoming)));
@@ -57,7 +59,7 @@ pub(super) fn receive_packets_system(
 
     // Process incoming packets
     taskpool.scope(|s| {
-        for (port, socket, socket_peers) in ports.iter() {
+        for (_, socket, socket_peers) in ports.iter() {
             // Spawn task
             s.spawn(async move {
                 // Allocate a buffer for storing incoming data
@@ -78,7 +80,53 @@ pub(super) fn receive_packets_system(
                 let address_map = locks.iter()
                     .map(|(entity, guard)| (guard.1.address, **entity))
                     .collect::<BTreeMap<_, _>>();
+
+                // Read all packets from the socket
+                let mut buffer = [0u8; PACKET_MAX_BYTES];
+                loop {
+                    // Read a packet
+                    let (octets, origin) = match socket.recv_from(&mut buffer) {
+                        Ok(n) => n,
+                        Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock => {
+                            // No more data to read
+                            break
+                        }
+                        Err(e) => {
+                            // Something went wrong
+                            error!("IO error while reading UDP socket {:?}: {}", socket.local_addr().unwrap(), e);
+                            continue
+                        },
+                    };
+
+                    // Check packet size
+                    // If it's less than 4 bytes it isn't worth processing
+                    if octets <= 3 { continue; }
+
+                    // Start processing the message
+                    match &buffer[0..2] == &[0; 3] {
+                        // Zero packet - someone's trying to join
+                        true => process_zero_packet(
+
+                        ),
+                        // Normal packet - probably from existing peer
+                        false => process_game_packet(
+
+                        ),
+                    }
+                }
             });
         }
     });
+}
+
+fn process_zero_packet(
+
+) {
+
+}
+
+fn process_game_packet(
+
+) {
+
 }
