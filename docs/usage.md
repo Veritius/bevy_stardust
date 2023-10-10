@@ -6,7 +6,6 @@ An 'octet string' is essentially an `Arc<Vec<u8>>`. It's an arbitrarily long ser
 
 Octet strings can be cloned cheaply, and kept around until no longer needed - due to using an `Arc`, you just drop the reference and it's freed from memory, assuming there's no other references.
 
-
 ## Layers
 Stardust divides networking into three layers:
 
@@ -33,6 +32,10 @@ Stardust operates using Bevy schedules, in this cycle.
 >    1. TransportSendPackets
 
 First, in `PreUpdate`, the `TransportReadPackets` schedule is run. This is where transport layers process incoming data and write octet strings for reading by your systems.
+
+`ReadOctetStrings` is where most systems that read octet strings should be placed. Since they run in `PreUpdate`, you can mutate the world before any other game systems are run, preventing system order related issues with plugins that aren't aware of Stardust. You can still read octet strings in `Update`, but be aware of potential issues.
+
+`TransportSendPackets` is just where transport layers send any octet strings you've written. After this, buffers are cleared. Messages do not persist across ticks, unless you or the transport layer clone the octet string.
 
 ## Channels
 **TODO**
