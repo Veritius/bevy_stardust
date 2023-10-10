@@ -33,3 +33,31 @@ In the case of B accepting A, they will send this JSON message.
 }
 ```
 The `port` field is the new port value that will be used to connect to the peer. When A receives this, they will store their IP and this new port value to communicate with them.
+
+If A sends a packet that:
+- is too small to be usable
+- has invalid Unicode data
+- is not a valid JSON table
+- the `transport` field can't be parsed
+- has no `request` field
+- has other unexpected JSON data
+
+it will discard the packet without informing A.
+
+***
+
+Alternatively, if B rejects A, they will send this:
+```jsonc
+{
+    "response": "denied",
+    "reason": "xyz"
+}
+```
+
+`reason` has many possible values, listed below. More may be added in future.
+- `unspecified` - No reason given towards the denial.
+- `transport` - B doesn't support A's transport layer.
+    - Has an extra field, `version`, containing the accepted versions.
+- `protocol` - A's and B's protocol values differ.
+    - Has an extra field, `requires`, containing B's protocol value.
+- `closed` - B is closed to new connections.

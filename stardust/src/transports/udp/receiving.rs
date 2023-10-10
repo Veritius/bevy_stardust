@@ -4,6 +4,7 @@ use std::{collections::BTreeMap, sync::Mutex};
 use bevy::prelude::*;
 use bevy::tasks::TaskPoolBuilder;
 use json::{JsonValue, object};
+use once_cell::sync::Lazy;
 use semver::Version;
 use crate::channels::incoming::IncomingNetworkMessages;
 use crate::prelude::*;
@@ -106,13 +107,18 @@ pub(super) fn receive_packets_system(
                     match &buffer[0..2] == &[0; 3] {
                         // Zero packet - someone's trying to join
                         true => process_zero_packet(
-
+                            &buffer,
+                            octets,
+                            socket,
+                            origin,
+                            hash.hex(),
                         ),
                         // Normal packet - probably from existing peer
                         false => process_game_packet(
-
+                            &buffer,
+                            octets,
                         ),
-                    }
+                    };
                 }
             });
         }
@@ -120,13 +126,117 @@ pub(super) fn receive_packets_system(
 }
 
 fn process_zero_packet(
+    buffer: &[u8; PACKET_MAX_BYTES],
+    octets: usize,
+    socket: &UdpSocket,
+    address: SocketAddr,
+    protocol: &str,
+)  -> ZeroPacketResult {
+    // Since this string remains constant across runtime, we initialise it once using a Lazy
+    // This saves us having to allocate a String every time we want to tell the remote peer one of these things
+    static TRANSPORT_LAYER_DENIED_PREPROC: Lazy<String> = Lazy::new(|| {
+        object! {
+            "response": "denied",
+            "reason": "transport",
+            "version": format!("udp-({TRANSPORT_LAYER_REQUIRE_STR})"),
+        }.dump()
+    });
 
-) {
+    // Turn data into a JSON table
+    // Will simply discard the packet if any of this fails
+    let string = std::str::from_utf8(&buffer[3..octets]);
+    let string = if string.is_err() { return ZeroPacketResult::Discarded } else { string.unwrap() };
+    let json = json::parse(string);
+    let json = if json.is_err() { return ZeroPacketResult::Discarded } else { json.unwrap() };
 
+    // Check transport version
+    let transport = match &json["transport"] {
+        JsonValue::Short(val) => val.as_str(),
+        JsonValue::String(val) => val.as_str(),
+        _ => { return ZeroPacketResult::Discarded }
+    };
+
+    let mut split = transport.split('-');
+    match split.next() {
+        Some(val) => {
+            if val != "udp" { return ZeroPacketResult::Discarded }
+        },
+        None => { return ZeroPacketResult::Discarded },
+    }
+    match split.next() {
+        Some(val) => {
+            // Check their version
+            let version = val.parse::<Version>();
+            let version = if version.is_err() { return ZeroPacketResult::Discarded } else { version.unwrap() };
+            if !TRANSPORT_LAYER_REQUIRE.matches(&version) {
+                // Inform the remote peer of their incorrect version
+                let result = socket.send_to(TRANSPORT_LAYER_DENIED_PREPROC.as_bytes(), address);
+                if result.is_err() { error!("Error while sending a packet: {}", result.unwrap_err()); }
+                return ZeroPacketResult::Discarded
+            }
+        },
+        None => { return ZeroPacketResult::Discarded }
+    }
+
+    // Check request type
+    let request = match &json["request"] {
+        JsonValue::Short(val) => val.as_str(),
+        JsonValue::String(val) => val.as_str(),
+        _ => { return ZeroPacketResult::Discarded }
+    };
+
+    return match request {
+        "join" => {
+            match process_zero_packet_join(
+                &json,
+                &socket,
+                address,
+                protocol,
+            ) {
+                true => ZeroPacketResult::NewConnection,
+                false => ZeroPacketResult::Discarded,
+            }
+        },
+        _ => ZeroPacketResult::Discarded,
+    }
+}
+
+fn process_zero_packet_join(
+    json: &JsonValue,
+    socket: &UdpSocket,
+    address: SocketAddr,
+    protocol: &str,
+) -> bool {
+    let other_protocol = match &json["protocol"] {
+        JsonValue::Short(val) => val.as_str(),
+        JsonValue::String(val) => val.as_str(),
+        _ => { return false }
+    };
+
+    if other_protocol != protocol {
+        // Inform remote peer their transport value is incorrect
+        let response = object! {
+            "response": "denied",
+            "reason": "transport",
+            "requires": protocol,
+        }.dump();
+        let result = socket.send_to(response.as_bytes(), address);
+        if result.is_err() { error!("Error while sending a packet: {}", result.unwrap_err()); }
+        return false
+    }
+
+    true
+}
+
+/// The outcome of receiving a zero packet.
+enum ZeroPacketResult {
+    Discarded,
+    NewConnection,
 }
 
 fn process_game_packet(
-
-) {
-
+    buffer: &[u8; PACKET_MAX_BYTES],
+    octets: usize,
+) -> ZeroPacketResult {
+    todo!()
 }
