@@ -106,14 +106,21 @@ pub(super) fn receive_packets_system(
                     // Start processing the message
                     match &buffer[0..2] == &[0; 3] {
                         // Zero packet - someone's trying to join
-                        true => process_zero_packet(
-                            &buffer,
-                            octets,
-                            socket,
-                            origin,
-                            hash.hex(),
-                            true, // TODO: allow this to be changed
-                        ),
+                        true => {
+                            match process_zero_packet(
+                                &buffer,
+                                octets,
+                                socket,
+                                origin,
+                                hash.hex(),
+                                true, // TODO: allow this to be changed
+                            ) {
+                                ZeroPacketResult::Discarded => { continue; },
+                                ZeroPacketResult::NewConnection => {
+                                    todo!()
+                                },
+                            }
+                        },
                         // Normal packet - probably from existing peer
                         false => process_game_packet(
                             &buffer,
@@ -258,6 +265,6 @@ enum ZeroPacketResult {
 fn process_game_packet(
     buffer: &[u8; PACKET_MAX_BYTES],
     octets: usize,
-) -> ZeroPacketResult {
+) {
     todo!()
 }
