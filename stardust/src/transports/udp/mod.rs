@@ -15,9 +15,10 @@ use once_cell::sync::Lazy;
 use semver::{Version, VersionReq};
 use crate::{prelude::*, scheduling::*};
 use self::{receiving::*, sending::*};
+use manager::apply_manager_action_system;
 
 // Expose manager
-pub use manager::*;
+pub use manager::UdpConnectionManager;
 
 static TRANSPORT_LAYER_VERSION: Lazy<Version> = Lazy::new(|| TRANSPORT_LAYER_VERSION_STR.parse::<Version>().unwrap());
 static TRANSPORT_LAYER_VERSION_STR: &str = "0.2.0";
