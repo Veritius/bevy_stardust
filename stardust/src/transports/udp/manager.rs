@@ -33,7 +33,8 @@ impl<'w, 's> UdpConnectionManager<'w, 's> {
 
     /// Inform all peers of shutdown and disconnect all ports.
     pub fn shutdown(&mut self) {
-        self.commands.insert_resource(ManagerAction::Shutdown);
+        // self.commands.insert_resource(ManagerAction::Shutdown);
+        todo!()
     }
 
     /// Enables listening for new remote connections.
