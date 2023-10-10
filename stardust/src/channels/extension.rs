@@ -3,9 +3,17 @@
 use std::any::TypeId;
 use bevy::prelude::*;
 use crate::{channels::outgoing::*, protocol::NetworkHashAppExt};
+use self::private::Sealed;
 use super::{id::Channel, config::ChannelData, registry::ChannelRegistry};
 
-pub trait ChannelSetupAppExt {
+// Make it impossible to implement ChannelSetupAppExt
+mod private {
+    pub trait Sealed {}
+    impl Sealed for bevy::prelude::App {}
+}
+
+/// Adds channel-related functions to the `App`. Can't be implemented.
+pub trait ChannelSetupAppExt: Sealed {
     /// Registers a channel with type `T` and the config and components given.
     fn register_channel<T: Channel>(&mut self, components: impl Bundle + std::hash::Hash);
 }
