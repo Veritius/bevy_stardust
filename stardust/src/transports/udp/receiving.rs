@@ -31,8 +31,22 @@ pub(super) fn receive_packets_system(
         .thread_name("UDP pkt receive".to_string())
         .build();
 
-    // Storage for adding new clients
-    let new_clients: Mutex<Vec<(u16, SocketAddr)>> = Mutex::new(Vec::new());
+    // Storage for adding newly accepted peers
+    let newly_accepted_peers: Mutex<Vec<(u16, SocketAddr)>> = Mutex::new(Vec::new());
+    let newly_accepted_by: Mutex<Vec<(Entity, u16)>> = Mutex::new(Vec::new());
+
+    // Store entity IDs of all active peers
+    let mut all_active_peers = active_peers
+        .iter()
+        .map(|f| f.0)
+        .collect::<Vec<_>>();
+    all_active_peers.sort_unstable();
+
+    // Store waiting attempts so the query isn't moved
+    let pending_peers = pending_peers
+        .iter()
+        .map(|(a, b)| (b.address.clone(), a))
+        .collect::<Vec<_>>();
 
     // Place query data into map of mutexes to allow mutation by multiple threads
     // This doesn't block since each key-value pair will only be accessed by one thread each.
@@ -52,7 +66,10 @@ pub(super) fn receive_packets_system(
         .collect::<BTreeMap<ChannelId, _>>();
 
     // Explicit borrows to prevent moves
-    let new_clients = &new_clients;
+    let all_active_peers = &all_active_peers;
+    let pending_peers = &pending_peers;
+    let newly_accepted_peers = &newly_accepted_peers;
+    let newly_accepted_by = &newly_accepted_by;
     let query_mutex_map = &query_mutex_map;
     let channel_map = &channel_map;
     let registry = &registry;
@@ -60,13 +77,15 @@ pub(super) fn receive_packets_system(
 
     // Process incoming packets
     taskpool.scope(|s| {
-        for (_, socket, socket_peers) in ports.iter() {
+        for (port, socket, socket_peers) in ports.iter() {
             // Spawn task
             s.spawn(async move {
                 // Allocate a buffer for storing incoming data
                 let mut buffer = [0u8; PACKET_MAX_BYTES];
 
                 // Lock mutexes for our port-associated clients
+                // This never blocks since each client is only accessed by one task at a time
+                // but it still lets us mutate the client's components
                 let mut locks = query_mutex_map.iter()
                     .filter(|(k,_)| socket_peers.contains(k))
                     .map(|(k,v)| (k, v.lock().unwrap()))
@@ -78,8 +97,10 @@ pub(super) fn receive_packets_system(
                     .collect::<Vec<_>>();
 
                 // Map addresses to entity IDs
+                // TODO: This allocates a lot, test perf without this
                 let address_map = locks.iter()
                     .map(|(entity, guard)| (guard.1.address, **entity))
+                    .chain(pending_peers.iter().cloned())
                     .collect::<BTreeMap<_, _>>();
 
                 // Read all packets from the socket
@@ -104,69 +125,132 @@ pub(super) fn receive_packets_system(
                     if octets <= 3 { continue; }
 
                     // Start processing the message
-                    match &buffer[0..2] == &[0; 3] {
-                        // Zero packet - someone's trying to join
-                        true => {
-                            match process_zero_packet(
+                    match (address_map.get(&origin), &buffer[0..2] == &[0; 3]) {
+                        // Known peer on non-zero channel, probably existing peer
+                        (Some(entity), false) => {
+                            // Ensure this peer is fully connected
+                            if all_active_peers.binary_search(entity).is_err() { continue; }
+                            process_game_packet(&buffer, octets)
+                        },
+
+                        // Known peer on zero channel, possibly a pending peer
+                        (Some(entity), true) => {
+                            // Ensure this peer is a pending peer
+                            if pending_peers.iter().find(|(_, b)| *b == *entity).is_none() { continue; }
+                            match process_zero_packet_from_known(
+                                &buffer,
+                                octets
+                            ) {
+                                KnownZeroPacketResult::Discarded => {},
+                                KnownZeroPacketResult::Accepted(port) => {
+                                    // Accepted by remote peer
+                                    newly_accepted_by.lock().unwrap().push((*entity, port));
+                                },
+                                KnownZeroPacketResult::Rejected => {
+                                    todo!()
+                                }
+                            }
+                        },
+
+                        // Unknown peer on zero channel, probably trying to join us
+                        (None, true) => {
+                            match process_zero_packet_from_unknown(
                                 &buffer,
                                 octets,
                                 socket,
                                 origin,
                                 hash.hex(),
-                                true, // TODO: allow this to be changed
+                                true
                             ) {
-                                ZeroPacketResult::Discarded => { continue; },
-                                ZeroPacketResult::NewConnection => {
-                                    todo!()
-                                },
+                                UnknownZeroPacketResult::Discarded => {},
+                                UnknownZeroPacketResult::AcceptUnknownRemote => todo!(),
                             }
                         },
-                        // Normal packet - probably from existing peer
-                        false => process_game_packet(
-                            &buffer,
-                            octets,
-                        ),
-                    };
+
+                        // Unknown peer on non-zero channel
+                        _ => { continue; }
+                    }
                 }
             });
         }
     });
 }
 
-fn process_zero_packet(
+fn process_zero_packet_from_known(
+    buffer: &[u8; PACKET_MAX_BYTES],
+    octets: usize,
+) -> KnownZeroPacketResult {
+    // Turn data into a JSON table
+    // Will simply discard the packet if any of this fails
+    let string = std::str::from_utf8(&buffer[3..octets]);
+    let string = if string.is_err() { return KnownZeroPacketResult::Discarded } else { string.unwrap() };
+    let json = json::parse(string);
+    let json = if json.is_err() { return KnownZeroPacketResult::Discarded } else { json.unwrap() };
+
+    // Get the response from the known peer
+    let response = match &json["response"] {
+        JsonValue::Short(val) => val.as_str(),
+        JsonValue::String(val) => val.as_str(),
+        _ => { return KnownZeroPacketResult::Discarded },
+    };
+
+    match response {
+        "accepted" => {
+            match &json["response"] {
+                JsonValue::Number(num) => {
+                    let port = u16::try_from(*num);
+                    if port.is_err() { return KnownZeroPacketResult::Discarded }
+                    return KnownZeroPacketResult::Accepted(port.ok().unwrap())
+                },
+                _ => { return KnownZeroPacketResult::Discarded },
+            }
+        },
+        "denied" => todo!(),
+        _ => { return KnownZeroPacketResult::Discarded }
+    }
+}
+
+/// The outcome of receiving a zero packet from an unknown peer.
+enum KnownZeroPacketResult {
+    Discarded,
+    Accepted(u16),
+    Rejected,
+}
+
+fn process_zero_packet_from_unknown(
     buffer: &[u8; PACKET_MAX_BYTES],
     octets: usize,
     socket: &UdpSocket,
     address: SocketAddr,
     protocol: &str,
     allow_new: bool,
-)  -> ZeroPacketResult {
+)  -> UnknownZeroPacketResult {
     // Turn data into a JSON table
     // Will simply discard the packet if any of this fails
     let string = std::str::from_utf8(&buffer[3..octets]);
-    let string = if string.is_err() { return ZeroPacketResult::Discarded } else { string.unwrap() };
+    let string = if string.is_err() { return UnknownZeroPacketResult::Discarded } else { string.unwrap() };
     let json = json::parse(string);
-    let json = if json.is_err() { return ZeroPacketResult::Discarded } else { json.unwrap() };
+    let json = if json.is_err() { return UnknownZeroPacketResult::Discarded } else { json.unwrap() };
 
     // Check transport version
     let transport = match &json["transport"] {
         JsonValue::Short(val) => val.as_str(),
         JsonValue::String(val) => val.as_str(),
-        _ => { return ZeroPacketResult::Discarded }
+        _ => { return UnknownZeroPacketResult::Discarded }
     };
 
     let mut split = transport.split('-');
     match split.next() {
         Some(val) => {
-            if val != "udp" { return ZeroPacketResult::Discarded }
+            if val != "udp" { return UnknownZeroPacketResult::Discarded }
         },
-        None => { return ZeroPacketResult::Discarded },
+        None => { return UnknownZeroPacketResult::Discarded },
     }
     match split.next() {
         Some(val) => {
             // Check their version
             let version = val.parse::<Version>();
-            let version = if version.is_err() { return ZeroPacketResult::Discarded } else { version.unwrap() };
+            let version = if version.is_err() { return UnknownZeroPacketResult::Discarded } else { version.unwrap() };
             if !TRANSPORT_LAYER_REQUIRE.matches(&version) {
                 // Inform the remote peer of their incorrect version
                 // Can't do the same thing as CLOSED_DENIED_PREPROC because if there were
@@ -178,37 +262,37 @@ fn process_zero_packet(
                     "version": format!("udp-({TRANSPORT_LAYER_REQUIRE_STR})"),
                 }.dump().as_bytes(), address);
                 if result.is_err() { error!("Error while sending a packet: {}", result.unwrap_err()); }
-                return ZeroPacketResult::Discarded
+                return UnknownZeroPacketResult::Discarded
             }
         },
-        None => { return ZeroPacketResult::Discarded }
+        None => { return UnknownZeroPacketResult::Discarded }
     }
 
     // Check request type
     let request = match &json["request"] {
         JsonValue::Short(val) => val.as_str(),
         JsonValue::String(val) => val.as_str(),
-        _ => { return ZeroPacketResult::Discarded }
+        _ => { return UnknownZeroPacketResult::Discarded }
     };
 
     return match request {
         "join" => {
-            match process_zero_packet_join(
+            match process_join_zero_packet_from_unknown(
                 &json,
                 &socket,
                 address,
                 protocol,
                 allow_new,
             ) {
-                true => ZeroPacketResult::NewConnection,
-                false => ZeroPacketResult::Discarded,
+                true => UnknownZeroPacketResult::AcceptUnknownRemote,
+                false => UnknownZeroPacketResult::Discarded,
             }
         },
-        _ => ZeroPacketResult::Discarded,
+        _ => UnknownZeroPacketResult::Discarded,
     }
 }
 
-fn process_zero_packet_join(
+fn process_join_zero_packet_from_unknown(
     json: &JsonValue,
     socket: &UdpSocket,
     address: SocketAddr,
@@ -256,10 +340,10 @@ fn process_zero_packet_join(
     return true
 }
 
-/// The outcome of receiving a zero packet.
-enum ZeroPacketResult {
+/// The outcome of receiving a zero packet from an unknown peer.
+enum UnknownZeroPacketResult {
     Discarded,
-    NewConnection,
+    AcceptUnknownRemote,
 }
 
 fn process_game_packet(
