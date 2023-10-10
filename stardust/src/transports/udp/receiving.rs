@@ -112,6 +112,7 @@ pub(super) fn receive_packets_system(
                             socket,
                             origin,
                             hash.hex(),
+                            true, // TODO: allow this to be changed
                         ),
                         // Normal packet - probably from existing peer
                         false => process_game_packet(
@@ -131,17 +132,8 @@ fn process_zero_packet(
     socket: &UdpSocket,
     address: SocketAddr,
     protocol: &str,
+    allow_new: bool,
 )  -> ZeroPacketResult {
-    // Since this string remains constant across runtime, we initialise it once using a Lazy
-    // This saves us having to allocate a String every time we want to tell the remote peer one of these things
-    static TRANSPORT_LAYER_DENIED_PREPROC: Lazy<String> = Lazy::new(|| {
-        object! {
-            "response": "denied",
-            "reason": "transport",
-            "version": format!("udp-({TRANSPORT_LAYER_REQUIRE_STR})"),
-        }.dump()
-    });
-
     // Turn data into a JSON table
     // Will simply discard the packet if any of this fails
     let string = std::str::from_utf8(&buffer[3..octets]);
@@ -170,7 +162,14 @@ fn process_zero_packet(
             let version = if version.is_err() { return ZeroPacketResult::Discarded } else { version.unwrap() };
             if !TRANSPORT_LAYER_REQUIRE.matches(&version) {
                 // Inform the remote peer of their incorrect version
-                let result = socket.send_to(TRANSPORT_LAYER_DENIED_PREPROC.as_bytes(), address);
+                // Can't do the same thing as CLOSED_DENIED_PREPROC because if there were
+                // different versions of the transport layer it could give an invalid response
+                // that could be very confusing to anyone trying to debug
+                let result = socket.send_to(object! {
+                    "response": "denied",
+                    "reason": "transport",
+                    "version": format!("udp-({TRANSPORT_LAYER_REQUIRE_STR})"),
+                }.dump().as_bytes(), address);
                 if result.is_err() { error!("Error while sending a packet: {}", result.unwrap_err()); }
                 return ZeroPacketResult::Discarded
             }
@@ -192,6 +191,7 @@ fn process_zero_packet(
                 &socket,
                 address,
                 protocol,
+                allow_new,
             ) {
                 true => ZeroPacketResult::NewConnection,
                 false => ZeroPacketResult::Discarded,
@@ -206,7 +206,19 @@ fn process_zero_packet_join(
     socket: &UdpSocket,
     address: SocketAddr,
     protocol: &str,
+    allow_new: bool
 ) -> bool {
+    // Since this string remains constant across runtime, we initialise it once using a Lazy
+    // This saves us having to allocate a String every time we want to tell the remote peer one of these things
+    // Arguably the performance gains aren't even worth it, but whatever.
+    static CLOSED_DENIED_PREPROC: Lazy<String> = Lazy::new(|| {
+        object! {
+            "response": "denied",
+            "reason": "closed",
+        }.dump()
+    });
+
+    // Check their protocol
     let other_protocol = match &json["protocol"] {
         JsonValue::Short(val) => val.as_str(),
         JsonValue::String(val) => val.as_str(),
@@ -225,7 +237,16 @@ fn process_zero_packet_join(
         return false
     }
 
-    true
+    // Check if new connections are allowed
+    // This is done after the protocol check since IMO that's more important to whoever's joining
+    if !allow_new {
+        let result = socket.send_to(CLOSED_DENIED_PREPROC.as_bytes(), address);
+        if result.is_err() { error!("Error while sending a packet: {}", result.unwrap_err()); }
+        return false
+    }
+
+    // All checks succeeded - let them in!
+    return true
 }
 
 /// The outcome of receiving a zero packet.
