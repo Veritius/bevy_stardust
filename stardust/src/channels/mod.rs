@@ -1,5 +1,6 @@
 //! Channel-related functionality.
 
+pub mod params;
 pub mod config;
 pub mod extension;
 pub mod id;

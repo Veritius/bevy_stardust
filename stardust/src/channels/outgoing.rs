@@ -91,12 +91,12 @@ impl OutgoingOctetStringsUntyped {
 /// Used to write octet strings to remote peers.
 /// You should use the client/server variations of `ChannelReader` and `ChannelWriter`
 #[derive(Resource)]
-pub struct OutgoingOctetStrings<T: Channel> {
+pub struct OutgoingNetworkMessages<T: Channel> {
     internal: Arc<RwLock<OutgoingOctetStringsUntyped>>,
     phantom: PhantomData<T>,
 }
 
-impl<T: Channel> OutgoingOctetStrings<T> {
+impl<T: Channel> OutgoingNetworkMessages<T> {
     pub(in crate) fn new(internal: Arc<RwLock<OutgoingOctetStringsUntyped>>) -> Self {
         Self {
             internal,
@@ -109,12 +109,19 @@ impl<T: Channel> OutgoingOctetStrings<T> {
         &self.internal
     }
 
-    /// Sends `octets to `target` over channel `T`
-    /// 
-    /// This function intentionally requires `&mut self`, even when it isn't technically necessary, to prevent blocking.
-    /// If you want to use this in a multi-threaded context, use `get_lock`.
+    /// Sends `octets` to `target` over channel `T`
+    // Requires a mutable reference so the Bevy scheduler can deal with parallelism.
     pub fn send(&mut self, target: SendTarget, octets: impl Into<OctetString>) {
         self.internal.write().unwrap().send(target, octets);
+    }
+
+    /// Sends all target-string pairs in `strings` over channel `T`
+    // Ditto for send's mutable requirement
+    pub fn send_batch(&mut self, strings: impl Iterator<Item = (SendTarget, impl Into<OctetString>)>) {
+        let mut lock = self.internal.write().unwrap();
+        for (target, string) in strings {
+            lock.send(target, string);
+        }
     }
 }
 

@@ -33,7 +33,7 @@ impl ChannelSetupAppExt for App {
         // Create storage location on heap and register channel to registry
         let store = OutgoingOctetStringsUntyped::new();
         let channel_id = registry.register_channel::<C>(entity_id, store.clone());
-        self.insert_resource(OutgoingOctetStrings::<C>::new(store));
+        self.insert_resource(OutgoingNetworkMessages::<C>::new(store));
 
         // Spawn config entity
         let type_id = TypeId::of::<C>();
