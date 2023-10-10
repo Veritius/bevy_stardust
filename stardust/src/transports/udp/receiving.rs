@@ -8,7 +8,6 @@ use once_cell::sync::Lazy;
 use semver::Version;
 use crate::channels::incoming::IncomingNetworkMessages;
 use crate::prelude::*;
-use crate::prelude::server::Client;
 use crate::protocol::UniqueNetworkHash;
 use crate::transports::udp::{TRANSPORT_LAYER_REQUIRE, TRANSPORT_LAYER_REQUIRE_STR};
 use super::pending::PendingConnection;

@@ -5,11 +5,7 @@
 
 pub mod setup;
 pub mod prelude;
-
 pub mod connections;
-pub mod client;
-pub mod server;
-
 pub mod protocol;
 pub mod octets;
 pub mod channels;
