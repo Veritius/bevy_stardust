@@ -52,3 +52,6 @@ pub enum UdpTransportState {
     /// Ports are bound and there may be running connections.
     Active,
 }
+
+#[cfg(all(target_arch = "wasm32", feature="udp"))]
+compile_error!("The UDP transport layer does not support wasm.");
