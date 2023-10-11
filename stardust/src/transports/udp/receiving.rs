@@ -18,7 +18,7 @@ use super::ports::PortBindings;
 pub(super) fn receive_packets_system(
     mut commands: Commands,
     mut active_peers: Query<(Entity, &NetworkPeer, &mut EstablishedUdpPeer, &mut IncomingNetworkMessages)>,
-    pending_peers: Query<(Entity, &PendingUdpPeer)>,
+    mut pending_peers: Query<(Entity, &mut PendingUdpPeer)>,
     registry: Res<ChannelRegistry>,
     channels: Query<(Option<&OrderedChannel>, Option<&ReliableChannel>, Option<&FragmentedChannel>)>,
     ports: Res<PortBindings>,
@@ -29,29 +29,20 @@ pub(super) fn receive_packets_system(
         .thread_name("UDP pkt receive".to_string())
         .build();
 
-    // Storage for adding newly accepted peers
-    let newly_accepted_peers: Mutex<Vec<(u16, SocketAddr)>> = Mutex::new(Vec::new());
-    let newly_accepted_by: Mutex<Vec<(Entity, u16)>> = Mutex::new(Vec::new());
-
-    // Store entity IDs of all active peers
-    let mut all_active_peers = active_peers
-        .iter()
-        .map(|f| f.0)
-        .collect::<Vec<_>>();
-    all_active_peers.sort_unstable();
-
-    // Store waiting attempts so the query isn't moved
-    let pending_peers = pending_peers
-        .iter()
-        .map(|(a, b)| (b.address.clone(), a))
-        .collect::<Vec<_>>();
-
     // Place query data into map of mutexes to allow mutation by multiple threads
     // This doesn't block since each key-value pair will only be accessed by one thread each.
-    let mut query_mutex_map = BTreeMap::new();
-    for (id, client, udp, incoming) in active_peers.iter_mut() {
-        query_mutex_map.insert(id, Mutex::new((client, udp, incoming)));
-    }
+    let active_peers_map = active_peers
+        .iter_mut()
+        .map(|(id, client, udp, incoming)| {
+            (id, Mutex::new((client, udp, incoming)))
+        })
+        .collect::<BTreeMap<_, _>>();
+    let pending_peers_map = pending_peers
+        .iter_mut()
+        .map(|(id, pending)| {
+            (id, Mutex::new(pending))
+        })
+        .collect::<BTreeMap<_, _>>();
 
     // Map of channels to speed up accesses
     let channel_map = (0..registry.channel_count())
@@ -64,11 +55,8 @@ pub(super) fn receive_packets_system(
         .collect::<BTreeMap<ChannelId, _>>();
 
     // Explicit borrows to prevent moves
-    let all_active_peers = &all_active_peers;
-    let pending_peers = &pending_peers;
-    let newly_accepted_peers = &newly_accepted_peers;
-    let newly_accepted_by = &newly_accepted_by;
-    let query_mutex_map = &query_mutex_map;
+    let active_peers_map = &active_peers_map;
+    let pending_peers_map = &pending_peers_map;
     let channel_map = &channel_map;
     let registry = &registry;
     let hash = &hash;
@@ -84,7 +72,7 @@ pub(super) fn receive_packets_system(
                 // Lock mutexes for our port-associated clients
                 // This never blocks since each client is only accessed by one task at a time
                 // but it still lets us mutate the client's components
-                let mut locks = query_mutex_map.iter()
+                let mut locks = active_peers_map.iter()
                     .filter(|(k,_)| socket_peers.contains(k))
                     .map(|(k,v)| (k, v.lock().unwrap()))
                     .collect::<BTreeMap<_, _>>();
@@ -98,7 +86,6 @@ pub(super) fn receive_packets_system(
                 // TODO: This allocates a lot, test perf without this
                 let address_map = locks.iter()
                     .map(|(entity, guard)| (guard.1.address, **entity))
-                    .chain(pending_peers.iter().cloned())
                     .collect::<BTreeMap<_, _>>();
 
                 // Read all packets from the socket
@@ -122,52 +109,7 @@ pub(super) fn receive_packets_system(
                     // If it's less than 4 bytes it isn't worth processing
                     if octets <= 3 { continue; }
 
-                    // Start processing the message
-                    match (address_map.get(&origin), &buffer[0..2] == &[0; 3]) {
-                        // Known peer on non-zero channel, probably existing peer
-                        (Some(entity), false) => {
-                            // Ensure this peer is fully connected
-                            if all_active_peers.binary_search(entity).is_err() { continue; }
-                            process_game_packet(&buffer, octets)
-                        },
-
-                        // Known peer on zero channel, possibly a pending peer
-                        (Some(entity), true) => {
-                            // Ensure this peer is a pending peer
-                            if pending_peers.iter().find(|(_, b)| *b == *entity).is_none() { continue; }
-                            match process_zero_packet_from_known(
-                                &buffer,
-                                octets
-                            ) {
-                                KnownZeroPacketResult::Discarded => {},
-                                KnownZeroPacketResult::Accepted(port) => {
-                                    // Accepted by remote peer
-                                    newly_accepted_by.lock().unwrap().push((*entity, port));
-                                },
-                                KnownZeroPacketResult::Rejected => {
-                                    todo!()
-                                }
-                            }
-                        },
-
-                        // Unknown peer on zero channel, probably trying to join us
-                        (None, true) => {
-                            match process_zero_packet_from_unknown(
-                                &buffer,
-                                octets,
-                                socket,
-                                origin,
-                                hash.hex(),
-                                true
-                            ) {
-                                UnknownZeroPacketResult::Discarded => {},
-                                UnknownZeroPacketResult::AcceptUnknownRemote => todo!(),
-                            }
-                        },
-
-                        // Unknown peer on non-zero channel
-                        _ => { continue; }
-                    }
+                    todo!()
                 }
             });
         }
