@@ -10,16 +10,15 @@ use crate::channels::incoming::IncomingNetworkMessages;
 use crate::prelude::*;
 use crate::protocol::UniqueNetworkHash;
 use crate::transports::udp::{TRANSPORT_LAYER_REQUIRE, TRANSPORT_LAYER_REQUIRE_STR};
-use super::pending::PendingConnection;
 use super::{PACKET_HEADER_SIZE, PACKET_MAX_BYTES, UdpTransportState};
-use super::peer::EstablishedUdpPeer;
+use super::peer::{EstablishedUdpPeer, PendingUdpPeer};
 use super::ports::PortBindings;
 
 /// Processes packets from bound ports using a task pool strategy.
 pub(super) fn receive_packets_system(
     mut commands: Commands,
     mut active_peers: Query<(Entity, &NetworkPeer, &mut EstablishedUdpPeer, &mut IncomingNetworkMessages)>,
-    pending_peers: Query<(Entity, &PendingConnection)>,
+    pending_peers: Query<(Entity, &PendingUdpPeer)>,
     registry: Res<ChannelRegistry>,
     channels: Query<(Option<&OrderedChannel>, Option<&ReliableChannel>, Option<&FragmentedChannel>)>,
     ports: Res<PortBindings>,

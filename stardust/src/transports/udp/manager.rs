@@ -3,7 +3,7 @@ use std::time::{Duration, Instant};
 use bevy::prelude::*;
 use bevy::ecs::system::SystemParam;
 use super::UdpTransportState;
-use super::pending::PendingConnection;
+use super::peer::PendingUdpPeer;
 use super::ports::PortBindings;
 
 /// Manages the UDP transport layer.
@@ -56,7 +56,7 @@ impl<'w, 's> UdpConnectionManager<'w, 's> {
 
         // Create entity to store connection attempt
         let pending = self.commands.spawn((
-            PendingConnection {
+            PendingUdpPeer {
                 address,
                 started: Instant::now(),
                 timeout,
