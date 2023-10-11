@@ -15,4 +15,26 @@ pub(super) struct PendingUdpPeer {
     pub address: SocketAddr,
     pub started: Instant,
     pub timeout: Option<Duration>,
+    pub direction: PendingDirection,
+}
+
+/// The direction and state of the connection attempt.
+#[derive(Debug)]
+pub(super) enum PendingDirection {
+    /// Attempt from this peer to connect to a remote peer.
+    Outgoing(PendingOutgoingState),
+    /// Attempt from a remote peer to connect to this peer.
+    Incoming(PendingIncomingState),
+}
+
+/// Current state of the pending outgoing connection attempt.
+#[derive(Debug)]
+pub(super) enum PendingOutgoingState {
+    NoResponseYet,
+}
+
+/// Current state of the pending incoming connection attempt.
+#[derive(Debug)]
+pub(super) enum PendingIncomingState {
+    
 }
