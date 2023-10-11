@@ -1,5 +1,4 @@
 use std::net::{SocketAddr, UdpSocket};
-use std::time::Instant;
 use std::{collections::BTreeMap, sync::Mutex};
 use bevy::prelude::*;
 use bevy::tasks::TaskPoolBuilder;
@@ -10,7 +9,7 @@ use crate::channels::incoming::IncomingNetworkMessages;
 use crate::prelude::*;
 use crate::protocol::UniqueNetworkHash;
 use crate::transports::udp::{TRANSPORT_LAYER_REQUIRE, TRANSPORT_LAYER_REQUIRE_STR};
-use super::{PACKET_HEADER_SIZE, PACKET_MAX_BYTES, UdpTransportState};
+use super::PACKET_MAX_BYTES;
 use super::connections::{EstablishedUdpPeer, PendingUdpPeer};
 use super::ports::PortBindings;
 
@@ -63,7 +62,7 @@ pub(super) fn receive_packets_system(
 
     // Process incoming packets
     taskpool.scope(|s| {
-        for (port, socket, socket_peers) in ports.iter() {
+        for (_, socket, socket_peers) in ports.iter() {
             // Spawn task
             s.spawn(async move {
                 // Allocate a buffer for storing incoming data
@@ -72,24 +71,24 @@ pub(super) fn receive_packets_system(
                 // Lock mutexes for our port-associated clients
                 // This never blocks since each client is only accessed by one task at a time
                 // but it still lets us mutate the client's components
-                let mut locks = active_peers_map.iter()
+                let mut active_locks = active_peers_map.iter()
                     .filter(|(k,_)| socket_peers.contains(k))
-                    .map(|(k,v)| (k, v.lock().unwrap()))
+                    .map(|(k,v)| (*k, v.lock().unwrap()))
+                    .collect::<BTreeMap<_, _>>();
+                let mut pending_locks = pending_peers_map.iter()
+                    .filter(|(k,_)| socket_peers.contains(k))
+                    .map(|(k,v)| (*k, v.lock().unwrap()))
                     .collect::<BTreeMap<_, _>>();
 
-                // Create vec of addresses for rapid filtering
-                let addresses = locks.iter()
-                    .map(|(_, guard)| guard.1.address)
-                    .collect::<Vec<_>>();
-
-                // Map addresses to entity IDs
-                // TODO: This allocates a lot, test perf without this
-                let address_map = locks.iter()
-                    .map(|(entity, guard)| (guard.1.address, **entity))
+                // Map addresses to entity IDs so we can lookup peers faster
+                // TODO: Test performance without this. It's probably negligible.
+                let addresses = active_locks
+                    .iter()
+                    .map(|(k, v)| (v.1.address, *k))
+                    .chain(pending_locks.iter().map(|(k, v)| (v.address, *k)))
                     .collect::<BTreeMap<_, _>>();
 
                 // Read all packets from the socket
-                let mut buffer = [0u8; PACKET_MAX_BYTES];
                 loop {
                     // Read a packet
                     let (octets, origin) = match socket.recv_from(&mut buffer) {
@@ -109,7 +108,21 @@ pub(super) fn receive_packets_system(
                     // If it's less than 4 bytes it isn't worth processing
                     if octets <= 3 { continue; }
 
-                    
+                    if let Some(entity) = addresses.get(&origin) {
+                        // Assert they're only in one map otherwise it'd be weird.
+                        debug_assert_ne!(active_locks.contains_key(entity), pending_locks.contains_key(entity));
+
+                        if let Some(mut address) = active_locks.get(entity) {
+                            // Active peer, process their packet normally
+                            todo!()
+                        } else if let Some(mut address) = pending_locks.get(entity) {
+                            // Pending peer, let's see what they have to say
+                            todo!()
+                        }
+                    } else {
+                        // Unknown peer, likely reaching out to connect to us.
+                        todo!()
+                    }
                 }
             });
         }

@@ -49,6 +49,7 @@ pub(super) enum PendingOutgoingState {
 }
 
 /// Current state of the pending incoming connection attempt.
+/// Has no variants as it is currently useless.
 #[derive(Debug)]
 pub(super) enum PendingIncomingState {
     

@@ -12,15 +12,23 @@ use super::ports::PortBindings;
 
 /// Sends octet strings using a taskpool strategy.
 pub(super) fn send_packets_system(
+    mut peers: Query<(Entity, &mut EstablishedUdpPeer), With<NetworkPeer>>,
+    mut pending: Query<(Entity, &mut PendingUdpPeer)>,
     registry: Res<ChannelRegistry>,
     channels: Query<(&ChannelData, Option<&ReliableChannel>, Option<&OrderedChannel>, Option<&FragmentedChannel>)>,
-    mut peers: Query<(Entity, &mut EstablishedUdpPeer), With<NetworkPeer>>,
-    pending: Query<(Entity, &PendingUdpPeer)>,
-    ports: Option<Res<PortBindings>>,
+    ports: Res<PortBindings>,
     outgoing: OutgoingOctetStringsAccessor,
 ) {
     // Create task pool
-    let pool = TaskPoolBuilder::new()
+    let taskpool = TaskPoolBuilder::new()
         .thread_name("UDP pkt send".to_string())
         .build();
+
+    taskpool.scope(|s| {
+        for (_, socket, peers) in ports.iter() {
+            s.spawn(async move {
+                todo!()
+            });
+        }
+    });
 }

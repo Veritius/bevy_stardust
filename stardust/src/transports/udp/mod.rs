@@ -47,9 +47,10 @@ impl Plugin for UdpTransportPlugin {
 
 /// The current state of the transport layer.
 /// Under no circumstances should you mutate this. Instead, use the [UdpConnectionManager] systemparam.
+// TODO: Make it so state is still accessible but can't be mutated outside the transport layer
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash, Reflect, States)]
 pub enum UdpTransportState {
-    /// Nothing going on. No ports are bound.
+    /// The transport layer is completely inactive.
     #[default]
     Offline,
     /// Ports are bound and there may be running connections.
