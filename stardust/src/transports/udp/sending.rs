@@ -7,7 +7,7 @@ use crate::octets::varints::u24;
 use crate::prelude::*;
 use crate::channels::outgoing::OutgoingOctetStringsAccessor;
 use crate::transports::udp::{PACKET_HEADER_SIZE, PACKET_MAX_BYTES};
-use super::peer::{EstablishedUdpPeer, PendingUdpPeer};
+use super::connections::{EstablishedUdpPeer, PendingUdpPeer};
 use super::ports::PortBindings;
 
 /// Sends octet strings using a taskpool strategy.
