@@ -13,14 +13,18 @@ use bevy::reflect::Reflect;
 pub struct u24(u32);
 
 impl u24 {
+    /// The minimum possible value of a u24.
     pub const MIN: Self = Self(0);
+    /// The maximum possible value of a u24.
     pub const MAX: Self = Self(2u32.pow(24));
 
+    /// Gets the byte representation of this u24 in big endian form, ready for transport.
     pub fn bytes(&self) -> [u8; 3] {
         let [_, a, b, c] = self.0.to_be_bytes();
         [a, b, c]
     }
 
+    /// Addition that wraps at 2^24.
     pub fn wrapping_add(self, rhs: Self) -> Self {
         let mut z = self.0.wrapping_add(rhs.0);
         let c = 2u32.pow(24);
@@ -145,6 +149,7 @@ impl From<u24> for usize {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum NIntegerError {
+    /// The n-integer could not represent the value.
     OutOfRange,
 }
 

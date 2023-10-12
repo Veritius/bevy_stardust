@@ -1,9 +1,6 @@
 //! The Stardust core plugin.
 
 use bevy::prelude::*;
-use semver::Version;
-use semver::VersionReq;
-
 use crate::prelude::*;
 use crate::scheduling::*;
 use crate::protocol::*;

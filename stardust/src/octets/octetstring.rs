@@ -2,6 +2,7 @@
 
 use std::sync::Arc;
 
+/// An octet, aka byte. Smallest unit of communicable data Stardust can transfer.
 pub type Octet = u8;
 
 /// A string of octets (aka bytes).

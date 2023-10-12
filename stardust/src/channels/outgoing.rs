@@ -125,6 +125,7 @@ impl<T: Channel> OutgoingNetworkMessages<T> {
     }
 }
 
+/// Defines the peers who will receive this message.
 #[derive(Debug, Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub enum SendTarget {
     /// Sends the message to a single peer.

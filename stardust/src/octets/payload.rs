@@ -26,6 +26,7 @@ pub struct Payload {
 }
 
 impl Payload {
+    /// Create a new Payload object.
     pub fn new(head: usize, tail: usize, data: impl Into<OctetString>) -> Self {
         Self {
             ignore_head: head,
