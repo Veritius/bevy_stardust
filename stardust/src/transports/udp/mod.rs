@@ -8,6 +8,7 @@ mod connections;
 mod ports;
 mod sending;
 mod receiving;
+mod reliability;
 
 use bevy::prelude::*;
 use once_cell::sync::Lazy;
