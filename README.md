@@ -9,7 +9,7 @@ Stardust is an opinionated, batteries-included networking crate built for Bevy, 
 ## Features
 - Tightly integrated with Bevy ECS - everything is part of the `World` and `App`, using the scheduler for parallel network code, even in your game systems.
 - Architecture agnostic - use client/server, peer to peer, mesh networks, you name it.
-- Send data any way you want, over UDP, WebRTC, WebSockets - you don't even need to use the Internet: use Meshtastic or even [maritime signal flags](https://en.wikipedia.org/wiki/International_maritime_signal_flags) if you really want to.
+- Send data any way you want, over UDP, WebRTC, WebSockets - you don't even need to use the Internet: use a custom radio protocol or even [maritime signal flags](https://en.wikipedia.org/wiki/International_maritime_signal_flags) if you really want to.
 - No matter the transport layer you use, write the same code in your game systems, entirely in parallel using Bevy's scheduler.
 - Add network-enabled Bevy plugins with no extra effort on your end.
 
