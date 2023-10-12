@@ -91,33 +91,46 @@ pub trait SequenceBitset: Sized {
     const BYTE_SIZE: u8;
     const BIT_SIZE: u8 = Self::BYTE_SIZE * 8;
 
-    fn set_bit(&mut self, idx: u8);
+    fn new() -> Self;
+    fn set_bit_on(&mut self, idx: u8);
 }
 
 impl SequenceBitset for u32 {
     const BYTE_SIZE: u8 = 4;
 
+    fn new() -> Self { 0 }
+
     #[inline]
-    fn set_bit(&mut self, idx: u8) {
-        todo!()
+    fn set_bit_on(&mut self, idx: u8) {
+        let mut mask = 1u32;
+        mask <<= idx;
+        *self |= mask;
     }
 }
 
 impl SequenceBitset for u64 {
     const BYTE_SIZE: u8 = 8;
 
+    fn new() -> Self { 0 }
+
     #[inline]
-    fn set_bit(&mut self, idx: u8) {
-        todo!()
+    fn set_bit_on(&mut self, idx: u8) {
+        let mut mask = 1u64;
+        mask <<= idx;
+        *self |= mask;
     }
 }
 
 impl SequenceBitset for u128 {
     const BYTE_SIZE: u8 = 16;
 
+    fn new() -> Self { 0 }
+
     #[inline]
-    fn set_bit(&mut self, idx: u8) {
-        todo!()
+    fn set_bit_on(&mut self, idx: u8) {
+        let mut mask = 1u128;
+        mask <<= idx;
+        *self |= mask;
     }
 }
 
