@@ -6,16 +6,22 @@ use std::{ops::Add, cmp::Ordering};
 pub trait SequenceNumber: Sized + PartialOrd + Add {
     const BYTE_SIZE: u8;
     const BIT_SIZE: u8 = Self::BYTE_SIZE * 8;
+    const VAL_MIN: Self;
+    const VAL_MAX: Self;
 
     fn from_bytes(bytes: &[u8]) -> Option<Self>;
     // TODO: Don't use allocation, use a fixed size array with size defined by the trait implementor
     // Not sure how to do that at the moment and my Internet connection isn't working.
     fn to_bytes(&self) -> Box<[u8]>;
-    fn wrapping_compare(&self, other: Self) -> Ordering;
+    fn wrapping_compare(&self, other: Self) -> Ordering {
+        todo!()
+    }
 }
 
 impl SequenceNumber for u8 {
     const BYTE_SIZE: u8 = 1;
+    const VAL_MIN: Self = u8::MIN;
+    const VAL_MAX: Self = u8::MAX;
 
     fn from_bytes(bytes: &[u8]) -> Option<Self> {
         if bytes.len() == 0 { return None }
@@ -25,14 +31,12 @@ impl SequenceNumber for u8 {
     fn to_bytes(&self) -> Box<[u8]> {
         Box::new(self.to_be_bytes())
     }
-    
-    fn wrapping_compare(&self, other: Self) -> Ordering {
-        todo!()
-    }
 }
 
 impl SequenceNumber for u16 {
     const BYTE_SIZE: u8 = 2;
+    const VAL_MIN: Self = u16::MIN;
+    const VAL_MAX: Self = u16::MAX;
 
     fn from_bytes(bytes: &[u8]) -> Option<Self> {
         if bytes.len() < 2 { return None }
@@ -42,14 +46,12 @@ impl SequenceNumber for u16 {
     fn to_bytes(&self) -> Box<[u8]> {
         Box::new(self.to_be_bytes())
     }
-
-    fn wrapping_compare(&self, other: Self) -> Ordering {
-        todo!()
-    }
 }
 
 impl SequenceNumber for u32 {
     const BYTE_SIZE: u8 = 4;
+    const VAL_MIN: Self = u32::MIN;
+    const VAL_MAX: Self = u32::MAX;
 
     fn from_bytes(bytes: &[u8]) -> Option<Self> {
         if bytes.len() < 4 { return None }
@@ -58,10 +60,6 @@ impl SequenceNumber for u32 {
 
     fn to_bytes(&self) -> Box<[u8]> {
         Box::new(self.to_be_bytes())
-    }
-
-    fn wrapping_compare(&self, other: Self) -> Ordering {
-        todo!()
     }
 }
 
