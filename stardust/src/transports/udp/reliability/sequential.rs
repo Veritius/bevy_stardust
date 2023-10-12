@@ -6,13 +6,6 @@
 use std::marker::PhantomData;
 use super::bits::{SequenceNumber, SequenceBitset};
 
-mod private {
-    pub trait Sealed {}
-    impl Sealed for u8 {}
-    impl Sealed for u16 {}
-    impl Sealed for u32 {}
-}
-
 /// State information for sequential reliability.
 pub struct SequentialReliabilityData<I: SequenceNumber, B: SequenceBitset> {
     pub local: I,
