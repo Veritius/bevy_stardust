@@ -25,6 +25,11 @@ impl<I: SequenceNumber, B: SequenceBitset> SequentialReliabilityData<I, B> {
     /// Updates `remote` and `bitset` based on the received sequence value.
     /// This function should be called when a packet is received.
     pub fn on_recv(&mut self, sequence: I) {
-        if sequence.wrapping_compare(self.remote) == Ordering::Greater {}
+        if sequence.wrapping_compare(self.remote) == Ordering::Greater {
+            let diff = sequence.wrapping_difference(self.remote).to_u8();
+            self.bitset.shift_left(diff);
+            self.bitset.set_bit_on(0);
+            self.remote = sequence;
+        }
     }
 }

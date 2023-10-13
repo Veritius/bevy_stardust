@@ -106,6 +106,7 @@ pub trait SequenceBitset: Sized {
     const BIT_SIZE: u8 = Self::BYTE_SIZE * 8;
 
     fn new() -> Self;
+    fn shift_left(&mut self, idx: u8);
     fn set_bit_on(&mut self, idx: u8);
 }
 
@@ -113,6 +114,11 @@ impl SequenceBitset for u32 {
     const BYTE_SIZE: u8 = 4;
 
     fn new() -> Self { 0 }
+
+    #[inline]
+    fn shift_left(&mut self, idx: u8) {
+        *self <<= idx
+    }
 
     #[inline]
     fn set_bit_on(&mut self, idx: u8) {
@@ -128,6 +134,11 @@ impl SequenceBitset for u64 {
     fn new() -> Self { 0 }
 
     #[inline]
+    fn shift_left(&mut self, idx: u8) {
+        *self <<= idx
+    }
+
+    #[inline]
     fn set_bit_on(&mut self, idx: u8) {
         let mut mask = 1u64;
         mask <<= idx;
@@ -139,6 +150,11 @@ impl SequenceBitset for u128 {
     const BYTE_SIZE: u8 = 16;
 
     fn new() -> Self { 0 }
+
+    #[inline]
+    fn shift_left(&mut self, idx: u8) {
+        *self <<= idx
+    }
 
     #[inline]
     fn set_bit_on(&mut self, idx: u8) {
@@ -161,5 +177,6 @@ fn sequence_numbers() {
     
     // Wrapping differences
     assert_eq!(600u16.wrapping_difference(605), 5);
+    assert_eq!(100u16.wrapping_difference(100), 0);
     assert_eq!(u16::MAX.wrapping_difference(u16::MIN), 1);
 }
