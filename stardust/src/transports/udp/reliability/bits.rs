@@ -2,6 +2,19 @@
 
 use std::{cmp::Ordering, fmt::Display};
 
+// A pretty bad way to avoid having to allocate, but it's good enough.
+pub struct SemiByteArray(pub usize, pub [u8; 16]);
+
+impl SemiByteArray {
+    pub fn new() -> Self {
+        Self(0, [0; 16])
+    }
+
+    pub fn read(&self) -> &[u8] {
+        &self.1[0..self.0]
+    }
+}
+
 /// A number that can be used to store the sequence value of a packet.
 pub trait SequenceNumber: Sized + Clone + Copy + Display {
     const SQ_BYTE_SIZE: u8;
@@ -15,7 +28,7 @@ pub trait SequenceNumber: Sized + Clone + Copy + Display {
 
     // TODO: Don't use allocation, use a fixed size array with size defined by the trait implementor
     // Not sure how to do that at the moment and my Internet connection isn't working.
-    fn to_bytes(&self) -> Box<[u8]>;
+    fn to_bytes(&self) -> SemiByteArray;
 
     fn wrapping_add(self, other: Self) -> Self;
 
@@ -32,6 +45,7 @@ pub trait SequenceNumber: Sized + Clone + Copy + Display {
 
 macro_rules! impl_sequence_number_primitive {
     ($i:ident, $h:expr) => {
+
         impl SequenceNumber for $i {
             const SQ_BYTE_SIZE: u8 = std::mem::size_of::<Self>() as u8;
             const VAL_ONE: Self = 1;
@@ -44,8 +58,13 @@ macro_rules! impl_sequence_number_primitive {
             }
 
             #[inline]
-            fn to_bytes(&self) -> Box<[u8]> {
-                Box::new(self.to_be_bytes())
+            fn to_bytes(&self) -> SemiByteArray {
+                let mut sbi = SemiByteArray::new();
+                for (i, x) in self.to_be_bytes().iter().enumerate() {
+                    sbi.0 = i;
+                    sbi.1[i] = *x;
+                }
+                sbi
             }
 
             #[inline]
@@ -108,6 +127,7 @@ pub trait SequenceBitset: Sized {
     fn new() -> Self;
     fn shift_left(&mut self, idx: u8);
     fn set_bit_on(&mut self, idx: u8);
+    fn to_bytes(&self) -> SemiByteArray;
 }
 
 impl SequenceBitset for u32 {
@@ -125,6 +145,16 @@ impl SequenceBitset for u32 {
         let mut mask = 1u32;
         mask <<= idx;
         *self |= mask;
+    }
+
+    #[inline]
+    fn to_bytes(&self) -> SemiByteArray {
+        let mut sbi = SemiByteArray::new();
+        for (i, x) in self.to_be_bytes().iter().enumerate() {
+            sbi.0 = i;
+            sbi.1[i] = *x;
+        }
+        sbi
     }
 }
 
@@ -144,6 +174,16 @@ impl SequenceBitset for u64 {
         mask <<= idx;
         *self |= mask;
     }
+
+    #[inline]
+    fn to_bytes(&self) -> SemiByteArray {
+        let mut sbi = SemiByteArray::new();
+        for (i, x) in self.to_be_bytes().iter().enumerate() {
+            sbi.0 = i;
+            sbi.1[i] = *x;
+        }
+        sbi
+    }
 }
 
 impl SequenceBitset for u128 {
@@ -161,6 +201,16 @@ impl SequenceBitset for u128 {
         let mut mask = 1u128;
         mask <<= idx;
         *self |= mask;
+    }
+
+    #[inline]
+    fn to_bytes(&self) -> SemiByteArray {
+        let mut sbi = SemiByteArray::new();
+        for (i, x) in self.to_be_bytes().iter().enumerate() {
+            sbi.0 = i;
+            sbi.1[i] = *x;
+        }
+        sbi
     }
 }
 

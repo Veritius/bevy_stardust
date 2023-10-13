@@ -4,7 +4,7 @@
 //! [Gaffer on Games' article]: https://www.gafferongames.com/post/reliability_ordering_and_congestion_avoidance_over_udp/
 
 use std::cmp::Ordering;
-use super::bits::{SequenceNumber, SequenceBitset};
+use super::bits::{SequenceNumber, SequenceBitset, SemiByteArray};
 
 /// State information for sequential reliability.
 /// 
@@ -36,5 +36,17 @@ impl<I: SequenceNumber, B: SequenceBitset> SequentialReliabilityData<I, B> {
             // Set bits normally
             self.bitset.set_bit_on(diff);
         }
+    }
+
+    // TODO: Again, avoid allocations
+    pub fn header(&self) -> SemiByteArray {
+        let mut sbi = SemiByteArray::new();
+        let bytes_a = self.remote.to_bytes();
+        let bytes_b = self.bitset.to_bytes();
+        for (i, x) in bytes_a.read().iter().chain(bytes_b.read().iter()).enumerate() {
+            sbi.0 = i;
+            sbi.1[i] = *x;
+        }
+        sbi
     }
 }
