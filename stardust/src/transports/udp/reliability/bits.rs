@@ -24,7 +24,7 @@ pub trait SequenceNumber: Sized + Clone + Copy + Display {
     /// Compare sequence numbers, taking wrapping into consideration.
     fn wrapping_compare(self, other: Self) -> Ordering;
 
-    fn absolute_difference(&self, other: Self) -> Self;
+    fn wrapping_difference(&self, other: Self) -> Self;
 
     /// Convert to u8, saturating at u8::MAX if too large.
     fn to_u8(self) -> u8;
@@ -62,8 +62,13 @@ macro_rules! impl_sequence_number_primitive {
                 gaffer_wrapping_compare!(self, other, $h)
             }
 
-            fn absolute_difference(&self, other: Self) -> Self {
-                todo!()
+            #[inline]
+            fn wrapping_difference(&self, other: Self) -> Self {
+                match self.wrapping_compare(other) {
+                    Ordering::Greater => self.wrapping_sub(other),
+                    Ordering::Equal => 0,
+                    Ordering::Less => other.wrapping_sub(*self),
+                }
             }
 
             #[inline]
@@ -144,7 +149,7 @@ impl SequenceBitset for u128 {
 }
 
 #[test]
-fn wrapping_compare_test() {
+fn sequence_numbers() {
     // Simple comparisons
     assert_eq!(0u16.wrapping_compare(0), Ordering::Equal);
     assert_eq!(1u16.wrapping_compare(0), Ordering::Greater);
@@ -153,4 +158,8 @@ fn wrapping_compare_test() {
     // Wrapping numbers
     assert_eq!(60000u16.wrapping_compare(5), Ordering::Less);
     assert_eq!(5u16.wrapping_compare(60000), Ordering::Greater);
+    
+    // Wrapping differences
+    assert_eq!(600u16.wrapping_difference(605), 5);
+    assert_eq!(u16::MAX.wrapping_difference(u16::MIN), 1);
 }
