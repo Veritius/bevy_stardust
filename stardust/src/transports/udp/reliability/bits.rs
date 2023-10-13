@@ -2,6 +2,78 @@
 
 use std::{cmp::Ordering, fmt::Display};
 
+/// A number that can be used to store the sequence value of a packet.
+pub trait SequenceNumber: Sized + Clone + Copy + Display {
+    const SQ_BYTE_SIZE: u8;
+    const BIT_SIZE: u8 = Self::SQ_BYTE_SIZE * 8;
+    const VAL_ONE: Self;
+    const VAL_MIN: Self;
+    const VAL_MAX: Self;
+
+    /// Try to create `Self` from a slice of bytes.
+    fn from_bytes(bytes: &[u8]) -> Option<Self>;
+
+    // TODO: Don't use allocation, use a fixed size array with size defined by the trait implementor
+    // Not sure how to do that at the moment and my Internet connection isn't working.
+    fn to_bytes(&self) -> Box<[u8]>;
+
+    fn wrapping_add(self, other: Self) -> Self;
+
+    fn wrapping_sub(self, other: Self) -> Self;
+
+    /// Compare sequence numbers, taking wrapping into consideration.
+    fn wrapping_compare(self, other: Self) -> Ordering;
+
+    fn absolute_difference(&self, other: Self) -> Self;
+
+    /// Convert to u8, saturating at u8::MAX if too large.
+    fn to_u8(self) -> u8;
+}
+
+macro_rules! impl_sequence_number_primitive {
+    ($i:ident, $h:expr) => {
+        impl SequenceNumber for $i {
+            const SQ_BYTE_SIZE: u8 = std::mem::size_of::<Self>() as u8;
+            const VAL_ONE: Self = 1;
+            const VAL_MIN: Self = $i::MIN;
+            const VAL_MAX: Self = $i::MAX;
+
+            fn from_bytes(bytes: &[u8]) -> Option<Self> {
+                if bytes.len() < (((Self::SQ_BYTE_SIZE as Self + Self::VAL_ONE))).try_into().unwrap() { return None }
+                Some(u8::from_be_bytes(bytes[0..(Self::SQ_BYTE_SIZE as usize - 1)].try_into().unwrap()).into())
+            }
+
+            #[inline]
+            fn to_bytes(&self) -> Box<[u8]> {
+                Box::new(self.to_be_bytes())
+            }
+
+            #[inline]
+            fn wrapping_add(self, other: Self) -> Self {
+                $i::wrapping_add(self, other)
+            }
+
+            #[inline]
+            fn wrapping_sub(self, other: Self) -> Self {
+                $i::wrapping_sub(self, other)
+            }
+
+            fn wrapping_compare(self, other: Self) -> Ordering {
+                gaffer_wrapping_compare!(self, other, $h)
+            }
+
+            fn absolute_difference(&self, other: Self) -> Self {
+                todo!()
+            }
+
+            #[inline]
+            fn to_u8(self) -> u8 {
+                self.min(u8::MAX as $i) as u8
+            }
+        }
+    };
+}
+
 // Wrapping comparison based on Gaffer on Games' algorithm.
 macro_rules! gaffer_wrapping_compare {
     ($s:ident, $o:ident, $e:expr) => {
@@ -19,143 +91,9 @@ macro_rules! gaffer_wrapping_compare {
     };
 }
 
-/// A number that can be used to store the sequence value of a packet.
-pub trait SequenceNumber: Sized + Clone + Copy + Display {
-    const BYTE_SIZE: u8;
-    const BIT_SIZE: u8 = Self::BYTE_SIZE * 8;
-    const VAL_ONE: Self;
-    const VAL_MIN: Self;
-    const VAL_MAX: Self;
-
-    /// Try to create `Self` from a slice of bytes.
-    fn from_bytes(bytes: &[u8]) -> Option<Self>;
-
-    // TODO: Don't use allocation, use a fixed size array with size defined by the trait implementor
-    // Not sure how to do that at the moment and my Internet connection isn't working.
-    fn to_bytes(&self) -> Box<[u8]>;
-
-    fn wrapping_add(self, other: Self) -> Self {
-        todo!()
-    }
-
-    fn wrapping_sub(self, other: Self) -> Self {
-        todo!()
-    }
-
-    /// Compare sequence numbers, taking wrapping into consideration.
-    fn wrapping_compare(self, other: Self) -> Ordering;
-
-    fn absolute_difference(&self, other: Self) -> Self;
-
-    /// Convert to u8, saturating at u8::MAX if too large.
-    fn to_u8(self) -> u8;
-}
-
-impl SequenceNumber for u8 {
-    const BYTE_SIZE: u8 = 1;
-    const VAL_ONE: Self = 1;
-    const VAL_MIN: Self = u8::MIN;
-    const VAL_MAX: Self = u8::MAX;
-
-    fn from_bytes(bytes: &[u8]) -> Option<Self> {
-        if bytes.len() == 0 { return None }
-        Some(bytes[0])
-    }
-
-    fn to_bytes(&self) -> Box<[u8]> {
-        Box::new(self.to_be_bytes())
-    }
-
-    fn wrapping_add(self, other: Self) -> Self {
-        u8::wrapping_add(self, other)
-    }
-
-    fn wrapping_sub(self, other: Self) -> Self {
-        u8::wrapping_sub(self, other)
-    }
-
-    fn wrapping_compare(self, other: Self) -> Ordering {
-        gaffer_wrapping_compare!(self, other, 127)
-    }
-
-    fn absolute_difference(&self, other: Self) -> Self {
-        todo!()
-    }
-
-    fn to_u8(self) -> u8 { self }
-}
-
-impl SequenceNumber for u16 {
-    const BYTE_SIZE: u8 = 2;
-    const VAL_ONE: Self = 1;
-    const VAL_MIN: Self = u16::MIN;
-    const VAL_MAX: Self = u16::MAX;
-
-    fn from_bytes(bytes: &[u8]) -> Option<Self> {
-        if bytes.len() < 2 { return None }
-        Some(u16::from_be_bytes(bytes[0..1].try_into().unwrap()))
-    }
-
-    fn to_bytes(&self) -> Box<[u8]> {
-        Box::new(self.to_be_bytes())
-    }
-
-    fn wrapping_add(self, other: Self) -> Self {
-        u16::wrapping_sub(self, other)
-    }
-
-    fn wrapping_sub(self, other: Self) -> Self {
-        u16::wrapping_sub(self, other)
-    }
-
-    fn wrapping_compare(self, other: Self) -> Ordering {
-        gaffer_wrapping_compare!(self, other, 32768)
-    }
-
-    fn absolute_difference(&self, other: Self) -> Self {
-        todo!()
-    }
-
-    fn to_u8(self) -> u8 {
-        self.min(u8::MAX as u16) as u8
-    }
-}
-
-impl SequenceNumber for u32 {
-    const BYTE_SIZE: u8 = 4;
-    const VAL_ONE: Self = 1;
-    const VAL_MIN: Self = u32::MIN;
-    const VAL_MAX: Self = u32::MAX;
-
-    fn from_bytes(bytes: &[u8]) -> Option<Self> {
-        if bytes.len() < 4 { return None }
-        Some(u32::from_be_bytes(bytes[0..3].try_into().unwrap()))
-    }
-
-    fn to_bytes(&self) -> Box<[u8]> {
-        Box::new(self.to_be_bytes())
-    }
-
-    fn wrapping_add(self, other: Self) -> Self {
-        u32::wrapping_add(self, other)
-    }
-
-    fn wrapping_sub(self, other: Self) -> Self {
-        u32::wrapping_sub(self, other)
-    }
-
-    fn wrapping_compare(self, other: Self) -> Ordering {
-        gaffer_wrapping_compare!(self, other, 2147483648)
-    }
-
-    fn absolute_difference(&self, other: Self) -> Self {
-        todo!()
-    }
-
-    fn to_u8(self) -> u8 {
-        self.min(u8::MAX as u32) as u8
-    }
-}
+impl_sequence_number_primitive!(u8, 127);
+impl_sequence_number_primitive!(u16, 32768);
+impl_sequence_number_primitive!(u32, 2147483648);
 
 /// A value that can store the received status of the past few packets.
 pub trait SequenceBitset: Sized {
