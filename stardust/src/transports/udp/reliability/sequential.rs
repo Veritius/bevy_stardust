@@ -38,7 +38,6 @@ impl<I: SequenceNumber, B: SequenceBitset> SequentialReliabilityData<I, B> {
         }
     }
 
-    // TODO: Again, avoid allocations
     pub fn header(&self) -> SemiByteArray {
         let mut sbi = SemiByteArray::new();
         let bytes_a = self.remote.to_bytes();

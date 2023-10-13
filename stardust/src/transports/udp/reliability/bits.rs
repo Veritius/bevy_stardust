@@ -26,8 +26,6 @@ pub trait SequenceNumber: Sized + Clone + Copy + Display {
     /// Try to create `Self` from a slice of bytes.
     fn from_bytes(bytes: &[u8]) -> Option<Self>;
 
-    // TODO: Don't use allocation, use a fixed size array with size defined by the trait implementor
-    // Not sure how to do that at the moment and my Internet connection isn't working.
     fn to_bytes(&self) -> SemiByteArray;
 
     fn wrapping_add(self, other: Self) -> Self;
