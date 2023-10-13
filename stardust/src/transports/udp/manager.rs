@@ -5,6 +5,7 @@ use bevy::ecs::system::SystemParam;
 use super::UdpTransportState;
 use super::connections::{PendingUdpPeer, PendingDirection};
 use super::ports::PortBindings;
+use super::reliability::sequential::SequentialReliabilityData;
 
 /// Manages the UDP transport layer.
 #[derive(SystemParam)]
@@ -60,6 +61,7 @@ impl<'w, 's> UdpConnectionManager<'w, 's> {
                 address,
                 started: Instant::now(),
                 timeout,
+                reliability: SequentialReliabilityData::default(),
                 direction: PendingDirection::Outgoing(super::connections::PendingOutgoingState::NoResponseYet),
             },
         )).id();

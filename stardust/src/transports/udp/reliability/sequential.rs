@@ -9,10 +9,11 @@ use super::bits::{SequenceNumber, SequenceBitset, SemiByteArray};
 /// State information for sequential reliability.
 /// 
 /// See the [module level documentation](self).
+#[derive(Debug, Default)]
 pub struct SequentialReliabilityData<I: SequenceNumber, B: SequenceBitset> {
     pub local: I,
-    pub remote: I,
-    pub bitset: B,
+    remote: I,
+    bitset: B,
 }
 
 impl<I: SequenceNumber, B: SequenceBitset> SequentialReliabilityData<I, B> {

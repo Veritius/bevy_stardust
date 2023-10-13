@@ -1,5 +1,6 @@
 use std::{net::SocketAddr, time::{Instant, Duration}};
 use bevy::prelude::*;
+use super::reliability::sequential::SequentialReliabilityData;
 
 /// A UDP peer that is fully connected.
 #[derive(Debug, Component)]
@@ -15,6 +16,7 @@ pub(super) struct PendingUdpPeer {
     pub address: SocketAddr,
     pub started: Instant,
     pub timeout: Option<Duration>,
+    pub reliability: SequentialReliabilityData<u8, u32>,
     pub direction: PendingDirection,
 }
 
