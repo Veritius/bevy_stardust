@@ -42,6 +42,9 @@ pub(super) fn receive_packets_system(
             (id, Mutex::new(pending))
         })
         .collect::<BTreeMap<_, _>>();
+    
+    // Accepted addresses
+    let accepted: Mutex<Vec<SocketAddr>> = Mutex::new(Vec::new());
 
     // Map of channels to speed up accesses
     let channel_map = (0..registry.channel_count())
@@ -56,6 +59,7 @@ pub(super) fn receive_packets_system(
     // Explicit borrows to prevent moves
     let active_peers_map = &active_peers_map;
     let pending_peers_map = &pending_peers_map;
+    let accepted = &accepted;
     let channel_map = &channel_map;
     let registry = &registry;
     let hash = &hash;
@@ -107,38 +111,13 @@ pub(super) fn receive_packets_system(
                     // Check packet size
                     // If it's less than 4 bytes it isn't worth processing
                     if octets <= 3 { continue; }
-
-                    if let Some(entity) = addresses.get(&origin) {
-                        // Assert they're only in one map otherwise it'd be weird.
-                        debug_assert_ne!(active_locks.contains_key(entity), pending_locks.contains_key(entity));
-
-                        if let Some(mut address) = active_locks.get(entity) {
-                            // Active peer, process their packet normally
-                            todo!()
-                        } else if let Some(mut address) = pending_locks.get(entity) {
-                            // Pending peer, let's see what they have to say
-                            todo!()
-                        }
-                    } else {
-                        // Unknown peer, likely reaching out to connect to us.
-                        match process_zero_packet_from_unknown(
-                            &buffer,
-                            octets,
-                            socket,
-                            origin,
-                            hash.hex(),
-                            true, // TODO: Allow changing this
-                        ) {
-                            UnknownZeroPacketResult::Discarded => todo!(),
-                            UnknownZeroPacketResult::AcceptUnknownRemote => todo!(),
-                        }
-                    }
                 }
             });
         }
     });
 }
 
+/* 
 fn process_zero_packet_from_known(
     buffer: &[u8; PACKET_MAX_BYTES],
     octets: usize,
@@ -203,41 +182,28 @@ fn process_zero_packet_from_unknown(
     let json = json::parse(string);
     let json = if json.is_err() { return UnknownZeroPacketResult::Discarded } else { json.unwrap() };
 
-    // Check transport version
+    // Get transport version field
     let transport = match &json["transport"] {
         JsonValue::Short(val) => val.as_str(),
         JsonValue::String(val) => val.as_str(),
         _ => { return UnknownZeroPacketResult::Discarded }
     };
 
-    let mut split = transport.split('-');
-    match split.next() {
-        Some(val) => {
-            if val != "udp" { return UnknownZeroPacketResult::Discarded }
-        },
-        None => { return UnknownZeroPacketResult::Discarded },
+    // Check their version
+    let version = transport.parse::<Version>();
+    let version = if version.is_err() { return UnknownZeroPacketResult::Discarded } else { version.unwrap() };
+    if !TRANSPORT_LAYER_REQUIRE.matches(&version) {
+        // Inform the remote peer of their incorrect version
+        // Can't do the same thing as CLOSED_DENIED_PREPROC because if there were
+        // different versions of the transport layer it could give an invalid response
+        // that could be very confusing to anyone trying to debug
+        let result = socket.send_to(object! {
+            "msg": "conn_rejected",
+            "reason": format!("Transport layer version not accepted, requires {}", TRANSPORT_LAYER_REQUIRE_STR),
+        }.dump().as_bytes(), address);
+        if result.is_err() { error!("Error while sending a packet: {}", result.unwrap_err()); }
+        return UnknownZeroPacketResult::Discarded
     }
-    match split.next() {
-        Some(val) => {
-            // Check their version
-            let version = val.parse::<Version>();
-            let version = if version.is_err() { return UnknownZeroPacketResult::Discarded } else { version.unwrap() };
-            if !TRANSPORT_LAYER_REQUIRE.matches(&version) {
-                // Inform the remote peer of their incorrect version
-                // Can't do the same thing as CLOSED_DENIED_PREPROC because if there were
-                // different versions of the transport layer it could give an invalid response
-                // that could be very confusing to anyone trying to debug
-                let result = socket.send_to(object! {
-                    "response": "conn_rejected",
-                    "reason": format!("Transport layer version not accepted, requires {}", TRANSPORT_LAYER_REQUIRE_STR),
-                }.dump().as_bytes(), address);
-                if result.is_err() { error!("Error while sending a packet: {}", result.unwrap_err()); }
-                return UnknownZeroPacketResult::Discarded
-            }
-        },
-        None => { return UnknownZeroPacketResult::Discarded }
-    }
-
     // Check request type
     let request = match &json["request"] {
         JsonValue::Short(val) => val.as_str(),
@@ -274,7 +240,7 @@ fn process_join_zero_packet_from_unknown(
     // Arguably the performance gains aren't even worth it, but whatever.
     static CLOSED_DENIED_PREPROC: Lazy<String> = Lazy::new(|| {
         object! {
-            "response": "conn_rejected",
+            "msg": "conn_rejected",
             "reason": "Connection closed to new peers",
         }.dump()
     });
@@ -289,7 +255,7 @@ fn process_join_zero_packet_from_unknown(
     if other_protocol != protocol {
         // Inform remote peer their transport value is incorrect
         let response = object! {
-            "response": "conn_rejected",
+            "msg": "conn_rejected",
             "reason": format!("Invalid protocol hash, server has {}", protocol),
         }.dump();
         let result = socket.send_to(response.as_bytes(), address);
@@ -321,4 +287,4 @@ fn process_game_packet(
     octets: usize,
 ) {
     todo!()
-}
+} */
