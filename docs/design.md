@@ -1,9 +1,6 @@
-:warning: **This is unfinished.**
+> :warning: **This is unfinished.**
 
 # Stardust
-## ECS peers
-TODO
-
 ## No concept of architecture
 A lot of crates that add networking capabilities to Bevy have a specific architecture or approach in mind. Rollback, client/server, whatever. And that works fine, but Stardust is made to be as general and cover as many use cases as possible.
 
@@ -12,9 +9,13 @@ In service of this goal, the core of Stardust just facilitates transferring byte
 ## Channels and Scheduling
 "Channels" are collections of network messages accessed primarily with the Rust type system, and defined using entities and components. By making channel access use the Rust type system, and also by dividing stores of messages into typed resources, game code can queue messages for sending in parallel, using the Bevy scheduler. Channels are also accessed with a 3-byte untyped ID object, which is mostly used in transport layers.
 
+Channels being accessed through type was a design choice made before I was aware of `SystemBuffer` and `Deferred`. However, I decided to keep it because it makes channels follow Rust's namespace publicity rules.
+
 ## Misc features
+### ECS peers
+Network peers are entities. This has two benefits, peers can have data attached to them with components, and it works with the Bevy scheduler.
 ### Protocol hash
-A 'protocol value' like [the one described by Glenn Fiedler](https://www.gafferongames.com/post/virtual_connection_over_udp/) is included with Stardust. It's just a `Hasher` you can mutate through the `App` while creating it.
+A 'protocol value' like [the one described by Glenn Fiedler](https://www.gafferongames.com/post/virtual_connection_over_udp/) is included with Stardust. It's just a `Resource` storing a `Hasher` you can mutate through the `App` while creating it. This is included with Stardust so any and all plugins can use it without needing to know about the rest.
 
 # UDP transport layer
 ## Dynamic port allocation
