@@ -121,7 +121,17 @@ pub(super) fn receive_packets_system(
                         }
                     } else {
                         // Unknown peer, likely reaching out to connect to us.
-                        todo!()
+                        match process_zero_packet_from_unknown(
+                            &buffer,
+                            octets,
+                            socket,
+                            origin,
+                            hash.hex(),
+                            true, // TODO: Allow changing this
+                        ) {
+                            UnknownZeroPacketResult::Discarded => todo!(),
+                            UnknownZeroPacketResult::AcceptUnknownRemote => todo!(),
+                        }
                     }
                 }
             });
@@ -148,7 +158,7 @@ fn process_zero_packet_from_known(
     };
 
     match response {
-        "accepted" => {
+        "conn_accepted" => {
             match &json["response"] {
                 JsonValue::Number(num) => {
                     let port = u16::try_from(*num);
@@ -158,16 +168,24 @@ fn process_zero_packet_from_known(
                 _ => { return KnownZeroPacketResult::Discarded },
             }
         },
-        "denied" => todo!(),
+        "conn_rejected" => {
+            let reason = match &json["reason"] {
+                JsonValue::Null => return KnownZeroPacketResult::Rejected(None),
+                JsonValue::Short(val) => val.as_str(),
+                JsonValue::String(val) => val.as_str(),
+                _ => { return KnownZeroPacketResult::Rejected(None) }
+            };
+            return KnownZeroPacketResult::Rejected(Some(reason.to_string()))
+        },
         _ => { return KnownZeroPacketResult::Discarded }
     }
 }
 
-/// The outcome of receiving a zero packet from an unknown peer.
+/// The outcome of receiving a zero packet from a known peer.
 enum KnownZeroPacketResult {
     Discarded,
     Accepted(u16),
-    Rejected,
+    Rejected(Option<String>),
 }
 
 fn process_zero_packet_from_unknown(
@@ -210,9 +228,8 @@ fn process_zero_packet_from_unknown(
                 // different versions of the transport layer it could give an invalid response
                 // that could be very confusing to anyone trying to debug
                 let result = socket.send_to(object! {
-                    "response": "denied",
-                    "reason": "transport",
-                    "version": format!("udp-({TRANSPORT_LAYER_REQUIRE_STR})"),
+                    "response": "conn_rejected",
+                    "reason": format!("Transport layer version not accepted, requires {}", TRANSPORT_LAYER_REQUIRE_STR),
                 }.dump().as_bytes(), address);
                 if result.is_err() { error!("Error while sending a packet: {}", result.unwrap_err()); }
                 return UnknownZeroPacketResult::Discarded
@@ -257,8 +274,8 @@ fn process_join_zero_packet_from_unknown(
     // Arguably the performance gains aren't even worth it, but whatever.
     static CLOSED_DENIED_PREPROC: Lazy<String> = Lazy::new(|| {
         object! {
-            "response": "denied",
-            "reason": "closed",
+            "response": "conn_rejected",
+            "reason": "Connection closed to new peers",
         }.dump()
     });
 
@@ -272,9 +289,8 @@ fn process_join_zero_packet_from_unknown(
     if other_protocol != protocol {
         // Inform remote peer their transport value is incorrect
         let response = object! {
-            "response": "denied",
-            "reason": "transport",
-            "requires": protocol,
+            "response": "conn_rejected",
+            "reason": format!("Invalid protocol hash, server has {}", protocol),
         }.dump();
         let result = socket.send_to(response.as_bytes(), address);
         if result.is_err() { error!("Error while sending a packet: {}", result.unwrap_err()); }
@@ -296,6 +312,7 @@ fn process_join_zero_packet_from_unknown(
 /// The outcome of receiving a zero packet from an unknown peer.
 enum UnknownZeroPacketResult {
     Discarded,
+    Rejected,
     AcceptUnknownRemote,
 }
 

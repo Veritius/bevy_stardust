@@ -56,7 +56,7 @@ Let's create two peers, A and B. A wants to connect to B, and B is listening for
     // All packets have a "msg" field, identifying their purpose in the conversation.
     "msg": "req_join",
     // A includes the SemVer version of their transport layer in string form
-    "version": "0.2.0",
+    "transport": "0.2.0",
     // A also sends their protocol hash
     "protocol": "42B2EC801C40258A"
 }
@@ -80,6 +80,7 @@ Or denial:
 ```jsonc
 {
     "msg": "conn_rejected",
-    "reason": "version"
+    // The reason can be absolutely whatever you want.
+    "reason": "whatever"
 }
 ```
