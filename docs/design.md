@@ -27,7 +27,11 @@ flowchart TD
 TODO
 
 ## Channel IDs and packet headers
+Each channel is first headed by three bytes, usually corresponding to the channel the message is intended for. If all three bytes are zero, it's part of the [connection protocol](#connection-protocol), which is not covered here.
+
 TODO
 
 ## Connection protocol
-TODO
+Technically, Stardust has two protocols in one. Most of the time you'll be using the regular protocol, which is what most of this document is about. However, when you first join, you use a special connection protocol that operates on the same ports as the normal protocol. This is possible because all packets are headed by their associated channel ID. By shifting channel IDs from game systems by 1 during transport, we can make space for a special identifier that doesn't correspond to a channel, but is instead used to negotiate connections between peers.
+
+From now on, we'll call all messages on this channel "zero messages". They're all packets headed by three bytes of zero, and are basically completely unrelated to the rest of the game. They even use their own, entirely distinct reliability system, which is similar to TCP. A UDP packet can only have one zero message on it, and it has to be entirely plaintext JSON.
