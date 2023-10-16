@@ -1,9 +1,16 @@
+:warning: **This is unfinished.**
+
 # Stardust
-## Channels
+## ECS peers
 TODO
 
-## Scheduling
-TODO
+## No concept of architecture
+A lot of crates that add networking capabilities to Bevy have a specific architecture or approach in mind. Rollback, client/server, whatever. And that works fine, but Stardust is made to be as general and cover as many use cases as possible.
+
+In service of this goal, the core of Stardust just facilitates transferring bytes, and treats all connections equally. In future, Stardust will include plugins to add functionality like marking peers as a client or server, or a member of a mesh network.
+
+## Channels and Scheduling
+"Channels" are collections of network messages accessed primarily with the Rust type system, and defined using entities and components. By making channel access use the Rust type system, and also by dividing stores of messages into typed resources, game code can queue messages for sending in parallel, using the Bevy scheduler. Channels are also accessed with a 3-byte untyped ID object, which is mostly used in transport layers.
 
 ## Misc features
 ### Protocol hash
@@ -43,6 +50,8 @@ TODO
 Technically, Stardust has two protocols in one. Most of the time you'll be using the regular protocol, which is what most of this document is about. However, when you first join, you use a special connection protocol that operates on the same ports as the normal protocol. This is possible because all packets are headed by their associated channel ID. By shifting channel IDs from game systems by 1 during transport, we can make space for a special identifier that doesn't correspond to a channel, but is instead used to negotiate connections between peers.
 
 From now on, we'll call all messages on this channel "zero messages". They're all packets headed by three bytes of zero (not the letter, just all binary zeros), and are basically completely unrelated to the rest of the game. A UDP packet intended for connection can only have one zero message on it, and it has to be entirely plaintext JSON.
+
+In future, reliability and other features will be added to the connection protocol, to support things like certificate exchange in encryption.
 
 ### Protocol ID
 Many implementations of networking code prefix all packets with a 'protocol' value, uniquely identifying the game and preventing the reading of packets not intended for it. However, this is a lot of data to repeatedly and unnecessarily send, potentially hundreds of times a second. Instead, we send the protocol ID (from the [Stardust protocol hash](#protocol-hash)) just once: when we're connecting. It's completely free to do this once they're connected - the source address is checked to access the client's payload store anyway.
