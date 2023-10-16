@@ -34,4 +34,33 @@ TODO
 ## Connection protocol
 Technically, Stardust has two protocols in one. Most of the time you'll be using the regular protocol, which is what most of this document is about. However, when you first join, you use a special connection protocol that operates on the same ports as the normal protocol. This is possible because all packets are headed by their associated channel ID. By shifting channel IDs from game systems by 1 during transport, we can make space for a special identifier that doesn't correspond to a channel, but is instead used to negotiate connections between peers.
 
-From now on, we'll call all messages on this channel "zero messages". They're all packets headed by three bytes of zero, and are basically completely unrelated to the rest of the game. They even use their own, entirely distinct reliability system, which is similar to TCP. A UDP packet can only have one zero message on it, and it has to be entirely plaintext JSON.
+From now on, we'll call all messages on this channel "zero messages". They're all packets headed by three bytes of zero (not the letter, just all binary zeros), and are basically completely unrelated to the rest of the game. They even use their own, entirely distinct reliability system, which is similar to TCP. A UDP packet can only have one zero message on it, and it has to be entirely plaintext JSON.
+
+### Your average zero message conversation
+Let's create two peers, A and B. A wants to connect to B, and B is listening for connections. A will start by sending the following to B.
+
+```jsonc
+// Headed by three zero bytes.
+{
+    // All packets have a "msg" field, identifying their purpose in the conversation.
+    "msg": "req_join",
+    // A includes the SemVer version of their transport layer in string form
+    "version": "0.2.0"
+}
+```
+
+Now that the first packet in the conversation has been sent, packets will have attached reliability data. This is sent in the form of 4 bytes: 1 sequence value byte, 1 ack byte, and 2 ack bitfield bytes.
+
+After this, B may choose to send some additional challenges to A to ensure they're compatible. In future, this will probably include encryption-related data.
+
+***
+
+If all challenges are passed, B will send this:
+
+```jsonc
+/// Headed by three zero bytes and reliability data
+{
+    "msg": "conn_accepted",
+    "use_port": 12345
+}
+```
