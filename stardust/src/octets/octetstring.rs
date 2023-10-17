@@ -1,6 +1,6 @@
 //! Octet strings, arbitrary-sized sets of octets for transmission.
 
-use std::sync::Arc;
+use std::{sync::Arc, ops::Deref};
 
 /// An octet, aka byte. Smallest unit of communicable data Stardust can transfer.
 pub type Octet = u8;
@@ -10,7 +10,7 @@ pub type Octet = u8;
 /// This type can be cloned freely and cheaply, and will always point to the same space in memory.
 /// Internally, it uses an `Arc` to count references, dropping the data when all copies are dropped.
 #[derive(Debug, Clone)]
-pub struct OctetString(Arc<Vec<Octet>>);
+pub struct OctetString(Arc<[Octet]>);
 
 impl OctetString {
     /// Returns a slice of the octet string.
@@ -27,24 +27,32 @@ impl OctetString {
 impl From<&[u8]> for OctetString {
     fn from(value: &[u8]) -> Self {
         let data = value.iter().cloned().collect::<Vec<Octet>>();
-        Self(Arc::new(data))
+        Self(data.into())
     }
 }
 
 impl From<Vec<u8>> for OctetString {
     fn from(value: Vec<u8>) -> Self {
-        Self(Arc::new(value))
+        Self(value.into())
     }
 }
 
 impl From<Box<[Octet]>> for OctetString {
     fn from(value: Box<[Octet]>) -> Self {
-        Self(Arc::new(value.into_vec()))
+        Self(value.into())
     }
 }
 
 impl From<String> for OctetString {
     fn from(value: String) -> Self {
         value.into_bytes().into()
+    }
+}
+
+impl Deref for OctetString {
+    type Target = [Octet];
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
 }
