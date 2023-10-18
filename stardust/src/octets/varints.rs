@@ -3,7 +3,7 @@
 //! Types here are represented in memory as the smallest possible primitive, but are converted to bytes for network transport.
 //! This means that a type like a `u24` is 4 bytes in memory, and 3 bytes over the wire.
 
-use std::{fmt::Debug, ops::{Add, Sub}};
+use std::{fmt::{Debug, Display}, ops::{Add, Sub}, error::Error};
 use bevy::reflect::Reflect;
 
 #[allow(non_camel_case_types)]
@@ -39,7 +39,7 @@ impl u24 {
 
 impl Debug for u24 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.0.fmt(f)
+        Debug::fmt(&self.0, f)
     }
 }
 
@@ -152,6 +152,16 @@ pub enum NIntegerError {
     /// The n-integer could not represent the value.
     OutOfRange,
 }
+
+impl Display for NIntegerError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            NIntegerError::OutOfRange => f.write_str("n-integer could not represent the value"),
+        }
+    }
+}
+
+impl Error for NIntegerError {}
 
 #[test]
 fn u24_wrapping_test() {
