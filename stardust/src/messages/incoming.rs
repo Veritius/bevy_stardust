@@ -16,21 +16,29 @@ where for <'a> Q: WorldQuery + 'a {
 
 impl<'w, 's, Q> TransportIncomingWriter<'w, 's, Q>
 where for <'a> Q: WorldQuery + 'a {
-
+    /// Returns an object used to manage mutable parallel access to the query.
+    pub fn par_access<'t>(&'t mut self) -> TransportIncomingWriterLockManager<'t, 'w, 's, Q> {
+        TransportIncomingWriterLockManager {
+            incoming: self
+        }
+    }
 }
 
-/// Manages mutable access to [TransportIncomingWriter] for parallelism purposes.
-pub struct TransportIncomingWriterLockManager<'w, 's, Q>
+/// Manages mutable access to query entries in [TransportIncomingWriter] for parallelism purposes.
+pub struct TransportIncomingWriterLockManager<'t, 'w, 's, Q>
 where for <'a> Q: WorldQuery + 'a {
-    incoming: &'w TransportIncomingWriter<'w, 's, Q>,
+    incoming: &'t TransportIncomingWriter<'w, 's, Q>,
 }
 
-impl<'w, 's, Q> TransportIncomingWriterLockManager<'w, 's, Q>
+impl<'t, 'w, 's, Q> TransportIncomingWriterLockManager<'t, 'w, 's, Q>
 where for <'a> Q: WorldQuery + 'a {
-    
+    /// Tries to lock mutable access to `peer`.
+    pub fn try_lock<'a>(&self, peer: Entity) -> Option<()> {
+        None
+    }
 }
 
-/// Storage for network messages that have been directed to this entity.
+/// Storage for network messages that have been received and directed to this peer.
 // TODO: Finish TransportIncomingWriter and make this pub(super)
 #[derive(Component)]
 pub struct NetworkMessageStorage(BTreeMap<ChannelId, Vec<OctetString>>);
