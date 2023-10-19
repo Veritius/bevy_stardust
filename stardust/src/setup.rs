@@ -15,8 +15,6 @@ impl Plugin for StardustPlugin {
     fn build(&self, app: &mut App) {
         // Scheduling stuff
         add_schedules(app);
-        app.add_systems(PreUpdate, network_pre_update);
-        app.add_systems(PostUpdate, network_post_update);
 
         // Add events
         app.add_event::<DisconnectPeerEvent>();
