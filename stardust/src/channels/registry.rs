@@ -2,14 +2,16 @@
 
 use std::{collections::BTreeMap, any::TypeId, sync::{Arc, RwLock}};
 use bevy::prelude::{Resource, Entity};
-use super::{id::{Channel, ChannelId, CHANNEL_ID_LIMIT}, outgoing::OutgoingOctetStringsUntyped};
+use crate::messages::outgoing::UntypedOctetStringCollection;
+
+use super::id::{Channel, ChannelId, CHANNEL_ID_LIMIT};
 
 /// Stores information related to type ids.
 #[derive(Resource)]
 pub struct ChannelRegistry {
     channel_count: u32,
     channel_type_map: BTreeMap<TypeId, ChannelId>,
-    outgoing_arc_map: BTreeMap<ChannelId, Arc<RwLock<OutgoingOctetStringsUntyped>>>,
+    outgoing_arc_map: BTreeMap<ChannelId, Arc<RwLock<UntypedOctetStringCollection>>>,
     entity_map: BTreeMap<ChannelId, Entity>,
 }
 
@@ -26,8 +28,10 @@ impl ChannelRegistry {
     pub(super) fn register_channel<T: Channel>(
         &mut self,
         entity: Entity,
-        untyped_store: Arc<RwLock<OutgoingOctetStringsUntyped>>
+        // untyped_store: Arc<RwLock<UntypedOctetStringCollection>>
     ) -> ChannelId {
+        todo!();
+
         if self.channel_count >= CHANNEL_ID_LIMIT {
             panic!("Exceeded channel limit of {}", CHANNEL_ID_LIMIT);
         }
@@ -41,7 +45,7 @@ impl ChannelRegistry {
         // Add to map
         let channel_id = ChannelId::try_from(self.channel_count).unwrap();
         self.channel_type_map.insert(type_id, channel_id);
-        self.outgoing_arc_map.insert(channel_id, untyped_store);
+        // self.outgoing_arc_map.insert(channel_id, untyped_store);
         self.entity_map.insert(channel_id, entity);
         self.channel_count += 1;
 
@@ -71,12 +75,12 @@ impl ChannelRegistry {
         self.channel_count
     }
 
-    pub(super) fn get_outgoing_arc_map(&self) -> &BTreeMap<ChannelId, Arc<RwLock<OutgoingOctetStringsUntyped>>> {
-        &self.outgoing_arc_map
+    pub(crate) fn get_outgoing_arc_map(&self) /* -> &BTreeMap<ChannelId, Arc<RwLock<OutgoingOctetStringsUntyped>>> */ {
+        // &self.outgoing_arc_map
     }
 
-    pub(super) fn get_outgoing_arc(&self, id: ChannelId) -> Option<Arc<RwLock<OutgoingOctetStringsUntyped>>> {
-        self.outgoing_arc_map.get(&id).cloned()
+    pub(crate) fn get_outgoing_arc(&self, id: ChannelId) /* -> Option<Arc<RwLock<OutgoingOctetStringsUntyped>>> */ {
+        // self.outgoing_arc_map.get(&id).cloned()
     }
 }
 

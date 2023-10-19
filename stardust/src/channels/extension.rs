@@ -2,7 +2,7 @@
 
 use std::any::TypeId;
 use bevy::prelude::*;
-use crate::{channels::outgoing::*, protocol::NetworkHashAppExt};
+use crate::{protocol::NetworkHashAppExt, messages::outgoing::{UntypedOctetStringCollection, ChannelOctetStringCollectionArcHolder}};
 use self::private::Sealed;
 use super::{id::Channel, config::ChannelData, registry::ChannelRegistry};
 
@@ -31,9 +31,9 @@ impl ChannelSetupAppExt for App {
         let mut registry = self.world.resource_mut::<ChannelRegistry>();
 
         // Create storage location on heap and register channel to registry
-        let store = OutgoingOctetStringsUntyped::new();
-        let channel_id = registry.register_channel::<C>(entity_id, store.clone());
-        self.insert_resource(OutgoingNetworkMessages::<C>::new(store));
+        let store = UntypedOctetStringCollection::new();
+        let channel_id = registry.register_channel::<C>(entity_id/*, store.clone()*/);
+        self.insert_resource(ChannelOctetStringCollectionArcHolder::<C>::new(store));
 
         // Spawn config entity
         let type_id = TypeId::of::<C>();

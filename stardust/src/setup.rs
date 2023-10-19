@@ -26,10 +26,6 @@ impl Plugin for StardustPlugin {
         // Systems that check for things that shouldn't happen
         app.add_systems(PreUpdate, panic_on_channel_removal);
 
-        // Systems for clearing the buffers
-        app.add_systems(NetworkPreUpdateCleanup, clear_incoming_buffers_system);
-        app.add_systems(NetworkPostUpdateCleanup, clear_outgoing_buffers_system);
-
         // Channel and hasher things
         app.insert_resource(ChannelRegistry::new());
         app.insert_resource(UniqueNetworkHasher::new());

@@ -6,14 +6,14 @@ use crate::prelude::{ChannelId, OctetString};
 
 /// Allows transport layers to store incoming messages on entities for game systems to read.
 #[derive(SystemParam)]
-pub struct TransportIncomingWriter {
-    
+pub struct TransportIncomingWriter<'w, 's> {
+    commands: Commands<'w, 's>,
 }
 
-impl TransportIncomingWriter {
+impl TransportIncomingWriter<'_, '_> {
 
 }
 
 /// Storage for network messages that have been directed to this entity.
 #[derive(Component)]
-pub(super) struct NetworkMessageStorage(BTreeMap<ChannelId, Vec<OctetString>>);
+pub struct NetworkMessageStorage(BTreeMap<ChannelId, Vec<OctetString>>);
