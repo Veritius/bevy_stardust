@@ -1,6 +1,6 @@
 //! Adds `register_channel` to the `App`.
 
-use std::any::TypeId;
+use std::{any::TypeId, sync::{Arc, RwLock}};
 use bevy::prelude::*;
 use crate::{protocol::NetworkHashAppExt, messages::outgoing::{UntypedOctetStringCollection, ChannelOctetStringCollectionArcHolder}};
 use self::private::Sealed;
@@ -32,7 +32,7 @@ impl ChannelSetupAppExt for App {
 
         // Create storage location on heap and register channel to registry
         let store = UntypedOctetStringCollection::new();
-        let channel_id = registry.register_channel::<C>(entity_id/*, store.clone()*/);
+        let channel_id = registry.register_channel::<C>(entity_id, Arc::new(RwLock::new(store.clone())));
         self.insert_resource(ChannelOctetStringCollectionArcHolder::<C>::new(store));
 
         // Spawn config entity

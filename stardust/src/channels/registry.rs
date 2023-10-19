@@ -28,10 +28,8 @@ impl ChannelRegistry {
     pub(super) fn register_channel<T: Channel>(
         &mut self,
         entity: Entity,
-        // untyped_store: Arc<RwLock<UntypedOctetStringCollection>>
+        untyped_store: Arc<RwLock<UntypedOctetStringCollection>>
     ) -> ChannelId {
-        todo!();
-
         if self.channel_count >= CHANNEL_ID_LIMIT {
             panic!("Exceeded channel limit of {}", CHANNEL_ID_LIMIT);
         }
@@ -75,12 +73,12 @@ impl ChannelRegistry {
         self.channel_count
     }
 
-    pub(crate) fn get_outgoing_arc_map(&self) /* -> &BTreeMap<ChannelId, Arc<RwLock<OutgoingOctetStringsUntyped>>> */ {
-        // &self.outgoing_arc_map
+    pub(crate) fn get_outgoing_arc_map(&self) -> &BTreeMap<ChannelId, Arc<RwLock<UntypedOctetStringCollection>>> {
+        &self.outgoing_arc_map
     }
 
-    pub(crate) fn get_outgoing_arc(&self, id: ChannelId) /* -> Option<Arc<RwLock<OutgoingOctetStringsUntyped>>> */ {
-        // self.outgoing_arc_map.get(&id).cloned()
+    pub(crate) fn get_outgoing_arc(&self, id: ChannelId) -> Option<Arc<RwLock<UntypedOctetStringCollection>>> {
+        self.outgoing_arc_map.get(&id).cloned()
     }
 }
 

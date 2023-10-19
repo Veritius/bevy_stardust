@@ -5,16 +5,21 @@ use bevy::{prelude::*, ecs::system::SystemParam};
 use smallvec::SmallVec;
 use crate::prelude::{ChannelRegistry, ChannelId, OctetString, Channel};
 
-#[derive(Debug, PartialEq, Eq)]
+/// Value used to specify which peers should receive a network message.
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SendTarget {
+    /// Sends to one peer.
     Single(Entity),
+    /// Sends to multiple peers.
+    // TODO: Remove in favor of network groups.
     Multiple(SmallVec<[Entity; 8]>),
+    /// Sends to all peers.
     Broadcast,
 }
 
 #[derive(Resource)]
 pub(crate) struct ChannelOctetStringCollectionArcHolder<T: Channel> {
-    internal: Arc<RwLock<UntypedOctetStringCollection>>,
+    pub internal: Arc<RwLock<UntypedOctetStringCollection>>,
     phantom: PhantomData<T>,
 }
 
@@ -34,25 +39,39 @@ pub struct TransportOutgoingReader<'w> {
 }
 
 impl<'w> TransportOutgoingReader<'w> {
-    pub fn by_channel(&self, channel: ChannelId) /* -> impl Iterator<Item = ChannelIter<'w>> + 'w */ {
-        todo!()
-        // self.registry
-        //     .get_outgoing_arc_map()
-        //     .iter()
-        //     .map(|(k,v)| {
-        //         ChannelIter {
-        //             channel: *k,
-        //             guard: v.read().unwrap()
-        //         }
-        //     })
+    /// Returns an iterator over all channels, with the collection of messages.
+    pub fn by_channel(&'w self, channel: ChannelId) -> impl Iterator<Item = ChannelReader<'w>> + 'w {
+        self.registry
+            .get_outgoing_arc_map()
+            .iter()
+            .map(|(k,v)| {
+                ChannelReader {
+                    channel: *k,
+                    guard: v.read().unwrap()
+                }
+            })
     }
 }
 
-pub struct ChannelIter<'a> {
+/// Read lock on a channel's collection of octet strings.
+pub struct ChannelReader<'a> {
     channel: ChannelId,
     guard: RwLockReadGuard<'a, UntypedOctetStringCollection>
 }
 
+impl<'a> ChannelReader<'a> {
+    /// Returns the channel ID corresponding to this ChannelReader.
+    pub fn channel(&self) -> ChannelId {
+        self.channel
+    }
+
+    /// Returns a slice of all messages.
+    pub fn read(&self) -> &[(SendTarget, OctetString)] {
+        &self.guard.0
+    }
+}
+
+#[derive(Clone)]
 pub(crate) struct UntypedOctetStringCollection(Vec<(SendTarget, OctetString)>);
 
 impl UntypedOctetStringCollection {
