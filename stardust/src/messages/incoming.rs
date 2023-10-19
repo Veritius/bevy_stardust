@@ -23,7 +23,7 @@ impl NetworkMessageStorage {
     /// Appends a message to the peer's message storage.
     /// Panics if this is done outside of the `TransportReadPackets` schedule.
     pub fn append(&mut self, schedule: &NetworkScheduleData, channel: ChannelId, octets: impl Into<OctetString>) {
-        if !schedule.message_mutation_allowed.0 {
+        if !schedule.message_storage_mutation_allowed() {
             panic!("Tried to append a message outside of the TransportReadPackets schedule");
         }
 

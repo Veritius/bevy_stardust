@@ -8,6 +8,13 @@ pub struct NetworkScheduleData<'w> {
     pub(crate) message_mutation_allowed: Res<'w, MessageStorageMutationAllowed>,
 }
 
+impl<'w> NetworkScheduleData<'w> {
+    /// Returns whether or not mutating `NetworkMessageStorage` components is allowed.
+    pub fn message_storage_mutation_allowed(&self) -> bool {
+        self.message_mutation_allowed.0
+    }
+}
+
 // HACK: This prevents adding to `NetworkMessageStorage` components outside of the `TransportReadPackets` schedule.
 // TODO: Think of something better than this.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Resource)]
