@@ -32,7 +32,7 @@ impl<T: Channel> ChannelOctetStringCollectionArcHolder<T> {
     }
 }
 
-/// Allows transport layers to view all messages sent by game systems for transport.
+/// Allows transport layers to view all messages queued for transport by game systems.
 #[derive(SystemParam)]
 pub struct TransportOutgoingReader<'w> {
     registry: Res<'w, ChannelRegistry>,
@@ -44,6 +44,7 @@ impl<'w> TransportOutgoingReader<'w> {
         self.registry
             .get_outgoing_arc_map()
             .iter()
+            .filter(move |(cid, _)| **cid == channel)
             .map(|(k,v)| {
                 ChannelReader {
                     channel: *k,
@@ -72,7 +73,7 @@ impl<'a> ChannelReader<'a> {
 }
 
 #[derive(Clone)]
-pub(crate) struct UntypedOctetStringCollection(Vec<(SendTarget, OctetString)>);
+pub(crate) struct UntypedOctetStringCollection(pub(super) Vec<(SendTarget, OctetString)>);
 
 impl UntypedOctetStringCollection {
     pub fn new() -> Self {

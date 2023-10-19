@@ -43,7 +43,7 @@ impl ChannelRegistry {
         // Add to map
         let channel_id = ChannelId::try_from(self.channel_count).unwrap();
         self.channel_type_map.insert(type_id, channel_id);
-        // self.outgoing_arc_map.insert(channel_id, untyped_store);
+        self.outgoing_arc_map.insert(channel_id, untyped_store);
         self.entity_map.insert(channel_id, entity);
         self.channel_count += 1;
 
@@ -75,10 +75,6 @@ impl ChannelRegistry {
 
     pub(crate) fn get_outgoing_arc_map(&self) -> &BTreeMap<ChannelId, Arc<RwLock<UntypedOctetStringCollection>>> {
         &self.outgoing_arc_map
-    }
-
-    pub(crate) fn get_outgoing_arc(&self, id: ChannelId) -> Option<Arc<RwLock<UntypedOctetStringCollection>>> {
-        self.outgoing_arc_map.get(&id).cloned()
     }
 }
 
