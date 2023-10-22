@@ -1,6 +1,6 @@
 use std::net::{SocketAddr, UdpSocket};
 use std::{collections::BTreeMap, sync::Mutex};
-use bevy::ecs::system::{CommandQueue, Despawn};
+use bevy::ecs::system::{CommandQueue, Despawn, Command};
 use bevy::prelude::*;
 use bevy::tasks::TaskPoolBuilder;
 use json::{JsonValue, object};
@@ -68,14 +68,13 @@ pub(super) fn receive_packets_system(
     let hash = &hash;
 
     // Process incoming packets
-    let commands = taskpool.scope(|s| {
+    let mut actions = taskpool.scope(|s| {
         for (_, socket, socket_peers) in ports.iter() {
             // Spawn task
             s.spawn(async move {
                 // Allocate a buffer for storing incoming data
                 let mut buffer = [0u8; PACKET_MAX_BYTES];
-
-                let mut commands = CommandQueue::default();
+                let mut actions = vec![];
 
                 // Lock mutexes for our port-associated clients
                 // This never blocks since each client is only accessed by one task at a time
@@ -128,14 +127,26 @@ pub(super) fn receive_packets_system(
 
                     if &buffer[0..2] == &[0u8; 3] {
                         if let Some((entity, ptype)) = addresses.get(&origin) {
+                            if *ptype == PeerType::Active { continue } // we ignore messages from active peers
                             match process_zero_packet_from_known(
                                 &buffer[3..octets],
                             ) {
-                                KnownZeroPacketResult::Discarded => todo!(),
-                                KnownZeroPacketResult::Accepted(_) => todo!(),
-                                KnownZeroPacketResult::Rejected(_) => {
-                                    info!("Connection attempt to {{TODO}} was rejected");
-                                    commands.push(Despawn { entity: *entity });
+                                KnownZeroPacketResult::Discarded => {
+                                    info!("{origin}'s response to a connection attempt failed to parse, stopping connection");
+                                    actions.push(TaskAction::DissociatePeer(*entity));
+                                    continue;
+                                },
+                                KnownZeroPacketResult::Accepted(port) => {
+                                    info!("Connection attempt to {origin} was accepted, rebinding to port {port}");
+                                    actions.push(TaskAction::ReassociatePeer(*entity, port));
+                                    continue;
+                                },
+                                KnownZeroPacketResult::Rejected(reason) => {
+                                    match reason {
+                                        Some(val) => { info!("Connection attempt to {origin} was rejected: {val}"); },
+                                        None => { info!("Connection attempt to {origin} was rejected: no reason given"); },
+                                    }
+                                    actions.push(TaskAction::DissociatePeer(*entity));
                                     continue;
                                 },
                             }
@@ -149,14 +160,19 @@ pub(super) fn receive_packets_system(
                             ) {
                                 UnknownZeroPacketResult::Discarded => { continue },
                                 UnknownZeroPacketResult::Rejected => {
-                                    info!("Connection attempt from {socket:?} was rejected");
+                                    info!("Connection attempt from {origin:?} was rejected");
                                     continue;
                                 },
-                                UnknownZeroPacketResult::AcceptUnknownRemote => todo!(),
+                                UnknownZeroPacketResult::AcceptUnknownRemote => {
+                                    // We'll log this later when this action is processed
+                                    actions.push(TaskAction::AssociatePeer(origin));
+                                    continue;
+                                },
                             }
                         }
                     } else {
                         if let Some((entity, ptype)) = addresses.get(&origin) {
+                            if *ptype == PeerType::Pending { continue } // we ignore messages from pending peers
                             process_game_packet(&buffer, octets - 3)
                         } else {
                             // Don't know them, don't care about them
@@ -167,6 +183,15 @@ pub(super) fn receive_packets_system(
             });
         }
     });
+}
+
+#[derive(Debug, Clone)]
+enum TaskAction {
+    /// Delete the entity and remove them from their port.
+    DissociatePeer(Entity),
+    /// Create a new entity on this address and bind them to a port.
+    AssociatePeer(SocketAddr),
+    ReassociatePeer(Entity, u16),
 }
 
 fn process_zero_packet_from_known(
@@ -262,16 +287,13 @@ fn process_zero_packet_from_unknown(
 
     return match request {
         "join" => {
-            match process_join_zero_packet_from_unknown(
+            return process_join_zero_packet_from_unknown(
                 &json,
                 &socket,
                 address,
                 protocol,
                 allow_new,
-            ) {
-                true => UnknownZeroPacketResult::AcceptUnknownRemote,
-                false => UnknownZeroPacketResult::Discarded,
-            }
+            )
         },
         _ => UnknownZeroPacketResult::Discarded,
     }
@@ -283,7 +305,7 @@ fn process_join_zero_packet_from_unknown(
     address: SocketAddr,
     protocol: &str,
     allow_new: bool
-) -> bool {
+) -> UnknownZeroPacketResult {
     // Since this string remains constant across runtime, we initialise it once using a Lazy
     // This saves us having to allocate a String every time we want to tell the remote peer one of these things
     // Arguably the performance gains aren't even worth it, but whatever.
@@ -298,7 +320,7 @@ fn process_join_zero_packet_from_unknown(
     let other_protocol = match &json["protocol"] {
         JsonValue::Short(val) => val.as_str(),
         JsonValue::String(val) => val.as_str(),
-        _ => { return false }
+        _ => { return UnknownZeroPacketResult::Rejected }
     };
 
     if other_protocol != protocol {
@@ -309,7 +331,7 @@ fn process_join_zero_packet_from_unknown(
         }.dump();
         let result = socket.send_to(response.as_bytes(), address);
         if result.is_err() { error!("Error while sending a packet: {}", result.unwrap_err()); }
-        return false
+        return UnknownZeroPacketResult::Rejected
     }
 
     // Check if new connections are allowed
@@ -317,11 +339,11 @@ fn process_join_zero_packet_from_unknown(
     if !allow_new {
         let result = socket.send_to(CLOSED_DENIED_PREPROC.as_bytes(), address);
         if result.is_err() { error!("Error while sending a packet: {}", result.unwrap_err()); }
-        return false
+        return UnknownZeroPacketResult::Rejected
     }
 
     // All checks succeeded - let them in!
-    return true
+    return UnknownZeroPacketResult::AcceptUnknownRemote
 }
 
 /// The outcome of receiving a zero packet from an unknown peer.
