@@ -1,5 +1,6 @@
 use std::net::{SocketAddr, UdpSocket};
 use std::{collections::BTreeMap, sync::Mutex};
+use bevy::ecs::system::{CommandQueue, Despawn};
 use bevy::prelude::*;
 use bevy::tasks::TaskPoolBuilder;
 use json::{JsonValue, object};
@@ -8,6 +9,7 @@ use semver::Version;
 use crate::messages::incoming::NetworkMessageStorage;
 use crate::prelude::*;
 use crate::protocol::UniqueNetworkHash;
+use crate::scheduling::NetworkScheduleData;
 use crate::transports::udp::{TRANSPORT_LAYER_REQUIRE, TRANSPORT_LAYER_REQUIRE_STR};
 use super::PACKET_MAX_BYTES;
 use super::connections::{EstablishedUdpPeer, PendingUdpPeer};
@@ -18,6 +20,7 @@ pub(super) fn receive_packets_system(
     mut commands: Commands,
     mut active_peers: Query<(Entity, &NetworkPeer, &mut EstablishedUdpPeer, &mut NetworkMessageStorage)>,
     mut pending_peers: Query<(Entity, &mut PendingUdpPeer)>,
+    schedule: NetworkScheduleData,
     registry: Res<ChannelRegistry>,
     channels: Query<(Option<&OrderedChannel>, Option<&ReliableChannel>, Option<&FragmentedChannel>)>,
     ports: Res<PortBindings>,
@@ -65,12 +68,14 @@ pub(super) fn receive_packets_system(
     let hash = &hash;
 
     // Process incoming packets
-    taskpool.scope(|s| {
+    let commands = taskpool.scope(|s| {
         for (_, socket, socket_peers) in ports.iter() {
             // Spawn task
             s.spawn(async move {
                 // Allocate a buffer for storing incoming data
                 let mut buffer = [0u8; PACKET_MAX_BYTES];
+
+                let mut commands = CommandQueue::default();
 
                 // Lock mutexes for our port-associated clients
                 // This never blocks since each client is only accessed by one task at a time
@@ -84,12 +89,21 @@ pub(super) fn receive_packets_system(
                     .map(|(k,v)| (*k, v.lock().unwrap()))
                     .collect::<BTreeMap<_, _>>();
 
+                #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+                enum PeerType {
+                    Active,
+                    Pending,
+                }
+
                 // Map addresses to entity IDs so we can lookup peers faster
                 // TODO: Test performance without this. It's probably negligible.
                 let addresses = active_locks
                     .iter()
-                    .map(|(k, v)| (v.1.address, *k))
-                    .chain(pending_locks.iter().map(|(k, v)| (v.address, *k)))
+                    .map(|(k, v)| (v.1.address, (*k, PeerType::Active)))
+                    .chain(
+                        pending_locks
+                        .iter()
+                        .map(|(k, v)| (v.address, (*k, PeerType::Pending))))
                     .collect::<BTreeMap<_, _>>();
 
                 // Read all packets from the socket
@@ -111,20 +125,56 @@ pub(super) fn receive_packets_system(
                     // Check packet size
                     // If it's less than 4 bytes it isn't worth processing
                     if octets <= 3 { continue; }
+
+                    if &buffer[0..2] == &[0u8; 3] {
+                        if let Some((entity, ptype)) = addresses.get(&origin) {
+                            match process_zero_packet_from_known(
+                                &buffer[3..octets],
+                            ) {
+                                KnownZeroPacketResult::Discarded => todo!(),
+                                KnownZeroPacketResult::Accepted(_) => todo!(),
+                                KnownZeroPacketResult::Rejected(_) => {
+                                    info!("Connection attempt to {{TODO}} was rejected");
+                                    commands.push(Despawn { entity: *entity });
+                                    continue;
+                                },
+                            }
+                        } else {
+                            match process_zero_packet_from_unknown(
+                                &buffer[3..octets],
+                                socket,
+                                origin,
+                                hash.hex(),
+                                true, // TODO: Allow changing this
+                            ) {
+                                UnknownZeroPacketResult::Discarded => { continue },
+                                UnknownZeroPacketResult::Rejected => {
+                                    info!("Connection attempt from {socket:?} was rejected");
+                                    continue;
+                                },
+                                UnknownZeroPacketResult::AcceptUnknownRemote => todo!(),
+                            }
+                        }
+                    } else {
+                        if let Some((entity, ptype)) = addresses.get(&origin) {
+                            process_game_packet(&buffer, octets - 3)
+                        } else {
+                            // Don't know them, don't care about them
+                            continue
+                        }
+                    }
                 }
             });
         }
     });
 }
 
-/* 
 fn process_zero_packet_from_known(
-    buffer: &[u8; PACKET_MAX_BYTES],
-    octets: usize,
+    buffer: &[u8],
 ) -> KnownZeroPacketResult {
     // Turn data into a JSON table
     // Will simply discard the packet if any of this fails
-    let string = std::str::from_utf8(&buffer[3..octets]);
+    let string = std::str::from_utf8(&buffer);
     let string = if string.is_err() { return KnownZeroPacketResult::Discarded } else { string.unwrap() };
     let json = json::parse(string);
     let json = if json.is_err() { return KnownZeroPacketResult::Discarded } else { json.unwrap() };
@@ -168,8 +218,7 @@ enum KnownZeroPacketResult {
 }
 
 fn process_zero_packet_from_unknown(
-    buffer: &[u8; PACKET_MAX_BYTES],
-    octets: usize,
+    buffer: &[u8],
     socket: &UdpSocket,
     address: SocketAddr,
     protocol: &str,
@@ -177,7 +226,7 @@ fn process_zero_packet_from_unknown(
 )  -> UnknownZeroPacketResult {
     // Turn data into a JSON table
     // Will simply discard the packet if any of this fails
-    let string = std::str::from_utf8(&buffer[3..octets]);
+    let string = std::str::from_utf8(&buffer);
     let string = if string.is_err() { return UnknownZeroPacketResult::Discarded } else { string.unwrap() };
     let json = json::parse(string);
     let json = if json.is_err() { return UnknownZeroPacketResult::Discarded } else { json.unwrap() };
@@ -287,4 +336,4 @@ fn process_game_packet(
     octets: usize,
 ) {
     todo!()
-} */
+}

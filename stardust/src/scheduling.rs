@@ -2,7 +2,7 @@
 
 use bevy::{prelude::*, ecs::{schedule::ScheduleLabel, system::SystemParam}};
 
-/// Data about the network schedule.
+/// Information about Stardust's scheduling.
 #[derive(SystemParam)]
 pub struct NetworkScheduleData<'w> {
     pub(crate) message_mutation_allowed: Res<'w, MessageStorageMutationAllowed>,
@@ -38,8 +38,10 @@ pub struct NetworkPreUpdate;
 pub(super) fn network_pre_update(world: &mut World) {
     world.resource_mut::<MessageStorageMutationAllowed>().0 = true;
     world.run_schedule(TransportReadPackets);
+    apply_deferred(world);
     world.resource_mut::<MessageStorageMutationAllowed>().0 = false;
     world.run_schedule(PreReadOctetStrings);
+    apply_deferred(world);
 }
 
 /// Receive packets and process them into usable data (ordering, defragmentation)
@@ -58,6 +60,7 @@ pub struct NetworkPostUpdate;
 
 pub(super) fn network_post_update(world: &mut World) {
     world.run_schedule(TransportSendPackets);
+    apply_deferred(world);
 }
 
 /// The transport layer fragments and sends packets over the network.
