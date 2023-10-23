@@ -14,7 +14,7 @@ pub(super) struct EstablishedUdpPeer {
 pub(super) struct PendingUdpPeer {
     pub address: SocketAddr,
     pub started: Instant,
-    pub timeout: Option<Duration>,
+    pub timeout: Duration,
     pub direction: PendingDirection,
 }
 

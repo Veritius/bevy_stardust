@@ -46,7 +46,7 @@ impl<'w, 's> UdpConnectionManager<'w, 's> {
     /// Try to connect to a remote peer.
     /// 
     /// `address` is the address that will be used to start the connection. The actual address used during an active connection may change.
-    /// `timeout` is how long the transport layer will try to establish a connection before giving up. If `None` it will never stop trying.
+    /// `timeout` is how long the transport layer will try to establish a connection before giving up. If `None`, defaults to 30 seconds.
     pub fn connect_to_remote(&mut self, address: SocketAddr, timeout: Option<Duration>) {
         // Check the state and warn if incorrect
         if *self.state.get() == UdpTransportState::Offline {
@@ -59,7 +59,7 @@ impl<'w, 's> UdpConnectionManager<'w, 's> {
             PendingUdpPeer {
                 address,
                 started: Instant::now(),
-                timeout,
+                timeout: timeout.unwrap_or(Duration::from_secs(30)),
                 direction: PendingDirection::Outgoing(super::connections::PendingOutgoingState::NoResponseYet),
             },
         )).id();
