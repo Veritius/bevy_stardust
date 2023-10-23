@@ -2,7 +2,7 @@
 
 use std::{collections::BTreeMap, any::TypeId, sync::{Arc, RwLock}};
 use bevy::prelude::{Resource, Entity};
-use crate::messages::outgoing::UntypedOctetStringCollection;
+use crate::{messages::outgoing::UntypedOctetStringCollection, octets::varints::u24};
 
 use super::id::{Channel, ChannelId, CHANNEL_ID_LIMIT};
 
@@ -71,6 +71,12 @@ impl ChannelRegistry {
     /// Returns how many channels currently exist.
     pub fn channel_count(&self) -> u32 {
         self.channel_count
+    }
+
+    /// Returns an iterator of all existing channel ids.
+    pub fn channel_ids(&self) -> impl Iterator<Item = ChannelId> {
+        (0..self.channel_count).into_iter()
+        .map(|f| ChannelId(TryInto::<u24>::try_into(f).unwrap()))
     }
 
     pub(crate) fn get_outgoing_arc_map(&self) -> &BTreeMap<ChannelId, Arc<RwLock<UntypedOctetStringCollection>>> {
