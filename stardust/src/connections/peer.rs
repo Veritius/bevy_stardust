@@ -22,6 +22,15 @@ pub struct NetworkPeer {
     pub connected: Instant,
 }
 
+impl NetworkPeer {
+    /// Creates a new [NetworkPeer] component with `connected` set to now.
+    pub fn new() -> Self {
+        Self {
+            connected: Instant::now(),
+        }
+    }
+}
+
 /// A `Uuid` value associated with a `NetworkPeer`. This could be an account value, or some other identifier.
 /// It's useful if you want to keep track of clients even if they disconnect.
 /// 

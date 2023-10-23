@@ -12,7 +12,7 @@ use crate::scheduling::NetworkScheduleData;
 use crate::transports::udp::{TRANSPORT_LAYER_REQUIRE, TRANSPORT_LAYER_REQUIRE_STR};
 use super::PACKET_MAX_BYTES;
 use super::connections::{EstablishedUdpPeer, PendingUdpPeer};
-use super::ports::PortBindings;
+use super::ports::{PortBindings, ReservationKey};
 
 /// Processes packets from bound ports using a task pool strategy.
 pub(super) fn receive_packets_system(
@@ -22,7 +22,7 @@ pub(super) fn receive_packets_system(
     schedule: NetworkScheduleData,
     registry: Res<ChannelRegistry>,
     channels: Query<(Option<&OrderedChannel>, Option<&ReliableChannel>, Option<&FragmentedChannel>)>,
-    ports: Res<PortBindings>,
+    mut ports: ResMut<PortBindings>,
     hash: Res<UniqueNetworkHash>,
 ) {
     // Create task pool for parallel accesses
@@ -61,16 +61,20 @@ pub(super) fn receive_packets_system(
     // Explicit borrows to prevent moves
     let active_peers_map = &active_peers_map;
     let pending_peers_map = &pending_peers_map;
+    let ports_ref = ports.as_ref();
     let accepted = &accepted;
     let channel_map = &channel_map;
     let registry = &registry;
     let hash = &hash;
 
     // Process incoming packets
-    taskpool.scope(|s| {
+    let actions = taskpool.scope(|s| {
         for (_, socket, socket_peers) in ports.iter() {
             // Spawn task
             s.spawn(async move {
+                // Storage for deferred actions this thread wants to make
+                let mut actions = vec![];
+                
                 // Allocate a buffer for storing incoming data
                 let mut buffer = [0u8; PACKET_MAX_BYTES];
 
@@ -131,12 +135,12 @@ pub(super) fn receive_packets_system(
                             ) {
                                 KnownZeroPacketResult::Discarded => {
                                     info!("{origin}'s response to a connection attempt failed to parse, stopping connection");
-                                    // actions.push(TaskAction::DissociatePeer(*entity));
+                                    actions.push(DeferredAction::ShutdownPeer(*entity));
                                     continue;
                                 },
                                 KnownZeroPacketResult::Accepted(port) => {
                                     info!("Connection attempt to {origin} was accepted, rebinding to port {port}");
-                                    // actions.push(TaskAction::ChangePeerPort(*entity, port));
+                                    actions.push(DeferredAction::MakeEstablished(*entity, port));
                                     continue;
                                 },
                                 KnownZeroPacketResult::Rejected(reason) => {
@@ -144,7 +148,7 @@ pub(super) fn receive_packets_system(
                                         Some(val) => { info!("Connection attempt to {origin} was rejected: {val}"); },
                                         None => { info!("Connection attempt to {origin} was rejected: no reason given"); },
                                     }
-                                    // actions.push(TaskAction::DissociatePeer(*entity));
+                                    actions.push(DeferredAction::ShutdownPeer(*entity));
                                     continue;
                                 },
                             }
@@ -153,6 +157,7 @@ pub(super) fn receive_packets_system(
                                 &buffer[3..octets],
                                 socket,
                                 origin,
+                                ports_ref,
                                 hash.hex(),
                                 true, // TODO: Allow changing this
                             ) {
@@ -161,9 +166,8 @@ pub(super) fn receive_packets_system(
                                     info!("Connection attempt from {origin:?} was rejected");
                                     continue;
                                 },
-                                UnknownZeroPacketResult::AcceptUnknownRemote => {
-                                    // We'll log this later when this action is processed
-                                    // actions.push(TaskAction::AssociatePeer(origin));
+                                UnknownZeroPacketResult::Accepted(reskey) => {
+                                    actions.push(DeferredAction::FinishReservation(reskey, origin));
                                     continue;
                                 },
                             }
@@ -178,9 +182,49 @@ pub(super) fn receive_packets_system(
                         }
                     }
                 }
+
+                // Return actions
+                actions
             });
         }
     });
+
+    // Apply deferred actions queued by tasks
+    for action in actions.iter().flatten() {
+        match action {
+            DeferredAction::FinishReservation(key, addr) => {
+                let entity = commands.spawn((
+                    NetworkPeer::new(),
+                    EstablishedUdpPeer {
+                        address: *addr,
+                        hiccups: 0,
+                    },
+                )).id();
+                ports.take_reservations([(*key, entity)].iter().cloned());
+            },
+            DeferredAction::ShutdownPeer(peer) => {
+                ports.remove_client(*peer);
+                commands.entity(*peer).despawn();
+            },
+            DeferredAction::MakeEstablished(peer, port) => {
+                let ip = pending_peers.get_mut(*peer).unwrap().1.address.ip();
+                commands.entity(*peer).remove::<PendingUdpPeer>().insert(EstablishedUdpPeer {
+                    address: SocketAddr::new(ip, *port),
+                    hiccups: 0,
+                });
+            },
+        }
+    }
+
+    #[cfg(debug_assertions="true")]
+    ports.confirm_reservation_emptiness();
+}
+
+#[derive(Debug, Clone)]
+enum DeferredAction {
+    FinishReservation(ReservationKey, SocketAddr),
+    ShutdownPeer(Entity),
+    MakeEstablished(Entity, u16),
 }
 
 fn process_zero_packet_from_known(
@@ -235,6 +279,7 @@ fn process_zero_packet_from_unknown(
     buffer: &[u8],
     socket: &UdpSocket,
     address: SocketAddr,
+    ports: &PortBindings,
     protocol: &str,
     allow_new: bool,
 )  -> UnknownZeroPacketResult {
@@ -277,6 +322,7 @@ fn process_zero_packet_from_unknown(
     return match request {
         "join" => {
             return process_join_zero_packet_from_unknown(
+                ports,
                 &json,
                 &socket,
                 address,
@@ -289,6 +335,7 @@ fn process_zero_packet_from_unknown(
 }
 
 fn process_join_zero_packet_from_unknown(
+    ports: &PortBindings,
     json: &JsonValue,
     socket: &UdpSocket,
     address: SocketAddr,
@@ -331,15 +378,25 @@ fn process_join_zero_packet_from_unknown(
         return UnknownZeroPacketResult::Rejected
     }
 
-    // All checks succeeded - let them in!
-    return UnknownZeroPacketResult::AcceptUnknownRemote
+    // All checks succeeded, reserve their position and inform them of acceptance
+    let (port, reskey) = ports.make_reservation();
+    let response = object! {
+        "msg": "conn_accepted",
+        "use_port": port
+    }.dump();
+    let result = socket.send_to(response.as_bytes(), address);
+    if result.is_err() { error!("Error while sending a packet: {}", result.unwrap_err()); }
+
+    // Log result and return the reservation key
+    info!("New peer on {address} accepted and assigned to {port}");
+    return UnknownZeroPacketResult::Accepted(reskey)
 }
 
 /// The outcome of receiving a zero packet from an unknown peer.
 enum UnknownZeroPacketResult {
     Discarded,
     Rejected,
-    AcceptUnknownRemote,
+    Accepted(ReservationKey),
 }
 
 fn process_game_packet(
