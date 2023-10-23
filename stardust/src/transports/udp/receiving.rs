@@ -1,6 +1,5 @@
 use std::net::{SocketAddr, UdpSocket};
 use std::{collections::BTreeMap, sync::Mutex};
-use bevy::ecs::system::{CommandQueue, Despawn, Command};
 use bevy::prelude::*;
 use bevy::tasks::TaskPoolBuilder;
 use json::{JsonValue, object};
@@ -68,13 +67,12 @@ pub(super) fn receive_packets_system(
     let hash = &hash;
 
     // Process incoming packets
-    let mut actions = taskpool.scope(|s| {
+    taskpool.scope(|s| {
         for (_, socket, socket_peers) in ports.iter() {
             // Spawn task
             s.spawn(async move {
                 // Allocate a buffer for storing incoming data
                 let mut buffer = [0u8; PACKET_MAX_BYTES];
-                let mut actions = vec![];
 
                 // Lock mutexes for our port-associated clients
                 // This never blocks since each client is only accessed by one task at a time
@@ -133,12 +131,12 @@ pub(super) fn receive_packets_system(
                             ) {
                                 KnownZeroPacketResult::Discarded => {
                                     info!("{origin}'s response to a connection attempt failed to parse, stopping connection");
-                                    actions.push(TaskAction::DissociatePeer(*entity));
+                                    // actions.push(TaskAction::DissociatePeer(*entity));
                                     continue;
                                 },
                                 KnownZeroPacketResult::Accepted(port) => {
                                     info!("Connection attempt to {origin} was accepted, rebinding to port {port}");
-                                    actions.push(TaskAction::ReassociatePeer(*entity, port));
+                                    // actions.push(TaskAction::ChangePeerPort(*entity, port));
                                     continue;
                                 },
                                 KnownZeroPacketResult::Rejected(reason) => {
@@ -146,7 +144,7 @@ pub(super) fn receive_packets_system(
                                         Some(val) => { info!("Connection attempt to {origin} was rejected: {val}"); },
                                         None => { info!("Connection attempt to {origin} was rejected: no reason given"); },
                                     }
-                                    actions.push(TaskAction::DissociatePeer(*entity));
+                                    // actions.push(TaskAction::DissociatePeer(*entity));
                                     continue;
                                 },
                             }
@@ -165,7 +163,7 @@ pub(super) fn receive_packets_system(
                                 },
                                 UnknownZeroPacketResult::AcceptUnknownRemote => {
                                     // We'll log this later when this action is processed
-                                    actions.push(TaskAction::AssociatePeer(origin));
+                                    // actions.push(TaskAction::AssociatePeer(origin));
                                     continue;
                                 },
                             }
@@ -183,15 +181,6 @@ pub(super) fn receive_packets_system(
             });
         }
     });
-}
-
-#[derive(Debug, Clone)]
-enum TaskAction {
-    /// Delete the entity and remove them from their port.
-    DissociatePeer(Entity),
-    /// Create a new entity on this address and bind them to a port.
-    AssociatePeer(SocketAddr),
-    ReassociatePeer(Entity, u16),
 }
 
 fn process_zero_packet_from_known(
