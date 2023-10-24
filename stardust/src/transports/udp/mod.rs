@@ -41,8 +41,10 @@ impl Plugin for UdpTransportPlugin {
         app.add_systems(PostUpdate, apply_manager_action_system);
         app.add_systems(TransportReadPackets, receive_packets_system
             .run_if(not(in_state(UdpTransportState::Offline))));
-        // app.add_systems(TransportSendPackets, send_packets_system
-        //     .run_if(not(in_state(UdpTransportState::Offline))));
+        app.add_systems(TransportSendPackets, send_packets_system
+            .run_if(not(in_state(UdpTransportState::Offline))));
+        app.add_systems(TransportSendPackets, attempt_connection_system
+            .run_if(not(in_state(UdpTransportState::Offline))));
     }
 }
 
