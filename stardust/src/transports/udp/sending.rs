@@ -48,8 +48,9 @@ pub(super) fn attempt_connection_system(
     for (_, socket, conns) in ports.iter() {
         for conn in conns {
             if !pending.contains(*conn) { continue }
-            let mut comp = pending.get_mut(*conn).unwrap();
-            if let PendingDirection::Outgoing(state) = &mut comp.direction {
+            let comp = pending.get_mut(*conn).unwrap();
+            if let PendingDirection::Outgoing(state) = &comp.direction {
+                if *state != PendingOutgoingState::NoResponseYet { continue }
                 let request = object! {
                     "msg": "req_join",
                     "transport": TRANSPORT_LAYER_VERSION_STR,

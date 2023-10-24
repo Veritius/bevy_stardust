@@ -38,7 +38,7 @@ pub(super) enum PendingDirection {
 }
 
 /// Current state of the pending outgoing connection attempt.
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub(super) enum PendingOutgoingState {
     /// No response from the server.
     NoResponseYet,
