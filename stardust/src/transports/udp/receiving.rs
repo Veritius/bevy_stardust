@@ -140,7 +140,7 @@ pub(super) fn receive_packets_system(
                                     continue;
                                 },
                                 KnownZeroPacketResult::Accepted(port) => {
-                                    info!("Connection attempt to {origin} was accepted, rebinding to port {port}");
+                                    info!("Connection attempt to {origin} was accepted, reassigning to port {port}");
                                     actions.push(DeferredAction::MakeEstablished(*entity, port));
                                     continue;
                                 },
@@ -239,7 +239,7 @@ fn process_zero_packet_from_known(
     let json = if json.is_err() { return KnownZeroPacketResult::Discarded } else { json.unwrap() };
 
     // Get the response from the known peer
-    let response = match &json["response"] {
+    let response = match &json["msg"] {
         JsonValue::Short(val) => val.as_str(),
         JsonValue::String(val) => val.as_str(),
         _ => { return KnownZeroPacketResult::Discarded },

@@ -1,4 +1,4 @@
-use std::{net::{SocketAddr, IpAddr, Ipv4Addr}, time::Duration};
+use std::{net::{SocketAddr, IpAddr, Ipv4Addr}, time::Duration, str::FromStr};
 
 use bevy::{prelude::*, log::LogPlugin, app::SubApp};
 use bevy_stardust::{setup::StardustPlugin, prelude::{UdpTransportPlugin, UdpConnectionManager}, transports::udp::startup_now};
@@ -36,7 +36,7 @@ fn main() {
     client.add_systems(Startup, |mut manager: UdpConnectionManager| {
         manager.connect_to_remote(
             SocketAddr::new(
-                IpAddr::V4(Ipv4Addr::UNSPECIFIED),
+                IpAddr::from_str("127.0.0.1").unwrap(),
                 *SERVER_PORTS.iter().nth(0).unwrap()
             ), Some(Duration::from_secs(5)));
     });
