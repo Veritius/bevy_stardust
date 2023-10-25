@@ -3,7 +3,7 @@ use std::time::{Duration, Instant};
 use bevy::prelude::*;
 use bevy::ecs::system::SystemParam;
 use super::UdpTransportState;
-use super::connections::PendingUdpPeer;
+use super::connections::{PendingUdpPeer, AllowNewConnections};
 use super::ports::PortBindings;
 
 /// Manages the UDP transport layer.
@@ -12,6 +12,7 @@ pub struct UdpConnectionManager<'w, 's> {
     commands: Commands<'w, 's>,
     state: Res<'w, State<UdpTransportState>>,
     ports: Option<ResMut<'w, PortBindings>>,
+    allow_new: Option<ResMut<'w, AllowNewConnections>>,
 }
 
 impl<'w, 's> UdpConnectionManager<'w, 's> {
@@ -37,10 +38,12 @@ impl<'w, 's> UdpConnectionManager<'w, 's> {
         todo!()
     }
 
-    /// Enables listening for new remote connections.
+    /// Sets whether the transport layer should accept new connections from remote peers.
     /// This is useful in a client/server architecture where you want to act as a server.
-    pub fn enable_listening(&mut self) {
-        todo!()
+    pub fn allow_new_connections(&mut self, enabled: bool) {
+        if let Some(allow_new) = &mut self.allow_new {
+            allow_new.0 = enabled;
+        }
     }
 
     /// Try to connect to a remote peer.
@@ -105,6 +108,9 @@ pub(super) fn apply_manager_action_system(
                 },
             }
 
+            // Add some additional resources
+            commands.insert_resource(AllowNewConnections(false));
+
             info!("Started multiplayer with {address}:{ports:?}");
             next_state.set(UdpTransportState::Active);
         },
@@ -126,6 +132,7 @@ pub fn startup_now(world: &mut World, address: Option<IpAddr>, ports: &[u16]) {
     ports.sort_unstable();
     ports.dedup();
     world.insert_resource(PortBindings::new(address, &ports).unwrap());
+    world.insert_resource(AllowNewConnections(false));
     world.resource_mut::<NextState<UdpTransportState>>().set(UdpTransportState::Active);
     apply_state_transition::<UdpTransportState>(world);
     info!("Immediately started multiplayer with {address}:{ports:?}");

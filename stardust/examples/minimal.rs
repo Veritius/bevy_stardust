@@ -28,8 +28,7 @@ fn main() {
 
     // Instruct the server to listen for new connections on startup
     server.add_systems(Startup, |mut manager: UdpConnectionManager| {
-        // TODO: Commented out because toggling listening is not done yet
-        // manager.enable_listening();
+        manager.allow_new_connections(true);
     });
 
     // Instruct the client to join the server on startup

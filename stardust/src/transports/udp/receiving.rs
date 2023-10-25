@@ -11,7 +11,7 @@ use crate::protocol::UniqueNetworkHash;
 use crate::scheduling::NetworkScheduleData;
 use crate::transports::udp::{TRANSPORT_LAYER_REQUIRE, TRANSPORT_LAYER_REQUIRE_STR};
 use super::PACKET_MAX_BYTES;
-use super::connections::{EstablishedUdpPeer, PendingUdpPeer};
+use super::connections::{EstablishedUdpPeer, PendingUdpPeer, AllowNewConnections};
 use super::ports::{PortBindings, ReservationKey};
 use super::sending::send_zero_packet;
 
@@ -25,6 +25,7 @@ pub(super) fn receive_packets_system(
     channels: Query<(Option<&OrderedChannel>, Option<&ReliableChannel>, Option<&FragmentedChannel>)>,
     mut ports: ResMut<PortBindings>,
     hash: Res<UniqueNetworkHash>,
+    allow_new: Res<AllowNewConnections>,
 ) {
     // Create task pool for parallel accesses
     let taskpool = TaskPoolBuilder::default()
@@ -67,6 +68,7 @@ pub(super) fn receive_packets_system(
     let channel_map = &channel_map;
     let registry = &registry;
     let hash = &hash;
+    let allow_new = &allow_new;
 
     // Process incoming packets
     let actions = taskpool.scope(|s| {
@@ -160,7 +162,7 @@ pub(super) fn receive_packets_system(
                                 origin,
                                 ports_ref,
                                 hash.hex(),
-                                true, // TODO: Allow changing this
+                                allow_new.0,
                             ) {
                                 UnknownZeroPacketResult::Discarded => { continue },
                                 UnknownZeroPacketResult::Rejected => {

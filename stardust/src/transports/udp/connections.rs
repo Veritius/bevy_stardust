@@ -1,6 +1,9 @@
 use std::{net::SocketAddr, time::{Instant, Duration}};
 use bevy::prelude::*;
 
+#[derive(Debug, Resource)]
+pub(super) struct AllowNewConnections(pub bool);
+
 /// A UDP peer that is fully connected.
 #[derive(Debug, Component)]
 pub(super) struct EstablishedUdpPeer {
