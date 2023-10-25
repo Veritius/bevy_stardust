@@ -3,7 +3,7 @@ use std::time::{Duration, Instant};
 use bevy::prelude::*;
 use bevy::ecs::system::SystemParam;
 use super::UdpTransportState;
-use super::connections::{PendingUdpPeer, PendingDirection};
+use super::connections::PendingUdpPeer;
 use super::ports::PortBindings;
 
 /// Manages the UDP transport layer.
@@ -60,7 +60,6 @@ impl<'w, 's> UdpConnectionManager<'w, 's> {
                 address,
                 started: Instant::now(),
                 timeout: timeout.unwrap_or(Duration::from_secs(30)),
-                direction: PendingDirection::Outgoing(super::connections::PendingOutgoingState::NoResponseYet),
             },
         )).id();
 

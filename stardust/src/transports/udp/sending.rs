@@ -7,7 +7,7 @@ use crate::messages::outgoing::TransportOutgoingReader;
 use crate::prelude::*;
 use crate::protocol::UniqueNetworkHash;
 use crate::transports::udp::TRANSPORT_LAYER_VERSION_STR;
-use super::connections::{EstablishedUdpPeer, PendingUdpPeer, PendingDirection, PendingOutgoingState};
+use super::connections::{EstablishedUdpPeer, PendingUdpPeer};
 use super::ports::PortBindings;
 
 /// Sends octet strings using a taskpool strategy.
@@ -52,21 +52,19 @@ pub(super) fn attempt_connection_system(
         for conn in conns {
             if !pending.contains(*conn) { continue }
             let comp = pending.get_mut(*conn).unwrap();
-            if let PendingDirection::Outgoing(state) = &comp.direction {
-                if *state != PendingOutgoingState::NoResponseYet { continue }
-                if comp.started.duration_since(Instant::now()) > comp.timeout {
-                    info!("Connection attempt to {} timed out", comp.address);
-                    commands.entity(*conn).despawn();
-                }
-
-                let request = object! {
-                    "msg": "req_join",
-                    "transport": TRANSPORT_LAYER_VERSION_STR,
-                    "protocol": protocol.hex(),
-                }.dump();
-
-                send_zero_packet(socket, comp.address, request.as_bytes());
+            
+            if comp.started.duration_since(Instant::now()) > comp.timeout {
+                info!("Connection attempt to {} timed out", comp.address);
+                commands.entity(*conn).despawn();
             }
+
+            let request = object! {
+                "msg": "req_join",
+                "transport": TRANSPORT_LAYER_VERSION_STR,
+                "protocol": protocol.hex(),
+            }.dump();
+
+            send_zero_packet(socket, comp.address, request.as_bytes());
         }
     }
 }
