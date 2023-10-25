@@ -13,6 +13,7 @@ use crate::transports::udp::{TRANSPORT_LAYER_REQUIRE, TRANSPORT_LAYER_REQUIRE_ST
 use super::PACKET_MAX_BYTES;
 use super::connections::{EstablishedUdpPeer, PendingUdpPeer};
 use super::ports::{PortBindings, ReservationKey};
+use super::sending::send_zero_packet;
 
 /// Processes packets from bound ports using a task pool strategy.
 pub(super) fn receive_packets_system(
@@ -127,7 +128,7 @@ pub(super) fn receive_packets_system(
                     // If it's less than 4 bytes it isn't worth processing
                     if octets <= 3 { continue; }
 
-                    if &buffer[0..2] == &[0u8; 3] {
+                    if &buffer[0..3] == &[0u8; 3] {
                         if let Some((entity, ptype)) = addresses.get(&origin) {
                             if *ptype == PeerType::Active { continue } // we ignore messages from active peers
                             match process_zero_packet_from_known(
@@ -246,7 +247,7 @@ fn process_zero_packet_from_known(
 
     match response {
         "conn_accepted" => {
-            match &json["response"] {
+            match &json["use_port"] {
                 JsonValue::Number(num) => {
                     let port = u16::try_from(*num);
                     if port.is_err() { return KnownZeroPacketResult::Discarded }
@@ -305,22 +306,22 @@ fn process_zero_packet_from_unknown(
         // Can't do the same thing as CLOSED_DENIED_PREPROC because if there were
         // different versions of the transport layer it could give an invalid response
         // that could be very confusing to anyone trying to debug
-        let result = socket.send_to(object! {
+        send_zero_packet(socket, address, object! {
             "msg": "conn_rejected",
             "reason": format!("Transport layer version not accepted, requires {}", TRANSPORT_LAYER_REQUIRE_STR),
-        }.dump().as_bytes(), address);
-        if result.is_err() { error!("Error while sending a packet: {}", result.unwrap_err()); }
+        }.dump().as_bytes());
         return UnknownZeroPacketResult::Discarded
     }
+
     // Check request type
-    let request = match &json["request"] {
+    let request = match &json["msg"] {
         JsonValue::Short(val) => val.as_str(),
         JsonValue::String(val) => val.as_str(),
         _ => { return UnknownZeroPacketResult::Discarded }
     };
 
     return match request {
-        "join" => {
+        "req_join" => {
             return process_join_zero_packet_from_unknown(
                 ports,
                 &json,
@@ -365,16 +366,14 @@ fn process_join_zero_packet_from_unknown(
             "msg": "conn_rejected",
             "reason": format!("Invalid protocol hash, server has {}", protocol),
         }.dump();
-        let result = socket.send_to(response.as_bytes(), address);
-        if result.is_err() { error!("Error while sending a packet: {}", result.unwrap_err()); }
+        send_zero_packet(socket, address, response.as_bytes());
         return UnknownZeroPacketResult::Rejected
     }
 
     // Check if new connections are allowed
     // This is done after the protocol check since IMO that's more important to whoever's joining
     if !allow_new {
-        let result = socket.send_to(CLOSED_DENIED_PREPROC.as_bytes(), address);
-        if result.is_err() { error!("Error while sending a packet: {}", result.unwrap_err()); }
+        send_zero_packet(socket, address, CLOSED_DENIED_PREPROC.as_bytes());
         return UnknownZeroPacketResult::Rejected
     }
 
@@ -384,8 +383,7 @@ fn process_join_zero_packet_from_unknown(
         "msg": "conn_accepted",
         "use_port": port
     }.dump();
-    let result = socket.send_to(response.as_bytes(), address);
-    if result.is_err() { error!("Error while sending a packet: {}", result.unwrap_err()); }
+    send_zero_packet(socket, address, response.as_bytes());
 
     // Log result and return the reservation key
     info!("New peer on {address} accepted and assigned to {port}");

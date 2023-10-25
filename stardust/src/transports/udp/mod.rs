@@ -16,6 +16,7 @@ use semver::{Version, VersionReq};
 use crate::{prelude::*, scheduling::*};
 use self::{receiving::*, sending::*};
 use manager::apply_manager_action_system;
+use sending::send_zero_packet;
 
 // Expose manager
 pub use manager::{UdpConnectionManager, startup_now};

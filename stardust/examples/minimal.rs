@@ -1,4 +1,4 @@
-use std::net::{SocketAddr, IpAddr, Ipv4Addr};
+use std::{net::{SocketAddr, IpAddr, Ipv4Addr}, time::Duration};
 
 use bevy::{prelude::*, log::LogPlugin, app::SubApp};
 use bevy_stardust::{setup::StardustPlugin, prelude::{UdpTransportPlugin, UdpConnectionManager}, transports::udp::startup_now};
@@ -38,7 +38,7 @@ fn main() {
             SocketAddr::new(
                 IpAddr::V4(Ipv4Addr::UNSPECIFIED),
                 *SERVER_PORTS.iter().nth(0).unwrap()
-            ),None);
+            ), Some(Duration::from_secs(5)));
     });
 
     // Add subapps to host
@@ -47,6 +47,6 @@ fn main() {
 
     // Run the host indefinitely
     loop {
-        host.run();
+        host.update();
     }
 }

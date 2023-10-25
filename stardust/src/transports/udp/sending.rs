@@ -1,3 +1,5 @@
+use std::net::{SocketAddr, UdpSocket};
+use std::time::Instant;
 use bevy::prelude::*;
 use bevy::tasks::TaskPoolBuilder;
 use json::object;
@@ -36,6 +38,7 @@ const OUTGOING_PACKET_RATE: f32 = 0.2;
 
 /// Sends connection attempt packets every now and then.
 pub(super) fn attempt_connection_system(
+    mut commands: Commands,
     time: Res<Time>,
     mut last_run: Local<f32>,
     ports: Res<PortBindings>,
@@ -51,16 +54,31 @@ pub(super) fn attempt_connection_system(
             let comp = pending.get_mut(*conn).unwrap();
             if let PendingDirection::Outgoing(state) = &comp.direction {
                 if *state != PendingOutgoingState::NoResponseYet { continue }
+                if comp.started.duration_since(Instant::now()) > comp.timeout {
+                    info!("Connection attempt to {} timed out", comp.address);
+                    commands.entity(*conn).despawn();
+                }
+
                 let request = object! {
                     "msg": "req_join",
                     "transport": TRANSPORT_LAYER_VERSION_STR,
                     "protocol": protocol.hex(),
                 }.dump();
 
-                if let Err(error) = socket.send_to(request.as_bytes(), comp.address) {
-                    error!("Error while sending attempt packet to {}: {}", comp.address, error);
-                }
+                send_zero_packet(socket, comp.address, request.as_bytes());
             }
         }
+    }
+}
+
+pub(super) fn send_zero_packet(socket: &UdpSocket, address: SocketAddr, bytes: &[u8]) {
+    let mut buffer = [0u8; 256]; // The limit can be increased if needed
+    let mut idx: usize = 3; // skip first f32 bytes
+    for byte in bytes {
+        buffer[idx] = *byte;
+        idx += 1;
+    }
+    if let Err(error) = socket.send_to(&buffer[0..idx], address) {
+        error!("Error while sending packet to {}: {}", address, error);
     }
 }
