@@ -20,9 +20,6 @@ impl PortBindings {
             panic!("Amount of ports used must be at least one");
         }
 
-        // Log port connections
-        info!("Bound to ports {:?}, total of {}", ports, ports.len());
-
         // Create manager
         let mut mgr = Self {
             sockets: BTreeMap::new(),

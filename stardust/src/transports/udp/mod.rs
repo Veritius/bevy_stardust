@@ -18,7 +18,7 @@ use self::{receiving::*, sending::*};
 use manager::apply_manager_action_system;
 
 // Expose manager
-pub use manager::UdpConnectionManager;
+pub use manager::{UdpConnectionManager, startup_now};
 
 static TRANSPORT_LAYER_VERSION: Lazy<Version> = Lazy::new(|| TRANSPORT_LAYER_VERSION_STR.parse::<Version>().unwrap());
 static TRANSPORT_LAYER_VERSION_STR: &str = "0.2.0";

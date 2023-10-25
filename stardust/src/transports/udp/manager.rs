@@ -116,3 +116,18 @@ pub(super) fn apply_manager_action_system(
         },
     }
 }
+
+/// Puts the transport layer into standby immediately without needing to go through a tick.
+/// Intended for use in headless applications, ie dedicated servers. Also used in the examples.
+/// 
+/// Panics if necessary plugins haven't been added, the transport layer is already in standby, or there's a problem starting up (binding ports, etc)
+pub fn startup_now(world: &mut World, address: Option<IpAddr>, ports: &[u16]) {
+    let address = if address.is_some() { address.unwrap() } else { IpAddr::V4(Ipv4Addr::UNSPECIFIED) };
+    let mut ports = ports.iter().map(|f| f.clone()).collect::<Vec<_>>();
+    ports.sort_unstable();
+    ports.dedup();
+    world.insert_resource(PortBindings::new(address, &ports).unwrap());
+    world.resource_mut::<NextState<UdpTransportState>>().set(UdpTransportState::Active);
+    apply_state_transition::<UdpTransportState>(world);
+    info!("Immediately started multiplayer with {address}:{ports:?}");
+}
