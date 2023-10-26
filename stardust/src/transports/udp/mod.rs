@@ -9,6 +9,7 @@ mod ports;
 mod sending;
 mod receiving;
 mod reliability;
+mod packet;
 
 use bevy::prelude::*;
 use once_cell::sync::Lazy;
