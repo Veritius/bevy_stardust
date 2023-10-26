@@ -47,7 +47,7 @@ pub(super) fn receive_packets_system(
         })
         .collect::<BTreeMap<_, _>>();
     
-    // Accepted addresses
+    // List of peers accepted this tick
     let accepted: Mutex<Vec<SocketAddr>> = Mutex::new(Vec::new());
 
     // Map of channels to speed up accesses
@@ -131,6 +131,7 @@ pub(super) fn receive_packets_system(
                     if octets <= 3 { continue; }
 
                     if &buffer[0..3] == &[0u8; 3] {
+                        if accepted.lock().unwrap().contains(&origin) { continue } // Skip this packet, we've already accepted them
                         if let Some((entity, ptype)) = addresses.get(&origin) {
                             if *ptype == PeerType::Active { continue } // we ignore messages from active peers
                             match process_zero_packet_from_known(
@@ -144,6 +145,7 @@ pub(super) fn receive_packets_system(
                                 KnownZeroPacketResult::Accepted(port) => {
                                     info!("Connection attempt to {origin} was accepted, reassigning to port {port}");
                                     actions.push(DeferredAction::MakeEstablished(*entity, port));
+                                    accepted.lock().unwrap().push(origin);
                                     continue;
                                 },
                                 KnownZeroPacketResult::Rejected(reason) => {
@@ -171,6 +173,7 @@ pub(super) fn receive_packets_system(
                                 },
                                 UnknownZeroPacketResult::Accepted(reskey) => {
                                     actions.push(DeferredAction::FinishReservation(reskey, origin));
+                                    accepted.lock().unwrap().push(origin);
                                     continue;
                                 },
                             }
