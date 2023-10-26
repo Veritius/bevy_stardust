@@ -1,8 +1,3 @@
-/// The header of a packet.
-pub(super) struct PacketHeader {
-    pub kind: PacketKind
-}
-
 /// A byte representing what kind of packet is being sent.
 #[derive(Debug, Hash, PartialEq, Eq)]
 pub(super) enum PacketKind {
@@ -10,4 +5,34 @@ pub(super) enum PacketKind {
     ConnectionManagement = 0,
     /// Contains a single octet string on one channel.
     SingleMessage = 1,
+}
+
+impl TryFrom<u8> for PacketKind {
+    type Error = ();
+
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        return Ok(match value {
+            0 => Self::ConnectionManagement,
+            1 => Self::SingleMessage,
+            _ => { return Err(()) }
+        })
+    }
+}
+
+
+impl Into<u8> for PacketKind {
+    fn into(self) -> u8 {
+        match self {
+            PacketKind::ConnectionManagement => 0,
+            PacketKind::SingleMessage => 1,
+        }
+    }
+}
+
+#[test]
+fn mgmt_is_zero() {
+    // The connection management packet must always be zero, so we have a test for it.
+    // If it's not, connection attempts with different transport versions will be ignored.
+    assert_eq!(Into::<u8>::into(PacketKind::ConnectionManagement), 0);
+    assert_eq!(PacketKind::try_from(0u8).unwrap(), PacketKind::ConnectionManagement);
 }
