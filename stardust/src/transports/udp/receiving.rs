@@ -131,7 +131,9 @@ pub(super) fn receive_packets_system(
                     // Route to the correct function for processing
                     match (peer_type, packet_kind) {
                         // A new connection attempt from a remote peer
-                        (None, PacketKind::ConnectionManagement) => todo!(),
+                        (None, PacketKind::ConnectionManagement) => {
+                            todo!()
+                        },
                         (Some(peer_type), PacketKind::ConnectionManagement) => {
                             match peer_type {
                                 // An established peer managing their connection
@@ -153,6 +155,7 @@ pub(super) fn receive_packets_system(
                                 },
                             }
                         },
+                        // Junk data we don't care about
                         _ => { continue }
                     }
                 }
