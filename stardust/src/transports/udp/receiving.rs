@@ -6,6 +6,7 @@ use bevy::tasks::TaskPoolBuilder;
 use json::{JsonValue, object};
 use once_cell::sync::Lazy;
 use semver::Version;
+use crate::connections::peer;
 use crate::messages::incoming::NetworkMessageStorage;
 use crate::prelude::*;
 use crate::protocol::UniqueNetworkHash;
@@ -123,14 +124,35 @@ pub(super) fn receive_packets_system(
                     // If it's less than 4 bytes it isn't worth processing
                     if octets <= 3 { continue; }
 
-                    // Get packet kind and route to correct function for processing
                     let packet_kind = if let Ok(v) = PacketKind::try_from(buffer[0]) { v } else { continue };
                     let lock = known_addresses.read().unwrap();
                     let peer_type = lock.get(&origin);
+
+                    // Route to the correct function for processing
                     match (peer_type, packet_kind) {
+                        // A new connection attempt from a remote peer
                         (None, PacketKind::ConnectionManagement) => todo!(),
-                        (Some(_), PacketKind::ConnectionManagement) => todo!(),
-                        (Some(_), PacketKind::SingleMessage) => todo!(),
+                        (Some(peer_type), PacketKind::ConnectionManagement) => {
+                            match peer_type {
+                                // An established peer managing their connection
+                                PeerType::Established => {
+                                    todo!()
+                                },
+                                // A pending peer trying to establish a connection
+                                PeerType::Pending => {
+                                    todo!()
+                                },
+                            }
+                        },
+                        // An established peer trying to send us game data
+                        (Some(PeerType::Established), packet_kind) => {
+                            match packet_kind {
+                                PacketKind::ConnectionManagement => panic!(),
+                                PacketKind::SingleMessage => {
+                                    todo!()
+                                },
+                            }
+                        },
                         _ => { continue }
                     }
                 }
