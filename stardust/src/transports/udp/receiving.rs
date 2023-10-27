@@ -1,4 +1,5 @@
 use std::net::{SocketAddr, UdpSocket};
+use std::sync::RwLock;
 use std::{collections::BTreeMap, sync::Mutex};
 use bevy::prelude::*;
 use bevy::tasks::TaskPoolBuilder;
@@ -9,6 +10,7 @@ use crate::messages::incoming::NetworkMessageStorage;
 use crate::prelude::*;
 use crate::protocol::UniqueNetworkHash;
 use crate::scheduling::NetworkScheduleData;
+use crate::transports::udp::packet::PacketKind;
 use crate::transports::udp::{TRANSPORT_LAYER_REQUIRE, TRANSPORT_LAYER_REQUIRE_STR};
 use super::PACKET_MAX_BYTES;
 use super::connections::{EstablishedUdpPeer, PendingUdpPeer, AllowNewConnections};
@@ -31,6 +33,21 @@ pub(super) fn receive_packets_system(
         .thread_name("UDP pkt receive".to_string())
         .build();
 
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+    enum PeerType {
+        Established,
+        Pending,
+    }
+
+    // List of addresses we know about, whether assigned to a peer or not
+    // This might be due to them already being connected or they've been accepted already
+    // This shouldn't hurt performance too much, since most of the cost is syscalls anyway
+    let known_addresses = RwLock::new(
+        active_peers.iter().map(|(_, _, e, _)| (e.address, PeerType::Established))
+        .chain(pending_peers.iter().map(|(_, e)| (e.address, PeerType::Pending)))
+        .collect::<BTreeMap<_, _>>()
+    );
+
     // Place query data into map of mutexes to allow mutation by multiple threads
     // This doesn't block since each key-value pair will only be accessed by one thread each.
     let active_peers_map = active_peers
@@ -45,9 +62,6 @@ pub(super) fn receive_packets_system(
             (id, Mutex::new(pending))
         })
         .collect::<BTreeMap<_, _>>();
-    
-    // List of peers accepted this tick
-    let accepted: Mutex<Vec<SocketAddr>> = Mutex::new(Vec::new());
 
     // Map of channels to speed up accesses
     let channel_map = (0..registry.channel_count())
@@ -62,8 +76,8 @@ pub(super) fn receive_packets_system(
     // Explicit borrows to prevent moves
     let active_peers_map = &active_peers_map;
     let pending_peers_map = &pending_peers_map;
+    let known_addresses = &known_addresses;
     let ports_ref = ports.as_ref();
-    let accepted = &accepted;
     let channel_map = &channel_map;
     let registry = &registry;
     let hash = &hash;
@@ -89,23 +103,6 @@ pub(super) fn receive_packets_system(
                     .map(|(k,v)| (*k, v.lock().unwrap()))
                     .collect::<BTreeMap<_, _>>();
 
-                #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-                enum PeerType {
-                    Active,
-                    Pending,
-                }
-
-                // Map addresses to entity IDs so we can lookup peers faster
-                // TODO: Test performance without this. It's probably negligible.
-                let addresses = active_locks
-                    .iter()
-                    .map(|(k, v)| (v.1.address, (*k, PeerType::Active)))
-                    .chain(
-                        pending_locks
-                        .iter()
-                        .map(|(k, v)| (v.address, (*k, PeerType::Pending))))
-                    .collect::<BTreeMap<_, _>>();
-
                 // Read all packets from the socket
                 loop {
                     // Read a packet
@@ -125,6 +122,17 @@ pub(super) fn receive_packets_system(
                     // Check packet size
                     // If it's less than 4 bytes it isn't worth processing
                     if octets <= 3 { continue; }
+
+                    // Get packet kind and route to correct function for processing
+                    let packet_kind = if let Ok(v) = PacketKind::try_from(buffer[0]) { v } else { continue };
+                    let lock = known_addresses.read().unwrap();
+                    let peer_type = lock.get(&origin);
+                    match (peer_type, packet_kind) {
+                        (None, PacketKind::ConnectionManagement) => todo!(),
+                        (Some(_), PacketKind::ConnectionManagement) => todo!(),
+                        (Some(_), PacketKind::SingleMessage) => todo!(),
+                        _ => { continue }
+                    }
                 }
             });
         }

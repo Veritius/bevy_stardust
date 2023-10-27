@@ -12,7 +12,7 @@ pub(super) struct EstablishedUdpPeer {
     pub hiccups: u32,
 }
 
-/// A connection attempt to a remote peer.
+/// An outgoing connection attempt to a remote peer.
 #[derive(Debug, Component)]
 pub(super) struct PendingUdpPeer {
     pub address: SocketAddr,
