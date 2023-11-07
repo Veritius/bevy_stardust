@@ -39,7 +39,7 @@ const OUTGOING_PACKET_RATE: f32 = 0.2;
 /// Sends connection attempt packets every now and then.
 pub(super) fn attempt_connection_system(
     mut commands: Commands,
-    time: Res<Time>,
+    time: Res<Time<Real>>,
     mut last_run: Local<f32>,
     ports: Res<PortBindings>,
     mut pending: Query<&mut PendingUdpPeer>,
