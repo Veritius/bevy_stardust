@@ -72,7 +72,9 @@ impl Default for PendingIncoming {
 
 #[derive(Debug)]
 pub enum PendingIncomingState {
+    /// The peer has just been noticed, and hasn't even had one of their messages processed.
     JustRegistered,
+    /// The peer has finished the handshake and will soon become `Established`.
     Accepted,
 }
 
