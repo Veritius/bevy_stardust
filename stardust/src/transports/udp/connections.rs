@@ -54,7 +54,7 @@ pub enum ConnectionStatus {
     /// A fully established connection.
     Established(Established),
     /// A previously established connection that is closed.
-    Disconnected,
+    Disconnected(Disconnected),
 }
 
 #[derive(Debug)]
@@ -76,6 +76,8 @@ pub enum PendingIncomingState {
     JustRegistered,
     /// The peer has finished the handshake and will soon become `Established`.
     Accepted,
+    /// The peer has failed the handshake and will move to the `Disconnected` state.
+    Rejected(Disconnected),
 }
 
 #[derive(Debug)]
@@ -99,3 +101,9 @@ pub enum PendingOutgoingState {
 
 #[derive(Debug)]
 pub struct Established;
+
+#[derive(Debug)]
+pub enum Disconnected {
+    /// A critical packet could not be parsed.
+    InvalidPacket,
+}

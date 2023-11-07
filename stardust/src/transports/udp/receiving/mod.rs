@@ -127,7 +127,7 @@ pub(super) fn receive_packets_system(
                                 pending_outgoing::process_pending_outgoing(message, outgoing, reliability),
                             ConnectionStatus::Established(established) =>
                                 established::process_established(message, established, reliability),
-                            ConnectionStatus::Disconnected =>
+                            ConnectionStatus::Disconnected(_) =>
                                 todo!(),
                         }
                     }
