@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 use std::io::ErrorKind;
 use std::net::SocketAddr;
 use std::sync::{RwLock, Mutex};
-use bevy::ecs::system::CommandQueue;
+use std::time::Duration;
 use bevy::prelude::*;
 use bevy::tasks::TaskPoolBuilder;
 use crate::messages::incoming::NetworkMessageStorage;
@@ -10,7 +10,6 @@ use crate::prelude::*;
 use crate::protocol::UniqueNetworkHash;
 use crate::scheduling::NetworkScheduleData;
 use super::connections::{AllowNewConnections, UdpConnection};
-use super::parallel::DeferredCommandQueue;
 use super::ports::PortBindings;
 
 /// Minimum amount of octets in a packet before it's ignored.
@@ -45,10 +44,12 @@ pub(super) fn receive_packets_system(
         .map(|x| (x.0, Mutex::new((x.1, x.2))))
         .collect::<BTreeMap<_,_>>();
 
-    // Put the threaded logic in a block so variable shadowing only happens inside it
-    // This isn't necessary, but it's convenient, so ports doesn't have to be named something else
-    // and would potentially be used after the threaded logic, which would cause problems
+    // Put the threaded logic in a block so anything we only use in the taskpool is dropped
+    // This isn't necessary, but it's convenient, so variables can be shadowed without issues later on
     {
+        // Wrap some things in synchronisation primitives for _infrequent_ parallel access
+        let commands = &Mutex::new(&mut commands);
+
         // Explicit borrows to prevent moves into the futures
         let ports = &ports;
         let active_addresses = &active_addresses;
@@ -76,7 +77,6 @@ pub(super) fn receive_packets_system(
                         .collect::<BTreeMap<_, _>>();
 
                     // Some variables the future uses
-                    let mut commands = CommandQueue::default();
                     let mut new: Vec<UdpConnection> = vec![];
                     let mut buffer = [0u8; 1472];
 
@@ -98,20 +98,30 @@ pub(super) fn receive_packets_system(
                         // Check length of message
                         if octets_read < MIN_OCTETS { continue }
 
-                        // Get information about our peer
-                        let origin_is_known = active_addresses.read().unwrap().contains(&origin);
+                        // Get or create a new UdpConnection object based on the origin address
+                        let mut connection = match peer_locks.get_mut(&origin) {
+                            Some((_, mutex)) => mutex.0.as_mut(),
+                            None => {
+                                match new.iter_mut().find(|p| p.address == origin) {
+                                    Some(v) => v,
+                                    None => {
+                                        new.push(UdpConnection::new_incoming(origin, Duration::from_secs(30)));
+                                        let idx = new.len();
+                                        new.get_mut(idx).unwrap()
+                                    },
+                                }
+                            },
+                        };
                     }
 
-                    // Return deferred mutations that this task wants to perform
-                    return commands
+                    // Create entities for new connections
+                    let mut commands = commands.lock().unwrap();
+                    for new in new.drain(..) {
+                        commands.spawn(new);
+                    }
                 });
             }
         });
-
-        // Add commands from tasks to Commands
-        for command in task_commands.drain(..) {
-            commands.add(DeferredCommandQueue(command))
-        }
     }
 
     #[cfg(debug_assertions="true")]
