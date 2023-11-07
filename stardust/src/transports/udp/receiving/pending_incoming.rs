@@ -31,6 +31,21 @@ fn read_initial_packet(
         },
     };
 
+    // Get request type
+    match json["req"].as_str() {
+        // Only the req_join case exists right now
+        Some("req_join") => {},
+        None => {
+            return PendingIncomingState::Rejected(Disconnected::MissingData);
+        },
+        _ => {
+            return PendingIncomingState::Rejected(Disconnected::InvalidPacket)
+        }
+    }
+
+    // Check transport version
+    todo!();
+
     // They've succeeded :)
     return PendingIncomingState::Accepted
 }

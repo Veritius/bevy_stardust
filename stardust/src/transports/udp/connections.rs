@@ -1,5 +1,6 @@
-use std::{net::SocketAddr, time::{Instant, Duration}};
+use std::{net::SocketAddr, time::{Instant, Duration}, error::Error, fmt::Display};
 use bevy::prelude::*;
+use semver::Version;
 use super::reliability::Reliability;
 
 /// If set to `false`, new incoming connections will be ignored.
@@ -106,4 +107,8 @@ pub struct Established;
 pub enum Disconnected {
     /// A critical packet could not be parsed.
     InvalidPacket,
+    /// Expected information was missing.
+    MissingData,
+    /// The peer's transport layer was incompatible.
+    WrongVersion,
 }
