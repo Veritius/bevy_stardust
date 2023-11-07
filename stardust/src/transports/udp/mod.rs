@@ -3,6 +3,7 @@
 #[cfg(target_arch = "wasm32")]
 compile_error!("The UDP transport layer does not support wasm.");
 
+mod parallel;
 mod manager;
 mod connections;
 mod ports;

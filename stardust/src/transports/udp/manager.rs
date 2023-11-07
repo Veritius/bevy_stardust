@@ -1,5 +1,5 @@
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
-use std::time::{Duration, Instant};
+use std::time::Duration;
 use bevy::prelude::*;
 use bevy::ecs::system::SystemParam;
 use super::UdpTransportState;
