@@ -47,7 +47,7 @@ pub(super) fn receive_packets_system(
                         Err(e) => {
                             // Actual I/O error, stop reading
                             error!("Error while reading packets: {e}");
-                            return commands
+                            break
                         },
                     };
 
