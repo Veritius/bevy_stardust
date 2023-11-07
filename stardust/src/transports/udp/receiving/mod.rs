@@ -27,7 +27,7 @@ pub(super) fn receive_packets_system(
     registry: Res<ChannelRegistry>,
     channels: Query<(Option<&OrderedChannel>, Option<&ReliableChannel>, Option<&FragmentedChannel>)>,
     mut ports: ResMut<PortBindings>,
-    hash: Res<UniqueNetworkHash>,
+    protocol: Res<UniqueNetworkHash>,
     allow_new: Res<AllowNewConnections>,
 ) {
     // Create task pool for parallel accesses
@@ -56,6 +56,7 @@ pub(super) fn receive_packets_system(
 
         // Explicit borrows to prevent moves into the futures
         let ports = &ports;
+        let protocol = &protocol;
         let active_addresses = &active_addresses;
         let peer_locks = &peer_locks;
 
@@ -122,7 +123,7 @@ pub(super) fn receive_packets_system(
                         let reliability = &mut connection.reliability;
                         match &mut connection.status {
                             ConnectionStatus::PendingIncoming(incoming) =>
-                                pending_incoming::process_pending_incoming(message, incoming, reliability),
+                                pending_incoming::process_pending_incoming(message, incoming, reliability, protocol.int()),
                             ConnectionStatus::PendingOutgoing(outgoing) =>
                                 pending_outgoing::process_pending_outgoing(message, outgoing, reliability),
                             ConnectionStatus::Established(established) =>

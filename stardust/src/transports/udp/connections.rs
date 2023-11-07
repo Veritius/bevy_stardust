@@ -76,7 +76,7 @@ pub enum PendingIncomingState {
     JustRegistered,
     /// The peer has finished the handshake and will soon become `Established`.
     Accepted,
-    /// The peer has failed the handshake and will move to the `Disconnected` state.
+    /// The peer has failed the handshake and will move to the `Disconnected` state with the enclosed reason.
     Rejected(Disconnected),
 }
 
@@ -104,12 +104,18 @@ pub struct Established;
 
 #[derive(Debug)]
 pub enum Disconnected {
-    /// A critical packet could not be parsed.
+    /// A critical packet could not be parsed or otherwise processed.
     InvalidPacket,
     /// Expected information was missing.
     MissingData,
+    /// Expected information was present but had an unexpected quality that prevented processing.
+    InvalidData,
     /// The peer's transport layer was incompatible.
     WrongVersion {
         version: u32,
+    },
+    /// The protocol hash was incorrect.
+    WrongProtocol {
+        protocol: u64,
     },
 }

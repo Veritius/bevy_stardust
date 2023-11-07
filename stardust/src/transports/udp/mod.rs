@@ -11,6 +11,7 @@ mod receiving;
 mod packet;
 mod reliability;
 
+use std::ops::Range;
 use bevy::prelude::*;
 use crate::scheduling::*;
 use self::{receiving::*, sending::*};
@@ -22,7 +23,7 @@ pub use manager::{UdpConnectionManager, startup_now};
 /// This peer's transport layer version.
 static COMPAT_THIS_VERSION: u32 = 0;
 /// The versions of the transport layer that the transport layer will connect to.
-static COMPAT_GOOD_VERSIONS: &[u32] = &[0];
+static COMPAT_GOOD_VERSIONS: Range<u32> = 0..1;
 
 const PACKET_HEADER_SIZE: usize = 5;
 const PACKET_MAX_BYTES: usize = 1472;
@@ -55,4 +56,9 @@ pub enum UdpTransportState {
     Offline,
     /// Ports are bound and there may be running connections.
     Active,
+}
+
+#[test]
+fn compat_versions_check() {
+    assert!(COMPAT_GOOD_VERSIONS.contains(&COMPAT_THIS_VERSION));
 }
