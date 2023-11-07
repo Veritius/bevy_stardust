@@ -1,8 +1,8 @@
 //! Dynamic port binding system.
 
 use std::{net::{UdpSocket, IpAddr}, collections::BTreeMap, sync::Mutex};
-use bevy::prelude::{Entity, Resource, info};
-use anyhow::Result;
+use bevy::prelude::{Entity, Resource};
+use anyhow::{Result, bail};
 use smallvec::{smallvec, SmallVec};
 
 /// Owns UdpSockets and associates Entity ids with them.
@@ -17,7 +17,7 @@ impl PortBindings {
     pub fn new(addr: IpAddr, ports: &[u16]) -> Result<Self> {
         // Check range of ports is acceptable
         if ports.len() == 0 {
-            panic!("Amount of ports used must be at least one");
+            bail!("Ports slice had a size of zero");
         }
 
         // Create manager
