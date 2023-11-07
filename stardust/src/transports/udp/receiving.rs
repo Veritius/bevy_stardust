@@ -11,6 +11,7 @@ use crate::protocol::UniqueNetworkHash;
 use crate::scheduling::NetworkScheduleData;
 use super::connections::{AllowNewConnections, UdpConnection, ConnectionStatus, PendingIncoming, PendingOutgoing, Established};
 use super::ports::PortBindings;
+use super::reliability::Reliability;
 
 /// Minimum amount of octets in a packet before it's ignored.
 const MIN_OCTETS: usize = 3;
@@ -115,13 +116,14 @@ pub(super) fn receive_packets_system(
 
                         // Process the packet
                         let message = &buffer[..octets_read];
+                        let reliability = &mut connection.reliability;
                         match &mut connection.status {
                             ConnectionStatus::PendingIncoming(incoming) =>
-                                process_pending_incoming(message, incoming),
+                                process_pending_incoming(message, incoming, reliability),
                             ConnectionStatus::PendingOutgoing(outgoing) =>
-                                process_pending_outgoing(message, outgoing),
+                                process_pending_outgoing(message, outgoing, reliability),
                             ConnectionStatus::Established(established) =>
-                                process_established(message, established),
+                                process_established(message, established, reliability),
                             ConnectionStatus::Disconnected =>
                                 todo!(),
                         }
@@ -144,20 +146,23 @@ pub(super) fn receive_packets_system(
 fn process_pending_incoming(
     message: &[u8],
     incoming: &mut PendingIncoming,
+    reliability: &mut Reliability,
 ) {
-
+    todo!()
 }
 
 fn process_pending_outgoing(
     message: &[u8],
     outgoing: &mut PendingOutgoing,
+    reliability: &mut Reliability,
 ) {
-
+    todo!()
 }
 
 fn process_established(
     message: &[u8],
     established: &mut Established,
+    reliability: &mut Reliability,
 ) {
-
+    todo!()
 }
