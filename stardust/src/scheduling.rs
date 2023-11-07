@@ -23,9 +23,9 @@ pub(crate) struct MessageStorageMutationAllowed(pub bool);
 pub(super) fn add_schedules(app: &mut App) {
     app.insert_resource(MessageStorageMutationAllowed(false));
 
-    app.add_schedule(TransportReadPackets, Schedule::new());
-    app.add_schedule(PreReadOctetStrings, Schedule::new());
-    app.add_schedule(TransportSendPackets, Schedule::new());
+    app.add_schedule(Schedule::new(TransportReadPackets));
+    app.add_schedule(Schedule::new(PreReadOctetStrings));
+    app.add_schedule(Schedule::new(TransportSendPackets));
 
     app.add_systems(PreUpdate, network_pre_update);
     app.add_systems(PostUpdate, network_post_update);

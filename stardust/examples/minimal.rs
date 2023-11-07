@@ -1,10 +1,15 @@
-use std::{net::{SocketAddr, IpAddr, Ipv4Addr}, time::Duration, str::FromStr};
-
-use bevy::{prelude::*, log::LogPlugin, app::SubApp};
+use std::{net::{SocketAddr, IpAddr}, time::Duration, str::FromStr};
+use bevy::{prelude::*, log::LogPlugin, app::{SubApp, AppLabel}};
 use bevy_stardust::{setup::StardustPlugin, prelude::{UdpTransportPlugin, UdpConnectionManager}, transports::udp::startup_now};
 
 const SERVER_PORTS: &[u16] = &[12340];
 const CLIENT_PORTS: &[u16] = &[12349];
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash, AppLabel)]
+enum SubappLabel {
+    Client,
+    Server,
+}
 
 fn main() {
     // Create host app that runs both peers
@@ -41,8 +46,8 @@ fn main() {
     });
 
     // Add subapps to host
-    host.insert_sub_app("server", SubApp::new(server, |_, _| {}));
-    host.insert_sub_app("client", SubApp::new(client, |_, _| {}));
+    host.insert_sub_app(SubappLabel::Client, SubApp::new(client, |_, _| {}));
+    host.insert_sub_app(SubappLabel::Server, SubApp::new(server, |_, _| {}));
 
     // Run the host indefinitely
     loop {
