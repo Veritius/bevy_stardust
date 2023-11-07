@@ -2,9 +2,9 @@
 #[derive(Debug, Hash, PartialEq, Eq)]
 pub(super) enum PacketKind {
     /// Related to managing the UDP connection.
-    ConnectionManagement = 0,
+    ConnectionManagement,
     /// Contains a single octet string on one channel.
-    SingleMessage = 1,
+    SingleMessage,
 }
 
 impl TryFrom<u8> for PacketKind {

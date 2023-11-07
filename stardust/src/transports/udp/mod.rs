@@ -8,8 +8,8 @@ mod connections;
 mod ports;
 mod sending;
 mod receiving;
-mod reliability;
 mod packet;
+mod reliability;
 
 use bevy::prelude::*;
 use once_cell::sync::Lazy;
@@ -43,8 +43,6 @@ impl Plugin for UdpTransportPlugin {
         app.add_systems(TransportReadPackets, receive_packets_system
             .run_if(not(in_state(UdpTransportState::Offline))));
         app.add_systems(TransportSendPackets, send_packets_system
-            .run_if(not(in_state(UdpTransportState::Offline))));
-        app.add_systems(TransportSendPackets, attempt_connection_system
             .run_if(not(in_state(UdpTransportState::Offline))));
     }
 }

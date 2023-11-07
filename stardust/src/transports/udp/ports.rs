@@ -110,7 +110,7 @@ impl PortBindings {
 
     /// Returns the least occupied port, including reservations.
     fn least_filled_port(&self) -> u16 {
-        let mut counter: SmallVec<[(u16, usize); 64]> = smallvec![];
+        let mut counter: SmallVec<[(u16, usize); 8]> = smallvec![];
 
         // Add all active to counter
         for (port, socket) in self.sockets.iter() {
