@@ -45,8 +45,8 @@ pub(super) fn attempt_connection_system(
     mut pending: Query<&mut PendingUdpPeer>,
     protocol: Res<UniqueNetworkHash>,
 ) {
-    if time.raw_elapsed_seconds() < *last_run + OUTGOING_PACKET_RATE { return }
-    *last_run = time.raw_elapsed_seconds();
+    if time.elapsed_seconds() < *last_run + OUTGOING_PACKET_RATE { return }
+    *last_run = time.elapsed_seconds();
 
     for (_, socket, conns) in ports.iter() {
         for conn in conns {
