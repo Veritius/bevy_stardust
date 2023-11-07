@@ -12,8 +12,6 @@ mod packet;
 mod reliability;
 
 use bevy::prelude::*;
-use once_cell::sync::Lazy;
-use semver::{Version, VersionReq};
 use crate::scheduling::*;
 use self::{receiving::*, sending::*};
 use manager::apply_manager_action_system;
@@ -21,10 +19,10 @@ use manager::apply_manager_action_system;
 // Expose manager
 pub use manager::{UdpConnectionManager, startup_now};
 
-static TRANSPORT_LAYER_VERSION: Lazy<Version> = Lazy::new(|| TRANSPORT_LAYER_VERSION_STR.parse::<Version>().unwrap());
-static TRANSPORT_LAYER_VERSION_STR: &str = "0.2.0";
-static TRANSPORT_LAYER_REQUIRE: Lazy<VersionReq> = Lazy::new(|| TRANSPORT_LAYER_REQUIRE_STR.parse::<VersionReq>().unwrap());
-static TRANSPORT_LAYER_REQUIRE_STR: &str = "=0.2.0";
+/// This peer's transport layer version.
+static COMPAT_THIS_VERSION: u32 = 0;
+/// The versions of the transport layer that the transport layer will connect to.
+static COMPAT_GOOD_VERSIONS: &[u32] = &[0];
 
 const PACKET_HEADER_SIZE: usize = 5;
 const PACKET_MAX_BYTES: usize = 1472;

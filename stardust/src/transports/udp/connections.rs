@@ -1,6 +1,5 @@
-use std::{net::SocketAddr, time::{Instant, Duration}, error::Error, fmt::Display};
+use std::{net::SocketAddr, time::{Instant, Duration}};
 use bevy::prelude::*;
-use semver::Version;
 use super::reliability::Reliability;
 
 /// If set to `false`, new incoming connections will be ignored.
@@ -110,5 +109,7 @@ pub enum Disconnected {
     /// Expected information was missing.
     MissingData,
     /// The peer's transport layer was incompatible.
-    WrongVersion,
+    WrongVersion {
+        version: u32,
+    },
 }
