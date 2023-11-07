@@ -9,7 +9,7 @@ use crate::messages::incoming::NetworkMessageStorage;
 use crate::prelude::*;
 use crate::protocol::UniqueNetworkHash;
 use crate::scheduling::NetworkScheduleData;
-use super::connections::{AllowNewConnections, UdpConnection};
+use super::connections::{AllowNewConnections, UdpConnection, ConnectionStatus};
 use super::ports::PortBindings;
 
 /// Minimum amount of octets in a packet before it's ignored.
@@ -112,6 +112,14 @@ pub(super) fn receive_packets_system(
                                 }
                             },
                         };
+
+                        // Process the packet
+                        match connection.status {
+                            ConnectionStatus::PendingIncoming(_) => todo!(),
+                            ConnectionStatus::PendingOutgoing(_) => todo!(),
+                            ConnectionStatus::Established(_) => todo!(),
+                            ConnectionStatus::Disconnected => todo!(),
+                        }
                     }
 
                     // Create entities for new connections

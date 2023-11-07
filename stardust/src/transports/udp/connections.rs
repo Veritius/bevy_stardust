@@ -17,6 +17,16 @@ pub struct UdpConnection {
 }
 
 impl UdpConnection {
+    pub fn new_incoming(address: SocketAddr, timeout: Duration) -> Self {
+        Self {
+            address,
+            started: Instant::now(),
+            timeout,
+            reliability: Reliability::default(),
+            status: ConnectionStatus::PendingIncoming(PendingIncoming::default()),
+        }
+    }
+
     /// Create an outgoing connection attempt to a new peer.
     pub fn new_outgoing(address: SocketAddr, timeout: Duration) -> Self {
         Self {
@@ -24,17 +34,7 @@ impl UdpConnection {
             started: Instant::now(),
             timeout,
             reliability: Reliability::default(),
-            status: ConnectionStatus::PendingOutgoing(PendingOutgoing::WaitingForResponse),
-        }
-    }
-
-    pub fn new_incoming(address: SocketAddr, timeout: Duration) -> Self {
-        Self {
-            address,
-            started: Instant::now(),
-            timeout,
-            reliability: Reliability::default(),
-            status: ConnectionStatus::PendingIncoming(PendingIncoming::JustRegistered),
+            status: ConnectionStatus::PendingOutgoing(PendingOutgoing::default()),
         }
     }
 }
@@ -46,19 +46,48 @@ pub enum ConnectionStatus {
     /// A connection attempt to a known remote peer, emanating from this peer.
     PendingOutgoing(PendingOutgoing),
     /// A fully established connection.
-    Established,
+    Established(Established),
     /// A previously established connection that is closed.
     Disconnected,
 }
 
 #[derive(Debug)]
-pub enum PendingIncoming {
+pub struct PendingIncoming {
+    pub state: PendingIncomingState,
+}
+
+impl Default for PendingIncoming {
+    fn default() -> Self {
+        Self {
+            state: PendingIncomingState::JustRegistered,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub enum PendingIncomingState {
     JustRegistered,
     Accepted,
 }
 
 #[derive(Debug)]
-pub enum PendingOutgoing {
+pub struct PendingOutgoing {
+    pub state: PendingOutgoingState,
+}
+
+impl Default for PendingOutgoing {
+    fn default() -> Self {
+        Self {
+            state: PendingOutgoingState::WaitingForResponse,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub enum PendingOutgoingState {
     WaitingForResponse,
     Accepted,
 }
+
+#[derive(Debug)]
+pub struct Established;
