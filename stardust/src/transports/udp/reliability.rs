@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 /// The reliability state of an [EstablishedUdpPeer](super::connections::EstablishedUdpPeer)
-#[derive(Component)]
+#[derive(Debug, Component)]
 pub struct Reliability {
     /// The local sequence value. Incremented whenever a packet is sent to the peer.
     pub local: u16,

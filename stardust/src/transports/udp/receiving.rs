@@ -13,6 +13,7 @@ use crate::transports::udp::{TRANSPORT_LAYER_REQUIRE, TRANSPORT_LAYER_REQUIRE_ST
 use super::PACKET_MAX_BYTES;
 use super::connections::{EstablishedUdpPeer, PendingUdpPeer, AllowNewConnections};
 use super::ports::{PortBindings, ReservationKey};
+use super::reliability::Reliability;
 use super::sending::send_zero_packet;
 
 /// Processes packets from bound ports using a task pool strategy.
@@ -203,7 +204,7 @@ pub(super) fn receive_packets_system(
                     NetworkPeer::new(),
                     EstablishedUdpPeer {
                         address: *addr,
-                        hiccups: 0,
+                        reliability: Reliability::default(),
                     },
                 )).id();
                 ports.take_reservations([(*key, entity)].iter().cloned());
@@ -216,7 +217,7 @@ pub(super) fn receive_packets_system(
                 let ip = pending_peers.get_mut(*peer).unwrap().1.address.ip();
                 commands.entity(*peer).remove::<PendingUdpPeer>().insert(EstablishedUdpPeer {
                     address: SocketAddr::new(ip, *port),
-                    hiccups: 0,
+                    reliability: Reliability::default(),
                 });
             },
         }
