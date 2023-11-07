@@ -142,21 +142,21 @@ pub(super) fn receive_packets_system(
 }
 
 fn process_pending_incoming(
-    message: &[Octet],
+    message: &[u8],
     incoming: &mut PendingIncoming,
 ) {
 
 }
 
 fn process_pending_outgoing(
-    message: &[Octet],
-    outgoing: &mut PendingOutgoing
+    message: &[u8],
+    outgoing: &mut PendingOutgoing,
 ) {
 
 }
 
 fn process_established(
-    message: &[Octet],
+    message: &[u8],
     established: &mut Established,
 ) {
 
