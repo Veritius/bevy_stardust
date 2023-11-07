@@ -47,13 +47,6 @@ Each channel is first headed by three bytes, usually corresponding to the channe
 
 TODO
 
-## Connection protocol
-Technically, Stardust has two protocols in one. Most of the time you'll be using the regular protocol, which is what most of this document is about. However, when you first join, you use a special connection protocol that operates on the same ports as the normal protocol. This is possible because all packets are headed by their associated channel ID. By shifting channel IDs from game systems by 1 during transport, we can make space for a special identifier that doesn't correspond to a channel, but is instead used to negotiate connections between peers.
-
-From now on, we'll call all messages on this channel "zero messages". They're all packets headed by three bytes of zero (not the letter, just all binary zeros), and are basically completely unrelated to the rest of the game. A UDP packet intended for connection can only have one zero message on it, and it has to be entirely plaintext JSON.
-
-In future, reliability and other features will be added to the connection protocol, to support things like certificate exchange in encryption.
-
 ### Protocol ID
 Many implementations of networking code prefix all packets with a 'protocol' value, uniquely identifying the game and preventing the reading of packets not intended for it. However, this is a lot of data to repeatedly and unnecessarily send, potentially hundreds of times a second. Instead, we send the protocol ID (from the [Stardust protocol hash](#protocol-hash)) just once: when we're connecting. It's completely free to do this once they're connected - the source address is checked to access the client's payload store anyway.
 
@@ -61,7 +54,6 @@ Many implementations of networking code prefix all packets with a 'protocol' val
 Let's create two peers, A and B. A wants to connect to B, and B is listening for connections. A will start by sending the following to B.
 
 ```jsonc
-// Headed by three zero bytes.
 {
     // All packets have a "msg" field, identifying their purpose in the conversation.
     "msg": "req_join",
@@ -72,25 +64,3 @@ Let's create two peers, A and B. A wants to connect to B, and B is listening for
 }
 ```
 
-In future, there will be additional steps, which will necessitate the inclusion of reliability data, such as negotiating encryption.
-
-***
-
-B will respond with acceptance:
-
-```jsonc
-{
-    "msg": "conn_accepted",
-    "use_port": 12345
-}
-```
-
-Or denial:
-
-```jsonc
-{
-    "msg": "conn_rejected",
-    // The reason can be absolutely whatever you want.
-    "reason": "whatever"
-}
-```
