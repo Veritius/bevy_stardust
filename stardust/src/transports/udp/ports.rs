@@ -104,7 +104,7 @@ impl PortBindings {
 
     /// Panics if there are any pending reservations.
     #[cfg(debug_assertions="true")]
-    pub fn confirm_reservation_emptiness(&self) {
+    pub fn assert_reservation_emptiness(&self) {
         self.reserved.lock().unwrap().1.values().for_each(|f| if f.len() > 0 { panic!() })
     }
 

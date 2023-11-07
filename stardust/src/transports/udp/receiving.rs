@@ -9,7 +9,7 @@ use crate::messages::incoming::NetworkMessageStorage;
 use crate::prelude::*;
 use crate::protocol::UniqueNetworkHash;
 use crate::scheduling::NetworkScheduleData;
-use super::connections::{AllowNewConnections, UdpConnection, ConnectionStatus};
+use super::connections::{AllowNewConnections, UdpConnection, ConnectionStatus, PendingIncoming, PendingOutgoing, Established};
 use super::ports::PortBindings;
 
 /// Minimum amount of octets in a packet before it's ignored.
@@ -99,7 +99,7 @@ pub(super) fn receive_packets_system(
                         if octets_read < MIN_OCTETS { continue }
 
                         // Get or create a new UdpConnection object based on the origin address
-                        let mut connection = match peer_locks.get_mut(&origin) {
+                        let connection = match peer_locks.get_mut(&origin) {
                             Some((_, mutex)) => mutex.0.as_mut(),
                             None => {
                                 match new.iter_mut().find(|p| p.address == origin) {
@@ -114,11 +114,16 @@ pub(super) fn receive_packets_system(
                         };
 
                         // Process the packet
-                        match connection.status {
-                            ConnectionStatus::PendingIncoming(_) => todo!(),
-                            ConnectionStatus::PendingOutgoing(_) => todo!(),
-                            ConnectionStatus::Established(_) => todo!(),
-                            ConnectionStatus::Disconnected => todo!(),
+                        let message = &buffer[..octets_read];
+                        match &mut connection.status {
+                            ConnectionStatus::PendingIncoming(incoming) =>
+                                process_pending_incoming(message, incoming),
+                            ConnectionStatus::PendingOutgoing(outgoing) =>
+                                process_pending_outgoing(message, outgoing),
+                            ConnectionStatus::Established(established) =>
+                                process_established(message, established),
+                            ConnectionStatus::Disconnected =>
+                                todo!(),
                         }
                     }
 
@@ -133,5 +138,26 @@ pub(super) fn receive_packets_system(
     }
 
     #[cfg(debug_assertions="true")]
-    ports.confirm_reservation_emptiness();
+    ports.assert_reservation_emptiness();
+}
+
+fn process_pending_incoming(
+    message: &[Octet],
+    incoming: &mut PendingIncoming,
+) {
+
+}
+
+fn process_pending_outgoing(
+    message: &[Octet],
+    outgoing: &mut PendingOutgoing
+) {
+
+}
+
+fn process_established(
+    message: &[Octet],
+    established: &mut Established,
+) {
+
 }

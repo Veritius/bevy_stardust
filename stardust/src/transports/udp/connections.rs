@@ -11,6 +11,8 @@ pub(super) struct AllowNewConnections(pub bool);
 pub struct UdpConnection {
     pub address: SocketAddr,
     pub started: Instant,
+    pub last_sent: Option<Instant>,
+    pub last_received: Option<Instant>,
     pub timeout: Duration,
     pub reliability: Reliability,
     pub status: ConnectionStatus,
@@ -21,6 +23,8 @@ impl UdpConnection {
         Self {
             address,
             started: Instant::now(),
+            last_sent: None,
+            last_received: None,
             timeout,
             reliability: Reliability::default(),
             status: ConnectionStatus::PendingIncoming(PendingIncoming::default()),
@@ -32,6 +36,8 @@ impl UdpConnection {
         Self {
             address,
             started: Instant::now(),
+            last_sent: None,
+            last_received: None,
             timeout,
             reliability: Reliability::default(),
             status: ConnectionStatus::PendingOutgoing(PendingOutgoing::default()),
