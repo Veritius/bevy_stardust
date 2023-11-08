@@ -1,9 +1,10 @@
-use crate::transports::udp::{connections::{PendingIncoming, PendingIncomingState, Disconnected}, reliability::Reliability, COMPAT_GOOD_VERSIONS};
+use crate::transports::udp::{connections::{PendingIncoming, PendingIncomingState, Disconnected}, reliability::Reliability, COMPAT_GOOD_VERSIONS, ordering::OrderingData};
 
 pub(super) fn process_pending_incoming(
     message: &[u8],
     incoming: &mut PendingIncoming,
     reliability: &mut Reliability,
+    ordering: &mut OrderingData,
     protocol: u64,
 ) {
     incoming.state = match incoming.state {
