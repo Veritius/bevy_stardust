@@ -1,6 +1,6 @@
 use std::{net::SocketAddr, time::{Instant, Duration}};
 use bevy::prelude::*;
-use super::reliability::Reliability;
+use super::{reliability::Reliability, ordering::Ordering};
 
 /// If set to `false`, new incoming connections will be ignored.
 #[derive(Debug, Resource)]
@@ -8,13 +8,14 @@ pub(super) struct AllowNewConnections(pub bool);
 
 /// A UDP connection. May or may not be fully connected.
 #[derive(Debug, Component)]
-pub struct UdpConnection {
+pub(super) struct UdpConnection {
     pub address: SocketAddr,
     pub started: Instant,
     pub last_sent: Option<Instant>,
     pub last_received: Option<Instant>,
     pub timeout: Duration,
     pub reliability: Reliability,
+    pub ordering: Ordering,
     pub status: ConnectionStatus,
 }
 
@@ -27,6 +28,7 @@ impl UdpConnection {
             last_received: None,
             timeout,
             reliability: Reliability::default(),
+            ordering: Ordering::default(),
             status: ConnectionStatus::PendingIncoming(PendingIncoming::default()),
         }
     }
@@ -40,13 +42,14 @@ impl UdpConnection {
             last_received: None,
             timeout,
             reliability: Reliability::default(),
+            ordering: Ordering::default(),
             status: ConnectionStatus::PendingOutgoing(PendingOutgoing::default()),
         }
     }
 }
 
 #[derive(Debug)]
-pub enum ConnectionStatus {
+pub(super) enum ConnectionStatus {
     /// A connection attempt from a hitherto-unknown remote peer.
     PendingIncoming(PendingIncoming),
     /// A connection attempt to a known remote peer, emanating from this peer.
@@ -58,7 +61,7 @@ pub enum ConnectionStatus {
 }
 
 #[derive(Debug)]
-pub struct PendingIncoming {
+pub(super) struct PendingIncoming {
     pub state: PendingIncomingState,
 }
 
@@ -71,7 +74,7 @@ impl Default for PendingIncoming {
 }
 
 #[derive(Debug)]
-pub enum PendingIncomingState {
+pub(super) enum PendingIncomingState {
     /// The peer has just been noticed, and hasn't even had one of their messages processed.
     JustRegistered,
     /// The peer has finished the handshake and will soon become `Established`.
@@ -81,7 +84,7 @@ pub enum PendingIncomingState {
 }
 
 #[derive(Debug)]
-pub struct PendingOutgoing {
+pub(super) struct PendingOutgoing {
     pub state: PendingOutgoingState,
 }
 
@@ -94,16 +97,16 @@ impl Default for PendingOutgoing {
 }
 
 #[derive(Debug)]
-pub enum PendingOutgoingState {
+pub(super) enum PendingOutgoingState {
     WaitingForResponse,
     Accepted,
 }
 
 #[derive(Debug)]
-pub struct Established;
+pub(super) struct Established;
 
 #[derive(Debug)]
-pub enum Disconnected {
+pub(super) enum Disconnected {
     /// A critical packet could not be parsed or otherwise processed.
     InvalidPacket,
     /// Expected information was missing.
