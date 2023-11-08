@@ -1,9 +1,8 @@
 //! The "safety net" of Stardust, used to prevent weird and hard-to-find issues.
 //! By creating a hashed value at startup from networking-related actions, like adding channels, hard to debug issues can be effectively prevented.
 
-use bevy::prelude::*;
-#[allow(deprecated)] // Intentional - keeps hasher implementation the same through Rust releases.
-use std::hash::{Hash, Hasher, SipHasher};
+use bevy::{prelude::*, utils::AHasher};
+use std::hash::{Hash, Hasher};
 
 /// A unique value generated during `App` creation, used to ensure two clients have consistent network setups.
 #[derive(Resource)]
@@ -67,8 +66,7 @@ impl ProtocolIdHasher {
     pub fn new() -> Self {
         Self {
             strings: vec![],
-            #[allow(deprecated)]
-            state: Box::new(Box::new(SipHasher::default())),
+            state: Box::new(AHasher::default()),
         }
     }
 }
