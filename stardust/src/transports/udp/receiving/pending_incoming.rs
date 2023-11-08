@@ -21,7 +21,7 @@ fn read_initial_packet(
     let string = match std::str::from_utf8(message) {
         Ok(v) => v,
         Err(_) => {
-            return PendingIncomingState::Rejected(Disconnected::InvalidPacket)
+            return PendingIncomingState::Rejected(Disconnected::HandshakeMalformedPacket)
         },
     };
 
@@ -29,7 +29,7 @@ fn read_initial_packet(
     let json = match json::parse(string) {
         Ok(v) => v,
         Err(_) => {
-            return PendingIncomingState::Rejected(Disconnected::InvalidPacket);
+            return PendingIncomingState::Rejected(Disconnected::HandshakeMalformedPacket);
         },
     };
 
@@ -38,10 +38,10 @@ fn read_initial_packet(
         // Only the req_join case exists right now
         Some("req_join") => {},
         None => {
-            return PendingIncomingState::Rejected(Disconnected::MissingData);
+            return PendingIncomingState::Rejected(Disconnected::HandshakeMalformedPacket);
         },
         _ => {
-            return PendingIncomingState::Rejected(Disconnected::InvalidPacket)
+            return PendingIncomingState::Rejected(Disconnected::HandshakeMalformedPacket)
         }
     }
 
@@ -51,15 +51,15 @@ fn read_initial_packet(
             let v = match v.parse::<u32>() {
                 Ok(v) => v,
                 Err(_) => {
-                    return PendingIncomingState::Rejected(Disconnected::InvalidData)
+                    return PendingIncomingState::Rejected(Disconnected::HandshakeMalformedPacket)
                 },
             };
             if !COMPAT_GOOD_VERSIONS.contains(&v) {
-                return PendingIncomingState::Rejected(Disconnected::WrongVersion { version: v })
+                return PendingIncomingState::Rejected(Disconnected::HandshakeWrongVersion { version: v })
             }
         },
         None => {
-            return PendingIncomingState::Rejected(Disconnected::InvalidData)
+            return PendingIncomingState::Rejected(Disconnected::HandshakeMalformedPacket)
         }
     }
 
@@ -69,16 +69,16 @@ fn read_initial_packet(
             match u64::from_str_radix(v, 16) {
                 Ok(v) => {
                     if v != protocol {
-                        return PendingIncomingState::Rejected(Disconnected::WrongProtocol { protocol: v })
+                        return PendingIncomingState::Rejected(Disconnected::HandshakeWrongProtocol { protocol: v })
                     }
                 },
                 Err(_) => {
-                    return PendingIncomingState::Rejected(Disconnected::InvalidData)
+                    return PendingIncomingState::Rejected(Disconnected::HandshakeMalformedPacket)
                 },
             }
         },
         None => {
-            return PendingIncomingState::Rejected(Disconnected::InvalidData)
+            return PendingIncomingState::Rejected(Disconnected::HandshakeMalformedPacket)
         },
     }
 

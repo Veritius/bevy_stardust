@@ -107,20 +107,17 @@ pub(super) struct Established;
 
 #[derive(Debug, Clone)]
 pub(super) enum Disconnected {
-    /// A critical packet could not be parsed or otherwise processed.
-    InvalidPacket,
-    /// Expected information was missing.
-    MissingData,
-    /// Expected information was present but had an unexpected quality that prevented processing.
-    InvalidData,
+    /// A critical packet could not be parsed, had invalid data, or had unexpected data.
+    HandshakeMalformedPacket,
     /// The peer's transport layer was incompatible.
-    WrongVersion {
+    HandshakeWrongVersion {
         version: u32,
     },
     /// The protocol hash was incorrect.
-    WrongProtocol {
+    HandshakeWrongProtocol {
         protocol: u64,
     },
+
     /// Too much unacknowledged data was being stored.
     OverMemoryBudget,
 }
@@ -128,12 +125,10 @@ pub(super) enum Disconnected {
 impl Display for Disconnected {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Disconnected::InvalidPacket => f.write_str("Important packet could not be read"),
-            Disconnected::MissingData => f.write_str("Expected information was missing"),
-            Disconnected::InvalidData => f.write_str("Some data could not be processed"),
-            Disconnected::WrongVersion { version } => f.write_str(&format!("Transport layer version ({version}) was out of range")),
-            Disconnected::WrongProtocol { protocol } => f.write_str(&format!("Protocol hash ({protocol:X})was incompatible")),
-            Disconnected::OverMemoryBudget => f.write_str("Peer exceeded memory budget for unacknowledged packets"),
+            Disconnected::HandshakeMalformedPacket => f.write_str("Peer sent a malformed packet during the handshake"),
+            Disconnected::HandshakeWrongVersion { version } => f.write_str(&format!("Peer's transport layer version ({version}) was out of range")),
+            Disconnected::HandshakeWrongProtocol { protocol } => f.write_str(&format!("Peer's protocol hash ({protocol:X})was incompatible")),
+            Disconnected::OverMemoryBudget => f.write_str("Peer exceeded maximum memory usage for unacknowledged packets"),
         }
     }
 }
