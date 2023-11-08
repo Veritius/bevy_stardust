@@ -1,4 +1,4 @@
-use std::{net::SocketAddr, time::{Instant, Duration}};
+use std::{net::SocketAddr, time::{Instant, Duration}, fmt::Display};
 use bevy::prelude::*;
 use super::{reliability::Reliability, ordering::Ordering};
 
@@ -105,7 +105,7 @@ pub(super) enum PendingOutgoingState {
 #[derive(Debug)]
 pub(super) struct Established;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(super) enum Disconnected {
     /// A critical packet could not be parsed or otherwise processed.
     InvalidPacket,
@@ -123,4 +123,17 @@ pub(super) enum Disconnected {
     },
     /// Too much unacknowledged data was being stored.
     OverMemoryBudget,
+}
+
+impl Display for Disconnected {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Disconnected::InvalidPacket => f.write_str("Important packet could not be read"),
+            Disconnected::MissingData => f.write_str("Expected information was missing"),
+            Disconnected::InvalidData => f.write_str("Some data could not be processed"),
+            Disconnected::WrongVersion { version } => f.write_str(&format!("Transport layer version ({version}) was out of range")),
+            Disconnected::WrongProtocol { protocol } => f.write_str(&format!("Protocol hash ({protocol:X})was incompatible")),
+            Disconnected::OverMemoryBudget => f.write_str("Peer exceeded memory budget for unacknowledged packets"),
+        }
+    }
 }
