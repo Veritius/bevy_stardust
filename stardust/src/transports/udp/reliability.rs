@@ -1,12 +1,36 @@
+use std::{collections::BTreeMap, sync::Arc};
 use bevy::prelude::*;
 
-/// The reliability state of an [EstablishedUdpPeer](super::connections::EstablishedUdpPeer)
+/// The reliability state of a [UdpConnection](super::connections::UdpConnection).
 #[derive(Debug, Component)]
 pub struct Reliability {
     /// The local sequence value. Incremented whenever a packet is sent to the peer.
-    pub local: u16,
+    local: u16,
     /// The remote sequence value. Updated to the most recent sequence ID of packets received from the peer.
-    pub remote: u16,
+    remote: u16,
+    /// Packets that have yet to be acknowledged.
+    waiting: BTreeMap<u16, Arc<[u8]>>,
+    /// Estimate of how much space `waiting` is taking up.
+    using_bytes: usize,
+}
+
+impl Reliability {
+    /// Returns an estimate of how much memory unacknowledged messages are taking up, in bytes.
+    /// Does not take into account the size of the map and pointers.
+    pub fn waiting(&self) -> usize {
+        self.using_bytes
+    }
+
+    /// Returns a sequence ID for an outgoing packet, incrementing the local counter.
+    pub fn increment_local(&mut self) -> u16 {
+        let old = self.local;
+        self.local = self.local.wrapping_add(1);
+        return old
+    }
+
+    pub fn update_remote(&mut self, seq: u16) {
+        todo!()
+    }
 }
 
 impl Default for Reliability {
@@ -14,6 +38,8 @@ impl Default for Reliability {
         Self {
             local: 0,
             remote: 0,
+            waiting: BTreeMap::new(),
+            using_bytes: 0,
         }
     }
 }

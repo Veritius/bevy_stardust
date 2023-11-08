@@ -118,4 +118,6 @@ pub enum Disconnected {
     WrongProtocol {
         protocol: u64,
     },
+    /// Too much unacknowledged data was being stored.
+    OverMemoryBudget,
 }
