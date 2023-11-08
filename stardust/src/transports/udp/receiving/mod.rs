@@ -25,7 +25,6 @@ pub(super) fn receive_packets_system(
     mut peers: Query<(Entity, &mut UdpConnection, Option<&mut NetworkMessageStorage>)>,
     schedule: NetworkScheduleData,
     registry: Res<ChannelRegistry>,
-    channels: Query<(Option<&OrderedChannel>, Option<&ReliableChannel>, Option<&FragmentedChannel>)>,
     mut ports: ResMut<PortBindings>,
     protocol: Res<UniqueNetworkHash>,
     allow_new: Res<AllowNewConnections>,

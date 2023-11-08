@@ -1,56 +1,87 @@
-//! Components for setting up a channel
+//! Channel configuration.
+//! 
+//! All settings are not definitive, but hints to transport layers as how to treat channels.
 
-use std::any::TypeId;
-use bevy::prelude::*;
+use std::{any::TypeId, marker::PhantomData};
 use super::id::ChannelId;
 
-/// An entity representing a channel.
-#[derive(Component)]
+/// Configuration for a channel.
+#[derive(Debug, Hash)]
+pub struct ChannelConfiguration {
+    /// See [ChannelReliability]'s documentation.
+    pub reliable: ChannelReliability,
+    /// See [ChannelOrdering]'s documentation.
+    pub ordering: ChannelOrdering,
+    /// See [ChannelFragmentation]'s documentation.
+    pub fragment: ChannelFragmentation,
+    /// See [ChannelCompression]'s documentation.
+    pub compress: ChannelCompression,
+    /// See [MessageValidation]'s documentation.
+    pub validate: MessageValidation,
+}
+
+/// Immutable channel information, owned by the `ChannelRegistry`.
 pub struct ChannelData {
-    pub(crate) type_id: TypeId,
-    pub(crate) type_path: &'static str,
-    pub(crate) channel_id: ChannelId,
+    /// The channel's `TypeId`.
+    pub type_id: TypeId,
+    /// The channel's `TypePath` (from `bevy_reflect`)
+    pub type_path: &'static str,
+    /// The channel's sequential ID assigned by the registry.
+    pub channel_id: ChannelId,
+
+    /// The config of the channel.
+    pub config: ChannelConfiguration,
+
+    // Prevent this type being constructed
+    pub(super) phantom: PhantomData<()>,
 }
 
-impl ChannelData {
-    /// Returns the associated `TypeId` used to access this channel.
-    pub fn type_id(&self) -> TypeId {
-        self.type_id
-    }
-
-    /// Returns the [TypePath](https://docs.rs/bevy_reflect/0.11.0/bevy_reflect/trait.TypePath.html) fully qualified path.
-    pub fn type_path(&self) -> &'static str {
-        self.type_path
-    }
-
-    /// Returns the associated `ChannelId` used for network transport.
-    pub fn channel_id(&self) -> ChannelId {
-        self.channel_id
-    }
+/// Reliable channels.
+#[derive(Debug, Hash)]
+pub enum ChannelReliability {
+    /// Messages will not be resent if missed.
+    Unreliable,
+    /// Messages will be resent if missed.
+    Reliable,
 }
 
-/// Marks this channel as ordered - messages sent in this channel will arrive in the exact order they are sent. Messages may not arrive, use [ReliableChannel] to ensure they do.
-#[derive(Component, Default, Hash, Reflect, Clone, Copy)]
-pub struct OrderedChannel;
+/// Ordered channels.
+#[derive(Debug, Hash)]
+pub enum ChannelOrdering {
+    /// Messages will be read in the order they arrive.
+    Unordered,
+    /// Messages will be read in the order they were sent.
+    Ordered,
+}
 
-/// Marks this channel as reliable - messages sent in this channel are guaranteed to arrive eventually.
-#[derive(Component, Default, Hash, Reflect, Clone, Copy)]
-pub struct ReliableChannel;
+/// Fragmented messages.
+#[derive(Debug, Hash)]
+pub enum ChannelFragmentation {
+    /// Messages that are too large to send will not be sent.
+    /// Additional behavior such as panicking depends on the transport layer.
+    Disabled,
+    /// Messages that are too large will be spread across multiple packets.
+    /// It's highly recommended to use [reliability](ChannelReliability::Reliable) if you are using this.
+    /// If a segment of a fragmented octet string is missed, the transport layer may discard the entire thing.
+    Enabled,
+}
 
-/// Discards packets in this channel that are older than a certain amount of ticks.
-#[derive(Component, Default, Hash, Reflect, Clone, Copy)]
-pub struct ChannelLatestness(u32);
-
-/// If large octet strings should be broken into smaller packets for transmission. Specific to a channel, may or may not add overhead.
-#[derive(Component, Default, Hash, Reflect, Clone, Copy)]
-pub struct FragmentedChannel;
-
-/// If messages on this channel should be compressed before transport. This uses the network more efficiently but takes processing on both ends of the connection. Useful with [ChannelFragmentation].
-#[derive(Component, Default, Hash, Reflect, Clone, Copy, PartialEq, Eq)]
-pub enum CompressedChannel {
-    /// Compression is slow but the results are smaller.
+/// Compresses octet strings on channels.
+#[derive(Debug, Hash)]
+pub enum ChannelCompression {
+    /// Don't compress messages.
+    Disabled,
+    /// Compress messages, but don't sacrifice speed.
+    Fast,
+    /// Compress messages as much as possible.
     High,
-    /// Compression is fast but the results may be larger.
-    #[default]
-    Low,
+}
+
+/// Ensure messages are as they were sent.
+#[derive(Debug, Hash)]
+pub enum MessageValidation {
+    /// The integrity of messages will not be checked.
+    Disabled,
+    /// The integrity of messages will be checked.
+    Enabled,
 }

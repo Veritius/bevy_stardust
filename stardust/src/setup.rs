@@ -5,7 +5,6 @@ use crate::prelude::*;
 use crate::scheduling::*;
 use crate::protocol::*;
 use crate::channels::registry::ChannelRegistry;
-use crate::channels::systems::*;
 
 /// The Stardust multiplayer plugin.
 /// Adds the core functionality of Stardust, but does not add a transport layer.
@@ -20,9 +19,6 @@ impl Plugin for StardustPlugin {
         app.add_event::<DisconnectPeerEvent>();
         app.add_event::<PeerDisconnectedEvent>();
         app.add_event::<PeerConnectedEvent>();
-
-        // Systems that check for things that shouldn't happen
-        app.add_systems(PreUpdate, panic_on_channel_removal);
 
         // Channel and hasher things
         app.insert_resource(ChannelRegistry::new());

@@ -7,7 +7,6 @@ use super::ports::PortBindings;
 /// Sends octet strings using a taskpool strategy.
 pub(super) fn send_packets_system(
     registry: Res<ChannelRegistry>,
-    channels: Query<(&ChannelData, Option<&ReliableChannel>, Option<&OrderedChannel>, Option<&FragmentedChannel>)>,
     ports: Res<PortBindings>,
     outgoing: TransportOutgoingReader,
 ) {
