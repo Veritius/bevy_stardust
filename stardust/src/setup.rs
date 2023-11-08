@@ -22,7 +22,7 @@ impl Plugin for StardustPlugin {
 
         // Channel and hasher things
         app.insert_resource(ChannelRegistry::new());
-        app.insert_resource(UniqueNetworkHasher::new());
+        app.insert_resource(ProtocolIdHasher::new());
         app.add_systems(PreStartup, complete_hasher);
     }
 }

@@ -11,7 +11,7 @@ use bevy::prelude::*;
 use bevy::tasks::TaskPoolBuilder;
 use crate::messages::incoming::NetworkMessageStorage;
 use crate::prelude::*;
-use crate::protocol::UniqueNetworkHash;
+use crate::protocol::ProtocolId;
 use crate::scheduling::NetworkScheduleData;
 use super::connections::{AllowNewConnections, UdpConnection, ConnectionStatus};
 use super::ports::PortBindings;
@@ -26,7 +26,7 @@ pub(super) fn receive_packets_system(
     schedule: NetworkScheduleData,
     registry: Res<ChannelRegistry>,
     mut ports: ResMut<PortBindings>,
-    protocol: Res<UniqueNetworkHash>,
+    protocol: Res<ProtocolId>,
     allow_new: Res<AllowNewConnections>,
 ) {
     // Create task pool for parallel accesses

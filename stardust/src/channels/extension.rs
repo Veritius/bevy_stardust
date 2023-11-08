@@ -2,7 +2,7 @@
 
 use std::sync::{Arc, RwLock};
 use bevy::prelude::*;
-use crate::{protocol::NetworkHashAppExt, messages::outgoing::UntypedOctetStringCollection, prelude::ChannelConfiguration};
+use crate::{protocol::ProtocolIdAppExt, messages::outgoing::UntypedOctetStringCollection, prelude::ChannelConfiguration};
 use super::{id::Channel, registry::ChannelRegistry};
 
 mod sealed {
