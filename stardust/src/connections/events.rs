@@ -3,9 +3,23 @@
 use std::fmt::Display;
 use bevy::{prelude::*, utils::Uuid};
 
-/// An event sent to disconnect a peer.
+/// Raise to try and disconnect a peer, with an optional reason.
 #[derive(Event)]
-pub struct DisconnectPeerEvent(pub Entity);
+pub struct DisconnectPeerEvent {
+    /// The peer to disconnect.
+    pub target: Entity,
+    /// The reason for disconnection.
+    pub reason: Option<Box<dyn Display + Send + Sync>>,
+}
+
+/// Raised when a peer tries to connect, but fails.
+#[derive(Event)]
+pub struct FailedConnectionEvent {
+    /// The origin of the connection, such as a `SocketAddr`.
+    pub origin: Box<dyn Display + Send + Sync>,
+    /// The reason the connection failed.
+    pub reason: Box<dyn Display + Send + Sync>,
+}
 
 /// Raised when a new peer connects.
 #[derive(Event)]
