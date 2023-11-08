@@ -54,12 +54,3 @@ impl std::fmt::Debug for Reliability {
         .finish()
     }
 }
-
-/// Returns `true` if `u1` is greater than `u2` while considering sequence id wrap-around.
-/// 
-/// Based on [Glenn Fiedler's article](https://gafferongames.com/post/reliability_ordering_and_congestion_avoidance_over_udp/) on reliability.
-#[inline]
-fn sequence_greater_than(u1: u16, u2: u16) -> bool {
-    ( (u1 > u2) && (u1 - u2 <= 32768) ) ||
-    ( (u1 < u2) && (u2 - u1 >  32768) )
-}
