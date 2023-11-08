@@ -23,7 +23,8 @@ impl Default for Ordering {
 /// Ordering data for a single channel.
 pub(super) struct OrderingData {
     using_bytes: usize,
-    latest: u16,
+    sent_latest: u16,
+    recv_latest: u16,
     pending: BTreeMap<u16, OctetString>,
 }
 
@@ -33,13 +34,18 @@ impl OrderingData {
     pub fn waiting(&self) -> usize {
         self.using_bytes
     }
+
+    pub fn receive(&mut self, id: u16, data: OctetString) -> OrderingReceiveResponse {
+        todo!()
+    }
 }
 
 impl Default for OrderingData {
     fn default() -> Self {
         Self {
             using_bytes: 0,
-            latest: 0,
+            sent_latest: 0,
+            recv_latest: 0,
             pending: BTreeMap::new(),
         }
     }
@@ -49,6 +55,16 @@ impl Debug for OrderingData {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ChannelOrdering").finish()
     }
+}
+
+/// Possible returned values from `receive`-ing a message using [OrderingData].
+pub(super) enum OrderingReceiveResponse {
+    /// No messages freed from the queue.
+    Nothing,
+    /// One message freed from the queue.
+    Single(OctetString),
+    /// Multiple messages freed from the queue (in order).
+    Multiple(Box<[OctetString]>),
 }
 
 /// Returns `true` if `u1` is greater than `u2` while considering sequence id wrap-around.
