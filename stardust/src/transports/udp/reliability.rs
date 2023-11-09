@@ -1,5 +1,6 @@
 use std::{collections::BTreeMap, sync::Arc};
 use bevy::prelude::*;
+use super::ordering::sequence_gte;
 
 /// The reliability state of a [UdpConnection](super::connections::UdpConnection).
 #[derive(Component)]
@@ -22,13 +23,16 @@ impl Reliability {
     }
 
     /// Returns a sequence ID for an outgoing packet, incrementing the local counter.
-    pub fn increment_local(&mut self) -> u16 {
+    pub fn update_local(&mut self) -> u16 {
         let old = self.local;
         self.local = self.local.wrapping_add(1);
         return old
     }
 
-    pub fn update_remote(&mut self, seq: u16) {
+    pub fn update_remote(&mut self, seq: u16, data: &[u8]) {
+        // if sequence_gte(seq, self.remote) {
+        //     self.remote = seq;
+        // }
         todo!()
     }
 }
