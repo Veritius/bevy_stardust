@@ -21,6 +21,9 @@ use manager::apply_manager_action_system;
 // Expose manager
 pub use manager::{UdpConnectionManager, startup_now};
 
+/// Unique transport layer identifier.
+/// If you fork the transport layer, you should change this to be a random number.
+static TRANSPORT_IDENTIFIER: u64 = 0;
 /// This peer's transport layer version.
 static COMPAT_THIS_VERSION: u32 = 0;
 /// The versions of the transport layer that the transport layer will connect to.

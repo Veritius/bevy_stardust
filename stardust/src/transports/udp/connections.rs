@@ -109,6 +109,10 @@ pub(super) struct Established;
 pub(super) enum Disconnected {
     /// A critical packet could not be parsed, had invalid data, or had unexpected data.
     HandshakeMalformedPacket,
+    /// The transport layer was not known.
+    HandshakeUnknownTransport {
+        identifier: u64,
+    },
     /// The peer's transport layer was incompatible.
     HandshakeWrongVersion {
         version: u32,
@@ -126,6 +130,7 @@ impl Display for Disconnected {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Disconnected::HandshakeMalformedPacket => f.write_str("Peer sent a malformed packet during the handshake"),
+            Disconnected::HandshakeUnknownTransport { identifier } => f.write_str(&format!("Peer's transport layer identifier was unknown ({identifier:X})")),
             Disconnected::HandshakeWrongVersion { version } => f.write_str(&format!("Peer's transport layer version ({version}) was out of range")),
             Disconnected::HandshakeWrongProtocol { protocol } => f.write_str(&format!("Peer's protocol hash ({protocol:X})was incompatible")),
             Disconnected::OverMemoryBudget => f.write_str("Peer exceeded maximum memory usage for unacknowledged packets"),

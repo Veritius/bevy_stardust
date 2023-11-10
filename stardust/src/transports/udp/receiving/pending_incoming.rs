@@ -1,4 +1,4 @@
-use crate::transports::udp::{connections::{PendingIncoming, PendingIncomingState, Disconnected}, reliability::Reliability, COMPAT_GOOD_VERSIONS, ordering::OrderingData};
+use crate::transports::udp::{connections::{PendingIncoming, PendingIncomingState, Disconnected}, reliability::Reliability, COMPAT_GOOD_VERSIONS, ordering::OrderingData, TRANSPORT_IDENTIFIER};
 
 pub(super) fn process_pending_incoming(
     message: &[u8],
@@ -18,70 +18,21 @@ fn read_initial_packet(
     message: &[u8],
     protocol: u64,
 ) -> PendingIncomingState {
-    // Try to parse into a string slice
-    let string = match std::str::from_utf8(message) {
-        Ok(v) => v,
-        Err(_) => {
-            return PendingIncomingState::Rejected(Disconnected::HandshakeMalformedPacket)
-        },
-    };
+    // Basic requirements for an initial packet
+    if message.len() < 20 {
+        return PendingIncomingState::Rejected(Disconnected::HandshakeMalformedPacket) }
 
-    // Try to parse into a json document
-    let json = match json::parse(string) {
-        Ok(v) => v,
-        Err(_) => {
-            return PendingIncomingState::Rejected(Disconnected::HandshakeMalformedPacket);
-        },
-    };
+    let identifier = u64::from_be_bytes(message[0..8].try_into().unwrap());
+    if identifier != TRANSPORT_IDENTIFIER {
+        return PendingIncomingState::Rejected(Disconnected::HandshakeUnknownTransport { identifier }) }
 
-    // Get request type
-    match json["req"].as_str() {
-        // Only the req_join case exists right now
-        Some("req_join") => {},
-        None => {
-            return PendingIncomingState::Rejected(Disconnected::HandshakeMalformedPacket);
-        },
-        _ => {
-            return PendingIncomingState::Rejected(Disconnected::HandshakeMalformedPacket)
-        }
-    }
+    let version = u32::from_be_bytes(message[8..12].try_into().unwrap());
+    if !COMPAT_GOOD_VERSIONS.contains(&version) {
+        return PendingIncomingState::Rejected(Disconnected::HandshakeWrongVersion { version }) }
 
-    // Check transport version
-    match json["transport"].as_str() {
-        Some(v) => {
-            let v = match v.parse::<u32>() {
-                Ok(v) => v,
-                Err(_) => {
-                    return PendingIncomingState::Rejected(Disconnected::HandshakeMalformedPacket)
-                },
-            };
-            if !COMPAT_GOOD_VERSIONS.contains(&v) {
-                return PendingIncomingState::Rejected(Disconnected::HandshakeWrongVersion { version: v })
-            }
-        },
-        None => {
-            return PendingIncomingState::Rejected(Disconnected::HandshakeMalformedPacket)
-        }
-    }
-
-    // Check protocol hash
-    match json["protocol"].as_str() {
-        Some(v) => {
-            match u64::from_str_radix(v, 16) {
-                Ok(v) => {
-                    if v != protocol {
-                        return PendingIncomingState::Rejected(Disconnected::HandshakeWrongProtocol { protocol: v })
-                    }
-                },
-                Err(_) => {
-                    return PendingIncomingState::Rejected(Disconnected::HandshakeMalformedPacket)
-                },
-            }
-        },
-        None => {
-            return PendingIncomingState::Rejected(Disconnected::HandshakeMalformedPacket)
-        },
-    }
+    let other_protocol = u64::from_be_bytes(message[12..20].try_into().unwrap());
+    if other_protocol != protocol {
+        return PendingIncomingState::Rejected(Disconnected::HandshakeWrongProtocol { protocol }) }
 
     // They've succeeded :)
     return PendingIncomingState::Accepted

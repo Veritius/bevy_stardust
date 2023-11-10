@@ -53,14 +53,8 @@ Many implementations of networking code prefix all packets with a 'protocol' val
 ### Example connection
 Let's create two peers, A and B. A wants to connect to B, and B is listening for connections. A will start by sending the following to B.
 
-```jsonc
-{
-    // All packets have a "msg" field, identifying their purpose in the conversation.
-    "msg": "req_join",
-    // A includes the SemVer version of their transport layer in string form
-    "transport": "0.2.0",
-    // A also sends their protocol hash
-    "protocol": "42B2EC801C40258A"
-}
 ```
-
+[8 bytes] Unique transport layer version, 64-bit unsigned integer
+[4 bytes] Transport version, 32-bit unsigned integer
+[8 bytes] Protocol hash, 64-bit unsigned integer
+```
