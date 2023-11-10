@@ -167,6 +167,7 @@ impl Error for NIntegerError {}
 fn u24_wrapping_test() {
     assert_eq!(u24::MAX.wrapping_add(1.into()), u24::MIN);
     assert_eq!(u24::from(16u16).wrapping_add(1u16.into()), u24::from(17u16));
+    assert_eq!(u24::try_from(2u32.pow(24)).unwrap().wrapping_add(1u16.into()), u24::from(0u16));
     // assert_eq!(u24::MIN.wrapping_sub(1.into()), u24::MAX);
     // assert_eq!(u24::from(16u16).wrapping_sub(1u16.into()), u24::from(15u16));
 }
