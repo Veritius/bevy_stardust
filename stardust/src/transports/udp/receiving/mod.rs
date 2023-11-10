@@ -60,7 +60,7 @@ pub(super) fn receive_packets_system(
         let peer_locks = &peer_locks;
 
         // Start reading bytes from all ports in parallel
-        let mut task_commands = taskpool.scope(|s| {
+        taskpool.scope(|s| {
             for (_, socket, peers) in ports.iter() {
                 s.spawn(async move {
                     // Take locks from the mutex elements
