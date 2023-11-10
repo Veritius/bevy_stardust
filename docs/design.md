@@ -57,4 +57,5 @@ Let's create two peers, A and B. A wants to connect to B, and B is listening for
 [8 bytes] Unique transport layer version, 64-bit unsigned integer
 [4 bytes] Transport version, 32-bit unsigned integer
 [8 bytes] Protocol hash, 64-bit unsigned integer
+[2 bytes] Packet sequence ID, 16-bit unsigned integer
 ```

@@ -1,14 +1,13 @@
 use std::{collections::BTreeMap, sync::Arc};
 use bevy::prelude::*;
-use super::ordering::sequence_gte;
 
 /// The reliability state of a [UdpConnection](super::connections::UdpConnection).
 #[derive(Component)]
 pub(super) struct Reliability {
     /// The local sequence value. Incremented whenever a packet is sent to the peer.
-    local: u16,
+    pub local: u16,
     /// The remote sequence value. Updated to the most recent sequence ID of packets received from the peer.
-    remote: u16,
+    pub remote: u16,
     /// Packets that have yet to be acknowledged.
     waiting: BTreeMap<u16, Arc<[u8]>>,
     /// Estimate of how much space `waiting` is taking up.

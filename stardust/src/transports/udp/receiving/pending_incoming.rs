@@ -8,7 +8,7 @@ pub(super) fn process_pending_incoming(
     protocol: u64,
 ) {
     incoming.state = match incoming.state {
-        PendingIncomingState::JustRegistered => read_initial_packet(message, protocol),
+        PendingIncomingState::JustRegistered => read_initial_packet(message, protocol, reliability),
         PendingIncomingState::Accepted => todo!(),
         PendingIncomingState::Rejected(_) => todo!(),
     }
@@ -17,9 +17,10 @@ pub(super) fn process_pending_incoming(
 fn read_initial_packet(
     message: &[u8],
     protocol: u64,
+    reliability: &mut Reliability,
 ) -> PendingIncomingState {
     // Basic requirements for an initial packet
-    if message.len() < 20 {
+    if message.len() < 22 {
         return Disconnected::HandshakeMalformedPacket.into()
     }
 
@@ -34,6 +35,9 @@ fn read_initial_packet(
     let other_protocol = u64::from_be_bytes(message[12..20].try_into().unwrap());
     if other_protocol != protocol {
         return Disconnected::HandshakeWrongProtocol { protocol }.into() }
+
+    // Use their sequence id in Reliability's remote field
+    reliability.remote = u16::from_be_bytes(message[20..22].try_into().unwrap());
 
     // They've succeeded :)
     return PendingIncomingState::Accepted
