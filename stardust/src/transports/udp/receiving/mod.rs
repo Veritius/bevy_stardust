@@ -109,6 +109,11 @@ pub(super) fn receive_packets_system(
                                 match new.iter_mut().find(|p| p.address == origin) {
                                     Some(v) => v,
                                     None => {
+                                        // Check this hasn't already been registered in another thread
+                                        if active_addresses.read().unwrap().contains(&origin) { continue }
+                                        active_addresses.write().unwrap().push(origin);
+
+                                        // Add to this thread-local storage
                                         new.push(UdpConnection::new_incoming(origin, Duration::from_secs(30)));
                                         let idx = new.len();
                                         new.get_mut(idx).unwrap()
