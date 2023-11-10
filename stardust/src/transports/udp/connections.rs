@@ -83,6 +83,12 @@ pub(super) enum PendingIncomingState {
     Rejected(Disconnected),
 }
 
+impl From<Disconnected> for PendingIncomingState {
+    fn from(value: Disconnected) -> Self {
+        Self::Rejected(value)
+    }
+}
+
 #[derive(Debug)]
 pub(super) struct PendingOutgoing {
     pub state: PendingOutgoingState,

@@ -20,19 +20,20 @@ fn read_initial_packet(
 ) -> PendingIncomingState {
     // Basic requirements for an initial packet
     if message.len() < 20 {
-        return PendingIncomingState::Rejected(Disconnected::HandshakeMalformedPacket) }
+        return Disconnected::HandshakeMalformedPacket.into()
+    }
 
     let identifier = u64::from_be_bytes(message[0..8].try_into().unwrap());
     if identifier != TRANSPORT_IDENTIFIER {
-        return PendingIncomingState::Rejected(Disconnected::HandshakeUnknownTransport { identifier }) }
+        return Disconnected::HandshakeUnknownTransport { identifier }.into() }
 
     let version = u32::from_be_bytes(message[8..12].try_into().unwrap());
     if !COMPAT_GOOD_VERSIONS.contains(&version) {
-        return PendingIncomingState::Rejected(Disconnected::HandshakeWrongVersion { version }) }
+        return Disconnected::HandshakeWrongVersion { version }.into() }
 
     let other_protocol = u64::from_be_bytes(message[12..20].try_into().unwrap());
     if other_protocol != protocol {
-        return PendingIncomingState::Rejected(Disconnected::HandshakeWrongProtocol { protocol }) }
+        return Disconnected::HandshakeWrongProtocol { protocol }.into() }
 
     // They've succeeded :)
     return PendingIncomingState::Accepted
