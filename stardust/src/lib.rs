@@ -3,7 +3,6 @@
 
 #![warn(missing_docs)]
 
-pub mod setup;
 pub mod prelude;
 pub mod connections;
 pub mod protocol;
@@ -12,3 +11,5 @@ pub mod channels;
 pub mod scheduling;
 pub mod transports;
 pub mod messages;
+
+mod setup;

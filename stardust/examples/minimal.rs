@@ -1,6 +1,6 @@
 use std::{net::{SocketAddr, IpAddr}, time::Duration, str::FromStr};
 use bevy::{prelude::*, log::LogPlugin, app::{SubApp, AppLabel}};
-use bevy_stardust::{setup::StardustPlugin, prelude::{UdpTransportPlugin, UdpConnectionManager}, transports::udp::startup_now};
+use bevy_stardust::{prelude::{StardustPlugin, UdpTransportPlugin, UdpConnectionManager}, transports::udp::startup_now};
 
 const SERVER_PORTS: &[u16] = &[12340];
 const CLIENT_PORTS: &[u16] = &[12349];
