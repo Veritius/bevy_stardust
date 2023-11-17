@@ -147,7 +147,4 @@ pub(super) fn receive_packets_system(
             }
         });
     }
-
-    #[cfg(debug_assertions="true")]
-    ports.assert_reservation_emptiness();
 }
