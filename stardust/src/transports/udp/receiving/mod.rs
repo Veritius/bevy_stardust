@@ -123,15 +123,13 @@ pub(super) fn receive_packets_system(
 
                         // Process the packet
                         let message = &buffer[..octets_read];
-                        let reliability = &mut connection.reliability;
-                        let ordering = &mut connection.ordering;
                         match &mut connection.status {
                             ConnectionStatus::PendingIncoming(incoming) =>
-                                incoming::process_pending_incoming(message, incoming, reliability, &mut ordering.main, protocol.int()),
+                                incoming::process_pending_incoming(message, connection, protocol.int()),
                             ConnectionStatus::PendingOutgoing(outgoing) =>
-                                outgoing::process_pending_outgoing(message, outgoing, reliability, &mut ordering.main),
+                                outgoing::process_pending_outgoing(message, connection),
                             ConnectionStatus::Established(established) =>
-                                established::process_established(message, established, reliability, ordering),
+                                established::process_established(message, connection),
                             ConnectionStatus::Disconnected(_) =>
                                 todo!(),
                         }

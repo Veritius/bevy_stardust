@@ -1,17 +1,11 @@
-use crate::transports::udp::{connections::{PendingIncoming, PendingIncomingState, Disconnected}, reliability::Reliability, COMPAT_GOOD_VERSIONS, ordering::OrderingData, TRANSPORT_IDENTIFIER};
+use crate::transports::udp::{connections::{PendingIncomingState, Disconnected, UdpConnection}, reliability::Reliability, COMPAT_GOOD_VERSIONS, TRANSPORT_IDENTIFIER};
 
 pub(super) fn process_pending_incoming(
     message: &[u8],
-    incoming: &mut PendingIncoming,
-    reliability: &mut Reliability,
-    ordering: &mut OrderingData,
+    connection: &mut UdpConnection,
     protocol: u64,
 ) {
-    incoming.state = match incoming.state {
-        PendingIncomingState::JustRegistered => read_initial_packet(message, protocol, reliability),
-        PendingIncomingState::Accepted => todo!(),
-        PendingIncomingState::Rejected(_) => todo!(),
-    }
+
 }
 
 fn read_initial_packet(

@@ -1,10 +1,8 @@
-use crate::transports::udp::{connections::PendingOutgoing, reliability::Reliability, ordering::OrderingData};
+use crate::transports::udp::connections::UdpConnection;
 
 pub(super) fn process_pending_outgoing(
     message: &[u8],
-    outgoing: &mut PendingOutgoing,
-    reliability: &mut Reliability,
-    ordering: &mut OrderingData,
+    connection: &mut UdpConnection,
 ) {
     todo!()
 }
