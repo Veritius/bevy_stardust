@@ -125,7 +125,7 @@ pub(super) fn receive_packets_system(
                         let message = &buffer[..octets_read];
                         match &mut connection.status {
                             ConnectionStatus::PendingIncoming(incoming) =>
-                                incoming::process_pending_incoming(message, connection, protocol.int()),
+                                incoming::process_pending_incoming(message, connection, protocol.int(), &*ports),
                             ConnectionStatus::PendingOutgoing(outgoing) =>
                                 outgoing::process_pending_outgoing(message, connection),
                             ConnectionStatus::Established(established) =>

@@ -1,9 +1,10 @@
-use crate::transports::udp::{connections::{PendingIncomingState, Disconnected, UdpConnection}, reliability::Reliability, COMPAT_GOOD_VERSIONS, TRANSPORT_IDENTIFIER};
+use crate::transports::udp::{connections::{PendingIncomingState, Disconnected, UdpConnection}, reliability::Reliability, COMPAT_GOOD_VERSIONS, TRANSPORT_IDENTIFIER, ports::PortBindings};
 
 pub(super) fn process_pending_incoming(
     message: &[u8],
     connection: &mut UdpConnection,
     protocol: u64,
+    ports: &PortBindings,
 ) {
 
 }

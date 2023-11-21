@@ -1,6 +1,6 @@
 //! Dynamic port binding system.
 
-use std::{net::{UdpSocket, IpAddr}, collections::BTreeMap};
+use std::{net::{UdpSocket, IpAddr}, collections::BTreeMap, sync::Mutex};
 use bevy::prelude::{Entity, Resource};
 use anyhow::{Result, bail};
 
@@ -8,6 +8,7 @@ use anyhow::{Result, bail};
 #[derive(Debug, Resource)]
 pub(super) struct PortBindings {
     sockets: BTreeMap<u16, BoundUdpSocket>,
+    reservations: Mutex<Vec<(Entity, u16)>>,
 }
 
 impl PortBindings {
@@ -21,6 +22,7 @@ impl PortBindings {
         // Create manager
         let mut mgr = Self {
             sockets: BTreeMap::new(),
+            reservations: Mutex::default(),
         };
 
         // Create ports from range
@@ -72,6 +74,21 @@ impl PortBindings {
         }
     }
 
+    pub fn make_reservation(&self, id: Entity) -> u16 {
+        // TODO: This locks the mutex twice, fix this
+        let port = self.least_filled_port();
+        self.reservations.lock().unwrap().push((id, port));
+        return port
+    }
+
+    /// Commits the reservations to the BoundUdpSockets.
+    pub fn commit_reservations(&mut self) {
+        let mut reservations = self.reservations.lock().unwrap();
+        for (id, port) in reservations.drain(..) {
+            self.sockets.get_mut(&port).unwrap().clients.push(id);
+        }
+    }
+
     /// Returns the least occupied port, including reservations.
     fn least_filled_port(&self) -> u16 {
         let mut counter: Vec<(u16, usize)> = vec![];
@@ -79,6 +96,17 @@ impl PortBindings {
         // Add all active to counter
         for (port, socket) in self.sockets.iter() {
             counter.push((*port, socket.clients.len()));
+        }
+
+        // Count reservations
+        let reservations = self.reservations.lock().unwrap();
+        for (_, port) in &*reservations {
+            for (skt, count) in counter.iter_mut() {
+                if *port == *skt {
+                    *count += 1;
+                    break
+                }
+            }
         }
 
         // Find the smallest value
