@@ -88,10 +88,9 @@ pub(super) fn receive_packets_system(
                         // Try to read a packet from the socket
                         let (octets_read, origin) = match socket.recv_from(&mut buffer) {
                             Ok(s) => s,
-                            Err(ref e) if e.kind() == ErrorKind::WouldBlock => {
-                                // We've run out of packets to read
-                                break
-                            },
+                            Err(ref e) if e.kind() == ErrorKind::WouldBlock => break,
+                            Err(ref e) if e.kind() == ErrorKind::Interrupted => break,
+                            Err(ref e) if e.kind() == ErrorKind::ConnectionReset => continue,
                             Err(e) => {
                                 // Actual I/O error, stop reading
                                 error!("Error while reading packets: {e}");
