@@ -1,5 +1,5 @@
-mod pending_incoming;
-mod pending_outgoing;
+mod incoming;
+mod outgoing;
 mod established;
 
 use std::collections::BTreeMap;
@@ -127,9 +127,9 @@ pub(super) fn receive_packets_system(
                         let ordering = &mut connection.ordering;
                         match &mut connection.status {
                             ConnectionStatus::PendingIncoming(incoming) =>
-                                pending_incoming::process_pending_incoming(message, incoming, reliability, &mut ordering.main, protocol.int()),
+                                incoming::process_pending_incoming(message, incoming, reliability, &mut ordering.main, protocol.int()),
                             ConnectionStatus::PendingOutgoing(outgoing) =>
-                                pending_outgoing::process_pending_outgoing(message, outgoing, reliability, &mut ordering.main),
+                                outgoing::process_pending_outgoing(message, outgoing, reliability, &mut ordering.main),
                             ConnectionStatus::Established(established) =>
                                 established::process_established(message, established, reliability, ordering),
                             ConnectionStatus::Disconnected(_) =>
