@@ -16,7 +16,7 @@ pub(super) struct UdpConnection {
     pub timeout: Duration,
     pub reliability: Reliability,
     pub ordering: Ordering,
-    pub status: ConnectionStatus,
+    // pub status: ConnectionStatus,
 }
 
 impl UdpConnection {
@@ -29,7 +29,7 @@ impl UdpConnection {
             timeout,
             reliability: Reliability::default(),
             ordering: Ordering::default(),
-            status: ConnectionStatus::PendingIncoming(PendingIncoming::default()),
+            // status: ConnectionStatus::PendingIncoming(PendingIncoming::default()),
         }
     }
 
@@ -43,69 +43,9 @@ impl UdpConnection {
             timeout,
             reliability: Reliability::default(),
             ordering: Ordering::default(),
-            status: ConnectionStatus::PendingOutgoing(PendingOutgoing::default()),
+            // status: ConnectionStatus::PendingOutgoing(PendingOutgoing::default()),
         }
     }
-}
-
-#[derive(Debug)]
-pub(super) enum ConnectionStatus {
-    /// A connection attempt from a hitherto-unknown remote peer.
-    PendingIncoming(PendingIncoming),
-    /// A connection attempt to a known remote peer, emanating from this peer.
-    PendingOutgoing(PendingOutgoing),
-    /// A fully established connection.
-    Established(Established),
-    /// A previously established connection that is closed.
-    Disconnected(Disconnected),
-}
-
-#[derive(Debug)]
-pub(super) struct PendingIncoming {
-    pub state: PendingIncomingState,
-}
-
-impl Default for PendingIncoming {
-    fn default() -> Self {
-        Self {
-            state: PendingIncomingState::JustRegistered,
-        }
-    }
-}
-
-#[derive(Debug)]
-pub(super) enum PendingIncomingState {
-    /// The peer has just been noticed, and hasn't even had one of their messages processed.
-    JustRegistered,
-    /// The peer has finished the handshake and will soon become `Established`.
-    Accepted,
-    /// The peer has failed the handshake and will move to the `Disconnected` state with the enclosed reason.
-    Rejected(Disconnected),
-}
-
-impl From<Disconnected> for PendingIncomingState {
-    fn from(value: Disconnected) -> Self {
-        Self::Rejected(value)
-    }
-}
-
-#[derive(Debug)]
-pub(super) struct PendingOutgoing {
-    pub state: PendingOutgoingState,
-}
-
-impl Default for PendingOutgoing {
-    fn default() -> Self {
-        Self {
-            state: PendingOutgoingState::WaitingForResponse,
-        }
-    }
-}
-
-#[derive(Debug)]
-pub(super) enum PendingOutgoingState {
-    WaitingForResponse,
-    Accepted,
 }
 
 #[derive(Debug)]
@@ -115,14 +55,17 @@ pub(super) struct Established;
 pub(super) enum Disconnected {
     /// A critical packet could not be parsed, had invalid data, or had unexpected data.
     HandshakeMalformedPacket,
+
     /// The transport layer was not known.
     HandshakeUnknownTransport {
         identifier: u64,
     },
+
     /// The peer's transport layer was incompatible.
     HandshakeWrongVersion {
         version: u32,
     },
+
     /// The protocol hash was incorrect.
     HandshakeWrongProtocol {
         protocol: u64,

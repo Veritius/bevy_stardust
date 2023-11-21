@@ -13,7 +13,7 @@ use crate::messages::incoming::NetworkMessageStorage;
 use crate::prelude::*;
 use crate::protocol::ProtocolId;
 use crate::scheduling::NetworkScheduleData;
-use super::connections::{AllowNewConnections, UdpConnection, ConnectionStatus};
+use super::connections::{AllowNewConnections, UdpConnection};
 use super::ports::PortBindings;
 
 /// Minimum amount of octets in a packet before it's ignored.
@@ -120,25 +120,6 @@ pub(super) fn receive_packets_system(
                                 }
                             },
                         };
-
-                        // Process the packet
-                        let message = &buffer[..octets_read];
-                        match &mut connection.status {
-                            ConnectionStatus::PendingIncoming(incoming) =>
-                                incoming::process_pending_incoming(message, connection, protocol.int(), &*ports),
-                            ConnectionStatus::PendingOutgoing(outgoing) =>
-                                outgoing::process_pending_outgoing(message, connection),
-                            ConnectionStatus::Established(established) =>
-                                established::process_established(message, connection),
-                            ConnectionStatus::Disconnected(_) =>
-                                todo!(),
-                        }
-                    }
-
-                    // Create entities for new connections
-                    let mut commands = commands.lock().unwrap();
-                    for new in new.drain(..) {
-                        commands.spawn(new);
                     }
                 });
             }
