@@ -13,7 +13,7 @@ use crate::messages::incoming::NetworkMessageStorage;
 use crate::prelude::*;
 use crate::protocol::ProtocolId;
 use crate::scheduling::NetworkScheduleData;
-use super::connections::{AllowNewConnections, UdpConnection};
+use super::connections::{AllowNewConnections, UdpConnection, ConnectionStatus};
 use super::ports::PortBindings;
 
 /// Minimum amount of octets in a packet before it's ignored.
@@ -100,26 +100,6 @@ pub(super) fn receive_packets_system(
 
                         // Check length of message
                         if octets_read < MIN_OCTETS { continue }
-
-                        // Get or create a new UdpConnection object based on the origin address
-                        let connection = match peer_locks.get_mut(&origin) {
-                            Some((_, mutex)) => mutex.0.as_mut(),
-                            None => {
-                                match new.iter_mut().find(|p| p.address == origin) {
-                                    Some(v) => v,
-                                    None => {
-                                        // Check this hasn't already been registered in another thread
-                                        if active_addresses.read().unwrap().contains(&origin) { continue }
-                                        active_addresses.write().unwrap().push(origin);
-
-                                        // Add to this thread-local storage
-                                        new.push(UdpConnection::new_incoming(origin, Duration::from_secs(30)));
-                                        let idx = new.len();
-                                        new.get_mut(idx).unwrap()
-                                    },
-                                }
-                            },
-                        };
                     }
                 });
             }

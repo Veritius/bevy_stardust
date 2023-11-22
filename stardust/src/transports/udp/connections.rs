@@ -16,7 +16,7 @@ pub(super) struct UdpConnection {
     pub timeout: Duration,
     pub reliability: Reliability,
     pub ordering: Ordering,
-    // pub status: ConnectionStatus,
+    pub status: ConnectionStatus,
 }
 
 impl UdpConnection {
@@ -29,7 +29,7 @@ impl UdpConnection {
             timeout,
             reliability: Reliability::default(),
             ordering: Ordering::default(),
-            // status: ConnectionStatus::PendingIncoming(PendingIncoming::default()),
+            status: ConnectionStatus::PendingIncoming,
         }
     }
 
@@ -43,8 +43,22 @@ impl UdpConnection {
             timeout,
             reliability: Reliability::default(),
             ordering: Ordering::default(),
-            // status: ConnectionStatus::PendingOutgoing(PendingOutgoing::default()),
+            status: ConnectionStatus::PendingOutgoing,
         }
+    }
+}
+
+#[derive(Debug)]
+pub(super) enum ConnectionStatus {
+    PendingIncoming,
+    PendingOutgoing,
+    Established(Established),
+    Disconnected(Disconnected)
+}
+
+impl From<Disconnected> for ConnectionStatus {
+    fn from(value: Disconnected) -> Self {
+        Self::Disconnected(value)
     }
 }
 
