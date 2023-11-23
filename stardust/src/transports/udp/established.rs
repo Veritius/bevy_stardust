@@ -10,7 +10,6 @@ pub(super) struct AllowNewConnections(pub bool);
 #[derive(Debug, Component)]
 pub(super) struct UdpConnection {
     pub address: SocketAddr,
-    pub started: Instant,
     pub last_sent: Option<Instant>,
     pub last_received: Option<Instant>,
     pub timeout: Duration,

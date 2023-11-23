@@ -12,6 +12,10 @@ use crate::{prelude::{ChannelId, OctetString}, scheduling::NetworkScheduleData};
 pub struct NetworkMessageStorage(BTreeMap<ChannelId, Vec<OctetString>>);
 
 impl NetworkMessageStorage {
+    pub fn new() -> Self {
+        Self(BTreeMap::default())
+    }
+
     /// Returns a slice of all octet strings in the channel received by this peer.
     pub fn read_channel(&self, channel: ChannelId) -> &[OctetString] {
         match self.0.get(&channel) {

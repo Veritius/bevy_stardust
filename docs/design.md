@@ -54,8 +54,30 @@ Many implementations of networking code prefix all packets with a 'protocol' val
 Let's create two peers, A and B. A wants to connect to B, and B is listening for connections. A will start by sending the following to B.
 
 ```
-[8 bytes] Unique transport layer version, 64-bit unsigned integer
-[4 bytes] Transport version, 32-bit unsigned integer
-[8 bytes] Protocol hash, 64-bit unsigned integer
-[2 bytes] Packet sequence ID, 16-bit unsigned integer
+[ 1 byte  ] Message type
+[ 8 bytes ] Transport layer identifier, 64-bit unsigned integer
+[ 4 bytes ] Transport version, 32-bit unsigned integer
+[ 8 bytes ] Protocol hash, 64-bit unsigned integer
+[ 2 bytes ] Packet sequence ID, 16-bit unsigned integer
 ```
+
+If B accepts A, they respond with the following:
+
+```
+[ 1 byte  ] Message type
+[ 2 bytes ] The server's reliability sequence ID
+[ 2 bytes ] Port to use for further communication
+```
+
+If B rejects A, they respond with the following:
+
+```
+[ 1 byte  ] Message type
+[ 2 bytes ] Rejection reason
+[ ? bytes ] Attached reason data
+```
+
+The following message types are defined:
+- `0` (connection request)
+- `1` (connection accepted)
+- `2` (connection rejected)

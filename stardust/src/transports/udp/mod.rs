@@ -4,7 +4,6 @@
 compile_error!("The UDP transport layer does not support wasm.");
 
 mod established;
-mod incoming;
 mod manager;
 mod ordering;
 mod outgoing;

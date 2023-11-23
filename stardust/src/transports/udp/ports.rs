@@ -81,7 +81,7 @@ impl PortBindings {
         return port
     }
 
-    /// Commits the reservations to the BoundUdpSockets.
+    /// Commits any existing reservations.
     pub fn commit_reservations(&mut self) {
         let mut reservations = self.reservations.lock().unwrap();
         for (id, port) in reservations.drain(..) {

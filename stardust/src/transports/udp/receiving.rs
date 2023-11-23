@@ -1,13 +1,17 @@
 use std::collections::BTreeMap;
 use std::io::ErrorKind;
-use std::net::SocketAddr;
+use std::net::{SocketAddr, UdpSocket};
 use std::sync::{RwLock, Mutex};
+use std::time::{Instant, Duration};
 use bevy::prelude::*;
 use bevy::tasks::TaskPoolBuilder;
 use crate::messages::incoming::NetworkMessageStorage;
 use crate::prelude::*;
 use crate::protocol::ProtocolId;
 use crate::scheduling::NetworkScheduleData;
+use super::ordering::Ordering;
+use super::reliability::Reliability;
+use super::{TRANSPORT_IDENTIFIER, COMPAT_GOOD_VERSIONS};
 use super::established::{AllowNewConnections, UdpConnection};
 use super::ports::PortBindings;
 
@@ -92,9 +96,104 @@ pub(super) fn receive_packets_system(
 
                         // Check length of message
                         if octets_read < MIN_OCTETS { continue }
+
+                        if let Some((identifier, data)) = peer_locks.get_mut(&origin) {
+                            // Client is established as an entity already
+                            todo!()
+                        } else if active_addresses.read().unwrap().contains(&origin) {
+                            // Client has just been accepted, this is probably an old message
+                            todo!()
+                        } else {
+                            // We don't know this person yet
+                            receive_packet_from_unknown(
+                                &buffer[..octets_read],
+                                origin,
+                                socket,
+                                &*protocol,
+                                active_addresses,
+                                ports,
+                                commands,
+                            )
+                        }
                     }
                 });
             }
         });
     }
+
+    ports.commit_reservations();
+}
+
+fn receive_packet_from_unknown(
+    data: &[u8],
+    origin: SocketAddr,
+    socket: &UdpSocket,
+    protocol: &ProtocolId,
+    active: &RwLock<Vec<SocketAddr>>,
+    ports: &PortBindings,
+    commands: &Mutex<&mut Commands>,
+) {
+    // TODO: When iter_next_chunk is stabilised, use it
+
+    // Message type
+    if data[0] != 0 {
+        todo!()
+    }
+
+    // Unique identifier for the transport layer
+    if u64::from_be_bytes(data[1..=8].try_into().unwrap()) != TRANSPORT_IDENTIFIER {
+        todo!()
+    }
+
+    // Transport version integer
+    if !COMPAT_GOOD_VERSIONS.contains(&u32::from_be_bytes(data[9..=13].try_into().unwrap())) {
+        todo!()
+    }
+
+    // Unique protocol hash
+    if u64::from_be_bytes(data[14..=22].try_into().unwrap()) != protocol.int() {
+        todo!()
+    }
+
+    // All checks passed, create connection entity
+
+    let mut reliability = Reliability::default();
+    reliability.remote = u16::from_be_bytes(data[23..=24].try_into().unwrap());
+    reliability.local = fastrand::u16(..);
+    let local = reliability.local.to_be_bytes();
+
+    let ordering = Ordering::default();
+
+    let id = commands.lock().unwrap().spawn((
+        UdpConnection {
+            address: origin,
+            last_sent: None,
+            last_received: None,
+            timeout: Duration::from_secs(10),
+            reliability,
+            ordering,
+        },
+
+        NetworkPeer {
+            connected: Instant::now(),
+        },
+
+        NetworkMessageStorage::new(),
+    )).id();
+
+    active.write().unwrap().push(origin.clone());
+
+    // Send a response packet
+
+    let mut buffer = [0u8; 5];
+    buffer[0] = 1;
+    buffer[1] = local[0];
+    buffer[2] = local[1];
+
+    let port = ports.make_reservation(id).to_be_bytes();
+    buffer[3] = port[0];
+    buffer[4] = port[1];
+
+    socket.send_to(&buffer, origin)
+        .expect("Failed to send acceptance packet, this shouldn't happen");
 }
