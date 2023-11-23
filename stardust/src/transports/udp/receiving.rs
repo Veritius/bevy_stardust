@@ -75,10 +75,7 @@ pub(super) fn receive_packets_system(
                         })
                         .collect::<BTreeMap<_, _>>();
 
-                    // Some variables the future uses
-                    let mut new: Vec<UdpConnection> = vec![];
                     let mut buffer = [0u8; 1472];
-
                     loop {
                         // Try to read a packet from the socket
                         let (octets_read, origin) = match socket.recv_from(&mut buffer) {
