@@ -3,14 +3,16 @@
 #[cfg(target_arch = "wasm32")]
 compile_error!("The UDP transport layer does not support wasm.");
 
+mod established;
+mod incoming;
 mod manager;
-mod connections;
-mod ports;
-mod sending;
-mod receiving;
-mod packet;
-mod reliability;
 mod ordering;
+mod outgoing;
+mod packet;
+mod ports;
+mod receiving;
+mod reliability;
+mod sending;
 
 use std::ops::Range;
 use bevy::prelude::*;

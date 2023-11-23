@@ -16,54 +16,7 @@ pub(super) struct UdpConnection {
     pub timeout: Duration,
     pub reliability: Reliability,
     pub ordering: Ordering,
-    pub status: ConnectionStatus,
 }
-
-impl UdpConnection {
-    pub fn new_incoming(address: SocketAddr, timeout: Duration) -> Self {
-        Self {
-            address,
-            started: Instant::now(),
-            last_sent: None,
-            last_received: None,
-            timeout,
-            reliability: Reliability::default(),
-            ordering: Ordering::default(),
-            status: ConnectionStatus::PendingIncoming,
-        }
-    }
-
-    /// Create an outgoing connection attempt to a new peer.
-    pub fn new_outgoing(address: SocketAddr, timeout: Duration) -> Self {
-        Self {
-            address,
-            started: Instant::now(),
-            last_sent: None,
-            last_received: None,
-            timeout,
-            reliability: Reliability::default(),
-            ordering: Ordering::default(),
-            status: ConnectionStatus::PendingOutgoing,
-        }
-    }
-}
-
-#[derive(Debug)]
-pub(super) enum ConnectionStatus {
-    PendingIncoming,
-    PendingOutgoing,
-    Established(Established),
-    Disconnected(Disconnected)
-}
-
-impl From<Disconnected> for ConnectionStatus {
-    fn from(value: Disconnected) -> Self {
-        Self::Disconnected(value)
-    }
-}
-
-#[derive(Debug)]
-pub(super) struct Established;
 
 #[derive(Debug, Clone)]
 pub(super) enum Disconnected {

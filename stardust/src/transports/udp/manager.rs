@@ -3,7 +3,7 @@ use std::time::Duration;
 use bevy::prelude::*;
 use bevy::ecs::system::SystemParam;
 use super::UdpTransportState;
-use super::connections::{AllowNewConnections, UdpConnection};
+use super::established::{AllowNewConnections, UdpConnection};
 use super::ports::PortBindings;
 
 /// Manages the UDP transport layer.
@@ -58,12 +58,13 @@ impl<'w, 's> UdpConnectionManager<'w, 's> {
         }
 
         // Create entity to store connection attempt
-        let pending = self.commands.spawn(
-            UdpConnection::new_outgoing(address, timeout.unwrap_or(Duration::from_secs(30)))
-        ).id();
+        todo!();
+        // let pending = self.commands.spawn(
+        //     UdpConnection::new_outgoing(address, timeout.unwrap_or(Duration::from_secs(30)))
+        // ).id();
 
         // If the state isn't Offline then this resource exists, so we can do this
-        self.ports.as_mut().unwrap().add_client(pending);
+        // self.ports.as_mut().unwrap().add_client(pending);
     }
 }
 

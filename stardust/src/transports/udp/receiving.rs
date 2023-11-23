@@ -1,19 +1,14 @@
-mod incoming;
-mod outgoing;
-mod established;
-
 use std::collections::BTreeMap;
 use std::io::ErrorKind;
 use std::net::SocketAddr;
 use std::sync::{RwLock, Mutex};
-use std::time::Duration;
 use bevy::prelude::*;
 use bevy::tasks::TaskPoolBuilder;
 use crate::messages::incoming::NetworkMessageStorage;
 use crate::prelude::*;
 use crate::protocol::ProtocolId;
 use crate::scheduling::NetworkScheduleData;
-use super::connections::{AllowNewConnections, UdpConnection, ConnectionStatus};
+use super::established::{AllowNewConnections, UdpConnection};
 use super::ports::PortBindings;
 
 /// Minimum amount of octets in a packet before it's ignored.
