@@ -16,7 +16,7 @@ mod sending;
 use std::ops::Range;
 use bevy::prelude::*;
 use crate::scheduling::*;
-use self::{receiving::*, sending::*};
+use self::{receiving::*, sending::*, outgoing::send_attempt_packets_system};
 use manager::apply_manager_action_system;
 
 // Expose manager
@@ -42,8 +42,12 @@ impl Plugin for UdpTransportPlugin {
         // Add states
         app.add_state::<UdpTransportState>();
 
+        // A resource
+        app.init_resource::<outgoing::OutgoingConnectionAttempts>();
+
         // Add systems
         app.add_systems(PostUpdate, apply_manager_action_system);
+        app.add_systems(Update, send_attempt_packets_system);
         app.add_systems(TransportReadPackets, receive_packets_system
             .run_if(not(in_state(UdpTransportState::Offline))));
         app.add_systems(TransportSendPackets, send_packets_system

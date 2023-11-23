@@ -1,9 +1,10 @@
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use bevy::prelude::*;
 use bevy::ecs::system::SystemParam;
 use super::UdpTransportState;
-use super::established::{AllowNewConnections, UdpConnection};
+use super::established::AllowNewConnections;
+use super::outgoing::{OutgoingConnectionAttempts, OutgoingConnectionAttempt};
 use super::ports::PortBindings;
 
 /// Manages the UDP transport layer.
@@ -13,6 +14,7 @@ pub struct UdpConnectionManager<'w, 's> {
     state: Res<'w, State<UdpTransportState>>,
     ports: Option<ResMut<'w, PortBindings>>,
     allow_new: Option<ResMut<'w, AllowNewConnections>>,
+    attempts: ResMut<'w, OutgoingConnectionAttempts>,
 }
 
 impl<'w, 's> UdpConnectionManager<'w, 's> {
@@ -57,14 +59,13 @@ impl<'w, 's> UdpConnectionManager<'w, 's> {
             return;
         }
 
-        // Create entity to store connection attempt
-        todo!();
-        // let pending = self.commands.spawn(
-        //     UdpConnection::new_outgoing(address, timeout.unwrap_or(Duration::from_secs(30)))
-        // ).id();
-
-        // If the state isn't Offline then this resource exists, so we can do this
-        // self.ports.as_mut().unwrap().add_client(pending);
+        self.attempts.0.push(OutgoingConnectionAttempt {
+            address,
+            local_idx: fastrand::u16(..),
+            started: Instant::now(),
+            last_sent: None,
+            timeout: timeout.unwrap_or(Duration::from_secs(30)),
+        });
     }
 }
 
