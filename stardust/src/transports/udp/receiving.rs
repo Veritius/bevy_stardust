@@ -17,7 +17,7 @@ use super::established::{AllowNewConnections, UdpConnection, Disconnected};
 use super::ports::PortBindings;
 
 /// Minimum amount of octets in a packet before it's ignored.
-const MIN_OCTETS: usize = 3;
+const MIN_OCTETS: usize = 5;
 
 /// Processes packets from bound ports using a task pool strategy.
 pub(super) fn receive_packets_system(
@@ -158,7 +158,7 @@ fn receive_packet_from_attempt_target(
         1 => {
             lock.push((index, OutgoingAttemptResult::Accepted {
                 rel_idx: u16::from_be_bytes(data[1..3].try_into().unwrap()),
-                port: u16::from_be_bytes(data[3..4].try_into().unwrap()),
+                port: u16::from_be_bytes(data[3..5].try_into().unwrap()),
             }))
         },
         2 => {
