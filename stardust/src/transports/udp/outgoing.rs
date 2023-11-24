@@ -1,12 +1,20 @@
 use std::{net::SocketAddr, time::{Instant, Duration}};
 use bevy::prelude::*;
 use crate::protocol::ProtocolId;
-use super::{ports::PortBindings, TRANSPORT_IDENTIFIER, COMPAT_THIS_VERSION};
+use super::{ports::PortBindings, TRANSPORT_IDENTIFIER, COMPAT_THIS_VERSION, established::Disconnected};
 
 const ATTEMPT_DELAY: Duration = Duration::from_secs(5);
 
 #[derive(Debug, Default, Resource)]
 pub(super) struct OutgoingConnectionAttempts(pub Vec<OutgoingConnectionAttempt>);
+
+impl OutgoingConnectionAttempts {
+    pub fn get_attempt_from_address(&self, address: &SocketAddr) -> Option<(usize, &OutgoingConnectionAttempt)> {
+        self.0.iter()
+        .enumerate()
+        .find(|p| &p.1.address == address)
+    }
+}
 
 #[derive(Debug)]
 pub(super) struct OutgoingConnectionAttempt {
@@ -62,4 +70,16 @@ pub(super) fn send_attempt_packets_system(
             .expect("Failed to send attempt message, this should not happen.");
         attempt.last_sent = Some(now);
     }
+}
+
+#[derive(Debug)]
+pub(super) enum OutgoingAttemptResult {
+    Accepted {
+        rel_idx: u16,
+        port: u16,
+    },
+    Rejected {
+        reason: Disconnected,
+    },
+    BadResponse,
 }

@@ -10,9 +10,10 @@ use crate::prelude::*;
 use crate::protocol::ProtocolId;
 use crate::scheduling::NetworkScheduleData;
 use super::ordering::Ordering;
+use super::outgoing::{OutgoingConnectionAttempts, OutgoingAttemptResult};
 use super::reliability::Reliability;
 use super::{TRANSPORT_IDENTIFIER, COMPAT_GOOD_VERSIONS};
-use super::established::{AllowNewConnections, UdpConnection};
+use super::established::{AllowNewConnections, UdpConnection, Disconnected};
 use super::ports::PortBindings;
 
 /// Minimum amount of octets in a packet before it's ignored.
@@ -22,6 +23,7 @@ const MIN_OCTETS: usize = 3;
 pub(super) fn receive_packets_system(
     mut commands: Commands,
     mut peers: Query<(Entity, &mut UdpConnection, Option<&mut NetworkMessageStorage>)>,
+    mut attempts: ResMut<OutgoingConnectionAttempts>,
     schedule: NetworkScheduleData,
     registry: Res<ChannelRegistry>,
     mut ports: ResMut<PortBindings>,
@@ -32,6 +34,9 @@ pub(super) fn receive_packets_system(
     let taskpool = TaskPoolBuilder::default()
         .thread_name("UDP pkt receive".to_string())
         .build();
+
+    // Storage for outgoing connection attempts that have signalled acceptance or denial
+    let outgoing_attempt_results: Mutex<Vec<(usize, OutgoingAttemptResult)>> = Mutex::default();
 
     // Synchronised set of addresses to prevent accepting the same peer twice
     // While this does block, the cost is nothing compared to syscalls and I/O
@@ -56,7 +61,9 @@ pub(super) fn receive_packets_system(
         let ports = &ports;
         let protocol = &protocol;
         let active_addresses = &active_addresses;
+        let outgoing_attempt_results = &outgoing_attempt_results;
         let peer_locks = &peer_locks;
+        let attempts = &attempts;
 
         // Start reading bytes from all ports in parallel
         taskpool.scope(|s| {
@@ -103,6 +110,15 @@ pub(super) fn receive_packets_system(
                         } else if active_addresses.read().unwrap().contains(&origin) {
                             // Client has just been accepted, this is probably an old message
                             todo!()
+                        } else if let Some((index, _)) = attempts.get_attempt_from_address(&origin) {
+                            // This packet is from a person we are trying to connect to
+                            receive_packet_from_attempt_target(
+                                &buffer[..octets_read],
+                                origin,
+                                index,
+                                active_addresses,
+                                outgoing_attempt_results,
+                            )
                         } else {
                             // We don't know this person yet
                             receive_packet_from_unknown(
@@ -121,7 +137,40 @@ pub(super) fn receive_packets_system(
         });
     }
 
+    for (index, result) in outgoing_attempt_results.lock().unwrap().iter() {
+        todo!()
+    }
+
     ports.commit_reservations();
+}
+
+fn receive_packet_from_attempt_target(
+    data: &[u8],
+    origin: SocketAddr,
+    index: usize,
+    active: &RwLock<Vec<SocketAddr>>,
+    results: &Mutex<Vec<(usize, OutgoingAttemptResult)>>,
+) {
+    // Check their response type
+    active.write().unwrap().push(origin);
+    let mut lock = results.lock().unwrap();
+    match data[0] {
+        1 => {
+            lock.push((index, OutgoingAttemptResult::Accepted {
+                rel_idx: u16::from_be_bytes(data[1..3].try_into().unwrap()),
+                port: u16::from_be_bytes(data[3..4].try_into().unwrap()),
+            }))
+        },
+        2 => {
+            lock.push((index, OutgoingAttemptResult::Rejected {
+                reason: Disconnected::from(&data[1..])
+            }))
+        },
+        _ => {
+            lock.push((index, OutgoingAttemptResult::BadResponse));
+            return
+        }
+    }
 }
 
 fn receive_packet_from_unknown(
@@ -133,7 +182,7 @@ fn receive_packet_from_unknown(
     ports: &PortBindings,
     commands: &Mutex<&mut Commands>,
 ) {
-    // TODO: When iter_next_chunk is stabilised, use it
+    // TODO: When iter_next_chunk is stabilised, use it here
 
     // Check packet length
     if data.len() < 23 {
