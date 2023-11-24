@@ -1,7 +1,8 @@
 use std::collections::BTreeMap;
 use std::io::ErrorKind;
 use std::net::{SocketAddr, UdpSocket};
-use std::sync::{RwLock, Mutex};
+use std::ops::DerefMut;
+use std::sync::{RwLock, Mutex, MutexGuard};
 use std::time::{Instant, Duration};
 use bevy::prelude::*;
 use bevy::tasks::TaskPoolBuilder;
@@ -22,7 +23,7 @@ const MIN_OCTETS: usize = 5;
 /// Processes packets from bound ports using a task pool strategy.
 pub(super) fn receive_packets_system(
     mut commands: Commands,
-    mut peers: Query<(Entity, &mut UdpConnection, Option<&mut NetworkMessageStorage>)>,
+    mut peers: Query<(Entity, &mut UdpConnection, &mut NetworkMessageStorage)>,
     mut attempts: ResMut<OutgoingConnectionAttempts>,
     schedule: NetworkScheduleData,
     registry: Res<ChannelRegistry>,
@@ -104,9 +105,12 @@ pub(super) fn receive_packets_system(
                         // Check length of message
                         if octets_read < MIN_OCTETS { continue }
 
-                        if let Some((identifier, data)) = peer_locks.get_mut(&origin) {
+                        if let Some((_identifier, data)) = peer_locks.get_mut(&origin) {
                             // Client is established as an entity already
-                            todo!()
+                            receive_packet_from_established(
+                                &buffer[..octets_read],
+                                data,
+                            )
                         } else if active_addresses.read().unwrap().contains(&origin) {
                             // Client has just been accepted, this is probably an old message
                             continue
@@ -172,6 +176,13 @@ pub(super) fn receive_packets_system(
 
     // Commit reservations
     ports.commit_reservations();
+}
+
+fn receive_packet_from_established(
+    buffer: &[u8],
+    data: &mut MutexGuard<(Mut<UdpConnection>, Mut<NetworkMessageStorage>)>,
+) {
+    todo!()
 }
 
 fn receive_packet_from_attempt_target(
