@@ -24,7 +24,7 @@ pub(super) fn send_attempt_packets_system(
 ) {
     // Create a buffer for use in the send fn, this part of the message will not change.
     let mut message = [0u8; 23];
-    message[0] = 1;
+    message[0] = 0;
     message[1..9].copy_from_slice(&TRANSPORT_IDENTIFIER.to_be_bytes());
     message[9..13].copy_from_slice(&COMPAT_THIS_VERSION.to_be_bytes());
     message[13..21].copy_from_slice(&protocol.int().to_be_bytes());
