@@ -1,8 +1,6 @@
 use std::{collections::BTreeMap, sync::Arc};
-use bevy::prelude::*;
 
 /// The reliability state of a [UdpConnection](super::connections::UdpConnection).
-#[derive(Component)]
 pub(super) struct Reliability {
     /// The local sequence value. Incremented whenever a packet is sent to the peer.
     pub local: u16,
