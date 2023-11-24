@@ -77,6 +77,7 @@ pub(super) enum OutgoingAttemptResult {
     Accepted {
         rel_idx: u16,
         port: u16,
+        time: Instant,
     },
     Rejected {
         reason: Disconnected,

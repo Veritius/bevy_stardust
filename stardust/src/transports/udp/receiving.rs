@@ -137,10 +137,40 @@ pub(super) fn receive_packets_system(
         });
     }
 
-    for (index, result) in outgoing_attempt_results.lock().unwrap().iter() {
-        todo!()
+    // Add entities for accepted results
+    let mut attempt_results = outgoing_attempt_results.lock().unwrap();
+    attempt_results.sort_unstable_by_key(|f| f.0);
+    for (index, result) in attempt_results.drain(..).rev() {
+        let attempt = attempts.0.remove(index);
+        match result {
+            OutgoingAttemptResult::Accepted { rel_idx, port, time } => {
+                let mut reliability = Reliability::default();
+                reliability.local = attempt.local_idx;
+                reliability.remote = rel_idx;
+
+                commands.spawn((
+                    UdpConnection {
+                        address: attempt.address,
+                        last_sent: attempt.last_sent,
+                        last_received: Some(time),
+                        timeout: Duration::from_secs(30),
+                        reliability,
+                        ordering: Ordering::default(),
+                    },
+
+                    NetworkPeer {
+                        connected: Instant::now(),
+                    },
+
+                    NetworkMessageStorage::new(),
+                ));
+            },
+            OutgoingAttemptResult::Rejected { reason: _reason } => todo!(),
+            OutgoingAttemptResult::BadResponse => todo!(),
+        }
     }
 
+    // Commit reservations
     ports.commit_reservations();
 }
 
@@ -159,6 +189,7 @@ fn receive_packet_from_attempt_target(
             lock.push((index, OutgoingAttemptResult::Accepted {
                 rel_idx: u16::from_be_bytes(data[1..3].try_into().unwrap()),
                 port: u16::from_be_bytes(data[3..5].try_into().unwrap()),
+                time: Instant::now(),
             }))
         },
         2 => {
@@ -216,8 +247,6 @@ fn receive_packet_from_unknown(
     reliability.local = fastrand::u16(..);
     let local = reliability.local.to_be_bytes();
 
-    let ordering = Ordering::default();
-
     let id = commands.lock().unwrap().spawn((
         UdpConnection {
             address: origin,
@@ -225,7 +254,7 @@ fn receive_packet_from_unknown(
             last_received: None,
             timeout: Duration::from_secs(10),
             reliability,
-            ordering,
+            ordering: Ordering::default(),
         },
 
         NetworkPeer {
