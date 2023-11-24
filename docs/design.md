@@ -7,17 +7,59 @@ A lot of crates that add networking capabilities to Bevy have a specific archite
 In service of this goal, the core of Stardust just facilitates transferring bytes, and treats all connections equally. In future, Stardust will include plugins to add functionality like marking peers as a client or server, or a member of a mesh network.
 
 ## Channels and Scheduling
-"Channels" are collections of network messages accessed primarily with the Rust type system, and defined using entities and components. By making channel access use the Rust type system, and also by dividing stores of messages into typed resources, game code can queue messages for sending in parallel, using the Bevy scheduler. Channels are also accessed with a 3-byte untyped ID object, which is mostly used in transport layers.
+"Channels" are collections of network messages accessed primarily with the Rust type system. By making channel access use the Rust type system, and also by dividing stores of messages into typed resources, game code can queue messages for sending in parallel, using the Bevy scheduler. Channels are also accessed with a 3-byte untyped ID object, which is mostly used in transport layers.
 
 Channels being accessed through type was a design choice made before I was aware of `SystemBuffer` and `Deferred`. However, I decided to keep it because it makes channels follow Rust's namespace publicity rules.
 
-## Misc features
-### ECS peers
-Network peers are entities. This has two benefits, peers can have data attached to them with components, and it works with the Bevy scheduler.
-### Protocol hash
-A 'protocol value' like [the one described by Glenn Fiedler](https://www.gafferongames.com/post/virtual_connection_over_udp/) is included with Stardust. It's just a `Resource` storing a `Hasher` you can mutate through the `App` while creating it. This is included with Stardust so any and all plugins can use it without needing to know about the rest.
-
 # UDP transport layer
+## The handshake
+### Versioned headers
+The initial handshake packet sent from a peer is prefixed both a unique number identifying the transport layer (in case of forks doing something different) and a version integer. By doing this, the handshake packet can be changed in any way that's needed as the project evolves.
+
+However, the way that denied connections in the handshake are reported stays the same. This is because when a client is rejected, they should be informed of why. To account for future changes, the amount of possible denial reasons is `2^16`.
+
+### Game protocol identifiers
+Many implementations of networking code prefix any and all packets with a 'protocol' identifier. This is used to differentiate different games using the same client. Notable examples are [Glenn Fiedler's article][fiedler-virtual-connections], as well as the [Netcode standard](netcode-standard).
+
+Instead of sending this data with every message, the Stardust UDP transport layer sends this during the handshake.
+
+### Example handshake
+<details>
+<summary>Click to view</summary>
+
+For this example, A is a peer trying to connect to B.
+
+```
+[ 1 byte  ] Message type (u8)
+[ 8 bytes ] Transport layer identifier (u64)
+[ 4 bytes ] Transport version (u32)
+[ 8 bytes ] Protocol hash (u64)
+[ 2 bytes ] Packet sequence ID (u16)
+```
+
+If B accepts A, they respond with the following:
+
+```
+[ 1 byte  ] Message type (u8)
+[ 2 bytes ] The server's reliability sequence ID (u16)
+[ 2 bytes ] Port to use for further communication (u16)
+```
+
+If B rejects A, they respond with the following:
+
+```
+[ 1 byte  ] Message type (u8)
+[ 2 bytes ] Rejection reason (u16)
+[ ? bytes ] Attached reason data (?)
+```
+
+The following message types are defined:
+- `0` (connection request)
+- `1` (connection accepted)
+- `2` (connection rejected)
+
+</details>
+
 ## Dynamic port allocation
 ### Abstract
 To achieve I/O parallelism while still allowing for concurrent mutable access to peer entities with minimal deferred mutations or blocking, the UDP transport layer distributes connections across a range of UDP ports. These ports are simple standard library `UdpSocket`s with an associated `Vec<Entity>`.
@@ -39,45 +81,7 @@ flowchart TD
             PortZ-->ClientF[Client F]
 ```
 
-### Explanation
-TODO
 
-## Channel IDs and packet headers
-Each channel is first headed by three bytes, usually corresponding to the channel the message is intended for. If all three bytes are zero, it's part of the [connection protocol](#connection-protocol), which is not covered here.
 
-TODO
-
-### Protocol ID
-Many implementations of networking code prefix all packets with a 'protocol' value, uniquely identifying the game and preventing the reading of packets not intended for it. However, this is a lot of data to repeatedly and unnecessarily send, potentially hundreds of times a second. Instead, we send the protocol ID (from the [Stardust protocol hash](#protocol-hash)) just once: when we're connecting. It's completely free to do this once they're connected - the source address is checked to access the client's payload store anyway.
-
-### Example connection
-Let's create two peers, A and B. A wants to connect to B, and B is listening for connections. A will start by sending the following to B.
-
-```
-[ 1 byte  ] Message type
-[ 8 bytes ] Transport layer identifier, 64-bit unsigned integer
-[ 4 bytes ] Transport version, 32-bit unsigned integer
-[ 8 bytes ] Protocol hash, 64-bit unsigned integer
-[ 2 bytes ] Packet sequence ID, 16-bit unsigned integer
-```
-
-If B accepts A, they respond with the following:
-
-```
-[ 1 byte  ] Message type
-[ 2 bytes ] The server's reliability sequence ID
-[ 2 bytes ] Port to use for further communication
-```
-
-If B rejects A, they respond with the following:
-
-```
-[ 1 byte  ] Message type
-[ 2 bytes ] Rejection reason
-[ ? bytes ] Attached reason data
-```
-
-The following message types are defined:
-- `0` (connection request)
-- `1` (connection accepted)
-- `2` (connection rejected)
+[fiedler-virtual-connections]: https://www.gafferongames.com/post/virtual_connection_over_udp/
+[netcode-standard]: https://github.com/networkprotocol/netcode/blob/997c0e67b84bf385e9789fd7d99942cbab216c6f/STANDARD.md
