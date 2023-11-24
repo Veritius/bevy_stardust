@@ -57,9 +57,6 @@ pub(super) fn send_attempt_packets_system(
         // Update message
         message[21..23].copy_from_slice(&attempt.local_idx.to_be_bytes());
 
-        // TODO: Remove this
-        dbg!(message);
-
         // Send packet and update attempt
         socket.send_to(&message, attempt.address)
             .expect("Failed to send attempt message, this should not happen.");

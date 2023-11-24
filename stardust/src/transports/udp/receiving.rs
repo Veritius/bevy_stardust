@@ -135,30 +135,35 @@ fn receive_packet_from_unknown(
 ) {
     // TODO: When iter_next_chunk is stabilised, use it
 
+    // Check packet length
+    if data.len() < 23 {
+        return;
+    }
+
     // Message type
     if data[0] != 0 {
         todo!()
     }
 
     // Unique identifier for the transport layer
-    if u64::from_be_bytes(data[1..=8].try_into().unwrap()) != TRANSPORT_IDENTIFIER {
+    if u64::from_be_bytes(data[1..9].try_into().unwrap()) != TRANSPORT_IDENTIFIER {
         todo!()
     }
 
     // Transport version integer
-    if !COMPAT_GOOD_VERSIONS.contains(&u32::from_be_bytes(data[9..=13].try_into().unwrap())) {
+    if !COMPAT_GOOD_VERSIONS.contains(&u32::from_be_bytes(data[9..13].try_into().unwrap())) {
         todo!()
     }
 
     // Unique protocol hash
-    if u64::from_be_bytes(data[14..=22].try_into().unwrap()) != protocol.int() {
+    if u64::from_be_bytes(data[13..21].try_into().unwrap()) != protocol.int() {
         todo!()
     }
 
     // All checks passed, create connection entity
 
     let mut reliability = Reliability::default();
-    reliability.remote = u16::from_be_bytes(data[23..=24].try_into().unwrap());
+    reliability.remote = u16::from_be_bytes(data[21..23].try_into().unwrap());
     reliability.local = fastrand::u16(..);
     let local = reliability.local.to_be_bytes();
 
