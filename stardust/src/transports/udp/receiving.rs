@@ -109,7 +109,7 @@ pub(super) fn receive_packets_system(
                             todo!()
                         } else if active_addresses.read().unwrap().contains(&origin) {
                             // Client has just been accepted, this is probably an old message
-                            todo!()
+                            continue
                         } else if let Some((index, _)) = attempts.get_attempt_from_address(&origin) {
                             // This packet is from a person we are trying to connect to
                             receive_packet_from_attempt_target(
