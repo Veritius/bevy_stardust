@@ -19,12 +19,12 @@ pub enum SendTarget {
 
 #[derive(Resource)]
 pub(crate) struct OutgoingMessageQueue<T: Channel> {
-    pub internal: Arc<RwLock<UntypedOctetStringCollection>>,
+    pub internal: Arc<RwLock<OutgoingMessageQueueInternal>>,
     phantom: PhantomData<T>,
 }
 
 impl<T: Channel> OutgoingMessageQueue<T> {
-    pub fn new(store: UntypedOctetStringCollection) -> Self {
+    pub fn new(store: OutgoingMessageQueueInternal) -> Self {
         Self {
             internal: Arc::new(RwLock::new(store)),
             phantom: PhantomData,
@@ -57,7 +57,7 @@ impl<'w> TransportOutgoingReader<'w> {
 /// Read lock on a channel's collection of octet strings.
 pub struct ChannelReader<'a> {
     channel: ChannelId,
-    guard: RwLockReadGuard<'a, UntypedOctetStringCollection>
+    guard: RwLockReadGuard<'a, OutgoingMessageQueueInternal>
 }
 
 impl<'a> ChannelReader<'a> {
@@ -73,9 +73,9 @@ impl<'a> ChannelReader<'a> {
 }
 
 #[derive(Clone)]
-pub(crate) struct UntypedOctetStringCollection(pub(super) Vec<(SendTarget, OctetString)>);
+pub(crate) struct OutgoingMessageQueueInternal(pub(super) Vec<(SendTarget, OctetString)>);
 
-impl UntypedOctetStringCollection {
+impl OutgoingMessageQueueInternal {
     pub fn new() -> Self {
         Self(Vec::new())
     }
