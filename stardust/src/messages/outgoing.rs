@@ -18,12 +18,12 @@ pub enum SendTarget {
 }
 
 #[derive(Resource)]
-pub(crate) struct ChannelOctetStringCollectionArcHolder<T: Channel> {
+pub(crate) struct OutgoingMessageQueue<T: Channel> {
     pub internal: Arc<RwLock<UntypedOctetStringCollection>>,
     phantom: PhantomData<T>,
 }
 
-impl<T: Channel> ChannelOctetStringCollectionArcHolder<T> {
+impl<T: Channel> OutgoingMessageQueue<T> {
     pub fn new(store: UntypedOctetStringCollection) -> Self {
         Self {
             internal: Arc::new(RwLock::new(store)),

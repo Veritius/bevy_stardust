@@ -6,7 +6,7 @@ use std::sync::{RwLock, Mutex, MutexGuard};
 use std::time::{Instant, Duration};
 use bevy::prelude::*;
 use bevy::tasks::TaskPoolBuilder;
-use crate::messages::incoming::NetworkMessageStorage;
+use crate::messages::incoming::IncomingMessageQueue;
 use crate::prelude::*;
 use crate::protocol::ProtocolId;
 use crate::scheduling::NetworkScheduleData;
@@ -23,7 +23,7 @@ const MIN_OCTETS: usize = 5;
 /// Processes packets from bound ports using a task pool strategy.
 pub(super) fn receive_packets_system(
     mut commands: Commands,
-    mut peers: Query<(Entity, &mut UdpConnection, &mut NetworkMessageStorage)>,
+    mut peers: Query<(Entity, &mut UdpConnection, &mut IncomingMessageQueue)>,
     mut attempts: ResMut<OutgoingConnectionAttempts>,
     schedule: NetworkScheduleData,
     registry: Res<ChannelRegistry>,
@@ -166,7 +166,7 @@ pub(super) fn receive_packets_system(
                         connected: Instant::now(),
                     },
 
-                    NetworkMessageStorage::new(),
+                    IncomingMessageQueue::new(),
                 ));
             },
             OutgoingAttemptResult::Rejected { reason: _reason } => todo!(),
@@ -180,7 +180,7 @@ pub(super) fn receive_packets_system(
 
 fn receive_packet_from_established(
     buffer: &[u8],
-    data: &mut MutexGuard<(Mut<UdpConnection>, Mut<NetworkMessageStorage>)>,
+    data: &mut MutexGuard<(Mut<UdpConnection>, Mut<IncomingMessageQueue>)>,
 ) {
     todo!()
 }
@@ -272,7 +272,7 @@ fn receive_packet_from_unknown(
             connected: Instant::now(),
         },
 
-        NetworkMessageStorage::new(),
+        IncomingMessageQueue::new(),
     )).id();
 
     active.write().unwrap().push(origin.clone());

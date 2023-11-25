@@ -3,13 +3,13 @@
 use std::marker::PhantomData;
 use bevy::{prelude::*, ecs::system::SystemParam};
 use crate::prelude::{Channel, OctetString, ChannelRegistry};
-use super::incoming::NetworkMessageStorage;
+use super::incoming::IncomingMessageQueue;
 
 /// Allows game systems to read messages sent over channel `T`.
 #[derive(SystemParam)]
 pub struct MessageReader<'w, 's, T: Channel> {
     registry: Res<'w, ChannelRegistry>,
-    storages: Query<'w, 's, &'static NetworkMessageStorage>,
+    storages: Query<'w, 's, &'static IncomingMessageQueue>,
     phantom: PhantomData<T>,
 }
 

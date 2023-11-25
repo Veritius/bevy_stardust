@@ -4,6 +4,7 @@ pub(super) enum PacketKind {
     /// Related to managing the UDP connection.
     ConnectionManagement,
     /// Contains a single octet string on one channel.
+    /// Apart from the header, the rest of the packet will be considered part of the octet string.
     SingleMessage,
 }
 

@@ -3,12 +3,12 @@
 use std::marker::PhantomData;
 use bevy::{prelude::*, ecs::system::SystemParam};
 use crate::prelude::{Channel, OctetString};
-use super::outgoing::{ChannelOctetStringCollectionArcHolder, SendTarget};
+use super::outgoing::{OutgoingMessageQueue, SendTarget};
 
 /// Allows game systems to send messages to peers on channel `T`.
 #[derive(SystemParam)]
 pub struct MessageWriter<'w, 's, T: Channel> {
-    outgoing: ResMut<'w, ChannelOctetStringCollectionArcHolder<T>>,
+    outgoing: ResMut<'w, OutgoingMessageQueue<T>>,
     phantom: PhantomData<&'s ()>,
 }
 

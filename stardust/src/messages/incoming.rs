@@ -9,9 +9,9 @@ use crate::{prelude::{ChannelId, OctetString}, scheduling::NetworkScheduleData};
 
 /// Storage for network messages that have been received and directed to this peer.
 #[derive(Component)]
-pub struct NetworkMessageStorage(BTreeMap<ChannelId, Vec<OctetString>>);
+pub struct IncomingMessageQueue(BTreeMap<ChannelId, Vec<OctetString>>);
 
-impl NetworkMessageStorage {
+impl IncomingMessageQueue {
     pub fn new() -> Self {
         Self(BTreeMap::default())
     }
