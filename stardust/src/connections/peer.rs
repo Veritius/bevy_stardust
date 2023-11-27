@@ -20,6 +20,9 @@ use bevy::{prelude::*, utils::Uuid};
 pub struct NetworkPeer {
     /// The moment in time that this peer was added to memory.
     pub connected: Instant,
+
+    /// The peer's unique UUID, if it has one.
+    pub uuid: Option<Uuid>,
 }
 
 impl NetworkPeer {
@@ -27,26 +30,7 @@ impl NetworkPeer {
     pub fn new() -> Self {
         Self {
             connected: Instant::now(),
+            uuid: None,
         }
-    }
-}
-
-/// A `Uuid` value associated with a `NetworkPeer`. This could be an account value, or some other identifier.
-/// It's useful if you want to keep track of clients even if they disconnect.
-/// 
-/// This is guaranteed to have the same ABI representation as `Uuid`.
-#[derive(Debug, Component, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Reflect)]
-#[repr(transparent)]
-pub struct PeerUuid(pub Uuid);
-
-impl From<Uuid> for PeerUuid {
-    fn from(value: Uuid) -> Self {
-        Self(value)
-    }
-}
-
-impl From<PeerUuid> for Uuid {
-    fn from(value: PeerUuid) -> Self {
-        value.0
     }
 }
