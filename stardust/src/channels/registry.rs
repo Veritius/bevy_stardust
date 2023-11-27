@@ -1,9 +1,43 @@
 //! The channel registry.
 
 use std::{collections::BTreeMap, any::TypeId, marker::PhantomData};
-use bevy::prelude::Resource;
-use crate::{octets::varints::u24, prelude::{ChannelData, ChannelConfiguration}};
+use bevy::{prelude::Resource, ecs::component::ComponentId};
+use crate::{octets::varints::u24, prelude::ChannelConfiguration};
 use super::id::{Channel, ChannelId, CHANNEL_ID_LIMIT};
+
+pub(super) struct ChannelWorldMeta {
+    pub incoming_events: ComponentId,
+    pub outgoing_queue: ComponentId,
+}
+
+/// Channel information generated when `register_channel` is run.
+pub struct ChannelData {
+    /// The channel's `TypeId`.
+    pub type_id: TypeId,
+    /// The channel's `TypePath` (from `bevy_reflect`)
+    pub type_path: &'static str,
+    /// The channel's sequential ID assigned by the registry.
+    pub channel_id: ChannelId,
+
+    /// The config of the channel.
+    pub config: ChannelConfiguration,
+
+    /// The `ComponentId` of the `Events<NetworkMessage<C>>` resource, where `C` is the channel.
+    pub incoming_events_component_id: ComponentId,
+    /// The `ComponentId` of the `OutgoingNetworkMessages<C>` resource, where `C` is the channel.
+    pub outgoing_queue_component_id: ComponentId,
+
+    // Prevent this type being constructed
+    phantom: PhantomData<()>,
+}
+
+impl std::ops::Deref for ChannelData {
+    type Target = ChannelConfiguration;
+
+    fn deref(&self) -> &Self::Target {
+        &self.config
+    }
+}
 
 /// Stores information related to type ids.
 #[derive(Resource)]
@@ -25,6 +59,7 @@ impl ChannelRegistry {
     pub(super) fn register_channel<C: Channel>(
         &mut self,
         config: ChannelConfiguration,
+        meta: ChannelWorldMeta,
     ) -> ChannelId {
         // Check we don't overrun the channel ID
         if self.channel_count >= CHANNEL_ID_LIMIT {
@@ -46,6 +81,10 @@ impl ChannelRegistry {
             type_path,
             channel_id,
             config,
+
+            incoming_events_component_id: meta.incoming_events,
+            outgoing_queue_component_id: meta.outgoing_queue,
+
             phantom: PhantomData
         });
         self.channel_count += 1;

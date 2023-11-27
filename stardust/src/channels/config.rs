@@ -2,9 +2,6 @@
 //! 
 //! All settings are not definitive, but hints to transport layers as how to treat channels.
 
-use std::{any::TypeId, marker::PhantomData};
-use super::id::ChannelId;
-
 /// Configuration for a channel.
 #[derive(Debug, Hash)]
 pub struct ChannelConfiguration {
@@ -18,30 +15,6 @@ pub struct ChannelConfiguration {
     pub compress: ChannelCompression,
     /// See [MessageValidation]'s documentation.
     pub validate: MessageValidation,
-}
-
-/// Immutable channel information, owned by the `ChannelRegistry`.
-pub struct ChannelData {
-    /// The channel's `TypeId`.
-    pub type_id: TypeId,
-    /// The channel's `TypePath` (from `bevy_reflect`)
-    pub type_path: &'static str,
-    /// The channel's sequential ID assigned by the registry.
-    pub channel_id: ChannelId,
-
-    /// The config of the channel.
-    pub config: ChannelConfiguration,
-
-    // Prevent this type being constructed
-    pub(super) phantom: PhantomData<()>,
-}
-
-impl std::ops::Deref for ChannelData {
-    type Target = ChannelConfiguration;
-
-    fn deref(&self) -> &Self::Target {
-        &self.config
-    }
 }
 
 /// If a packet is missed, it will be resent. This can take a (relatively) long time.
