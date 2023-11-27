@@ -28,9 +28,10 @@ impl ChannelSetupAppExt for App {
         self.init_resource::<OutgoingNetworkMessages<C>>();
 
         // Resource metadata from the World
+        let components = self.world.components();
         let component_data = ChannelWorldMeta {
-            incoming_events: self.world.init_resource::<Events<NetworkMessage<C>>>(),
-            outgoing_queue: self.world.init_resource::<OutgoingNetworkMessages<C>>(),
+            incoming_events: components.resource_id::<Events<NetworkMessage<C>>>().unwrap(),
+            outgoing_queue: components.resource_id::<OutgoingNetworkMessages<C>>().unwrap(),
         };
 
         // Add to registry

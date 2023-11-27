@@ -2,7 +2,7 @@
 
 use std::marker::PhantomData;
 use bevy::prelude::*;
-use crate::prelude::{Channel, OctetString};
+use crate::prelude::{Channel, OctetString, ChannelRegistry};
 
 /// Messages on channel `T` that are queued for sending.
 #[derive(Resource)]
@@ -27,13 +27,21 @@ impl<T: Channel> OutgoingNetworkMessages<T> {
     }
 }
 
+/// A message queued for sending by transport layers.
 pub struct OutgoingNetworkMessage {
+    /// The octet string that will be sent.
     pub data: OctetString,
+    /// The target for sending.
     pub target: Entity,
 }
 
 pub(crate) fn clear_outgoing(
-    
+    world: &mut World,
 ) {
-    todo!()
+    let mut world = world.cell();
+    let registry = world.resource::<ChannelRegistry>();
+
+    for id in registry.channel_ids() {
+        let data = registry.get_from_id(id).unwrap();
+    }
 }

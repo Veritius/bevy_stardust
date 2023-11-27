@@ -1,6 +1,6 @@
 //! The channel registry.
 
-use std::{collections::BTreeMap, any::TypeId, marker::PhantomData};
+use std::{collections::BTreeMap, any::TypeId};
 use bevy::{prelude::Resource, ecs::component::ComponentId};
 use crate::{octets::varints::u24, prelude::ChannelConfiguration};
 use super::id::{Channel, ChannelId, CHANNEL_ID_LIMIT};
@@ -19,16 +19,14 @@ pub struct ChannelData {
     /// The channel's sequential ID assigned by the registry.
     pub channel_id: ChannelId,
 
-    /// The config of the channel.
-    pub config: ChannelConfiguration,
-
     /// The `ComponentId` of the `Events<NetworkMessage<C>>` resource, where `C` is the channel.
     pub incoming_events_component_id: ComponentId,
     /// The `ComponentId` of the `OutgoingNetworkMessages<C>` resource, where `C` is the channel.
     pub outgoing_queue_component_id: ComponentId,
 
-    // Prevent this type being constructed
-    phantom: PhantomData<()>,
+    /// The config of the channel.
+    /// Since `ChannelData` implements `Deref` for `ChannelConfiguration`, this is just clutter.
+    config: ChannelConfiguration,
 }
 
 impl std::ops::Deref for ChannelData {
@@ -80,12 +78,11 @@ impl ChannelRegistry {
             type_id,
             type_path,
             channel_id,
-            config,
 
             incoming_events_component_id: meta.incoming_events,
             outgoing_queue_component_id: meta.outgoing_queue,
 
-            phantom: PhantomData
+            config,
         });
         self.channel_count += 1;
 
