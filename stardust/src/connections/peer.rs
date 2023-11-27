@@ -34,23 +34,10 @@ impl NetworkPeer {
 /// A `Uuid` value associated with a `NetworkPeer`. This could be an account value, or some other identifier.
 /// It's useful if you want to keep track of clients even if they disconnect.
 /// 
-/// The internal `Uuid` value cannot be mutated, but can be read freely.
 /// This is guaranteed to have the same ABI representation as `Uuid`.
 #[derive(Debug, Component, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Reflect)]
 #[repr(transparent)]
-pub struct PeerUuid(Uuid);
-
-impl PeerUuid {
-    /// Creates a new `PeerUuid` from `uuid`.
-    pub fn new(uuid: Uuid) -> Self {
-        Self(uuid)
-    }
-
-    /// Gets the `Uuid` value.
-    pub fn get(&self) -> &Uuid {
-        &self.0
-    }
-}
+pub struct PeerUuid(pub Uuid);
 
 impl From<Uuid> for PeerUuid {
     fn from(value: Uuid) -> Self {
@@ -61,17 +48,5 @@ impl From<Uuid> for PeerUuid {
 impl From<PeerUuid> for Uuid {
     fn from(value: PeerUuid) -> Self {
         value.0
-    }
-}
-
-/// A "display name" for a network peer, useful for more user-facing logging.
-/// 
-/// This is not intended for identifying peers. Instead, use the `Entity` id or the `PeerUuid` component.
-#[derive(Debug, Component, Clone, PartialEq, Eq, Hash, Reflect)]
-pub struct PeerDisplayName(pub String);
-
-impl std::fmt::Display for PeerDisplayName {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.0.fmt(f)
     }
 }
