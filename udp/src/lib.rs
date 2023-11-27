@@ -2,8 +2,9 @@
 
 #![warn(missing_docs)]
 
-mod plugin;
 mod established;
+mod plugin;
+mod ports;
 
-pub use plugin::UdpTransportPlugin;
 pub use established::UdpConnection;
+pub use plugin::UdpTransportPlugin;

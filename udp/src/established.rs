@@ -7,9 +7,6 @@ pub struct UdpConnection {
     /// How long before the connection is timed out for inactivity.
     pub timeout: Duration,
 
-    /// Unique identifier for the peer.
-    pub(crate) identifier: u32,
-
     pub(crate) address: SocketAddr,
     pub(crate) last_sent: Option<Instant>,
     pub(crate) last_recv: Option<Instant>,
