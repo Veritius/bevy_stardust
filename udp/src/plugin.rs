@@ -1,0 +1,10 @@
+use bevy::prelude::*;
+
+/// A transport layer for Stardust that uses native UDP sockets.
+pub struct UdpTransportPlugin;
+
+impl Plugin for UdpTransportPlugin {
+    fn build(&self, app: &mut App) {
+        todo!()
+    }
+}

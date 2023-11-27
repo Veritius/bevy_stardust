@@ -13,8 +13,6 @@ Stardust is an opinionated, batteries-included networking crate built for Bevy, 
 - No matter the transport layer you use, write the same code in your game systems, entirely in parallel using Bevy's scheduler.
 - Add network-enabled Bevy plugins with no extra effort on your end.
 
-*Note: While you can use any transport layer, Stardust only includes support for native UDP, with the `udp` feature (enabled by default).*
-
 ### Planned features
 - Features for the UDP transport layer
     - Fragmentation
