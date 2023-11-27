@@ -1,8 +1,8 @@
 //! The channel registry.
 
-use std::{collections::BTreeMap, any::TypeId, sync::{Arc, RwLock}, marker::PhantomData};
+use std::{collections::BTreeMap, any::TypeId, marker::PhantomData};
 use bevy::prelude::Resource;
-use crate::{messages::outgoing::OutgoingMessageQueueInternal, octets::varints::u24, prelude::{ChannelData, ChannelConfiguration}};
+use crate::{octets::varints::u24, prelude::{ChannelData, ChannelConfiguration}};
 use super::id::{Channel, ChannelId, CHANNEL_ID_LIMIT};
 
 /// Stores information related to type ids.
@@ -10,7 +10,6 @@ use super::id::{Channel, ChannelId, CHANNEL_ID_LIMIT};
 pub struct ChannelRegistry {
     channel_count: u32,
     channel_type_map: BTreeMap<TypeId, ChannelId>,
-    outgoing_arc_map: BTreeMap<ChannelId, Arc<RwLock<OutgoingMessageQueueInternal>>>,
     channel_data_map: BTreeMap<ChannelId, ChannelData>,
 }
 
@@ -19,7 +18,6 @@ impl ChannelRegistry {
         Self {
             channel_count: 0,
             channel_type_map: BTreeMap::new(),
-            outgoing_arc_map: BTreeMap::new(),
             channel_data_map: BTreeMap::new(),
         }    
     }
@@ -27,7 +25,6 @@ impl ChannelRegistry {
     pub(super) fn register_channel<C: Channel>(
         &mut self,
         config: ChannelConfiguration,
-        untyped_store: Arc<RwLock<OutgoingMessageQueueInternal>>
     ) -> ChannelId {
         // Check we don't overrun the channel ID
         if self.channel_count >= CHANNEL_ID_LIMIT {
@@ -44,7 +41,6 @@ impl ChannelRegistry {
         // Add to map
         let channel_id = ChannelId::try_from(self.channel_count).unwrap();
         self.channel_type_map.insert(type_id, channel_id);
-        self.outgoing_arc_map.insert(channel_id, untyped_store);
         self.channel_data_map.insert(channel_id, ChannelData {
             type_id,
             type_path,
@@ -85,10 +81,6 @@ impl ChannelRegistry {
         (0..self.channel_count).into_iter()
         .map(|f| ChannelId(TryInto::<u24>::try_into(f).unwrap()))
     }
-
-    pub(crate) fn get_outgoing_arc_map(&self) -> &BTreeMap<ChannelId, Arc<RwLock<OutgoingMessageQueueInternal>>> {
-        &self.outgoing_arc_map
-    }
 }
 
 impl Default for ChannelRegistry {
@@ -96,7 +88,6 @@ impl Default for ChannelRegistry {
         Self {
             channel_count: 0,
             channel_type_map: BTreeMap::new(),
-            outgoing_arc_map: BTreeMap::new(),
             channel_data_map: BTreeMap::new(),
         }
     }
