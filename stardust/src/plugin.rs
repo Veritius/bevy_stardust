@@ -2,7 +2,6 @@
 
 use bevy::prelude::*;
 use crate::prelude::*;
-use crate::scheduling::*;
 use crate::protocol::*;
 use crate::channels::registry::ChannelRegistry;
 
@@ -12,9 +11,6 @@ pub struct StardustPlugin;
 
 impl Plugin for StardustPlugin {
     fn build(&self, app: &mut App) {
-        // Scheduling stuff
-        add_schedules(app);
-
         // Add events
         app.add_event::<DisconnectPeerEvent>();
         app.add_event::<PeerDisconnectedEvent>();

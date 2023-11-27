@@ -5,7 +5,7 @@ static EMPTY_OCTETSTRING_ARRAY: &[OctetString] = &[];
 
 use std::collections::BTreeMap;
 use bevy::prelude::*;
-use crate::{prelude::{ChannelId, OctetString}, scheduling::NetworkScheduleData};
+use crate::prelude::{ChannelId, OctetString};
 
 /// Storage for network messages that have been received and directed to this peer.
 #[derive(Component)]
@@ -25,12 +25,7 @@ impl IncomingMessageQueue {
     }
 
     /// Appends a message to the peer's message storage.
-    /// Panics if this is done outside of the `TransportReadPackets` schedule.
-    pub fn append(&mut self, schedule: &NetworkScheduleData, channel: ChannelId, octets: impl Into<OctetString>) {
-        if !schedule.message_storage_mutation_allowed() {
-            panic!("Tried to append a message outside of the TransportReadPackets schedule");
-        }
-
+    pub fn append(&mut self, channel: ChannelId, octets: impl Into<OctetString>) {
         self.0
             .entry(channel)
             .or_insert(Vec::with_capacity(1))
