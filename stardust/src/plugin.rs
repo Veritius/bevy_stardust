@@ -24,6 +24,7 @@ impl Plugin for StardustPlugin {
         app.add_systems(PreStartup, complete_hasher);
 
         app.add_systems(PostUpdate, clear_outgoing
-            .in_set(NetworkWrite::Clear));
+            .in_set(NetworkWrite::Clear)
+            .after(NetworkWrite::Send));
     }
 }
