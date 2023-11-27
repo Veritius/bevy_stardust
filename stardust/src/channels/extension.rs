@@ -1,7 +1,7 @@
 //! Adds `register_channel` to the `App`.
 
 use bevy::prelude::*;
-use crate::{protocol::ProtocolIdAppExt, prelude::ChannelConfiguration};
+use crate::{protocol::ProtocolIdAppExt, prelude::ChannelConfiguration, messages::{incoming::NetworkMessage, outgoing::OutgoingNetworkMessages}};
 use super::{id::Channel, registry::ChannelRegistry};
 
 mod sealed {
@@ -22,6 +22,10 @@ impl ChannelSetupAppExt for App {
     ) {
         // Change hash value
         self.net_hash_value(("channel", C::type_path(), &config));
+
+        // Add network message event and queue resources
+        self.add_event::<NetworkMessage<C>>();
+        self.init_resource::<OutgoingNetworkMessages<C>>();
 
         let mut registry = self.world.resource_mut::<ChannelRegistry>();
         registry.register_channel::<C>(config);

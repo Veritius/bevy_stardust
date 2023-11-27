@@ -14,8 +14,8 @@ pub enum NetworkRead {
 /// Systems dealing with outgoing octet strings.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, SystemSet)]
 pub enum NetworkWrite {
-    /// Game systems write octet strings for sending.
-    Write,
     /// Transport layers send packets written by game systems.
     Send,
+    /// Queued messages in `OutgoingNetworkMessages` are cleared.
+    Clear,
 }
