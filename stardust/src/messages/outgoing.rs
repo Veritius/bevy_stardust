@@ -22,8 +22,8 @@ impl<T: Channel> Default for OutgoingNetworkMessages<T> {
 
 impl<T: Channel> OutgoingNetworkMessages<T> {
     /// Pushes `message` to the queue.
-    pub fn push(&mut self, message: OutgoingNetworkMessage) {
-        self.queue.push(message)
+    pub fn push(&mut self, message: impl Into<OutgoingNetworkMessage>) {
+        self.queue.push(message.into())
     }
 }
 
@@ -35,13 +35,26 @@ pub struct OutgoingNetworkMessage {
     pub target: Entity,
 }
 
+impl From<(OctetString, Entity)> for OutgoingNetworkMessage {
+    fn from(value: (OctetString, Entity)) -> Self {
+        Self {
+            data: value.0,
+            target: value.1,
+        }
+    }
+}
+
+impl From<(Entity, OctetString)> for OutgoingNetworkMessage {
+    fn from(value: (Entity, OctetString)) -> Self {
+        Self {
+            data: value.1,
+            target: value.0,
+        }
+    }
+}
+
 pub(crate) fn clear_outgoing(
     world: &mut World,
 ) {
-    let mut world = world.cell();
-    let registry = world.resource::<ChannelRegistry>();
-
-    for id in registry.channel_ids() {
-        let data = registry.get_from_id(id).unwrap();
-    }
+    todo!()
 }
