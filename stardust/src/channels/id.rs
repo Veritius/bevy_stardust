@@ -42,8 +42,21 @@ impl TryFrom<u32> for ChannelId {
     }
 }
 
+impl From<[u8;3]> for ChannelId {
+    fn from(value: [u8;3]) -> Self {
+        Self(u32::from_le_bytes([value[0], value[1], value[2], 0].into()))
+    }
+}
+
 impl From<ChannelId> for u32 {
     fn from(value: ChannelId) -> Self {
         value.0
+    }
+}
+
+impl From<ChannelId> for [u8;3] {
+    fn from(value: ChannelId) -> Self {
+        let value = value.0.to_le_bytes();
+        [value[0], value[1], value[2]]
     }
 }
