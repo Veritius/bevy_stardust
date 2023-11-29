@@ -59,10 +59,10 @@ impl<'w, 's> NetworkOutgoingReader<'w, 's> {
     /// ```
     /// // Example usage
     /// // Outer iterator reads over channels
-    /// for (id, channel) in reader.iter_channels() {
+    /// for (channel, msg_iter) in reader.iter_channels() {
     ///     // Inner iterator reads over octet strings in those channels
-    ///     for (origin, string) in channel {
-    ///         println!("{origin:?} sent {string:?}");
+    ///     for (origin, string) in msg_iter {
+    ///         println!("{origin:?} sent {string:?} on channel {channel:?}");
     ///     }
     /// }
     /// ```
@@ -74,6 +74,21 @@ impl<'w, 's> NetworkOutgoingReader<'w, 's> {
             let component = self.query.get(entity)
                 .expect(CHANNEL_ENTITY_DELETED_MESSAGE);
             (id, component.queue.iter())
+        })
+    }
+
+    /// Returns an iterator over all messages and their channel and sender data.
+    /// 
+    /// ```
+    /// // Example usage
+    /// for (channel, origin, string) in reader.iter_all() {
+    ///     println!("{origin:?} sent {string:?} on channel {channel:?}");
+    /// }
+    /// ```
+    pub fn iter_all(&self) -> impl Iterator<Item = (ChannelId, Entity, &OctetString)> {
+        self.iter_channels()
+        .flat_map(|f| {
+            f.1.map(move |x| (f.0, x.0, &x.1))
         })
     }
 }
