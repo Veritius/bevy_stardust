@@ -16,7 +16,7 @@ impl<'w, 's, C: Channel> NetworkWriter<'w, 's, C> {
     }
 
     /// Queues several messages for sending.
-    pub fn send_batch(&mut self, messages: impl Iterator<Item = (Entity, OctetString)>) {
+    pub fn send_many(&mut self, messages: impl Iterator<Item = (Entity, OctetString)>) {
         let mut component = self.component_mut();
         for value in messages {
             Self::send_inner(component.as_mut(), value);

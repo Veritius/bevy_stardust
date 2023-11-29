@@ -9,7 +9,7 @@ pub struct NetworkReader<'w, 's, C: Channel> {
 }
 
 impl<'w, 's, C: Channel> NetworkReader<'w, 's, C> {
-    /// Returns an iterator over all messages in this channel.
+    /// Returns an iterator over all messages in this channel, including the sender's ID.
     pub fn iter(&'w self) -> impl Iterator<Item = &'w (Entity, OctetString)> {
         self.query.get_single().expect(CHANNEL_ENTITY_DELETED_MESSAGE).queue.iter()
     }
@@ -21,6 +21,27 @@ impl<'w, 's, C: Channel> NetworkReader<'w, 's, C> {
 pub struct NetworkIncomingWriter<'w, 's> {
     registry: Res<'w, ChannelRegistry>,
     query: Query<'w, 's, &'static mut IncomingMessages>
+}
+
+impl<'w, 's> NetworkIncomingWriter<'w, 's> {
+    /// Queues a single octet string for reading by the `NetworkReader` corresponding to `channel`.
+    pub fn send(&mut self, channel: ChannelId, origin: Entity, string: impl Into<OctetString>) {
+        self.get_mut(channel).queue.push((origin, string.into()));
+    }
+
+    /// Queues several messages for reading by the `NetworkReader` corresponding to `channel`.
+    pub fn send_many(&mut self, channel: ChannelId, messages: impl Iterator<Item = (Entity, impl Into<OctetString>)>) {
+        let mut data = self.get_mut(channel);
+        for (origin, string) in messages {
+            data.queue.push((origin, string.into()));
+        }
+    }
+
+    #[inline]
+    fn get_mut(&mut self, id: ChannelId) -> Mut<'_, IncomingMessages> {
+        let data = self.registry.get_from_id(id).unwrap();
+        self.query.get_mut(data.entity_id).expect(CHANNEL_ENTITY_DELETED_MESSAGE)
+    }
 }
 
 /// Incoming messages on this channel.
