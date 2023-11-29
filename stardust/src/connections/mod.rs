@@ -1,4 +1,5 @@
 //! Connection-related functionality.
 
-pub mod peer;
 pub mod events;
+pub mod groups;
+pub mod peer;
