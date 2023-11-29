@@ -2,7 +2,11 @@ use bevy::{prelude::*, ecs::system::SystemParam};
 use crate::prelude::*;
 use super::{id::ChannelMarker, CHANNEL_ENTITY_DELETED_MESSAGE};
 
-/// Systemparam for queuing messages to send in channel `T`.
+/// Systemparam for queuing messages to send in channel `C`.
+/// 
+/// ## Panics
+/// Using any of the methods in this systemparam will panic if `C` wasn't registered in the `App`.
+/// In future, this may change to panicking the moment the scheduler tries to run the system.
 #[derive(SystemParam)]
 pub struct NetworkWriter<'w, 's, C: Channel> {
     query: Query<'w, 's, &'static mut OutgoingMessages, With<ChannelMarker<C>>>

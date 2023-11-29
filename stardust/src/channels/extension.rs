@@ -17,6 +17,17 @@ mod sealed {
 /// Adds channel-related functions to the `App`.
 pub trait ChannelSetupAppExt: sealed::Sealed {
     /// Registers a channel with type `T` and the config and components given.
+    /// 
+    /// ```
+    /// // Simple example
+    /// app.register_channel::<MyChannel>(ChannelConfiguration {
+    ///     reliable: ChannelReliability::Reliable,
+    ///     ordering: ChannelOrdering::Ordered,
+    ///     fragmentation: ChannelFragmentation::Disabled,
+    ///     compression: ChannelCompression::Disabled,
+    ///     validation: MessageValidation::Disabled,
+    /// });
+    /// ```
     fn register_channel<C: Channel>(&mut self, config: ChannelConfiguration);
 }
 

@@ -2,7 +2,32 @@ use bevy::{prelude::*, ecs::system::SystemParam};
 use crate::prelude::*;
 use super::{id::ChannelMarker, CHANNEL_ENTITY_DELETED_MESSAGE};
 
-/// Systemparam for reading messages received in channel `T`.
+/// Systemparam for reading messages received in channel `C`.
+/// 
+/// ## Examples
+/// ```
+/// // Simple example
+/// fn my_example_system(
+///     reader: NetworkReader<MyChannel>,
+/// ) {
+///     for (sender, string) in reader.iter() {
+///         println!("{sender:?} sent a message: {string:?}");
+///     }
+/// }
+/// 
+/// // You can also use generic types in your systems
+/// fn my_other_example_system<C: Channel>(
+///     reader: NetworkReader<C>,
+/// ) {
+///     for (sender, string) in reader.iter() {
+///         println!("{sender:?} sent a message: {string:?}");
+///     }
+/// }
+/// ```
+/// 
+/// ## Panics
+/// Using any of the methods in this systemparam will panic if `C` wasn't registered in the `App`.
+/// In future, this may change to panicking the moment the scheduler tries to run the system.
 #[derive(SystemParam)]
 pub struct NetworkReader<'w, 's, C: Channel> {
     query: Query<'w, 's, &'static IncomingMessages, With<ChannelMarker<C>>>

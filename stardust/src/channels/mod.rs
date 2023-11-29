@@ -1,4 +1,25 @@
 //! Channel definitions and message storage.
+//! 
+//! You can add a channel when setting up the `App`.
+//! ```
+//! use bevy::prelude::*;
+//! use bevy_stardust::prelude::*;
+//! 
+//! #[derive(Debug, Reflect)]
+//! struct MyChannel;
+//! 
+//! fn main() {
+//!     let mut app = App::new();
+//! 
+//!     app.register_channel::<MyChannel>(ChannelConfiguration {
+//!         reliable: ChannelReliability::Reliable,
+//!         ordering: ChannelOrdering::Ordered,
+//!         fragmentation: ChannelFragmentation::Disabled,
+//!         compression: ChannelCompression::Disabled,
+//!         validation: MessageValidation::Disabled,
+//!     });
+//! }
+//! ```
 
 pub mod config;
 pub mod id;
