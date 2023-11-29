@@ -16,7 +16,15 @@ pub struct NetworkOutgoingReader<'w, 's> {
     query: Query<'w, 's, &'static OutgoingMessages>
 }
 
+/// Queued outgoing messages on this channel.
 #[derive(Component)]
 pub(super) struct OutgoingMessages {
     pub queue: Vec<(Entity, OctetString)>,
+}
+
+pub(super) fn clear_outgoing(
+    mut query: Query<&mut OutgoingMessages>,
+) {
+    query.par_iter_mut()
+    .for_each(|mut v| v.queue.clear());
 }

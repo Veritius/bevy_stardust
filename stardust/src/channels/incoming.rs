@@ -16,7 +16,15 @@ pub struct NetworkIncomingWriter<'w, 's> {
     query: Query<'w, 's, &'static mut IncomingMessages>
 }
 
+/// Incoming messages on this channel.
 #[derive(Component)]
 pub(super) struct IncomingMessages {
     pub queue: Vec<(Entity, OctetString)>,
+}
+
+pub(super) fn clear_incoming(
+    mut query: Query<&mut IncomingMessages>,
+) {
+    query.par_iter_mut()
+    .for_each(|mut v| v.queue.clear());
 }
