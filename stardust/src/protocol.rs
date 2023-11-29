@@ -1,6 +1,7 @@
 //! The "safety net" of Stardust, used to prevent weird and hard-to-find issues.
 //! By creating a hashed value at startup from networking-related actions, like adding channels, hard to debug issues can be effectively prevented.
 
+// TODO: Don't use AHash, it's not stable across compilations, Rust versions, or platforms
 use bevy::{prelude::*, utils::AHasher};
 use std::hash::{Hash, Hasher};
 
