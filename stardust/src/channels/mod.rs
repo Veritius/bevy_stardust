@@ -1,12 +1,12 @@
 //! Channel definitions and message storage.
 
 pub mod config;
-pub mod extension;
 pub mod id;
 pub mod registry;
 
-mod incoming;
-mod outgoing;
+pub(crate) mod extension;
+pub(crate) mod incoming;
+pub(crate) mod outgoing;
 
 pub(super) fn channels(app: &mut bevy::prelude::App) {
     use bevy::prelude::*;

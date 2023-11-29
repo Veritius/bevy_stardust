@@ -18,8 +18,14 @@ pub trait Channel: TypePath + std::fmt::Debug + Send + Sync + 'static {}
 impl<T: TypePath + std::fmt::Debug + Send + Sync + 'static> Channel for T {}
 
 /// Typed marker component for filtering channel entities.
-#[derive(Default, Component)]
-pub(super) struct ChannelMarker<T: Channel>(pub PhantomData<T>);
+#[derive(Component)]
+pub(super) struct ChannelMarker<C: Channel>(pub PhantomData<C>);
+
+impl<C: Channel> Default for ChannelMarker<C> {
+    fn default() -> Self {
+        Self(Default::default())
+    }
+}
 
 /// A unique 24-bit channel identifier.
 #[derive(Debug, Clone, Copy, Hash, Reflect, PartialEq, Eq, PartialOrd, Ord)]

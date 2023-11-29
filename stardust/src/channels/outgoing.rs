@@ -53,7 +53,7 @@ pub struct NetworkOutgoingReader<'w, 's> {
 }
 
 /// Queued outgoing messages on this channel.
-#[derive(Component)]
+#[derive(Default, Component)]
 pub(super) struct OutgoingMessages {
     pub queue: Vec<(Entity, OctetString)>,
 }

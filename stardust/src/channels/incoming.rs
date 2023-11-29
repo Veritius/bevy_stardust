@@ -24,7 +24,7 @@ pub struct NetworkIncomingWriter<'w, 's> {
 }
 
 /// Incoming messages on this channel.
-#[derive(Component)]
+#[derive(Default, Component)]
 pub(super) struct IncomingMessages {
     pub queue: Vec<(Entity, OctetString)>,
 }
