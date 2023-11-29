@@ -1,7 +1,7 @@
 //! Types and traits for accessing channels.
 
-use std::ops::Deref;
-use bevy::reflect::{Reflect, TypePath};
+use std::{ops::Deref, marker::PhantomData};
+use bevy::prelude::*;
 use crate::octets::varints::{u24, NIntegerError};
 
 /// The maximum amount of channels that can exist.
@@ -16,6 +16,10 @@ pub const CHANNEL_ID_LIMIT: u32 = 2u32.pow(24);
 /// ```
 pub trait Channel: TypePath + std::fmt::Debug + Send + Sync + 'static {}
 impl<T: TypePath + std::fmt::Debug + Send + Sync + 'static> Channel for T {}
+
+/// Typed marker component for filtering channel entities.
+#[derive(Default, Component)]
+pub(super) struct ChannelMarker<T: Channel>(pub PhantomData<T>);
 
 /// A unique 24-bit channel identifier.
 #[derive(Debug, Clone, Copy, Hash, Reflect, PartialEq, Eq, PartialOrd, Ord)]

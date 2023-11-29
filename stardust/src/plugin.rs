@@ -1,7 +1,6 @@
 //! The Stardust core plugin.
 
 use bevy::prelude::*;
-use crate::messages::outgoing::clear_outgoing;
 use crate::prelude::*;
 use crate::protocol::*;
 use crate::channels::registry::ChannelRegistry;
@@ -22,9 +21,5 @@ impl Plugin for StardustPlugin {
         app.insert_resource(ChannelRegistry::new());
         app.insert_resource(ProtocolIdHasher::new());
         app.add_systems(PreStartup, complete_hasher);
-
-        app.add_systems(PostUpdate, clear_outgoing
-            .in_set(NetworkWrite::Clear)
-            .after(NetworkWrite::Send));
     }
 }
