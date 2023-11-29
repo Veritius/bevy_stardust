@@ -18,19 +18,28 @@ use bevy::{prelude::*, utils::Uuid};
 /// They are used as the 'target' of messages, and the transport layer will handle the actual sending and receiving.
 #[derive(Debug, Component, Reflect)]
 pub struct NetworkPeer {
-    /// The moment in time that this peer was added to memory.
-    pub connected: Instant,
+    /// The point in time this peer was added to the `World`.
+    pub joined: Instant,
 
-    /// The peer's unique UUID, if it has one.
+    /// A unique UUID, if it has one.
+    /// This can be used to identify a peer across network sessions.
     pub uuid: Option<Uuid>,
+
+    /// The quality of the connection, from `0.0` to `1.0`.
+    pub quality: f32,
+
+    /// Round-trip time, in milliseconds.
+    pub ping: u32,
 }
 
 impl NetworkPeer {
     /// Creates a new [NetworkPeer] component with `connected` set to now.
     pub fn new() -> Self {
         Self {
-            connected: Instant::now(),
+            joined: Instant::now(),
             uuid: None,
+            quality: 1.0,
+            ping: 0,
         }
     }
 }
