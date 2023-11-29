@@ -11,7 +11,17 @@ pub struct NetworkReader<'w, 's, C: Channel> {
 impl<'w, 's, C: Channel> NetworkReader<'w, 's, C> {
     /// Returns an iterator over all messages in this channel, including the sender's ID.
     pub fn iter(&'w self) -> impl Iterator<Item = &'w (Entity, OctetString)> {
-        self.query.get_single().expect(CHANNEL_ENTITY_DELETED_MESSAGE).queue.iter()
+        self.component().queue.iter()
+    }
+
+    /// Returns how many messages are in this channel.
+    pub fn count(&self) -> usize {
+        self.component().queue.len()
+    }
+
+    #[inline]
+    fn component(&self) -> &IncomingMessages {
+        self.query.get_single().expect(CHANNEL_ENTITY_DELETED_MESSAGE)
     }
 }
 
