@@ -52,6 +52,32 @@ pub struct NetworkOutgoingReader<'w, 's> {
     query: Query<'w, 's, &'static OutgoingMessages>
 }
 
+impl<'w, 's> NetworkOutgoingReader<'w, 's> {
+    // what a clusterfuck of a function signature lol
+    /// Returns an iterator that can be used to read all outgoing messages for each channel.
+    /// 
+    /// ```
+    /// // Example usage
+    /// // Outer iterator reads over channels
+    /// for (id, data) in reader.iter_channels() {
+    ///     // Inner iterator reads over octet strings in those channels
+    ///     for (origin, string) in data {
+    ///         println!("{origin:?} sent {string:?}");
+    ///     }
+    /// }
+    /// ```
+    pub fn iter_channels(&self) -> impl Iterator<Item = (ChannelId, impl Iterator<Item = &(Entity, OctetString)>)> {
+        self.registry.channel_ids()
+        .map(|id| {
+            let data = self.registry.get_from_id(id).unwrap();
+            let (id, entity) = (data.channel_id, data.entity_id);
+            let component = self.query.get(entity)
+                .expect(CHANNEL_ENTITY_DELETED_MESSAGE);
+            (id, component.queue.iter())
+        })
+    }
+}
+
 /// Queued outgoing messages on this channel.
 #[derive(Default, Component)]
 pub(super) struct OutgoingMessages {

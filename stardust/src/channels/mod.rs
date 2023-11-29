@@ -20,4 +20,4 @@ pub(super) fn channels(app: &mut bevy::prelude::App) {
         .after(NetworkWrite::Send).in_set(NetworkWrite::Clear));
 }
 
-static CHANNEL_ENTITY_DELETED_MESSAGE: &'static str = "A channel entity was deleted. This should not happen!";
+static CHANNEL_ENTITY_DELETED_MESSAGE: &'static str = "A channel entity was deleted or somehow stopped being accessible to a query. This should not happen!";

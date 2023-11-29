@@ -15,7 +15,7 @@ pub struct ChannelData {
     /// The channel's sequential ID assigned by the registry.
     pub channel_id: ChannelId,
     /// Entity ID of the channel's entity representation.
-    pub entity: Entity,
+    pub entity_id: Entity,
 
     /// The config of the channel.
     /// Since `ChannelData` implements `Deref` for `ChannelConfiguration`, this is just clutter.
@@ -72,7 +72,7 @@ impl ChannelRegistry {
             type_path,
             channel_id,
 
-            entity,
+            entity_id: entity,
             config,
         });
         self.channel_count += 1;
