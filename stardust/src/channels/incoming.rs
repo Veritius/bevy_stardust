@@ -1,11 +1,18 @@
 use bevy::{prelude::*, ecs::system::SystemParam};
 use crate::prelude::*;
-use super::id::ChannelMarker;
+use super::{id::ChannelMarker, CHANNEL_ENTITY_DELETED_MESSAGE};
 
 /// Systemparam for reading messages received in channel `T`.
 #[derive(SystemParam)]
-pub struct NetworkReader<'w, 's, T: Channel> {
-    query: Query<'w, 's, &'static IncomingMessages, With<ChannelMarker<T>>>
+pub struct NetworkReader<'w, 's, C: Channel> {
+    query: Query<'w, 's, &'static IncomingMessages, With<ChannelMarker<C>>>
+}
+
+impl<'w, 's, C: Channel> NetworkReader<'w, 's, C> {
+    /// Returns an iterator over all messages in this channel.
+    pub fn iter(&'w self) -> impl Iterator<Item = &'w (Entity, OctetString)> {
+        self.query.get_single().expect(CHANNEL_ENTITY_DELETED_MESSAGE).queue.iter()
+    }
 }
 
 /// Systemparam for storing messages for reading by `NetworkReader` params.
