@@ -59,9 +59,9 @@ impl<'w, 's> NetworkOutgoingReader<'w, 's> {
     /// ```
     /// // Example usage
     /// // Outer iterator reads over channels
-    /// for (id, data) in reader.iter_channels() {
+    /// for (id, channel) in reader.iter_channels() {
     ///     // Inner iterator reads over octet strings in those channels
-    ///     for (origin, string) in data {
+    ///     for (origin, string) in channel {
     ///         println!("{origin:?} sent {string:?}");
     ///     }
     /// }
