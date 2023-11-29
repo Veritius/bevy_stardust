@@ -2,7 +2,7 @@
 
 use std::{collections::BTreeMap, any::TypeId};
 use bevy::prelude::*;
-use crate::{octets::varints::u24, prelude::ChannelConfiguration};
+use crate::prelude::ChannelConfiguration;
 use super::id::{Channel, ChannelId, CHANNEL_ID_LIMIT};
 
 /// Channel information generated when `register_channel` is run.
@@ -106,7 +106,7 @@ impl ChannelRegistry {
     /// Returns an iterator of all existing channel ids.
     pub fn channel_ids(&self) -> impl Iterator<Item = ChannelId> {
         (0..self.channel_count).into_iter()
-        .map(|f| ChannelId(TryInto::<u24>::try_into(f).unwrap()))
+        .map(|f| ChannelId::try_from(f).unwrap())
     }
 }
 

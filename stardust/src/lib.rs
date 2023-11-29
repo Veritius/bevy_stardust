@@ -5,7 +5,7 @@
 
 pub mod channels;
 pub mod connections;
-pub mod octets;
+pub mod octetstring;
 pub mod plugin;
 pub mod prelude;
 pub mod protocol;
