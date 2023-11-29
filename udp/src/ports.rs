@@ -22,9 +22,9 @@ impl BoundSocketManager {
         Ok(())
     }
 
-    pub fn unbind(&mut self, port: u16) -> Result<BoundSocket> {
+    pub fn unbind(&mut self, port: u16) -> Result<Vec<Entity>> {
         match self.sockets.remove(&port) {
-            Some(val) => Ok(val),
+            Some(val) => Ok(val.clients),
             None => bail!("Socket with port {port} was not present"),
         }
     }
