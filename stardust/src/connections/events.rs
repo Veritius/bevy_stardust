@@ -8,16 +8,16 @@ pub struct DisconnectPeerEvent {
     /// The peer to disconnect.
     pub target: Entity,
     /// The reason for disconnection.
-    pub reason: Option<String>,
+    pub reason: Option<Box<str>>,
 }
 
 /// Raised when a peer tries to connect, but fails.
 #[derive(Event)]
 pub struct FailedConnectionEvent {
     /// The origin of the connection, such as a `SocketAddr`.
-    pub origin: String,
+    pub origin: Box<str>,
     /// The reason the connection failed.
-    pub reason: String,
+    pub reason: Box<str>,
 }
 
 /// Raised when a new peer connects.
@@ -32,5 +32,5 @@ pub struct PeerDisconnectedEvent {
     /// The peer's `PeerUuid` value, if it had one.
     pub uuid: Option<Uuid>,
     /// The reason the peer was disconnected.
-    pub reason: String,
+    pub reason: Box<str>,
 }
