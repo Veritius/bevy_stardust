@@ -41,7 +41,7 @@ pub trait ProtocolIdAppExt: sealed::Sealed {
     /// 
     /// You can use this if you insert values in an unpredictable order, but want a consistent output.
     /// If you want to put in any value, or ordering matters, use `net_hash_value`.
-    fn net_hash_string(&mut self, value: impl Into<String>);
+    fn net_hash_string(&mut self, value: impl Into<Box<str>>);
 }
 
 impl ProtocolIdAppExt for App {
@@ -50,7 +50,7 @@ impl ProtocolIdAppExt for App {
         value.hash(&mut hasher.state);
     }
 
-    fn net_hash_string(&mut self, value: impl Into<String>) {
+    fn net_hash_string(&mut self, value: impl Into<Box<str>>) {
         let mut hasher = self.world.resource_mut::<ProtocolIdHasher>();
         hasher.strings.push(value.into());
     }
@@ -59,7 +59,7 @@ impl ProtocolIdAppExt for App {
 /// Stores the state of the hasher before a result is finalized
 #[derive(Resource)]
 pub(super) struct ProtocolIdHasher {
-    strings: Vec<String>,
+    strings: Vec<Box<str>>,
     state: Box<dyn Hasher + Send + Sync + 'static>,
 }
 
