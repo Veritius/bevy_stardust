@@ -30,10 +30,9 @@ impl Plugin for UdpTransportPlugin {
 }
 
 /// Parallelism config for I/O systems in the plugin.
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub enum SystemIoMode {
     /// Defers I/O operations to Bevy to occur at some point.
-    #[default]
     Deferred,
 
     /// Runs as an exclusive system, using all CPU cores to perform I/O until finished.
