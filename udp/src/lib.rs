@@ -11,7 +11,7 @@ mod receiving;
 mod sending;
 
 pub use established::UdpConnection;
-pub use plugin::UdpTransportPlugin;
+pub use plugin::*;
 
 /// The maximum amount of bytes that can be stored in a single UDP packet's payload.
 const MAXIMUM_PACKET_LENGTH: usize = 1472;
