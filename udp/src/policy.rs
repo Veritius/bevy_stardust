@@ -22,7 +22,7 @@ impl BlockingPolicy {
 
         // Match rules
         for rule in &self.rules {
-            if rule.is_blocked(address) { return true }
+            if rule.matches(address) { return true }
         }
 
         // The address isn't blocked
@@ -33,5 +33,5 @@ impl BlockingPolicy {
 /// A rule that can be used to block IPs.
 pub trait AddressBlockingRule: Send + Sync {
     /// Returns `true` if `address` is matched by this rule, and therefore should be blocked.
-    fn is_blocked(&self, address: &IpAddr) -> bool;
+    fn matches(&self, address: &IpAddr) -> bool;
 }
