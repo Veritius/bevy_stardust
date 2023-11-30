@@ -44,6 +44,7 @@ impl From<Box<[Octet]>> for OctetString {
 }
 
 impl From<String> for OctetString {
+    /// Writes the exact UTF-8 bytes of the `String` into an `OctetString`
     fn from(value: String) -> Self {
         value.into_bytes().into()
     }
