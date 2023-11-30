@@ -1,3 +1,3 @@
-mod deferred;
+mod blocking;
 
-pub(crate) use deferred::deferred_send_packets_system;
+pub(crate) use blocking::blocking_send_packets_system;
