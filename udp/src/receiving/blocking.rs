@@ -1,17 +1,27 @@
 use std::{sync::Mutex, collections::BTreeMap};
-use bevy::{prelude::*, tasks::ComputeTaskPool};
+use bevy::{prelude::*, ecs::system::SystemState};
 use bevy_stardust::prelude::*;
 use crate::{UdpConnection, ports::BoundSocketManager, MAXIMUM_PACKET_LENGTH, policy::BlockingPolicy};
 
 pub(crate) fn blocking_receive_packets_system(
-    registry: Res<ChannelRegistry>,
-    sockets: Res<BoundSocketManager>,
-    policy: Res<BlockingPolicy>,
-    mut peers: Query<(Entity, &mut NetworkPeer, &mut UdpConnection)>,
-    mut incoming: NetworkIncomingWriter,
+    world: &mut World,
 ) {
-    // Task pool for performant, pleasing parallel processing of ports
-    let taskpool = ComputeTaskPool::get();
+    // TODO: Cache state
+    let mut state: SystemState<(
+        Res<ChannelRegistry>,
+        Res<BoundSocketManager>,
+        Res<BlockingPolicy>,
+        Query<(Entity, &mut NetworkPeer, &mut UdpConnection)>,
+        NetworkIncomingWriter,
+    )> = SystemState::new(world);
+
+    let (
+        registry,
+        sockets,
+        policy,
+        mut peers,
+        mut incoming,
+    ) = state.get_mut(world);
 
     // Mutexes to make the borrow checker happy
     // While we don't access anything in this set twice, unsafe blocks aren't really worth it imo
@@ -25,9 +35,10 @@ pub(crate) fn blocking_receive_packets_system(
         let peer_locks = &peer_locks;
         let policy = &policy;
 
-        taskpool.scope(|scope| {
+        // Task pool for performant, pleasing parallel processing of ports
+        rayon::scope(|scope| {
             for (port, socket) in sockets.iter() {
-                scope.spawn(async move {
+                scope.spawn(move |_| {
                     let peers = &socket.peers;
 
                     // Take locks for all the peers in our table

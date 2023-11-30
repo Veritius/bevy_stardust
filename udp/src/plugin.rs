@@ -37,5 +37,6 @@ pub enum SystemIoMode {
     Deferred,
 
     /// Runs as an exclusive system, using all CPU cores to perform I/O until finished.
+    /// This may result in Bevy tasks (compute, io) being CPU deprived until the system finishes.
     Blocking,
 }
