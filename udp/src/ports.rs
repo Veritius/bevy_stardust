@@ -20,7 +20,7 @@ impl BoundSocketManager {
         let mut smallest_idx: u16 = 0;
 
         for (k, v) in self.sockets.iter() {
-            let len = v.clients.len();
+            let len = v.peers.len();
             if len < smallest_val {
                 smallest_val = len;
                 smallest_idx = *k;
@@ -40,7 +40,7 @@ impl BoundSocketManager {
 
     pub fn unbind(&mut self, port: u16) -> Result<Vec<Entity>> {
         match self.sockets.remove(&port) {
-            Some(val) => Ok(val.clients),
+            Some(val) => Ok(val.peers),
             None => bail!("Socket with port {port} was not present"),
         }
     }
@@ -49,7 +49,7 @@ impl BoundSocketManager {
         // Check the peer isn't already added
         self.sockets.values()
         .for_each(|f| {
-            if f.clients.contains(&peer) {
+            if f.peers.contains(&peer) {
                 todo!(); // Handle this case
             }
         });
@@ -59,22 +59,26 @@ impl BoundSocketManager {
         self.sockets
             .get_mut(&smallest)
             .unwrap() // TODO: Handle this case
-            .clients
+            .peers
             .push(peer);
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = (u16, &BoundSocket)> {
+        self.sockets.iter().map(|(k,v)| (*k, v))
     }
 }
 
 #[derive(Debug)]
 pub(crate) struct BoundSocket {
     pub socket: UdpSocket,
-    pub clients: Vec<Entity>,
+    pub peers: Vec<Entity>,
 }
 
 impl BoundSocket {
     pub fn new(socket: UdpSocket) -> Self {
         BoundSocket {
             socket,
-            clients: vec![],
+            peers: vec![],
         }
     }
 }

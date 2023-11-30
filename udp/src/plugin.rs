@@ -8,8 +8,10 @@ pub struct UdpTransportPlugin;
 impl Plugin for UdpTransportPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(PreUpdate, receive_packets_system
+            .before(NetworkRead::Read)
             .in_set(NetworkRead::Receive));
         app.add_systems(PostUpdate, send_packets_system
+            .before(NetworkWrite::Clear)
             .in_set(NetworkWrite::Send));
     }
 }
