@@ -3,7 +3,7 @@ Stardust is an opinionated, batteries-included networking crate built for Bevy, 
 <br></br>
 
 ![License](https://img.shields.io/github/license/veritius/bevy_stardust)
-[![Bevy version](https://img.shields.io/badge/bevy-0.11-blue?color=blue)](https://bevyengine.org/)
+[![Bevy version](https://img.shields.io/badge/bevy-0.12-blue?color=blue)](https://bevyengine.org/)
 [![Crates.io](https://img.shields.io/crates/v/bevy_stardust)](https://crates.io/crates/bevy_stardust)
 
 ## Features
