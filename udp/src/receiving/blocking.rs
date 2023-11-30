@@ -1,28 +1,15 @@
 use std::{sync::Mutex, collections::BTreeMap};
-use bevy::{prelude::*, ecs::system::SystemState};
+use bevy::prelude::*;
 use bevy_stardust::prelude::*;
 use crate::{UdpConnection, ports::BoundSocketManager, MAXIMUM_PACKET_LENGTH, policy::BlockingPolicy};
 
 pub(crate) fn blocking_receive_packets_system(
-    world: &mut World,
+    registry: Res<ChannelRegistry>,
+    sockets: Res<BoundSocketManager>,
+    policy: Res<BlockingPolicy>,
+    mut peers: Query<(Entity, &mut NetworkPeer, &mut UdpConnection)>,
+    mut incoming: NetworkIncomingWriter,
 ) {
-    // TODO: Cache state
-    let mut state: SystemState<(
-        Res<ChannelRegistry>,
-        Res<BoundSocketManager>,
-        Res<BlockingPolicy>,
-        Query<(Entity, &mut NetworkPeer, &mut UdpConnection)>,
-        NetworkIncomingWriter,
-    )> = SystemState::new(world);
-
-    let (
-        registry,
-        sockets,
-        policy,
-        mut peers,
-        mut incoming,
-    ) = state.get_mut(world);
-
     // Mutexes to make the borrow checker happy
     // While we don't access anything in this set twice, unsafe blocks aren't really worth it imo
     let peer_locks = peers.iter_mut()
