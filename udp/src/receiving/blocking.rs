@@ -1,7 +1,7 @@
 use std::{sync::Mutex, collections::BTreeMap};
 use bevy::prelude::*;
 use bevy_stardust::prelude::*;
-use crate::{UdpConnection, ports::BoundSocketManager, MAXIMUM_PACKET_LENGTH, policy::BlockingPolicy};
+use crate::{MAXIMUM_PACKET_LENGTH, established::UdpConnection, ports::BoundSocketManager, policy::BlockingPolicy};
 
 pub(crate) fn blocking_receive_packets_system(
     registry: Res<ChannelRegistry>,

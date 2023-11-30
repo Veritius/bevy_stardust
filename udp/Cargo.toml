@@ -15,3 +15,7 @@ bevy_stardust = { version = "0.2.0", path = "../stardust" }
 rayon = "1.8.0"
 anyhow = "1.0.75"
 fastrand = "2.0.1"
+
+[dev-dependencies]
+bevy = { version = "0.12", default-features = true }
+bevy_egui = "0.23.0"
