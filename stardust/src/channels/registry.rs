@@ -80,12 +80,19 @@ impl ChannelRegistry {
         channel_id
     }
 
-    /// Returns the ChannelId and a reference to the ChannelConfig
+    /// Returns the channel ID if `reflect` is a registered type
+    pub fn get_from_reflect(&self, reflect: &dyn Reflect) -> Option<(ChannelId, &ChannelData)> {
+        self.get_from_type_inner(reflect.as_any().type_id())
+    }
+
+    /// Returns the ChannelId and a reference to the ChannelConfig if `C` is a registered type
     pub fn get_from_type<C: Channel>(&self) -> Option<(ChannelId, &ChannelData)> {
-        let type_id = TypeId::of::<C>();
-        let channel_id = *self.channel_type_map.get(&type_id)?;
-        let config = self.channel_data_map.get(&channel_id)?;
-        Some((channel_id, config))
+        self.get_from_type_inner(TypeId::of::<C>())
+    }
+
+    fn get_from_type_inner(&self, typeid: TypeId) -> Option<(ChannelId, &ChannelData)> {
+        let channel_id = *self.channel_type_map.get(&typeid)?;
+        Some((channel_id, self.get_from_id(channel_id).unwrap()))
     }
 
     /// Returns a reference to the channel configuration.
