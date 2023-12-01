@@ -11,10 +11,6 @@ pub struct ChannelConfiguration {
     pub ordering: ChannelOrdering,
     /// See [ChannelFragmentation]'s documentation.
     pub fragment: ChannelFragmentation,
-    /// See [ChannelCompression]'s documentation.
-    pub compress: ChannelCompression,
-    /// See [MessageValidation]'s documentation.
-    pub validate: MessageValidation,
 }
 
 /// If a packet is missed, it will be resent. This can take a (relatively) long time.
@@ -46,32 +42,5 @@ pub enum ChannelFragmentation {
     /// Disable fragmentation.
     Disabled,
     /// Enable fragmentation.
-    Enabled,
-}
-
-/// Compresses octet strings on channels, reducing size over the wire at the cost of extra processing on both ends.
-/// 
-/// Most octet strings don't need compression. In general, you'll only need it if you're sending more than a few kilobytes.
-/// It's highly recommended to also use [fragmentation](ChannelFragmentation::Enabled) along with this, since any messages that are compressed
-/// are likely to still be too big to be sent in a single packet.
-#[derive(Debug, Hash)]
-pub enum ChannelCompression {
-    /// Don't compress messages.
-    Disabled,
-    /// Compress messages, but don't sacrifice speed.
-    Fast,
-    /// Compress messages as much as possible.
-    High,
-}
-
-/// Tries to ensure that the message is received exactly as it was sent.
-/// This does not protect against a [MITM attack] by itself, use signing or encryption for that (if your transport layer supports it).
-/// 
-/// [MITM attack]: https://en.wikipedia.org/wiki/Man-in-the-middle_attack
-#[derive(Debug, Hash)]
-pub enum MessageValidation {
-    /// The integrity of messages will not be checked.
-    Disabled,
-    /// The integrity of messages will be checked.
     Enabled,
 }
