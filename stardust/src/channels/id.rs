@@ -28,7 +28,7 @@ use bevy::prelude::*;
 ///
 /// fn main() {
 ///     app.add_event::<MovementEvent>();
-///     app.register_channel::<MovementEvent>();
+///     app.add_channel::<MovementEvent>();
 ///     app.add_system(PostUpdate, |mut events: EventReader<MovementEvent>, mut writer: NetworkWriter<MovementEvent>| {
 ///         let target = Entity::PLACEHOLDER;
 ///         for event in events.iter() {

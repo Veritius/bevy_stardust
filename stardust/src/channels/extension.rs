@@ -1,4 +1,4 @@
-//! Adds `register_channel` to the `App`.
+//! Adds `add_channel` to the `App`.
 
 use bevy::prelude::*;
 use crate::{protocol::ProtocolIdAppExt, prelude::ChannelConfiguration};
@@ -20,7 +20,7 @@ pub trait ChannelSetupAppExt: sealed::Sealed {
     /// 
     /// ```
     /// // Simple example
-    /// app.register_channel::<MyChannel>(ChannelConfiguration {
+    /// app.add_channel::<MyChannel>(ChannelConfiguration {
     ///     reliable: ChannelReliability::Reliable,
     ///     ordering: ChannelOrdering::Ordered,
     ///     fragmentation: ChannelFragmentation::Disabled,
@@ -28,11 +28,11 @@ pub trait ChannelSetupAppExt: sealed::Sealed {
     ///     validation: MessageValidation::Disabled,
     /// });
     /// ```
-    fn register_channel<C: Channel>(&mut self, config: ChannelConfiguration);
+    fn add_channel<C: Channel>(&mut self, config: ChannelConfiguration);
 }
 
 impl ChannelSetupAppExt for App {
-    fn register_channel<C: Channel>(
+    fn add_channel<C: Channel>(
         &mut self,
         config: ChannelConfiguration,
     ) {

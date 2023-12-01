@@ -11,7 +11,7 @@
 //! fn main() {
 //!     let mut app = App::new();
 //! 
-//!     app.register_channel::<MyChannel>(ChannelConfiguration {
+//!     app.add_channel::<MyChannel>(ChannelConfiguration {
 //!         reliable: ChannelReliability::Reliable,
 //!         ordering: ChannelOrdering::Ordered,
 //!         fragmentation: ChannelFragmentation::Disabled,

@@ -5,7 +5,7 @@ use bevy::prelude::*;
 use crate::prelude::ChannelConfiguration;
 use super::id::{Channel, ChannelId, CHANNEL_ID_LIMIT};
 
-/// Channel information generated when `register_channel` is run.
+/// Channel information generated when `add_channel` is run.
 pub struct ChannelData {
     /// The channel's `TypeId`.
     pub type_id: TypeId,
