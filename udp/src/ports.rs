@@ -4,7 +4,7 @@ use bevy::prelude::*;
 
 #[derive(Debug, Resource)]
 pub(crate) struct BoundSocketManager {
-    pub sockets: BTreeMap<u16, BoundSocket>,
+    sockets: BTreeMap<u16, BoundSocket>,
 }
 
 impl BoundSocketManager {
@@ -54,13 +54,15 @@ impl BoundSocketManager {
             }
         });
 
-        // Add to the least populated socket
+        // Get the least populated socket in the map
         let smallest = self.smallest();
-        self.sockets
+        let mut socket = self.sockets
             .get_mut(&smallest)
-            .unwrap() // TODO: Handle this case
-            .peers
-            .push(peer);
+            .unwrap(); // TODO: Handle this case
+        
+        // Add to the least populated socket
+        socket.peers.push(peer);
+        socket.peers.sort_unstable();
     }
 
     pub fn iter(&self) -> impl Iterator<Item = (u16, &BoundSocket)> {
@@ -71,6 +73,7 @@ impl BoundSocketManager {
 #[derive(Debug)]
 pub(crate) struct BoundSocket {
     pub socket: UdpSocket,
+    /// Peers associated with this socket. This list is sorted.
     pub peers: Vec<Entity>,
 }
 

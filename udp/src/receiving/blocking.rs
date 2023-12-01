@@ -16,48 +16,41 @@ pub(crate) fn blocking_receive_packets_system(
         .map(|x| (x.0, Mutex::new((x.1, x.2))))
         .collect::<BTreeMap<_,_>>();
 
-    // Create a block to only have variables be shadowed inside here, since the task futures are move
-    {
-        // Prevent moves by shadowing variables as explicit references
-        let peer_locks = &peer_locks;
-        let policy = &policy;
+    // Task pool for performant, pleasing parallel processing of ports
+    rayon::scope(|scope| {
+        for (port, socket) in sockets.iter() {
+            scope.spawn(|_| {
+                let peers = &socket.peers;
 
-        // Task pool for performant, pleasing parallel processing of ports
-        rayon::scope(|scope| {
-            for (port, socket) in sockets.iter() {
-                scope.spawn(move |_| {
-                    let peers = &socket.peers;
+                // Take locks for all the peers in our table
+                let mut peer_locks = peers.iter()
+                .map(|id| {
+                    let lock = match peer_locks.get(id).unwrap().try_lock() {
+                        Ok(lock) => lock,
+                        Err(error) => {
+                            panic!("Peer data mutex in receiving system may have had two simultaneous locks, this should not happen. Error is as follows: {error}");
+                        },
+                    };
+                    (lock.1.address, (*id, lock))
+                })
+                .collect::<BTreeMap<_, _>>();
 
-                    // Take locks for all the peers in our table
-                    let mut peer_locks = peers.iter()
-                    .map(|id| {
-                        let lock = match peer_locks.get(id).unwrap().try_lock() {
-                            Ok(lock) => lock,
-                            Err(error) => {
-                                panic!("Peer data mutex in receiving system may have had two simultaneous locks, this should not happen. Error is as follows: {error}");
-                            },
-                        };
-                        (lock.1.address, (*id, lock))
-                    })
-                    .collect::<BTreeMap<_, _>>();
-
-                    // Read all packets
-                    let mut buffer = [0u8; MAXIMUM_PACKET_LENGTH];
-                    loop {
-                        // Read a packet from the socket
-                        let (len, origin) = match socket.socket.recv_from(&mut buffer) {
-                            Ok(v) => v,
-                            Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock => break,
-                            Err(e) => {
-                                error!("Error while reading UDP packets: {e}");
-                                break
-                            },
-                        };
-
-                        todo!()
-                    }
-                });
-            }
-        });
-    }
+                // Read all packets
+                let mut buffer = [0u8; MAXIMUM_PACKET_LENGTH];
+                loop {
+                    // Read a packet from the socket
+                    let (len, origin) = match socket.socket.recv_from(&mut buffer) {
+                        Ok(v) => v,
+                        Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock => break,
+                        Err(e) => {
+                            error!("Error while reading UDP packets: {e}");
+                            break
+                        },
+                    };
+                    
+                    todo!();
+                }
+            });
+        }
+    });
 }
