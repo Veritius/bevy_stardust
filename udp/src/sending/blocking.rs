@@ -1,11 +1,12 @@
 use std::{sync::Mutex, collections::BTreeMap};
 use bevy::prelude::*;
-use bevy_stardust::prelude::*;
+use bevy_stardust::{prelude::*, connections::groups::NetworkGroup};
 use crate::{prelude::*, ports::BoundSocketManager};
 
 pub(crate) fn blocking_send_packets_system(
     registry: Res<ChannelRegistry>,
     sockets: Res<BoundSocketManager>,
+    groups: Query<&NetworkGroup>,
     mut peers: Query<(Entity, &mut NetworkPeer, &mut UdpConnection)>,
     outgoing: NetworkOutgoingReader,
 ) {
@@ -37,8 +38,24 @@ pub(crate) fn blocking_send_packets_system(
                 .iter_all()
                 .filter(|(_, target, _)| { peers.binary_search(target).is_ok() });
 
+                // Buffers for a simple algorithm to try and pack as many messages into one packet as possible
+                // TODO: This could be made less allocation-heavy
+                let mut buffers: BTreeMap<Entity, Vec<Vec<u8>>> = BTreeMap::new();
+
+                // Read all messages and try to pack them into our target's buffers
                 for (channel, target, data) in iter {
-                    todo!();
+                    // The target could be a group, so we need to account for that
+                    let slice = &[target]; // TODO: This is janky
+                    let targets = match groups.get(target) {
+                        Ok(v) => v.0.as_slice(),
+                        Err(_) => slice,
+                    };
+
+                    // Pack the data for all targets
+                    for target in targets {
+                        let mut buffers = buffers.entry(*target).or_insert(vec![]);
+                        todo!()
+                    }
                 }
             });
         }
