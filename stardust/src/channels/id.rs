@@ -3,15 +3,43 @@
 use std::marker::PhantomData;
 use bevy::prelude::*;
 
-/// Identifier for a channel. Used to access writing and reading functionality.
-/// Automatically implemented, just derive `Debug` and `Reflect` (or `TypePath`).
+/// Types that can be used to interface with Stardust's message reading and writing APIs.
 /// 
-/// ```rs
-/// #[derive(Debug, Reflect)]
-/// pub struct MyChannel;
 /// ```
-pub trait Channel: TypePath + std::fmt::Debug + Send + Sync + 'static {}
-impl<T: TypePath + std::fmt::Debug + Send + Sync + 'static> Channel for T {}
+/// // Defining a channel type is simple
+/// #[derive(TypePath)]
+/// pub struct MyChannel;
+/// 
+/// // You can make channels private
+/// #[derive(TypePath)]
+/// struct MyPrivateChannel;
+/// 
+/// // You can make channels with generic type bounds too
+/// #[derive(TypePath)]
+/// struct MyGenericChannel<T: Channel>(PhantomData<T>);
+/// ```
+/// 
+/// In Stardust, `Channel` trait objects are just used for their type data.
+/// The type itself isn't actually stored. That means you can do things like this.
+/// 
+/// ```
+/// #[derive(TypePath, Event)]
+/// pub struct MovementEvent(pub Vec3);
+///
+/// fn main() {
+///     app.add_event::<MovementEvent>();
+///     app.register_channel::<MovementEvent>();
+///     app.add_system(PostUpdate, |mut events: EventReader<MovementEvent>, mut writer: NetworkWriter<MovementEvent>| {
+///         let target = Entity::PLACEHOLDER;
+///         for event in events.iter() {
+///             let bytes = &[0u8;32]; // Some kind of serialisation logic
+///             writer.send(target, bytes.into());
+///         }
+///     });
+/// }
+/// ```
+pub trait Channel: TypePath + Send + Sync + 'static {}
+impl<T: TypePath + Send + Sync + 'static> Channel for T {}
 
 /// Typed marker component for filtering channel entities.
 #[derive(Component)]
