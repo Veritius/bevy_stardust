@@ -56,7 +56,7 @@ impl BoundSocketManager {
 
         // Get the least populated socket in the map
         let smallest = self.smallest();
-        let mut socket = self.sockets
+        let socket = self.sockets
             .get_mut(&smallest)
             .unwrap(); // TODO: Handle this case
         

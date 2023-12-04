@@ -6,9 +6,11 @@ pub mod prelude;
 pub mod policy;
 
 mod established;
+mod ordering;
 mod plugin;
 mod ports;
 mod receiving;
+mod reliability;
 mod sending;
 
 /// Information about the packet at the header of the packet.
