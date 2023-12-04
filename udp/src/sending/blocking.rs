@@ -10,6 +10,9 @@ pub(crate) fn blocking_send_packets_system(
     mut peers: Query<(Entity, &mut NetworkPeer, &mut UdpConnection)>,
     outgoing: NetworkOutgoingReader,
 ) {
+    // Global values for how we should write packets
+    let use_short_ids = registry.channel_count() < u16::MAX.into();
+
     // Mutexes to make the borrow checker happy
     let peer_locks = peers.iter_mut()
         .map(|x| (x.0, Mutex::new((x.1, x.2))))
@@ -40,7 +43,21 @@ pub(crate) fn blocking_send_packets_system(
                         panic!("A sent octet string was too long ({} bytes). Fragmenting isn't supported right now, so it couldn't be sent.", string.len());
                     }
 
-                    todo!()
+                    // Find or create a buffer that can store our string
+                    let buffer = 'buffer_find: {
+                        // Find a buffer
+                        for buffer in buffers.iter_mut() {
+                            if (buffer.len() + scratch_len) > buffer.capacity() { continue }
+                            break 'buffer_find buffer; // This one's good
+                        }
+
+                        // Create a new buffer
+                        let buffer = Vec::with_capacity(MAXIMUM_PACKET_LENGTH);
+                        buffers.push(buffer);
+                        break 'buffer_find buffers.last_mut().unwrap();
+                    };
+
+                    todo!();
                 }
             })
         }
