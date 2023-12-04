@@ -14,7 +14,8 @@ pub struct ChannelConfiguration {
     /// See [ChannelFragmentation]'s documentation.
     pub fragment: ChannelFragmentation,
 
-    /// How long an octet string sent over this channel will be, on average.
+    /// How long an octet string sent over this channel will be, used for optimisations.
+    /// Octet strings with lengths outside this range may cause panics in transport layers.
     pub expected_string_size: Range<u32>,
 }
 
