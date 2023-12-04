@@ -11,5 +11,7 @@ mod ports;
 mod receiving;
 mod sending;
 
+/// Information about the packet at the header of the packet.
+const PACKET_HEADER_SIZE: usize = 3;
 /// The maximum amount of bytes that can be stored in a single UDP packet's payload.
 const MAXIMUM_PACKET_LENGTH: usize = 1472;
