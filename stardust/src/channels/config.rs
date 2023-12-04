@@ -2,6 +2,8 @@
 //! 
 //! All settings are not definitive, but hints to transport layers as how to treat channels.
 
+use std::ops::Range;
+
 /// Configuration for a channel.
 #[derive(Debug, Hash)]
 pub struct ChannelConfiguration {
@@ -11,6 +13,9 @@ pub struct ChannelConfiguration {
     pub ordering: ChannelOrdering,
     /// See [ChannelFragmentation]'s documentation.
     pub fragment: ChannelFragmentation,
+
+    /// How long an octet string sent over this channel will be, on average.
+    pub expected_string_size: Range<u32>,
 }
 
 /// If a packet is missed, it will be resent. This can take a (relatively) long time.
