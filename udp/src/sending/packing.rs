@@ -12,6 +12,10 @@ pub(super) fn pack_strings<'a>(
     // The algorithm just finds the first 'buffer' and writes the data to that, adding more buffers as necessary.
     let mut buffers: Vec<Vec<u8>> = vec![];
 
+    // Scratch space
+    let mut scratch_buf = [0u8; 1450];
+    let mut scratch_len: usize = 0;
+
     // Pack all strings into packets
     for (channel, _, string) in items {
         // Check the string isn't too long since fragmenting isn't supported
@@ -23,7 +27,7 @@ pub(super) fn pack_strings<'a>(
         let buffer = 'buffer_find: {
             // Find a buffer
             for buffer in buffers.iter_mut() {
-                // if (buffer.len() + scratch_len) > buffer.capacity() { continue }
+                if (buffer.len() + scratch_len) > buffer.capacity() { continue }
                 break 'buffer_find buffer; // This one's good
             }
 
