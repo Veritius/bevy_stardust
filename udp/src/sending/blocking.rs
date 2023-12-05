@@ -1,7 +1,7 @@
 use std::{sync::Mutex, collections::BTreeMap};
 use bevy::prelude::*;
 use bevy_stardust::{prelude::*, connections::groups::NetworkGroup};
-use crate::{prelude::*, ports::BoundSocketManager, sending::packing::first_fit};
+use crate::{prelude::*, ports::BoundSocketManager};
 use super::packing::{pack_strings, PackingConfig};
 
 pub(crate) fn blocking_send_packets_system(
@@ -32,7 +32,6 @@ pub(crate) fn blocking_send_packets_system(
                 .filter(|(_, entity, _)| *entity == *id);
 
                 let packed = pack_strings(
-                    first_fit,
                     &packing_config,
                     &mut peer_data,
                     items

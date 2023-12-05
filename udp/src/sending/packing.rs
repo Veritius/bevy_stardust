@@ -7,21 +7,8 @@ pub(super) struct PackingConfig {
     pub use_short_ids: bool,
 }
 
-/// First-fit bin packing algorithm.
-pub(super) fn first_fit(
-    element: usize,
-    bins: &mut dyn Iterator<Item = (usize, usize, usize)>,
-) -> usize {
-    for (index, capacity, length) in bins {
-        if (length + element) > capacity { return index }
-    }
-
-    return usize::MAX
-}
-
-/// Tries to pack octet strings into as little packets as possible, depending on your choice of `packing_alg`
+/// Tries to pack octet strings into as little packets as possible.
 pub(super) fn pack_strings<'a>(
-    packing_alg: impl Fn(usize, &mut dyn Iterator<Item = (usize, usize, usize)>) -> usize,
     packing_config: &PackingConfig,
     peer_data: &mut MutexGuard<(Mut<NetworkPeer>, Mut<UdpConnection>)>,
     items: impl Iterator<Item = (ChannelId, Entity, &'a OctetString)>,
@@ -41,19 +28,27 @@ pub(super) fn pack_strings<'a>(
         }
 
         // Find or create a bin that can store our string
-        let index = packing_alg(scratch_len, &mut bins.iter().enumerate().map(|(index, f)| (index, f.capacity(), f.len())));
-        if index == usize::MAX {
-            let new_bin = Vec::with_capacity(MAXIMUM_PACKET_LENGTH);
-            bins.push(new_bin);
-        }
+        // Uses the best-fit bin packing algorithm
+        // https://en.wikipedia.org/wiki/Best-fit_bin_packing
+        let bin = 'bins: {
+            // Try to find the most suitable bin (least space remaining)
+            let mut most_suitable: (usize, usize) = (usize::MAX, MAXIMUM_PACKET_LENGTH);
+            for (index, bin) in bins.iter().enumerate() {
+                let bin_space = bin.capacity() - bin.len();
+                if scratch_len > bin_space { continue } // Check this bin has space for our message
+                if bin_space < most_suitable.1 { continue } // Check if this bin has less space
+                most_suitable = (index, bin_space);
+            }
 
-        // Access the bin we'll be putting bytes into
-        let working_bin = match index {
-            usize::MAX => {
-                let len = bins.len();
-                &mut bins[len]
-            },
-            _ => &mut bins[index],
+            // If none of the bins were suitable, create a new one and break
+            if most_suitable.0 == usize::MAX {
+                bins.push(Vec::with_capacity(MAXIMUM_PACKET_LENGTH));
+                let ind = bins.len();
+                break 'bins &mut bins[ind];
+            }
+
+            // Break with the most suitable bin
+            break 'bins &mut bins[most_suitable.0];
         };
 
         todo!();
