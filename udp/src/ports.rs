@@ -45,7 +45,7 @@ impl BoundSocketManager {
         }
     }
 
-    pub fn add_peer(&mut self, peer: Entity) {        
+    pub fn add_peer(&mut self, peer: Entity) -> u16 {        
         // Check the peer isn't already added
         self.sockets.values()
         .for_each(|f| {
@@ -63,6 +63,9 @@ impl BoundSocketManager {
         // Add to the least populated socket
         socket.peers.push(peer);
         socket.peers.sort_unstable();
+
+        // Return the port they were assigned to
+        return smallest;
     }
 
     pub fn iter(&self) -> impl Iterator<Item = (u16, &BoundSocket)> {

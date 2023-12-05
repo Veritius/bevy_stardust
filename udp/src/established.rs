@@ -9,6 +9,7 @@ pub struct UdpConnection {
     pub timeout: Duration,
 
     pub(crate) address: SocketAddr,
+    pub(crate) bound_port: u16,
     pub(crate) last_sent: Option<Instant>,
     pub(crate) last_recv: Option<Instant>,
 
@@ -28,6 +29,7 @@ impl std::fmt::Debug for UdpConnection {
         f.debug_struct("UdpConnection")
         .field("timeout", &self.timeout)
         .field("address", &self.address)
+        .field("bound_port", &self.bound_port)
         .field("last_sent", &self.last_sent)
         .field("last_recv", &self.last_recv)
         .finish()
