@@ -1,5 +1,4 @@
-use std::sync::MutexGuard;
-use bevy::prelude::{Entity, Mut};
+use bevy::prelude::Entity;
 use bevy_stardust::prelude::*;
 use crate::{MAXIMUM_PACKET_LENGTH, established::UdpConnection};
 
@@ -10,8 +9,9 @@ pub(super) struct PackingConfig {
 /// Tries to pack octet strings into as little packets as possible.
 pub(super) fn pack_strings<'a>(
     packing_config: &PackingConfig,
-    peer_data: &mut MutexGuard<(Mut<NetworkPeer>, Mut<UdpConnection>)>,
-    items: impl Iterator<Item = (ChannelId, Entity, &'a OctetString)>,
+    channels: &ChannelRegistry,
+    peer_data: &mut UdpConnection,
+    strings: impl Iterator<Item = (ChannelId, Entity, &'a OctetString)>,
 ) -> Vec<Vec<u8>> {
     // Bins for packing
     let mut bins: Vec<Vec<u8>> = vec![];
@@ -21,7 +21,7 @@ pub(super) fn pack_strings<'a>(
     let mut scratch_len: usize = 0;
 
     // Pack all strings into packets
-    for (channel, _, string) in items {
+    for (channel, _, string) in strings {
         // Check the string isn't too long since fragmenting isn't supported
         if string.len() > (MAXIMUM_PACKET_LENGTH - 20) {
             panic!("A sent octet string was too long ({} bytes). Fragmenting isn't supported right now, so it couldn't be sent.", string.len());

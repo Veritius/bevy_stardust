@@ -27,14 +27,15 @@ pub(crate) fn blocking_send_packets_system(
             scope.spawn(|_| {
                 let mut peer_data = mutex.try_lock().unwrap();
 
-                let items = outgoing
+                let strings = outgoing
                 .iter_all()
                 .filter(|(_, entity, _)| *entity == *id);
 
                 let packed = pack_strings(
                     &packing_config,
-                    &mut peer_data,
-                    items
+                    &registry,
+                    &mut peer_data.1,
+                    strings
                 );
 
                 todo!();
