@@ -49,7 +49,10 @@ pub(super) fn pack_strings<'a>(
 
         // Access the bin we'll be putting bytes into
         let working_bin = match index {
-            usize::MAX => bins.iter_mut().last().unwrap(),
+            usize::MAX => {
+                let len = bins.len();
+                &mut bins[len]
+            },
             _ => &mut bins[index],
         };
 
