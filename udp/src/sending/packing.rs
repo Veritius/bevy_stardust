@@ -1,5 +1,5 @@
 use std::sync::MutexGuard;
-use bevy::prelude::*;
+use bevy::prelude::{Entity, Mut};
 use bevy_stardust::prelude::*;
 use crate::{MAXIMUM_PACKET_LENGTH, established::UdpConnection};
 
@@ -7,9 +7,21 @@ pub(super) struct PackingConfig {
     pub use_short_ids: bool,
 }
 
-/// Tries to pack octet strings into as little packets as possible.
-/// Currently uses the First-Fit bin packing algorithm.
-pub(super) fn pack_strings_first_fit<'a>(
+/// First-fit bin packing algorithm.
+pub(super) fn first_fit(
+    element: usize,
+    bins: &mut dyn Iterator<Item = (usize, usize, usize)>,
+) -> usize {
+    for (index, capacity, length) in bins {
+        if (length + element) > capacity { return index }
+    }
+
+    return usize::MAX
+}
+
+/// Tries to pack octet strings into as little packets as possible, depending on your choice of `packing_alg`
+pub(super) fn pack_strings<'a>(
+    packing_alg: impl Fn(usize, &mut dyn Iterator<Item = (usize, usize, usize)>) -> usize,
     packing_config: &PackingConfig,
     peer_data: &mut MutexGuard<(Mut<NetworkPeer>, Mut<UdpConnection>)>,
     items: impl Iterator<Item = (ChannelId, Entity, &'a OctetString)>,
@@ -29,17 +41,16 @@ pub(super) fn pack_strings_first_fit<'a>(
         }
 
         // Find or create a bin that can store our string
-        let buffer = 'bins: {
-            // Find a bin
-            for bin in bins.iter_mut() {
-                if (bin.len() + scratch_len) > bin.capacity() { continue }
-                break 'bins bin; // This one's good
-            }
+        let index = packing_alg(scratch_len, &mut bins.iter().enumerate().map(|(index, f)| (index, f.capacity(), f.len())));
+        if index == usize::MAX {
+            let new_bin = Vec::with_capacity(MAXIMUM_PACKET_LENGTH);
+            bins.push(new_bin);
+        }
 
-            // Create a new bin
-            let buffer = Vec::with_capacity(MAXIMUM_PACKET_LENGTH);
-            bins.push(buffer);
-            break 'bins bins.last_mut().unwrap();
+        // Access the bin we'll be putting bytes into
+        let working_bin = match index {
+            usize::MAX => bins.iter_mut().last().unwrap(),
+            _ => &mut bins[index],
         };
 
         todo!();
