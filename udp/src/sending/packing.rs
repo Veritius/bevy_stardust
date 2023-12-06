@@ -17,9 +17,36 @@ pub(super) fn pack_strings<'a>(
     let mut reliable_bins: Vec<Vec<u8>> = vec![];
     let mut unreliable_bins: Vec<Vec<u8>> = vec![];
 
+    // Working space
+    let mut scratch = [0u8; MAXIMUM_PACKET_LENGTH];
+    let mut scratch_len: usize = 0;
+
     // Iterate all strings and pack them
     for (channel, _, string) in strings {
-        todo!()
+        // Information about the channel
+        let data = channels.get_from_id(channel).unwrap();
+
+        // Write data
+        scratch[0..3].clone_from_slice(&Into::<[u8;3]>::into(channel));
+        scratch_len += 3;
+
+        // Ordering data
+        if data.ordered {
+            todo!()
+        }
+
+        // Push to the set
+        match data.reliable {
+            true => pack_best_fit(|| {
+                Vec::with_capacity(MAXIMUM_PACKET_LENGTH)
+            }, &scratch[..scratch_len], &mut reliable_bins),
+            false => pack_best_fit(|| {
+                Vec::with_capacity(MAXIMUM_PACKET_LENGTH)
+            }, &scratch[..scratch_len], &mut unreliable_bins),
+        }
+
+        // Clean up for the next string
+        scratch_len = 0;
     }
 
     // Return both bins
@@ -29,7 +56,7 @@ pub(super) fn pack_strings<'a>(
 }
 
 fn pack_best_fit(
-    new_bin: impl Fn() -> Vec<u8>,
+    mut new_bin: impl FnMut() -> Vec<u8>,
     data: &[u8],
     bins: &mut Vec<Vec<u8>>
 ) {
