@@ -1,9 +1,6 @@
-use std::collections::BTreeMap;
-use bevy_stardust::prelude::*;
-
 pub(crate) struct OrderingData {
     pub control: ChannelOrderingData,
-    pub channels: BTreeMap<ChannelId, ChannelOrderingData>,
+    pub channels: Vec<ChannelOrderingData>,
 }
 
 pub(crate) struct ChannelOrderingData {

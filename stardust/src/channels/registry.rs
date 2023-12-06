@@ -34,16 +34,16 @@ impl std::ops::Deref for ChannelData {
 #[derive(Resource)]
 pub struct ChannelRegistry {
     channel_count: u32,
-    channel_type_map: BTreeMap<TypeId, ChannelId>,
-    channel_data_map: BTreeMap<ChannelId, ChannelData>,
+    channel_type_ids: BTreeMap<TypeId, ChannelId>,
+    channel_data: Vec<ChannelData>,
 }
 
 impl ChannelRegistry {
     pub(in crate) fn new() -> Self {
         Self {
             channel_count: 0,
-            channel_type_map: BTreeMap::new(),
-            channel_data_map: BTreeMap::new(),
+            channel_type_ids: BTreeMap::new(),
+            channel_data: vec![],
         }    
     }
 
@@ -60,14 +60,14 @@ impl ChannelRegistry {
         // Check the channel doesn't already exist
         let type_id = TypeId::of::<C>();
         let type_path = C::type_path();
-        if self.channel_type_map.get(&type_id).is_some() {
+        if self.channel_type_ids.get(&type_id).is_some() {
             panic!("A channel was registered twice: {type_path}");
         }
 
         // Add to map
         let channel_id = ChannelId::try_from(self.channel_count).unwrap();
-        self.channel_type_map.insert(type_id, channel_id);
-        self.channel_data_map.insert(channel_id, ChannelData {
+        self.channel_type_ids.insert(type_id, channel_id);
+        self.channel_data.push(ChannelData {
             type_id,
             type_path,
             channel_id,
@@ -91,18 +91,18 @@ impl ChannelRegistry {
     }
 
     fn get_from_type_inner(&self, typeid: TypeId) -> Option<(ChannelId, &ChannelData)> {
-        let channel_id = *self.channel_type_map.get(&typeid)?;
+        let channel_id = *self.channel_type_ids.get(&typeid)?;
         Some((channel_id, self.get_from_id(channel_id).unwrap()))
     }
 
     /// Returns a reference to the channel configuration.
     pub fn get_from_id(&self, id: ChannelId) -> Option<&ChannelData> {
-        self.channel_data_map.get(&id)
+        self.channel_data.get(Into::<usize>::into(id))
     }
 
     /// Returns whether the channel exists.
     pub fn channel_exists(&self, id: ChannelId) -> bool {
-        self.channel_data_map.contains_key(&id)
+        self.channel_data.len() >= Into::<usize>::into(id)
     }
 
     /// Returns how many channels currently exist.
@@ -121,8 +121,8 @@ impl Default for ChannelRegistry {
     fn default() -> Self {
         Self {
             channel_count: 0,
-            channel_type_map: BTreeMap::new(),
-            channel_data_map: BTreeMap::new(),
+            channel_type_ids: BTreeMap::new(),
+            channel_data: vec![],
         }
     }
 }

@@ -82,6 +82,12 @@ impl From<ChannelId> for u32 {
     }
 }
 
+impl From<ChannelId> for usize {
+    fn from(value: ChannelId) -> Self {
+        value.0 as usize
+    }
+}
+
 impl From<ChannelId> for [u8;3] {
     fn from(value: ChannelId) -> Self {
         let value = value.0.to_le_bytes();
