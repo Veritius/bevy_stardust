@@ -13,47 +13,47 @@ pub(super) fn pack_strings<'a>(
     peer_data: &mut UdpConnection,
     strings: impl Iterator<Item = (ChannelId, Entity, &'a OctetString)>,
 ) -> Vec<Vec<u8>> {
-    // Bins for packing
-    let mut bins: Vec<Vec<u8>> = vec![];
+    // Reliable and unreliable bins
+    let mut reliable_bins: Vec<Vec<u8>> = vec![];
+    let mut unreliable_bins: Vec<Vec<u8>> = vec![];
 
-    // Scratch space
-    let mut scratch_buf = [0u8; 1450];
-    let mut scratch_len: usize = 0;
-
-    // Pack all strings into packets
+    // Iterate all strings and pack them
     for (channel, _, string) in strings {
-        // Check the string isn't too long since fragmenting isn't supported
-        if string.len() > (MAXIMUM_PACKET_LENGTH - 20) {
-            panic!("A sent octet string was too long ({} bytes). Fragmenting isn't supported right now, so it couldn't be sent.", string.len());
-        }
-
-        // Find or create a bin that can store our string
-        // Uses the best-fit bin packing algorithm
-        // https://en.wikipedia.org/wiki/Best-fit_bin_packing
-        let bin = 'bins: {
-            // Try to find the most suitable bin (least space remaining)
-            let mut most_suitable: (usize, usize) = (usize::MAX, MAXIMUM_PACKET_LENGTH);
-            for (index, bin) in bins.iter().enumerate() {
-                let bin_space = bin.capacity() - bin.len();
-                if scratch_len > bin_space { continue } // Check this bin has space for our message
-                if bin_space < most_suitable.1 { continue } // Check if this bin has less space
-                most_suitable = (index, bin_space);
-            }
-
-            // If none of the bins were suitable, create a new one and break
-            if most_suitable.0 == usize::MAX {
-                bins.push(Vec::with_capacity(MAXIMUM_PACKET_LENGTH));
-                let ind = bins.len();
-                break 'bins &mut bins[ind];
-            }
-
-            // Break with the most suitable bin
-            break 'bins &mut bins[most_suitable.0];
-        };
-
-        todo!();
+        todo!()
     }
 
-    // Return our packed bins
-    bins
+    // Return both bins
+    reliable_bins.drain(..)
+    .chain(unreliable_bins.drain(..))
+    .collect::<Vec<_>>()
+}
+
+fn pack_best_fit(
+    new_bin: impl Fn() -> Vec<u8>,
+    data: &[u8],
+    bins: &mut Vec<Vec<u8>>
+) {
+    let length = data.len();
+
+    // Pick the most suitable bin
+    let mut most_suitable = (usize::MAX, usize::MAX);
+    for (index, bin) in bins.iter().enumerate() {
+        let remaining_space = bin.capacity().saturating_sub(bin.len());
+        if remaining_space < length { continue }
+        if remaining_space > most_suitable.1 { continue }
+        most_suitable = (index, remaining_space)
+    }
+
+    // Get or create the bin
+    let bin = match most_suitable.0 {
+        usize::MAX => {
+            bins.push(new_bin());
+            let len = bins.len();
+            &mut bins[len]
+        },
+        _ => &mut bins[most_suitable.0]
+    };
+
+    // Write to the bin
+    todo!()
 }
