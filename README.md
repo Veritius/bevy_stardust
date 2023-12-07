@@ -36,7 +36,7 @@ app.register_channel::<MyChannel>(ChannelConfiguration {
     reliable: true,
     ordered: false,
     fragmented: false,
-    expected_string_size: 10..100,
+    string_size: 10..=100,
 });
 
 // Read and write messages in game systems

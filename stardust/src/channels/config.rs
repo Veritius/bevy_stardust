@@ -2,7 +2,7 @@
 //! 
 //! All settings are not definitive, but hints to transport layers as how to treat channels.
 
-use std::ops::Range;
+use std::ops::RangeInclusive;
 
 /// Configuration for a channel.
 #[derive(Debug, Hash)]
@@ -16,5 +16,5 @@ pub struct ChannelConfiguration {
 
     /// How long an octet string sent over this channel will be, used for optimisations.
     /// Octet strings with lengths outside this range may cause panics in transport layers.
-    pub expected_string_size: Range<u32>,
+    pub string_size: RangeInclusive<u32>,
 }
