@@ -1,7 +1,7 @@
 use std::{sync::Mutex, collections::BTreeMap};
 use bevy::prelude::*;
 use bevy_stardust::prelude::*;
-use crate::{MAXIMUM_PACKET_LENGTH, established::UdpConnection, ports::BoundSocketManager, policy::BlockingPolicy};
+use crate::{MAXIMUM_TRANSPORT_UNITS, established::UdpConnection, ports::BoundSocketManager, policy::BlockingPolicy};
 
 pub(crate) fn blocking_receive_packets_system(
     registry: Res<ChannelRegistry>,
@@ -36,7 +36,7 @@ pub(crate) fn blocking_receive_packets_system(
                 .collect::<BTreeMap<_, _>>();
 
                 // Read all packets
-                let mut buffer = [0u8; MAXIMUM_PACKET_LENGTH];
+                let mut buffer = [0u8; MAXIMUM_TRANSPORT_UNITS];
                 loop {
                     // Read a packet from the socket
                     let (len, origin) = match socket.socket.recv_from(&mut buffer) {

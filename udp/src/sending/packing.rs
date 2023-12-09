@@ -1,6 +1,6 @@
 use bevy::prelude::Entity;
 use bevy_stardust::prelude::*;
-use crate::{MAXIMUM_PACKET_LENGTH, established::UdpConnection};
+use crate::{MAXIMUM_TRANSPORT_UNITS, established::UdpConnection};
 
 pub(super) struct PackingConfig {
     pub use_short_ids: bool,
@@ -18,7 +18,7 @@ pub(super) fn pack_strings<'a>(
     let mut unreliable_bins: Vec<Vec<u8>> = vec![];
 
     // Working space
-    let mut scratch = [0u8; MAXIMUM_PACKET_LENGTH];
+    let mut scratch = [0u8; MAXIMUM_TRANSPORT_UNITS];
     let mut scratch_len: usize = 0;
 
     // Iterate all strings and pack them
@@ -38,10 +38,10 @@ pub(super) fn pack_strings<'a>(
         // Push to the set
         match data.reliable {
             true => pack_best_fit(|| {
-                Vec::with_capacity(MAXIMUM_PACKET_LENGTH)
+                Vec::with_capacity(MAXIMUM_TRANSPORT_UNITS)
             }, &scratch[..scratch_len], &mut reliable_bins),
             false => pack_best_fit(|| {
-                Vec::with_capacity(MAXIMUM_PACKET_LENGTH)
+                Vec::with_capacity(MAXIMUM_TRANSPORT_UNITS)
             }, &scratch[..scratch_len], &mut unreliable_bins),
         }
 

@@ -1,10 +1,10 @@
-use std::collections::BTreeMap;
+use crate::MAXIMUM_TRANSPORT_UNITS;
 
 pub(crate) struct ReliabilityData {
     local: u16,
     remote: u16,
     bitfield: u32,
-    unacked: BTreeMap<u16, Box<[u8]>>,
+    unacked: [[u8; MAXIMUM_TRANSPORT_UNITS]; 33],
 }
 
 impl ReliabilityData {
