@@ -12,7 +12,7 @@
 //!     let mut app = App::new();
 //! 
 //!     app.add_channel::<MyChannel>(ChannelConfiguration {
-//!         reliable: ChannelReliability::SemiReliable,
+//!         reliable: true,
 //!         ordered: false,
 //!         fragment: false,
 //!         string_size: 0..16,
