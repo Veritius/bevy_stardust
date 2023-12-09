@@ -18,11 +18,6 @@ The initial handshake packet sent from a peer is prefixed both a unique number i
 
 However, the way that denied connections in the handshake are reported stays the same. This is because when a client is rejected, they should be informed of why. To account for future changes, the amount of possible denial reasons is `2^16`.
 
-### Game protocol identifiers
-Many implementations of networking code prefix any and all packets with a 'protocol' identifier. This is used to differentiate different games using the same client. Notable examples are [Glenn Fiedler's article][fiedler-virtual-connections], as well as the [Netcode standard](netcode-standard).
-
-Instead of sending this data with every message, the Stardust UDP transport layer sends this during the handshake.
-
 ### Example handshake
 <details>
 <summary>Click to view</summary>
