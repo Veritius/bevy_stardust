@@ -12,11 +12,10 @@
 //!     let mut app = App::new();
 //! 
 //!     app.add_channel::<MyChannel>(ChannelConfiguration {
-//!         reliable: ChannelReliability::Reliable,
-//!         ordering: ChannelOrdering::Ordered,
-//!         fragmentation: ChannelFragmentation::Disabled,
-//!         compression: ChannelCompression::Disabled,
-//!         validation: MessageValidation::Disabled,
+//!         reliable: ChannelReliability::SemiReliable,
+//!         ordered: false,
+//!         fragment: false,
+//!         string_size: 0..16,
 //!     });
 //! }
 //! ```

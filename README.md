@@ -33,7 +33,7 @@ struct MyChannel;
 
 // Add it to your app
 app.register_channel::<MyChannel>(ChannelConfiguration {
-    reliable: true,
+    reliable: ChannelReliability::SemiReliabile,
     ordered: false,
     fragmented: false,
     string_size: 10..=100,
