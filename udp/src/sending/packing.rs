@@ -27,7 +27,7 @@ pub(super) fn pack_strings<'a>(
         let data = channels.get_from_id(channel).unwrap();
 
         // Write data
-        scratch[0..3].clone_from_slice(&Into::<[u8;3]>::into(channel));
+        scratch[0..4].clone_from_slice(&Into::<[u8;4]>::into(channel));
         scratch_len += 3;
 
         // Ordering data

@@ -3,7 +3,7 @@
 use std::{collections::BTreeMap, any::TypeId};
 use bevy::prelude::*;
 use crate::prelude::ChannelConfiguration;
-use super::id::{Channel, ChannelId, CHANNEL_ID_LIMIT};
+use super::id::{Channel, ChannelId};
 
 /// Channel information generated when `add_channel` is run.
 pub struct ChannelData {
@@ -53,8 +53,8 @@ impl ChannelRegistry {
         entity: Entity,
     ) -> ChannelId {
         // Check we don't overrun the channel ID
-        if self.channel_count >= CHANNEL_ID_LIMIT {
-            panic!("Exceeded channel limit of {}", CHANNEL_ID_LIMIT);
+        if self.channel_count == u32::MAX {
+            panic!("Exceeded channel limit of {}", u32::MAX);
         }
         
         // Check the channel doesn't already exist
