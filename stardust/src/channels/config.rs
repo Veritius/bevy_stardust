@@ -8,7 +8,7 @@ use std::ops::RangeInclusive;
 #[derive(Debug, Hash)]
 pub struct ChannelConfiguration {
     /// See [ChannelReliability]'s documentation.
-    pub reliable: bool,
+    pub reliable: ChannelReliability,
 
     /// Whether messages should be read in the order they were sent.
     /// With reliability set on, this can cause delays in reading messages on the channel.
