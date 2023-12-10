@@ -1,14 +1,16 @@
 //! Assembling octet strings into packets.
 
-use bevy::prelude::*;
 use bevy_stardust::prelude::*;
-
 use crate::prelude::*;
 
-fn assemble_packet<'a>(
+pub(super) fn assemble_packets<'a>(
     channels: &ChannelRegistry,
     peer_data: &mut UdpConnection,
-    strings: impl Iterator<Item = (ChannelId, Entity, &'a OctetString)>,
-) {
+    strings: impl Iterator<Item = (ChannelId, &'a OctetString)>,
+) -> Box<[Box<[u8]>]> {
+    for (channel, string) in strings {
+        let channel_data = channels.get_from_id(channel).unwrap();
+    }
 
+    todo!()
 }

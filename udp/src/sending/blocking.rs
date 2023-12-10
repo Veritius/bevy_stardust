@@ -2,6 +2,7 @@ use std::{sync::Mutex, collections::BTreeMap};
 use bevy::prelude::*;
 use bevy_stardust::{prelude::*, connections::groups::NetworkGroup};
 use crate::{prelude::*, ports::BoundSocketManager};
+use super::assembler::*;
 
 pub(crate) fn blocking_send_packets_system(
     registry: Res<ChannelRegistry>,
@@ -23,7 +24,14 @@ pub(crate) fn blocking_send_packets_system(
 
                 let strings = outgoing
                 .iter_all()
-                .filter(|(_, entity, _)| *entity == *id);
+                .filter(|(_, entity, _)| *entity == *id)
+                .map(|(a, _, b)| (a,b));
+
+                let packets = assemble_packets(
+                    &registry,
+                    &mut peer_data.1,
+                    strings
+                );
 
                 todo!();
             })
