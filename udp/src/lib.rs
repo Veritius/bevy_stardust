@@ -12,6 +12,7 @@ mod ports;
 mod receiving;
 mod reliability;
 mod sending;
+mod utils;
 
 /// Information about the packet at the header of the packet.
 const PACKET_HEADER_SIZE: usize = 3;
