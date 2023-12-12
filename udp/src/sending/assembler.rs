@@ -16,12 +16,10 @@ pub(super) fn assemble_packets<'a>(
 
     // Scratch space for working
     let mut scratch = [0u8; 1450];
-    let mut length: usize = 0;
 
     // Iterate over all strings and pack them
     for (channel, string) in strings {
-        // Reset working space
-        length = 0;
+        let mut length: usize = 0;
 
         #[inline]
         fn write_scratch(
