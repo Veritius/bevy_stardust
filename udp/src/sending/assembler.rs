@@ -1,7 +1,7 @@
 //! Assembling octet strings into packets.
 
 use bevy_stardust::prelude::*;
-use crate::{prelude::*, utils::bytes_for_channel_ids};
+use crate::{prelude::*, utils::bytes_for_channel_ids, reliability::ReliabilityData};
 
 pub(super) fn assemble_packets<'a>(
     channels: &ChannelRegistry,
@@ -61,12 +61,13 @@ pub(super) fn assemble_packets<'a>(
         // Reliable messages have a different process
         match channel_data.reliable {
             false => unreliable(
-                peer_data,
+                &mut unreliable_bins,
                 &scratch[..length],
             ),
             true => reliable(
-                peer_data,
+                &mut reliable_bins,
                 &scratch[..length],
+                &mut peer_data.reliability,
             ),
         }
     }
@@ -75,15 +76,16 @@ pub(super) fn assemble_packets<'a>(
 }
 
 fn unreliable(
-    peer_data: &mut UdpConnection,
+    bins: &mut Vec<Vec<u8>>,
     buffer: &[u8],
 ) {
     todo!()
 }
 
 fn reliable(
-    peer_data: &mut UdpConnection,
+    bins: &mut Vec<Vec<u8>>,
     buffer: &[u8],
+    peer_data: &mut ReliabilityData,
 ) {
     todo!()
 }
