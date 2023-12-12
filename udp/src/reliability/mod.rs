@@ -7,7 +7,11 @@ pub(crate) struct ReliabilityData {
 }
 
 impl ReliabilityData {
-
+    pub fn new(pipes: u8) -> Self {
+        Self {
+            pipes: Pipes::new(pipes),
+        }
+    }
 }
 
 #[inline]
