@@ -1,4 +1,4 @@
-/// Returns how many bytes are needed to 
+/// Returns how many bytes are needed to store all possible registered channel IDs.
 #[inline]
 pub(crate) fn bytes_for_channel_ids(val: u32) -> u8 {
     match val {
