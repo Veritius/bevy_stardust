@@ -1,7 +1,6 @@
 use crate::MAXIMUM_TRANSPORT_UNITS;
 
 pub(super) struct Pipes {
-    count: usize,
     pipes: Vec<Pipe>,
 }
 
