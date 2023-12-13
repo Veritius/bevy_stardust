@@ -1,9 +1,8 @@
 //! Assembling octet strings into packets.
 
 use std::ops::IndexMut;
-use bevy::prelude::*;
 use bevy_stardust::prelude::*;
-use crate::{prelude::*, utils::bytes_for_channel_ids, reliability::{ReliabilityData, pipe_for_channel}, MAXIMUM_TRANSPORT_UNITS};
+use crate::{prelude::*, utils::bytes_for_channel_ids, reliability::pipe_for_channel, MAXIMUM_TRANSPORT_UNITS};
 
 use super::packing::best_fit;
 
@@ -17,9 +16,9 @@ pub(super) fn assemble_packets<'a>(
     let channel_id_bytes = bytes_for_channel_ids(channel_count);
 
     // Bins for packing octet strings
-    let mut unreliable_bins: Vec<Vec<u8>> = Vec::with_capacity(1);
-    let mut reliable_bins: Vec<Vec<ReliablePacket>> = Vec::with_capacity(config.reliable_pipes as usize);
-    reliable_bins.fill_with(|| Vec::default());
+    let mut unreliable_bins: Vec<PacketData<()>> = Vec::with_capacity(1);
+    let mut reliable_pipe_bins: Vec<Vec<PacketData<(u16, u16, u32)>>> = Vec::with_capacity(config.reliable_pipes as usize);
+    reliable_pipe_bins.fill_with(|| Vec::default());
 
     // Scratch space for working
     let mut scratch = [0u8; 1450];
@@ -64,19 +63,17 @@ pub(super) fn assemble_packets<'a>(
         write_scratch(&mut scratch, &mut length, string.as_slice());
 
         // Reliable messages have a different process
+        let buffer = &scratch[..length];
         match channel_data.reliable {
-            false => unreliable(
+            false => pack_bytes(
                 &mut unreliable_bins,
-                &scratch[..length],
+                buffer,
             ),
             true => {
                 // Pipe count check
                 if config.reliable_pipes == 0 {
                     #[cfg(not(debug_assertions))] {
-                        unreliable(
-                            &mut unreliable_bins,
-                            &scratch[..length],
-                        );
+                        pack_bytes(&mut unreliable_bins, buffer);
                         error!("A reliable message was queued for sending, but the amount of reliable pipes is zero. The message has been sent unreliably and may be lost.");
                         continue
                     }
@@ -85,13 +82,12 @@ pub(super) fn assemble_packets<'a>(
                     panic!("A reliable message was queued for sending, but the amount of reliable pipes is zero.");
                 }
                 
-                let bin = reliable_bins.index_mut(
+                let pipe_bins = reliable_pipe_bins.index_mut(
                     pipe_for_channel(config.reliable_pipes, channel_count, channel.into()) as usize);
 
-                reliable(
-                    bin,
-                    &scratch[..length],
-                    &mut peer_data.reliability,
+                pack_bytes(
+                    pipe_bins,
+                    buffer,
                 )
             },
         }
@@ -100,16 +96,23 @@ pub(super) fn assemble_packets<'a>(
     todo!()
 }
 
-fn unreliable(
-    bins: &mut Vec<Vec<u8>>,
+pub(super) struct PacketData<H: Default> {
+    pub header: H,
+    pub data: Vec<u8>,
+}
+
+fn pack_bytes<H: Default>(
+    bins: &mut Vec<PacketData<H>>,
     buffer: &[u8],
 ) {
-    let bin = best_fit(bins, buffer.len());
+    let header_size = std::mem::size_of::<H>();
+    let bin = best_fit(bins.iter().map(|f| (f.data.capacity() - header_size, f.data.len())), buffer.len());
     let bin = match bin {
         usize::MAX => {
-            let mut vec = Vec::with_capacity(MAXIMUM_TRANSPORT_UNITS);
-            vec.push(0); // unreliable 'pipe' has id zero
-            bins.push(vec);
+            bins.push(PacketData {
+                header: H::default(),
+                data: Vec::with_capacity(MAXIMUM_TRANSPORT_UNITS - header_size),
+            });
             bins.last_mut().unwrap()
         },
         _ => {
@@ -118,21 +121,6 @@ fn unreliable(
     };
 
     for v in buffer {
-        bin.push(*v);
+        bin.data.push(*v);
     }
-}
-
-pub(super) struct ReliablePacket {
-    pub seq: u16,
-    pub ack: u16,
-    pub ack_bits: u32,
-    pub data: Vec<u8>,
-}
-
-fn reliable(
-    bins: &mut Vec<ReliablePacket>,
-    buffer: &[u8],
-    peer_data: &mut ReliabilityData,
-) {
-    todo!()
 }

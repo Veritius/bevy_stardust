@@ -1,11 +1,11 @@
 pub(super) fn best_fit(
-    bins: &Vec<Vec<u8>>,
+    bins: impl Iterator<Item = (usize, usize)>,
     length: usize,
 ) -> usize {
     // Pick the most suitable bin
     let mut most_suitable = (usize::MAX, usize::MAX);
-    for (index, bin) in bins.iter().enumerate() {
-        let remaining_space = bin.capacity().saturating_sub(bin.len());
+    for (index, bin) in bins.enumerate() {
+        let remaining_space = bin.0.saturating_sub(bin.1);
         if remaining_space < length { continue }
         if remaining_space > most_suitable.1 { continue }
         most_suitable = (index, remaining_space)
