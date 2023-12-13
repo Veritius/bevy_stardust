@@ -85,7 +85,7 @@ pub(super) fn assemble_packets<'a>(
                     panic!("A reliable message was queued for sending, but the amount of reliable pipes is zero.");
                 }
                 
-                let bin = &mut reliable_bins.index_mut(
+                let bin = reliable_bins.index_mut(
                     pipe_for_channel(config.reliable_pipes, channel_count, channel.into()) as usize);
 
                 reliable(
