@@ -8,12 +8,13 @@ use crate::{prelude::*, utils::bytes_for_channel_ids, reliability::ReliabilityDa
 use super::packing::best_fit;
 
 pub(super) fn assemble_packets<'a>(
-    config: &PluginConfig,
+    config: &UdpPluginConfig,
     channels: &ChannelRegistry,
     peer_data: &mut UdpConnection,
     strings: impl Iterator<Item = (ChannelId, &'a OctetString)>,
 ) -> Box<[Box<[u8]>]> {
-    let channel_id_bytes = bytes_for_channel_ids(channels.channel_count());
+    let channel_count = channels.channel_count();
+    let channel_id_bytes = bytes_for_channel_ids(channel_count);
 
     // Bins for packing octet strings
     let mut unreliable_bins: Vec<Vec<u8>> = Vec::with_capacity(1);
@@ -70,6 +71,7 @@ pub(super) fn assemble_packets<'a>(
             ),
             true => reliable(
                 &mut reliable_bins,
+                channel_count,
                 &scratch[..length],
                 &mut peer_data.reliability,
             ),
@@ -110,6 +112,7 @@ pub(super) struct ReliablePacket {
 
 fn reliable(
     bins: &mut Vec<Vec<ReliablePacket>>,
+    channels: u32,
     buffer: &[u8],
     peer_data: &mut ReliabilityData,
 ) {

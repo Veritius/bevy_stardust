@@ -5,7 +5,7 @@ use crate::{prelude::*, ports::BoundSocketManager};
 use super::assembler::*;
 
 pub(crate) fn blocking_send_packets_system(
-    config: Res<PluginConfig>,
+    config: Res<UdpPluginConfig>,
     registry: Res<ChannelRegistry>,
     sockets: Res<BoundSocketManager>,
     groups: Query<&NetworkGroup>,
