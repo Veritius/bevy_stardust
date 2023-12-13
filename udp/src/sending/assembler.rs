@@ -1,7 +1,11 @@
 //! Assembling octet strings into packets.
 
+use std::ops::IndexMut;
+
 use bevy_stardust::prelude::*;
-use crate::{prelude::*, utils::bytes_for_channel_ids, reliability::ReliabilityData};
+use crate::{prelude::*, utils::bytes_for_channel_ids, reliability::ReliabilityData, MAXIMUM_TRANSPORT_UNITS};
+
+use super::packing::best_fit;
 
 pub(super) fn assemble_packets<'a>(
     config: &PluginConfig,
@@ -79,7 +83,22 @@ fn unreliable(
     bins: &mut Vec<Vec<u8>>,
     buffer: &[u8],
 ) {
-    todo!()
+    let bin = best_fit(bins, buffer.len());
+    let bin = match bin {
+        usize::MAX => {
+            let mut vec = Vec::with_capacity(MAXIMUM_TRANSPORT_UNITS);
+            vec.push(0); // unreliable 'pipe' has id zero
+            bins.push(vec);
+            bins.last_mut().unwrap()
+        },
+        _ => {
+            bins.index_mut(bin)
+        },
+    };
+
+    for v in buffer {
+        bin.push(*v);
+    }
 }
 
 pub(super) struct ReliablePacket {

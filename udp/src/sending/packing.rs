@@ -1,6 +1,6 @@
-fn best_fit(
+pub(super) fn best_fit(
+    bins: &Vec<Vec<u8>>,
     length: usize,
-    bins: &Vec<Vec<u8>>
 ) -> usize {
     // Pick the most suitable bin
     let mut most_suitable = (usize::MAX, usize::MAX);
