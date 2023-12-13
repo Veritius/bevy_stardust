@@ -1,9 +1,9 @@
 //! Assembling octet strings into packets.
 
 use std::ops::IndexMut;
-
+use bevy::prelude::*;
 use bevy_stardust::prelude::*;
-use crate::{prelude::*, utils::bytes_for_channel_ids, reliability::ReliabilityData, MAXIMUM_TRANSPORT_UNITS};
+use crate::{prelude::*, utils::bytes_for_channel_ids, reliability::{ReliabilityData, pipe_for_channel}, MAXIMUM_TRANSPORT_UNITS};
 
 use super::packing::best_fit;
 
@@ -69,12 +69,31 @@ pub(super) fn assemble_packets<'a>(
                 &mut unreliable_bins,
                 &scratch[..length],
             ),
-            true => reliable(
-                &mut reliable_bins,
-                channel_count,
-                &scratch[..length],
-                &mut peer_data.reliability,
-            ),
+            true => {
+                // Pipe count check
+                if config.reliable_pipes == 0 {
+                    #[cfg(not(debug_assertions))] {
+                        unreliable(
+                            &mut unreliable_bins,
+                            &scratch[..length],
+                        );
+                        error!("A reliable message was queued for sending, but the amount of reliable pipes is zero. The message has been sent unreliably and may be lost.");
+                        continue
+                    }
+
+                    #[cfg(debug_assertions)]
+                    panic!("A reliable message was queued for sending, but the amount of reliable pipes is zero.");
+                }
+                
+                let bin = &mut reliable_bins.index_mut(
+                    pipe_for_channel(config.reliable_pipes, channel_count, channel.into()) as usize);
+
+                reliable(
+                    bin,
+                    &scratch[..length],
+                    &mut peer_data.reliability,
+                )
+            },
         }
     }
 
@@ -111,8 +130,7 @@ pub(super) struct ReliablePacket {
 }
 
 fn reliable(
-    bins: &mut Vec<Vec<ReliablePacket>>,
-    channels: u32,
+    bins: &mut Vec<ReliablePacket>,
     buffer: &[u8],
     peer_data: &mut ReliabilityData,
 ) {
