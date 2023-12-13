@@ -5,6 +5,7 @@ use crate::{prelude::*, ports::BoundSocketManager};
 use super::assembler::*;
 
 pub(crate) fn blocking_send_packets_system(
+    config: Res<PluginConfig>,
     registry: Res<ChannelRegistry>,
     sockets: Res<BoundSocketManager>,
     groups: Query<&NetworkGroup>,
@@ -28,6 +29,7 @@ pub(crate) fn blocking_send_packets_system(
                 .map(|(a, _, b)| (a,b));
 
                 let packets = assemble_packets(
+                    &config,
                     &registry,
                     &mut peer_data.1,
                     strings

@@ -28,6 +28,10 @@ impl Plugin for UdpTransportPlugin {
     fn build(&self, app: &mut App) {
         assert_ne!(self.reliable_pipes, u8::MAX, "The number of reliable pipes has a maximum of 254, not 255.");
 
+        app.insert_resource(PluginConfig {
+            reliable_pipes: self.reliable_pipes,
+        });
+
         app.add_systems(PreUpdate, blocking_receive_packets_system
             .before(NetworkRead::Read)
             .in_set(NetworkRead::Receive));
@@ -36,4 +40,9 @@ impl Plugin for UdpTransportPlugin {
             .before(NetworkWrite::Clear)
             .in_set(NetworkWrite::Send));
     }
+}
+
+#[derive(Resource)]
+pub(crate) struct PluginConfig {
+    pub reliable_pipes: u8,
 }

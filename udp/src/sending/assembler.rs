@@ -4,6 +4,7 @@ use bevy_stardust::prelude::*;
 use crate::{prelude::*, utils::bytes_for_channel_ids, reliability::ReliabilityData};
 
 pub(super) fn assemble_packets<'a>(
+    config: &PluginConfig,
     channels: &ChannelRegistry,
     peer_data: &mut UdpConnection,
     strings: impl Iterator<Item = (ChannelId, &'a OctetString)>,
@@ -12,7 +13,8 @@ pub(super) fn assemble_packets<'a>(
 
     // Bins for packing octet strings
     let mut unreliable_bins: Vec<Vec<u8>> = Vec::with_capacity(1);
-    let mut reliable_bins: Vec<Vec<u8>> = Vec::with_capacity(1);
+    let mut reliable_bins: Vec<Vec<ReliablePacket>> = Vec::with_capacity(config.reliable_pipes as usize);
+    reliable_bins.fill_with(|| Vec::default());
 
     // Scratch space for working
     let mut scratch = [0u8; 1450];
@@ -80,8 +82,15 @@ fn unreliable(
     todo!()
 }
 
+pub(super) struct ReliablePacket {
+    pub seq: u16,
+    pub ack: u16,
+    pub ack_bits: u32,
+    pub data: Vec<u8>,
+}
+
 fn reliable(
-    bins: &mut Vec<Vec<u8>>,
+    bins: &mut Vec<Vec<ReliablePacket>>,
     buffer: &[u8],
     peer_data: &mut ReliabilityData,
 ) {
