@@ -16,8 +16,8 @@ pub(super) fn assemble_packets<'a>(
     let channel_id_bytes = bytes_for_channel_ids(channel_count);
 
     // Bins for packing octet strings
-    let mut unreliable_bins: Vec<PacketData<()>> = Vec::with_capacity(1);
-    let mut reliable_pipe_bins: Vec<Vec<PacketData<(u16, u16, u32)>>> = Vec::with_capacity(config.reliable_pipes as usize);
+    let mut unreliable_bins: Vec<Packet> = Vec::with_capacity(1);
+    let mut reliable_pipe_bins: Vec<Vec<Packet<(u16, u16, u32)>>> = Vec::with_capacity(config.reliable_pipes as usize);
     reliable_pipe_bins.fill_with(|| Vec::default());
 
     // Scratch space for working
@@ -96,20 +96,20 @@ pub(super) fn assemble_packets<'a>(
     todo!()
 }
 
-pub(super) struct PacketData<H: Default> {
+pub(super) struct Packet<H: Default = ()> {
     pub header: H,
     pub data: Vec<u8>,
 }
 
 fn pack_bytes<H: Default>(
-    bins: &mut Vec<PacketData<H>>,
+    bins: &mut Vec<Packet<H>>,
     buffer: &[u8],
 ) {
     let header_size = std::mem::size_of::<H>();
     let bin = best_fit(bins.iter().map(|f| (f.data.capacity() - header_size, f.data.len())), buffer.len());
     let bin = match bin {
         usize::MAX => {
-            bins.push(PacketData {
+            bins.push(Packet {
                 header: H::default(),
                 data: Vec::with_capacity(MAXIMUM_TRANSPORT_UNITS - header_size),
             });
