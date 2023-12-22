@@ -1,16 +1,35 @@
 mod pipes;
 
-use self::pipes::Pipes;
+use std::ops::IndexMut;
+use self::pipes::Pipe;
 
 pub(crate) struct ReliabilityData {
-    pipes: Pipes,
+    pipes: Vec<Pipe>,
 }
 
 impl ReliabilityData {
     pub fn new(pipes: u8) -> Self {
+        assert_ne!(pipes, u8::MIN);
+        assert_ne!(pipes, u8::MAX);
+
+        let mut pipes = Vec::with_capacity(pipes as usize);
+        pipes.fill_with(|| Pipe::new());
+
         Self {
-            pipes: Pipes::new(pipes),
+            pipes,
         }
+    }
+
+    pub fn store(
+        &mut self,
+        pipe: u8,
+        seq: u16,
+        ack: u16,
+        bits: u32,
+        message: &[u8]
+    ) {
+        let mut pipe = self.pipes.index_mut(pipe as usize);
+        todo!()
     }
 }
 
