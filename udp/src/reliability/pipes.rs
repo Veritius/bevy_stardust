@@ -21,6 +21,17 @@ impl Pipes {
             pipes,
         }
     }
+
+    pub fn store(
+        &mut self,
+        pipe: u8,
+        id: u16,
+        ack: u16,
+        bits: u32,
+        message: &[u8],
+    ) {
+
+    }
 }
 
 pub(super) struct Pipe {
