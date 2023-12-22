@@ -1,4 +1,5 @@
 use bevy::{prelude::*, ecs::system::SystemParam};
+use bytes::Bytes;
 use crate::prelude::*;
 use super::{id::ChannelMarker, CHANNEL_ENTITY_DELETED_MESSAGE};
 
@@ -35,7 +36,7 @@ pub struct NetworkReader<'w, 's, C: Channel> {
 
 impl<'w, 's, C: Channel> NetworkReader<'w, 's, C> {
     /// Returns an iterator over all messages in this channel, including the sender's ID.
-    pub fn iter(&'w self) -> impl Iterator<Item = &'w (Entity, OctetString)> {
+    pub fn iter(&'w self) -> impl Iterator<Item = &'w (Entity, Bytes)> {
         self.component().queue.iter()
     }
 
@@ -60,12 +61,12 @@ pub struct NetworkIncomingWriter<'w, 's> {
 
 impl<'w, 's> NetworkIncomingWriter<'w, 's> {
     /// Queues a single octet string for reading by the `NetworkReader` corresponding to `channel`.
-    pub fn send(&mut self, channel: ChannelId, origin: Entity, string: impl Into<OctetString>) {
+    pub fn send(&mut self, channel: ChannelId, origin: Entity, string: Bytes) {
         self.get_mut(channel).queue.push((origin, string.into()));
     }
 
     /// Queues several messages for reading by the `NetworkReader` corresponding to `channel`.
-    pub fn send_many(&mut self, channel: ChannelId, messages: impl Iterator<Item = (Entity, impl Into<OctetString>)>) {
+    pub fn send_many(&mut self, channel: ChannelId, messages: impl Iterator<Item = (Entity, Bytes)>) {
         let mut data = self.get_mut(channel);
         for (origin, string) in messages {
             data.queue.push((origin, string.into()));
@@ -82,7 +83,7 @@ impl<'w, 's> NetworkIncomingWriter<'w, 's> {
 /// Incoming messages on this channel.
 #[derive(Default, Component)]
 pub(super) struct IncomingMessages {
-    pub queue: Vec<(Entity, OctetString)>,
+    pub queue: Vec<(Entity, Bytes)>,
 }
 
 pub(super) fn clear_incoming(

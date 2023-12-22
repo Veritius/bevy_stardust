@@ -1,4 +1,5 @@
 use bevy::{prelude::*, ecs::system::SystemParam};
+use bytes::Bytes;
 use crate::prelude::*;
 use super::{id::ChannelMarker, CHANNEL_ENTITY_DELETED_MESSAGE};
 
@@ -14,13 +15,13 @@ pub struct NetworkWriter<'w, 's, C: Channel> {
 
 impl<'w, 's, C: Channel> NetworkWriter<'w, 's, C> {
     /// Queues a single message for sending.
-    pub fn send(&mut self, to: Entity, octets: impl Into<OctetString>) {
+    pub fn send(&mut self, to: Entity, octets: Bytes) {
         let mut component = self.component_mut();
         Self::send_inner(component.as_mut(), (to, octets.into()))
     }
 
     /// Queues several messages for sending.
-    pub fn send_many(&mut self, messages: impl Iterator<Item = (Entity, OctetString)>) {
+    pub fn send_many(&mut self, messages: impl Iterator<Item = (Entity, Bytes)>) {
         let mut component = self.component_mut();
         for value in messages {
             Self::send_inner(component.as_mut(), value);
@@ -43,7 +44,7 @@ impl<'w, 's, C: Channel> NetworkWriter<'w, 's, C> {
     }
 
     #[inline]
-    fn send_inner(component: &mut OutgoingMessages, value: (Entity, OctetString)) {
+    fn send_inner(component: &mut OutgoingMessages, value: (Entity, Bytes)) {
         component.queue.push(value);
     }
 }
@@ -70,7 +71,7 @@ impl<'w, 's> NetworkOutgoingReader<'w, 's> {
     ///     }
     /// }
     /// ```
-    pub fn iter_channels(&self) -> impl Iterator<Item = (ChannelId, impl Iterator<Item = &(Entity, OctetString)>)> {
+    pub fn iter_channels(&self) -> impl Iterator<Item = (ChannelId, impl Iterator<Item = &(Entity, Bytes)>)> {
         self.registry.channel_ids()
         .map(|id| {
             let data = self.registry.get_from_id(id).unwrap();
@@ -89,7 +90,7 @@ impl<'w, 's> NetworkOutgoingReader<'w, 's> {
     ///     println!("{origin:?} sent {string:?} on channel {channel:?}");
     /// }
     /// ```
-    pub fn iter_all(&self) -> impl Iterator<Item = (ChannelId, Entity, &OctetString)> {
+    pub fn iter_all(&self) -> impl Iterator<Item = (ChannelId, Entity, &Bytes)> {
         self.iter_channels()
         .flat_map(|f| {
             f.1.map(move |x| (f.0, x.0, &x.1))
@@ -100,7 +101,7 @@ impl<'w, 's> NetworkOutgoingReader<'w, 's> {
 /// Queued outgoing messages on this channel.
 #[derive(Default, Component)]
 pub(super) struct OutgoingMessages {
-    pub queue: Vec<(Entity, OctetString)>,
+    pub queue: Vec<(Entity, Bytes)>,
 }
 
 pub(super) fn clear_outgoing(
