@@ -9,3 +9,4 @@ pub use crate::channels::incoming::*;
 pub use crate::channels::outgoing::*;
 pub use crate::channels::id::{Channel, ChannelId};
 pub use crate::channels::config::*;
+pub use bytes::Bytes;

@@ -7,5 +7,5 @@ pub(crate) struct OrderingData {
 
 pub(crate) struct ChannelOrderingData {
     reliable: bool,
-    queue: Vec<(u16, OctetString)>,
+    queue: Vec<(u16, Bytes)>,
 }

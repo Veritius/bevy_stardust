@@ -3,14 +3,13 @@
 use std::ops::IndexMut;
 use bevy_stardust::prelude::*;
 use crate::{prelude::*, utils::bytes_for_channel_ids, reliability::pipe_for_channel, MAXIMUM_TRANSPORT_UNITS};
-
 use super::packing::best_fit;
 
 pub(super) fn assemble_packets<'a>(
     config: &UdpPluginConfig,
     channels: &ChannelRegistry,
     peer_data: &mut UdpConnection,
-    strings: impl Iterator<Item = (ChannelId, &'a OctetString)>,
+    strings: impl Iterator<Item = (ChannelId, &'a Bytes)>,
 ) -> Box<[Box<[u8]>]> {
     let channel_count = channels.channel_count();
     let channel_id_bytes = bytes_for_channel_ids(channel_count);
@@ -60,7 +59,7 @@ pub(super) fn assemble_packets<'a>(
         write_scratch(&mut scratch, &mut length, &Into::<u16>::into(string.len() as u16).to_be_bytes());
 
         // Write the contents of the message
-        write_scratch(&mut scratch, &mut length, string.as_slice());
+        write_scratch(&mut scratch, &mut length, &string);
 
         // Reliable messages have a different process
         let buffer = &scratch[..length];
