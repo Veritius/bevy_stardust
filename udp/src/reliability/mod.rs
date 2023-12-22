@@ -1,7 +1,16 @@
 mod pipes;
 
+pub(crate) use pipes::pipe_for_channel;
+
 use std::ops::IndexMut;
 use self::pipes::Pipe;
+
+#[derive(Debug, Clone, Copy)]
+pub struct ReliableHeader {
+    pub seq: u16,
+    pub ack: u16,
+    pub bits: u32,
+}
 
 pub(crate) struct ReliabilityData {
     pipes: Vec<Pipe>,
@@ -20,21 +29,21 @@ impl ReliabilityData {
         }
     }
 
-    pub fn store(
+    pub fn send(
         &mut self,
         pipe: u8,
-        seq: u16,
-        ack: u16,
-        bits: u32,
+        data: &[u8],
+    ) -> ReliableHeader {
+        todo!()
+    }
+
+    pub fn receive(
+        &mut self,
+        pipe: u8,
+        header: &ReliableHeader,
         message: &[u8]
     ) {
         let mut pipe = self.pipes.index_mut(pipe as usize);
         todo!()
     }
-}
-
-#[inline]
-pub(crate) const fn pipe_for_channel(pipes: u8, channels: u32, channel: u32) -> u8 {
-    let channels_per_pipe = channels / pipes as u32;
-    (channel / channels_per_pipe) as u8
 }
