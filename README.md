@@ -27,7 +27,7 @@ Stardust is an opinionated networking crate built for Bevy, with a focus on exte
 
 ***
 
-```rs
+```rust
 use bevy::prelude::*;
 use bevy_stardust::prelude::*;
 
