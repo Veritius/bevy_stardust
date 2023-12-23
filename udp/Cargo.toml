@@ -1,0 +1,14 @@
+[package]
+name="bevy_stardust_udp"
+version="0.1.0"
+edition="2021"
+authors=["Veritius <veritiusgaming@gmail.com>"]
+readme="../README.md"
+license="MIT OR Apache-2.0"
+description="A transport layer for bevy_stardust that uses native UDP."
+repository="https://github.com/veritius/bevy_stardust/"
+keywords=["bevy", "gamedev", "networking"]
+
+[dependencies]
+bevy = { version = "0.12", default-features=false }
+bevy_stardust = { version = "0.2", path = "../stardust" }
