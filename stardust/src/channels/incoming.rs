@@ -7,6 +7,12 @@ use super::{id::ChannelMarker, CHANNEL_ENTITY_DELETED_MESSAGE};
 /// 
 /// ## Examples
 /// ```
+/// use bevy::prelude::*;
+/// use bevy_stardust::prelude::*;
+/// 
+/// #[derive(TypePath)]
+/// struct MyChannel;
+/// 
 /// // Simple example
 /// fn my_example_system(
 ///     reader: NetworkReader<MyChannel>,

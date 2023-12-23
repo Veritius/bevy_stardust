@@ -11,11 +11,13 @@
 //! fn main() {
 //!     let mut app = App::new();
 //! 
+//!     app.add_plugins((DefaultPlugins, StardustPlugin));
+//! 
 //!     app.add_channel::<MyChannel>(ChannelConfiguration {
 //!         reliable: true,
 //!         ordered: false,
-//!         fragment: false,
-//!         string_size: 0..16,
+//!         fragmented: false,
+//!         string_size: 0..=16,
 //!     });
 //! }
 //! ```

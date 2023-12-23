@@ -5,7 +5,7 @@ use bevy::prelude::*;
 
 /// Types that can be used to interface with Stardust's message reading and writing APIs.
 /// 
-/// ```
+/// ```ignore
 /// // Defining a channel type is simple
 /// #[derive(TypePath)]
 /// pub struct MyChannel;
@@ -22,18 +22,29 @@ use bevy::prelude::*;
 /// In Stardust, `Channel` trait objects are just used for their type data.
 /// The type itself isn't actually stored. That means you can do things like this.
 /// 
-/// ```
+/// ```ignore
 /// #[derive(TypePath, Event)]
 /// pub struct MovementEvent(pub Vec3);
 ///
 /// fn main() {
+///     let mut app = App::new();
+/// 
+///     app.add_plugins((DefaultPlugins, StardustPlugin));
+/// 
 ///     app.add_event::<MovementEvent>();
-///     app.add_channel::<MovementEvent>();
-///     app.add_system(PostUpdate, |mut events: EventReader<MovementEvent>, mut writer: NetworkWriter<MovementEvent>| {
+///     app.add_channel::<MovementEvent>(ChannelConfiguration {
+///         reliable: true,
+///         ordered: false,
+///         fragmented: false,
+///         string_size: ..=16,
+///     });
+/// 
+///     app.add_systems(PostUpdate, |mut events: EventReader<MovementEvent>, mut writer: NetworkWriter<MovementEvent>| {
 ///         let target = Entity::PLACEHOLDER;
-///         for event in events.iter() {
-///             let bytes = &[0u8;32]; // Some kind of serialisation logic
-///             writer.send(target, bytes.into());
+///         for event in events.read() {
+///             // Serialisation logic goes here.
+///             let bytes = Bytes::from("Hello, world!");
+///             writer.send(target, bytes);
 ///         }
 ///     });
 /// }

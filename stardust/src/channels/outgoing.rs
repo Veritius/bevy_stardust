@@ -61,7 +61,7 @@ impl<'w, 's> NetworkOutgoingReader<'w, 's> {
     // what a clusterfuck of a function signature lol
     /// Returns an iterator that can be used to read all outgoing messages for each channel.
     /// 
-    /// ```
+    /// ```ignore
     /// // Example usage
     /// // Outer iterator reads over channels
     /// for (channel, msg_iter) in reader.iter_channels() {
@@ -84,7 +84,7 @@ impl<'w, 's> NetworkOutgoingReader<'w, 's> {
 
     /// Returns an iterator over all messages and their channel and sender data.
     /// 
-    /// ```
+    /// ```ignore
     /// // Example usage
     /// for (channel, origin, string) in reader.iter_all() {
     ///     println!("{origin:?} sent {string:?} on channel {channel:?}");

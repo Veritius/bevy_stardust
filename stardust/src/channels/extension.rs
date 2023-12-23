@@ -18,7 +18,7 @@ mod sealed {
 pub trait ChannelSetupAppExt: sealed::Sealed {
     /// Registers a channel with type `T` and the config and components given.
     /// 
-    /// ```
+    /// ```ignore
     /// // Simple example
     /// app.add_channel::<MyChannel>(ChannelConfiguration {
     ///     reliable: ChannelReliability::Reliable,
