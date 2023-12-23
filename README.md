@@ -35,9 +35,18 @@ use bevy_stardust::prelude::*;
 #[derive(TypePath)]
 struct MyChannel;
 
+// Set up your app
 fn main() {
     let mut app = App::new();
     app.add_plugins((DefaultPlugins, StardustPlugin));
+
+    // Register the channel
+    app.add_channel::<MyChannel>(ChannelConfiguration {
+        reliable: true,
+        ordered: true,
+        fragmented: true,
+        string_size: 0..=5,
+    });
 }
 
 // A simple system to read and write messages
