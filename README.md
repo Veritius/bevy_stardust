@@ -23,8 +23,8 @@ Stardust is an opinionated networking crate built for Bevy, with a focus on exte
 ## Usage
 | Bevy | Stardust | UDP transport |
 | ---- | -------- | ------------- |
-| 0.12 | 0.2      | 0.1           |
-| 0.11 | 0.1      | N/A           |
+| 0.12 | 0.2      | N/A           |
+| 0.11 | 0.1      | Included      |
 
 ```rs
 // Define your channels
