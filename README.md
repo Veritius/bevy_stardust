@@ -6,6 +6,8 @@ Stardust is an opinionated networking crate built for Bevy, with a focus on exte
 [![Bevy version](https://img.shields.io/badge/bevy-0.12-blue?color=blue)](https://bevyengine.org/)
 [![Crates.io](https://img.shields.io/crates/v/bevy_stardust)](https://crates.io/crates/bevy_stardust)
 
+<p align="center"><font color="yellow">At the time of writing, no transport layers exist for Stardust. One is being worked on as a separate crate, but in the meantime I wouldn't use this for any projects.</font></p>
+
 ## Features
 - Tightly integrated with Bevy ECS - everything is part of the `World` and `App`, using the scheduler for parallel network code, even in your game systems.
 - Architecture agnostic - use client/server, peer to peer, mesh networks, you name it.
@@ -14,11 +16,8 @@ Stardust is an opinionated networking crate built for Bevy, with a focus on exte
 - Full, flexible support for network-enabled plugins.
 
 ### Planned features
-- Additional features for the UDP transport layer
-    - Fragmentation and compression
-    - Encryption and authentication
 - Replication and state synchronisation API
-- WebRTC and QUIC transport layers
+- UDP, QUIC, and WebRTC transport layers
 
 ## Usage
 | Bevy | Stardust | UDP transport |
@@ -26,20 +25,22 @@ Stardust is an opinionated networking crate built for Bevy, with a focus on exte
 | 0.12 | 0.2      | N/A           |
 | 0.11 | 0.1      | Included      |
 
+***
+
 ```rs
-// Define your channels
+use bevy::prelude::*;
+use bevy_stardust::prelude::*;
+
+// First, define a channel type
 #[derive(TypePath)]
 struct MyChannel;
 
-// Add it to your app
-app.register_channel::<MyChannel>(ChannelConfiguration {
-    reliable: true,
-    ordered: false,
-    fragmented: false,
-    string_size: 10..=100,
-});
+fn main() {
+    let mut app = App::new();
+    app.add_plugins((DefaultPlugins, StardustPlugin));
+}
 
-// Read and write messages in game systems
+// A simple system to read and write messages
 fn my_system(
     mut writer: ChannelWriter<MyChannel>,
     reader: ChannelReader<MyChannel>,
@@ -52,8 +53,3 @@ fn my_system(
     assert_eq!(std::str::from_utf8(&read).unwrap(), "hello");
 }
 ```
-
-Detailed information is available at [docs/usage.md](./docs/usage.md).
-
-## Performance
-**TODO: Performance comparisons**
