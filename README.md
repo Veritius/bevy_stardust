@@ -2,7 +2,7 @@
 Stardust is an opinionated networking crate built for Bevy, with a focus on extensibility and parallelism.
 <br></br>
 
-[![License](https://img.shields.io/github/license/veritius/bevy_stardust)](./)
+[![License](https://img.shields.io/badge/license-MIT_or_Apache_2.0-green?color=green)](./)
 [![Bevy version](https://img.shields.io/badge/bevy-0.12-blue?color=blue)](https://bevyengine.org/)
 [![Crates.io](https://img.shields.io/crates/v/bevy_stardust)](https://crates.io/crates/bevy_stardust)
 
