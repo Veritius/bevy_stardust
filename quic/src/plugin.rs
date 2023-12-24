@@ -1,5 +1,6 @@
 //! The QUIC transport layer plugin.
 
+use std::sync::Arc;
 use bevy::prelude::*;
 
 /// Adds a QUIC transport layer to the `App`.
@@ -9,34 +10,23 @@ pub struct QuicTransportPlugin {
     /// - More than one server at once
     /// - A client and a server at once
     /// 
-    /// Disabled by default. Most games shouldn't need this.
+    /// Most games do not need this functionality.
+    /// If in doubt, set to `false`.
     pub allow_multipurpose: bool,
 
-    /// Allow clients to migrate to new IP addresses.
-    /// When running a server, improves behavior for clients that move between different internet connections or suffer NAT rebinding.
-    /// Enabled by default.
-    /// 
-    /// See [Section 9 of IETF RFC 9000](https://www.ietf.org/rfc/rfc9000.html#name-connection-migration) for more information.
-    pub allow_migration: bool,
+    /// Overrides the default QUIC transport configuration.
+    /// This is for advanced users. If in doubt, set to `None`.
+    pub transport_config_override: Option<Arc<quinn_proto::TransportConfig>>,
 
-    /// Default maximum concurrent connections for a single endpoint.
-    /// Applies individually to each endpoint. Defaults to 100,000.
-    pub concurrent_connections: u32,
+    /// Root certificates for connection authentication.
+    /// If in doubt, you can use the `rustls-native-certs` or `webpki-roots` crates.
+    pub root_certificates: rustls::RootCertStore,
 
-    /// Maximum size of UDP payloads. This improves network performance at the cost of higher memory usage. 
-    /// This value must be at least 1200, and defaults to 1472, the largest MTU almost all connections will accept.
-    pub max_payload_size: u16,
-}
+    /// Chain of trust for connection authentication.
+    pub certificate_chain: Vec<rustls::Certificate>,
 
-impl Default for QuicTransportPlugin {
-    fn default() -> Self {
-        Self {
-            allow_multipurpose: false,
-            allow_migration: true,
-            concurrent_connections: 100_000,
-            max_payload_size: 1472,
-        }
-    }
+    /// Server private key for encrypted messaging.
+    pub private_key: rustls::PrivateKey,
 }
 
 impl Plugin for QuicTransportPlugin {
