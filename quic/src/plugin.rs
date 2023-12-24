@@ -20,12 +20,23 @@ pub struct QuicTransportPlugin {
     pub allow_migration: bool,
 
     /// Default maximum concurrent connections for a single endpoint.
-    /// Applies individually to each endpoint.
+    /// Applies individually to each endpoint. Defaults to 100,000.
     pub concurrent_connections: u32,
 
     /// Maximum size of UDP payloads. This improves network performance at the cost of higher memory usage. 
     /// This value must be at least 1200, and defaults to 1472, the largest MTU almost all connections will accept.
     pub max_payload_size: u16,
+}
+
+impl Default for QuicTransportPlugin {
+    fn default() -> Self {
+        Self {
+            allow_multipurpose: false,
+            allow_migration: true,
+            concurrent_connections: 100_000,
+            max_payload_size: 1472,
+        }
+    }
 }
 
 impl Plugin for QuicTransportPlugin {
