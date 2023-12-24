@@ -16,7 +16,7 @@ pub struct QuicTransportPlugin {
     /// When running a server, improves behavior for clients that move between different internet connections or suffer NAT rebinding.
     /// Enabled by default.
     /// 
-    /// See [Section 9 of IETF RFC 9000](https://www.rfc-editor.org/rfc/rfc9000.html#name-connection-migration) for more information.
+    /// See [Section 9 of IETF RFC 9000](https://www.ietf.org/rfc/rfc9000.html#name-connection-migration) for more information.
     pub allow_migration: bool,
 
     /// Default maximum concurrent connections for a single endpoint.
