@@ -2,3 +2,5 @@
 //! A QUIC transport layer for bevy_stardust.
 
 #![warn(missing_docs)]
+
+pub mod plugin;
