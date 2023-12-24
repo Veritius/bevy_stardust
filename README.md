@@ -6,8 +6,6 @@ Stardust is an opinionated networking crate built for Bevy, with a focus on exte
 [![Bevy version](https://img.shields.io/badge/bevy-0.12-blue?color=blue)](https://bevyengine.org/)
 [![Crates.io](https://img.shields.io/crates/v/bevy_stardust)](https://crates.io/crates/bevy_stardust)
 
-<p align="center"><font color="yellow">At the time of writing, no transport layers exist for Stardust. One is being worked on as a separate crate, but in the meantime I wouldn't use this for any projects.</font></p>
-
 ## Features
 - Tightly integrated with Bevy ECS - everything is part of the `World` and `App`, using the scheduler for parallel network code, even in your game systems.
 - Architecture agnostic - use client/server, peer to peer, mesh networks, you name it.
