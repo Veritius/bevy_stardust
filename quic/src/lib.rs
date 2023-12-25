@@ -5,7 +5,9 @@
 #![feature(exclusive_wrapper)]
 
 pub mod plugin;
-pub mod manager;
-pub mod events;
 
+mod events;
+mod manager;
 mod endpoint;
+
+pub use manager::QuicManager;
