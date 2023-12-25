@@ -1,6 +1,5 @@
 //! Connection events, like players leaving or joining.
 
-use std::net::SocketAddr;
 use bevy::{prelude::*, utils::Uuid};
 
 /// Raise to try and disconnect a peer, with an optional reason.
@@ -16,7 +15,7 @@ pub struct DisconnectPeerEvent {
 #[derive(Event)]
 pub struct FailedConnectionEvent {
     /// The origin of the connection.
-    pub origin: SocketAddr,
+    pub origin: Box<str>,
     /// The reason the connection failed.
     pub reason: Box<str>,
 }
@@ -24,8 +23,6 @@ pub struct FailedConnectionEvent {
 /// Raised when a new peer connects.
 #[derive(Event)]
 pub struct PeerConnectedEvent {
-    /// The address of the connection.
-    pub address: SocketAddr,
     /// The entity ID given to the connection.
     pub id: Entity,
 }
