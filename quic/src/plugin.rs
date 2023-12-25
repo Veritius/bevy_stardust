@@ -30,7 +30,11 @@ pub struct QuicTransportPlugin {
 }
 
 impl Plugin for QuicTransportPlugin {
-    fn build(&self, _app: &mut App) {
-        todo!()
+    fn build(&self, app: &mut App) {
+        use crate::events::*;
+        app.add_event::<StartEndpointEvent>();
+        app.add_event::<CloseEndpointEvent>();
+        app.add_event::<TryConnectEvent>();
+        app.add_event::<ToggleIncomingEvent>();
     }
 }

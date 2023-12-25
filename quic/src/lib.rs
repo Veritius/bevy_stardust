@@ -2,5 +2,10 @@
 //! A QUIC transport layer for bevy_stardust.
 
 #![warn(missing_docs)]
+#![feature(exclusive_wrapper)]
 
 pub mod plugin;
+pub mod manager;
+pub mod events;
+
+mod endpoint;
