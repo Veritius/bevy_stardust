@@ -14,7 +14,7 @@ pub struct DisconnectPeerEvent {
 /// Raised when a peer tries to connect, but fails.
 #[derive(Event)]
 pub struct FailedConnectionEvent {
-    /// The origin of the connection.
+    /// The origin of the connection, such as a `SocketAddr`.
     pub origin: Box<str>,
     /// The reason the connection failed.
     pub reason: Box<str>,
@@ -22,10 +22,7 @@ pub struct FailedConnectionEvent {
 
 /// Raised when a new peer connects.
 #[derive(Event)]
-pub struct PeerConnectedEvent {
-    /// The entity ID given to the connection.
-    pub id: Entity,
-}
+pub struct PeerConnectedEvent(pub Entity);
 
 /// Raised when a peer disconnects.
 #[derive(Event)]

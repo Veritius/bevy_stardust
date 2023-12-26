@@ -5,6 +5,31 @@ use bevy::prelude::*;
 use crate::prelude::ChannelConfiguration;
 use super::id::{Channel, ChannelId};
 
+/// Channel information generated when `add_channel` is run.
+pub struct ChannelData {
+    /// The channel's `TypeId`.
+    pub type_id: TypeId,
+    /// The channel's `TypePath` (from `bevy_reflect`)
+    pub type_path: &'static str,
+
+    /// The channel's sequential ID assigned by the registry.
+    pub channel_id: ChannelId,
+    /// Entity ID of the channel's entity representation.
+    pub entity_id: Entity,
+
+    /// The config of the channel.
+    /// Since `ChannelData` implements `Deref` for `ChannelConfiguration`, this is just clutter.
+    config: ChannelConfiguration,
+}
+
+impl std::ops::Deref for ChannelData {
+    type Target = ChannelConfiguration;
+
+    fn deref(&self) -> &Self::Target {
+        &self.config
+    }
+}
+
 /// Stores information related to type ids.
 #[derive(Resource)]
 pub struct ChannelRegistry {
@@ -99,30 +124,5 @@ impl Default for ChannelRegistry {
             channel_type_ids: BTreeMap::new(),
             channel_data: vec![],
         }
-    }
-}
-
-/// Channel information generated when `add_channel` is run.
-pub struct ChannelData {
-    /// The channel's `TypeId`.
-    pub type_id: TypeId,
-    /// The channel's `TypePath` (from `bevy_reflect`)
-    pub type_path: &'static str,
-
-    /// The channel's sequential ID assigned by the registry.
-    pub channel_id: ChannelId,
-    /// Entity ID of the channel's entity representation.
-    pub entity_id: Entity,
-
-    /// The config of the channel.
-    /// Since `ChannelData` implements `Deref` for `ChannelConfiguration`, this is just clutter.
-    config: ChannelConfiguration,
-}
-
-impl std::ops::Deref for ChannelData {
-    type Target = ChannelConfiguration;
-
-    fn deref(&self) -> &Self::Target {
-        &self.config
     }
 }
