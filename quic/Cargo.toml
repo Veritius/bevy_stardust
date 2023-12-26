@@ -11,7 +11,7 @@ keywords=["bevy", "gamedev", "networking"]
 
 [dependencies]
 bevy = { version = "0.12", default-features=false }
-bevy_stardust = { version = "0.3", path = "../stardust" }
+bevy_stardust = { version = "0.2", path = "../stardust" }
 quinn-proto = "0.10"
 tokio = "1.28"
 rustls = { version = "0.21", features = ["quic"] }

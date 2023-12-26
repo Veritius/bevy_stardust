@@ -1,7 +1,7 @@
 # bevy_stardust_quic
 
 [![License](https://img.shields.io/badge/license-MIT_or_Apache_2.0-green?color=green)](./)
-[![Stardust version](https://img.shields.io/badge/bevy__stardust-0.3-blue?color=blue)](https://crates.io/crates/bevy_stardust)
+[![Stardust version](https://img.shields.io/badge/bevy__stardust-0.2-blue?color=blue)](https://crates.io/crates/bevy_stardust)
 [![Bevy version](https://img.shields.io/badge/bevy-0.12-blue?color=blue)](https://bevyengine.org/)
 [![Crates.io](https://img.shields.io/crates/v/bevy_stardust_udp)](https://crates.io/crates/bevy_stardust)
 
