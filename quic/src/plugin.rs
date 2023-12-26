@@ -1,7 +1,7 @@
 //! The QUIC transport layer plugin.
 
-use std::sync::Arc;
 use bevy::prelude::*;
+use crate::endpoint::{endpoint_manager_system, Endpoint};
 
 /// Adds a QUIC transport layer to the `App`.
 pub struct QuicTransportPlugin {
@@ -13,28 +13,12 @@ pub struct QuicTransportPlugin {
     /// Most games do not need this functionality.
     /// If in doubt, set to `false`.
     pub allow_multipurpose: bool,
-
-    /// Overrides the default QUIC transport configuration.
-    /// This is for advanced users. If in doubt, set to `None`.
-    pub transport_config_override: Option<Arc<quinn_proto::TransportConfig>>,
-
-    /// Root certificates for connection authentication.
-    /// If in doubt, you can use the `rustls-native-certs` or `webpki-roots` crates.
-    pub root_certificates: rustls::RootCertStore,
-
-    /// Chain of trust for connection authentication.
-    pub certificate_chain: Vec<rustls::Certificate>,
-
-    /// Server private key for encrypted messaging.
-    pub private_key: rustls::PrivateKey,
 }
 
 impl Plugin for QuicTransportPlugin {
     fn build(&self, app: &mut App) {
-        use crate::events::*;
-        app.add_event::<StartEndpointEvent>();
-        app.add_event::<CloseEndpointEvent>();
-        app.add_event::<TryConnectEvent>();
-        app.add_event::<ToggleIncomingEvent>();
+        app.init_resource::<Endpoint>();
+        app.add_event::<crate::events::EndpointManagerEvent>();
+        app.add_systems(PostUpdate, endpoint_manager_system);
     }
 }
