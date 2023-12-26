@@ -21,7 +21,7 @@ impl ServerTlsConfig {
     }
 
     /// Creates a new `ServerTlsConfig` from a certificate chain and private key found in the given paths.
-    /// Invalid certificates or keys found in files will be silently ignored.
+    /// Uses the first private key found. Invalid certificates or keys found in files will be silently ignored.
     /// 
     /// Fails if the files can't be accessed, are invalid, or if the private key doesn't match the certificate chain.
     pub fn with_single_cert_from_file(cert_chain_path: &Path, key_der_path: &Path) -> Result<Self> {
@@ -33,15 +33,9 @@ impl ServerTlsConfig {
 
         // Get all keys
         let mut key_reader = BufReader::new(File::open(key_der_path)?);
-        let key_der = loop {
-            use rustls_pemfile::Item;
-            match rustls_pemfile::read_one(&mut key_reader)? {
-                Some(Item::Pkcs1Key(key)) => break key.into(),
-                Some(Item::Pkcs8Key(key)) => break key.into(),
-                Some(Item::Sec1Key(key)) => break key.into(),
-                Some(_) => continue,
-                None => bail!("No keys found in path {key_der_path:?}"),
-            }
+        let key_der = match rustls_pemfile::private_key(&mut key_reader)? {
+            Some(value) => value,
+            None => bail!("No keys found in {key_der_path:?}"),
         };
 
         Self::with_single_cert(cert_chain, key_der)
