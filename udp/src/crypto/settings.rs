@@ -9,13 +9,21 @@ use rustls::{ServerConfig, ClientConfig, RootCertStore, pki_types::{CertificateD
 pub struct ServerTlsConfig(Arc<ServerConfig>);
 
 impl ServerTlsConfig {
+    /// Clones the internal `Arc` used to store the server config data.
+    pub fn clone_arc(&self) -> Arc<ServerConfig> {
+        self.0.clone()
+    }
+
     /// Creates a new `ServerTlsConfig` from a certificate chain and private key.
     /// 
     /// Fails if `key_der` doesn't match `cert_chain`.
     pub fn with_single_cert(cert_chain: Vec<CertificateDer<'static>>, key_der: PrivateKeyDer<'static>) -> Result<Self> {
-        let config = ServerConfig::builder()
+        let mut config = ServerConfig::builder()
             .with_no_client_auth()
             .with_single_cert(cert_chain, key_der)?;
+
+        // no secret extraction for you
+        config.enable_secret_extraction = false;
 
         Ok(Self(Arc::new(config)))
     }
@@ -48,15 +56,23 @@ impl ServerTlsConfig {
 pub struct ClientTlsConfig(Arc<ClientConfig>);
 
 impl ClientTlsConfig {
+    /// Clones the internal `Arc` used to store the client config data.
+    pub fn clone_arc(&self) -> Arc<ClientConfig> {
+        self.0.clone()
+    }
+
     /// Use a custom set of root certificates as a trust anchor.
     /// 
     /// Most users shouldn't use this. Instead, you can use:
     /// - `with_native_roots` from the `encryption-native-roots` feature
     /// - `with_webpki_roots` from the `encryption-webpki-roots` feature
     pub fn with_custom_roots(roots: impl Into<Arc<RootCertStore>>) -> Self {
-        let config = ClientConfig::builder()
+        let mut config = ClientConfig::builder()
             .with_root_certificates(roots)
             .with_no_client_auth();
+
+        // no secret extraction for you either
+        config.enable_secret_extraction = false;
 
         Self(Arc::new(config))
     }
