@@ -42,6 +42,9 @@ impl ReliablePipe {
         self.local_sequence = self.local_sequence.wrapping_add(1);
         self.unacked_messages.insert(seq, payload.clone());
 
+        // Shift the bitfield right
+        self.received_bitfield >>= 1;
+
         // Create the 'scratch' buffer
         let length = 8 + &payload.len();
         scratch[0..2].clone_from_slice(&self.local_sequence.to_be_bytes());
