@@ -2,5 +2,7 @@
 
 #![warn(missing_docs)]
 
+pub mod connection;
+
 #[cfg(feature="encryption")]
 pub mod crypto;
