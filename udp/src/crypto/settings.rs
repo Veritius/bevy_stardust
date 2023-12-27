@@ -84,20 +84,24 @@ impl ClientTlsConfig {
 
         Self(Arc::new(config))
     }
+}
 
+#[cfg(feature="encryption-native-roots")]
+impl ClientTlsConfig {
     /// Uses native root certificates fetched from the OS as the trust anchor.
     /// Invalid certificates found in the OS will be silently ignored.
     /// 
     /// This can fail and is a very slow operation (use it in a future!)
-    #[cfg(feature="encryption-native-roots")]
     pub fn with_native_roots() -> Result<Self> {
         let mut roots = RootCertStore::empty();
         roots.add_parsable_certificates(rustls_native_certs::load_native_certs()?);
         Ok(Self::with_custom_roots(roots))
     }
+}
 
+#[cfg(feature="encryption-webpki-roots")]
+impl ClientTlsConfig {
     /// Uses compiled-in root certificates from the [Common CA Database](https://www.ccadb.org/) run by Mozilla.
-    #[cfg(feature="encryption-webpki-roots")]
     pub fn with_webpki_roots() -> Self {
         let mut roots = RootCertStore::empty();
         roots.extend(webpki_roots::TLS_SERVER_ROOTS.iter().cloned());
