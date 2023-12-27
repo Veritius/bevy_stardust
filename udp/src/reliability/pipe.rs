@@ -1,6 +1,8 @@
 use std::collections::BTreeMap;
 use bytes::Bytes;
 
+use super::sequence_greater_than;
+
 pub(super) struct ReliablePipe {
     /// The sequence ID we're using to send messages.
     local_sequence: u16,
@@ -49,5 +51,20 @@ impl ReliablePipe {
 
         // Return bytes written
         return length
+    }
+
+    /// "Receives" the contents of a reliable packet, removing the header and returning a slice containing the payload.
+    pub fn receive<'a>(&mut self, buffer: &'a [u8]) -> &'a [u8] {
+        // Create some variables
+        let their_remote = u16::from_be_bytes(buffer[0..2].try_into().unwrap());
+        let their_ack = u16::from_be_bytes(buffer[2..4].try_into().unwrap());
+        let their_bitfield = u32::from_be_bytes(buffer[4..8].try_into().unwrap());
+        let their_payload = &buffer[8..];
+
+        // Modify the pipe state
+        todo!();
+
+        // Return the payload
+        their_payload
     }
 }
