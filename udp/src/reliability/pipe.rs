@@ -1,0 +1,53 @@
+use std::collections::BTreeMap;
+use bytes::Bytes;
+
+pub(super) struct ReliablePipe {
+    /// The sequence ID we're using to send messages.
+    local_sequence: u16,
+    /// The highest sequence id we've heard from our friend.
+    remote_sequence: u16,
+    /// Storage for messages we've sent that haven't been acknowledged yet.
+    unacked_messages: BTreeMap<u16, Bytes>,
+    /// Signals to our partner over the internet what packets we've heard.
+    received_bitfield: u32,
+}
+
+impl ReliablePipe {
+    /// Creates a new `ReliablePipe` with a sequence ID.
+    pub fn new(local: u16) -> Self {
+        Self {
+            local_sequence: local,
+            remote_sequence: 0,
+            unacked_messages: BTreeMap::new(),
+            received_bitfield: 0,
+        }
+    }
+
+    /// Sets the internal remote sequence ID to `remote`.
+    /// 
+    /// **ONLY USE THIS DURING A HANDSHAKE. THIS WILL BREAK RELIABILITY OTHERWISE!**
+    pub fn set_remote(&mut self, remote: u16) {
+        self.remote_sequence = remote;
+    }
+
+    /// "Sends" a payload, storing it for potential resending,
+    /// and writing the reliable header and `payload` to `scratch`.
+    /// 
+    /// Panics if `scratch` is too short. It must be at least 8 + `payload`'s length.
+    pub fn send(&mut self, scratch: &mut [u8], payload: Bytes) -> usize {
+        // Append to the unacknowledged messages map
+        let seq = self.local_sequence.clone();
+        self.local_sequence = self.local_sequence.wrapping_add(1);
+        self.unacked_messages.insert(seq, payload.clone());
+
+        // Create the 'scratch' buffer
+        let length = 8 + &payload.len();
+        scratch[0..2].clone_from_slice(&self.local_sequence.to_be_bytes());
+        scratch[2..4].clone_from_slice(&self.remote_sequence.to_be_bytes());
+        scratch[4..8].clone_from_slice(&self.received_bitfield.to_be_bytes());
+        scratch[8..length].clone_from_slice(&payload);
+
+        // Return bytes written
+        return length
+    }
+}
