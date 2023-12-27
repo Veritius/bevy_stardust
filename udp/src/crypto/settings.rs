@@ -50,6 +50,14 @@ impl ServerTlsConfig {
     }
 }
 
+impl std::ops::Deref for ServerTlsConfig {
+    type Target = ServerConfig;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
 /// Configuration for TLS clients.
 /// Can be changed at any time, but will only affect new connections.
 #[derive(Resource)]
@@ -94,5 +102,13 @@ impl ClientTlsConfig {
         let mut roots = RootCertStore::empty();
         roots.extend(webpki_roots::TLS_SERVER_ROOTS.iter().cloned());
         Self::with_custom_roots(roots)
+    }
+}
+
+impl std::ops::Deref for ClientTlsConfig {
+    type Target = ClientConfig;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
 }
