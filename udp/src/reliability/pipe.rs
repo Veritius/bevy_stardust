@@ -10,8 +10,8 @@ pub(super) struct ReliablePipe {
     remote_sequence: u16,
     /// Storage for messages we've sent that haven't been acknowledged yet.
     unacked_messages: BTreeMap<u16, Bytes>,
-    /// Signals to our partner over the internet what packets we've heard.
-    received_bitfield: u32,
+    // /// Messages we've received from our friend over the internet
+    // todo
 }
 
 impl ReliablePipe {
@@ -21,7 +21,6 @@ impl ReliablePipe {
             local_sequence: local,
             remote_sequence: 0,
             unacked_messages: BTreeMap::new(),
-            received_bitfield: 0,
         }
     }
 
@@ -42,14 +41,12 @@ impl ReliablePipe {
         self.local_sequence = self.local_sequence.wrapping_add(1);
         self.unacked_messages.insert(seq, payload.clone());
 
-        // Shift the bitfield right
-        self.received_bitfield >>= 1;
-
         // Create the 'scratch' buffer
         let length = 8 + &payload.len();
         scratch[0..2].clone_from_slice(&self.local_sequence.to_be_bytes());
         scratch[2..4].clone_from_slice(&self.remote_sequence.to_be_bytes());
-        scratch[4..8].clone_from_slice(&self.received_bitfield.to_be_bytes());
+        // TODO: Bitfield
+        // scratch[4..8].clone_from_slice(&self.received_bitfield.to_be_bytes());
         scratch[8..length].clone_from_slice(&payload);
 
         // Return bytes written
@@ -64,7 +61,18 @@ impl ReliablePipe {
         let their_bitfield = u32::from_be_bytes(buffer[4..8].try_into().unwrap());
         let their_payload = &buffer[8..];
 
-        // Modify the pipe state
+        // Update the remote sequence
+        if sequence_greater_than(their_remote, self.remote_sequence) {
+            self.remote_sequence = their_remote;
+        }
+
+        // Flag their message as received
+        todo!();
+
+        // Acknowledge the ack sequence packet
+        self.unacked_messages.remove(&their_ack);
+
+        // Acknowledge all sequences in the bitfield
         todo!();
 
         // Return the payload
