@@ -5,7 +5,7 @@ use rustls::{ServerConfig, ClientConfig, RootCertStore, pki_types::{CertificateD
 
 /// Configuration for TLS servers.
 /// Can be changed at any time, but will only affect new connections.
-#[derive(Resource)]
+#[derive(Resource, Clone)]
 pub struct ServerTlsConfig(Arc<ServerConfig>);
 
 impl ServerTlsConfig {
@@ -60,7 +60,7 @@ impl std::ops::Deref for ServerTlsConfig {
 
 /// Configuration for TLS clients.
 /// Can be changed at any time, but will only affect new connections.
-#[derive(Resource)]
+#[derive(Resource, Clone)]
 pub struct ClientTlsConfig(Arc<ClientConfig>);
 
 impl ClientTlsConfig {
