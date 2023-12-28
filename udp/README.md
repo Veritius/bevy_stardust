@@ -6,5 +6,4 @@ A native UDP transport layer for [bevy_stardust](https://crates.io/crates/bevy_s
 - Pure UDP using the standard library
 - Reliability, ordering, and fragmentation
 - Horizontally scalable with load balancing
-- Optional encryption and authentication
 - Flexible protocol with versioning

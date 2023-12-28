@@ -15,16 +15,3 @@ bevy = { version = "0.12", default-features = false }
 bevy_stardust = { version = "0.2", path = "../stardust" }
 bytes = "1.5.0"
 anyhow = "1"
-
-# Encryption feature dependencies
-rustls = { version = "0.22", optional = true }
-ring = { version = "0.17", optional = true }
-rustls-pemfile = { version = "2", optional = true }
-rustls-native-certs = { version = "0.7", optional = true }
-webpki-roots = { version = "0.26", optional = true }
-
-[features]
-default = ["encryption"]
-encryption = ["dep:rustls", "dep:ring", "dep:rustls-pemfile"]
-encryption-native-roots = ["encryption", "dep:rustls-native-certs"]
-encryption-webpki-roots = ["encryption", "dep:webpki-roots"]

@@ -4,7 +4,4 @@
 
 pub mod connection;
 
-#[cfg(feature="encryption")]
-pub mod crypto;
-
 mod reliability;
