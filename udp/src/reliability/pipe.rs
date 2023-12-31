@@ -47,7 +47,7 @@ impl ReliablePipe {
         let length = 8 + &payload.len();
         scratch[0..2].clone_from_slice(&self.local_sequence.to_be_bytes());
         scratch[2..4].clone_from_slice(&self.remote_sequence.to_be_bytes());
-        scratch[4..8].clone_from_slice(&self.received_packets.to_be_bytes());
+        scratch[4..8].clone_from_slice(&self.received_packets.to_be_bytes()[0..4]);
         scratch[8..length].clone_from_slice(&payload);
 
         // Return bytes written
