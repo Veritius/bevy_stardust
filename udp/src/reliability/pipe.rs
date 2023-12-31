@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, VecDeque};
+use std::collections::BTreeMap;
 use bytes::Bytes;
 use super::sequence_greater_than;
 
@@ -10,7 +10,7 @@ pub(super) struct ReliablePipe {
     /// Storage for messages we've sent that haven't been acknowledged yet.
     unacked_messages: BTreeMap<u16, Bytes>,
     /// Messages we've received from our friend over the internet
-    received_packets: VecDeque<u16>,
+    received_packets: u32,
 }
 
 impl ReliablePipe {
@@ -20,7 +20,7 @@ impl ReliablePipe {
             local_sequence: local,
             remote_sequence: 0,
             unacked_messages: BTreeMap::new(),
-            received_packets: VecDeque::with_capacity(34),
+            received_packets: 0,
         }
     }
 
@@ -45,8 +45,7 @@ impl ReliablePipe {
         let length = 8 + &payload.len();
         scratch[0..2].clone_from_slice(&self.local_sequence.to_be_bytes());
         scratch[2..4].clone_from_slice(&self.remote_sequence.to_be_bytes());
-        // TODO: Bitfield
-        // scratch[4..8].clone_from_slice(&self.received_bitfield.to_be_bytes());
+        scratch[4..8].clone_from_slice(&self.received_packets.to_be_bytes());
         scratch[8..length].clone_from_slice(&payload);
 
         // Return bytes written
@@ -67,10 +66,7 @@ impl ReliablePipe {
         }
 
         // Flag their message as received
-        self.received_packets.push_front(their_remote);
-        if self.received_packets.len() > 33 {
-            self.received_packets.pop_back();
-        }
+        todo!();
 
         // Acknowledge the ack sequence packet
         self.unacked_messages.remove(&their_ack);
