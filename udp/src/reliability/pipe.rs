@@ -10,7 +10,9 @@ pub(super) struct ReliablePipe {
     /// Storage for messages we've sent that haven't been acknowledged yet.
     unacked_messages: BTreeMap<u16, Bytes>,
     /// Messages we've received from our friend over the internet
-    received_packets: u32,
+    /// This is a u128 so we have a lot of space to work with
+    /// and for if the user wants to have a longer ack bitfield range
+    received_packets: u128,
 }
 
 impl ReliablePipe {
