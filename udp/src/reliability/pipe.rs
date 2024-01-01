@@ -63,12 +63,11 @@ impl ReliablePipe {
         let their_payload = &buffer[8..];
 
         // Update the remote sequence
+        let seq_diff = super::wrapping_diff(their_remote, self.remote_sequence);
         if sequence_greater_than(their_remote, self.remote_sequence) {
             self.remote_sequence = their_remote;
+            self.received_packets >>= seq_diff;
         }
-
-        // Flag their message as received
-        todo!();
 
         // Acknowledge the ack sequence packet
         self.unacked_messages.remove(&their_ack);
@@ -79,25 +78,4 @@ impl ReliablePipe {
         // Return the payload
         their_payload
     }
-}
-
-/// Returns the minimum difference between the absolute difference and a wrapping difference.
-fn wrapping_diff(a: u16, b: u16) -> u16 {
-    const MIDPOINT: u16 = u16::MAX / 2;
-
-    let diff = a.abs_diff(b);
-    match (a > b, diff > MIDPOINT) {
-        (_, false) => diff,
-        (true, _) => b.wrapping_sub(a),
-        (false, _) => a.wrapping_sub(b),
-    }
-}
-
-#[test]
-fn test_wrapping_diff() {
-    assert_eq!(wrapping_diff(0, 1), 1);
-    assert_eq!(wrapping_diff(1, 3), 2);
-    assert_eq!(wrapping_diff(15, 35), 20);
-    assert_eq!(wrapping_diff(u16::MAX, u16::MIN), 1);
-    assert_eq!(wrapping_diff(u16::MAX-1, u16::MIN+1), 3);
 }
