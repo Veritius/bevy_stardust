@@ -4,14 +4,18 @@ use super::sequence_greater_than;
 
 pub(super) struct ReliablePipe {
     /// The sequence ID we're using to send messages.
+    /// Used when we send messages
     local_sequence: u16,
-    /// The highest sequence id we've heard from our friend.
-    remote_sequence: u16,
-    /// Storage for messages we've sent that haven't been acknowledged yet.
+
+    /// Storage for messages we've sent that they haven't acknowledged yet.
     unacked_messages: BTreeMap<u16, Bytes>,
-    /// Messages we've received from our friend over the internet
-    /// This is a u128 so we have a lot of space to work with
-    /// and for if the user wants to have a longer ack bitfield range
+
+    /// The highest sequence id we've heard from our friend.
+    /// Used with received_packets to track what we've received
+    remote_sequence: u16,
+
+    /// Messages they've sent that we have/haven't acknowledged yet, relative to remote_sequence
+    /// This is a u128 so we have a lot of space to work with, and for if the user wants to have a longer ack bitfield range
     received_packets: u128,
 }
 
