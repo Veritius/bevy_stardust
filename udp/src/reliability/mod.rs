@@ -1,4 +1,4 @@
-mod pipe;
+mod river;
 
 // Glenn Fiedler's wrap-around sequence identifier algorithm
 // https://www.gafferongames.com/post/reliability_ordering_and_congestion_avoidance_over_udp/

@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 use bytes::Bytes;
 use super::sequence_greater_than;
 
-pub(super) struct ReliablePipe {
+pub(super) struct ReliableRiver {
     /// The sequence ID we're using to send messages.
     /// Used when we send messages
     local_sequence: u16,
@@ -19,8 +19,8 @@ pub(super) struct ReliablePipe {
     received_packets: u128,
 }
 
-impl ReliablePipe {
-    /// Creates a new `ReliablePipe` with a sequence ID.
+impl ReliableRiver {
+    /// Creates a new `ReliableRiver` with a sequence ID.
     pub fn new(local: u16) -> Self {
         Self {
             local_sequence: local,

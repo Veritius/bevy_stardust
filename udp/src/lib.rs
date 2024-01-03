@@ -2,8 +2,9 @@
 
 #![warn(missing_docs)]
 
-pub mod plugin;
-pub mod connection;
-
 mod config;
+mod connection;
+mod plugin;
 mod reliability;
+
+pub use plugin::UdpTransportPlugin;
