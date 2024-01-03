@@ -2,6 +2,8 @@
 
 #![warn(missing_docs)]
 
+pub mod plugin;
 pub mod connection;
 
+mod config;
 mod reliability;
