@@ -1,7 +1,8 @@
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, time::{Instant, Duration}};
 use bytes::Bytes;
-use super::sequence_greater_than;
+use super::{sequence_greater_than, SentPacket};
 
+const DROPPED_TIMEOUT: Duration = Duration::from_millis(1000);
 const BITMASK: u128 = 1 << 127;
 
 pub(super) struct ReliableRiver {
@@ -10,7 +11,7 @@ pub(super) struct ReliableRiver {
     local_sequence: u16,
 
     /// Storage for messages we've sent that they haven't acknowledged yet.
-    unacked_messages: BTreeMap<u16, Bytes>,
+    unacked_messages: BTreeMap<u16, SentPacket>,
 
     /// The highest sequence id we've heard from our friend.
     /// Used with received_packets to track what we've received
@@ -47,7 +48,10 @@ impl ReliableRiver {
         // Append to the unacknowledged messages map
         let seq = self.local_sequence.clone();
         self.local_sequence = self.local_sequence.wrapping_add(1);
-        self.unacked_messages.insert(seq, payload.clone());
+        self.unacked_messages.insert(seq, SentPacket {
+            data: payload.clone(),
+            time: Instant::now()
+        });
 
         // Create the 'scratch' buffer
         let length = 8 + &payload.len();
@@ -87,5 +91,15 @@ impl ReliableRiver {
 
         // Return the payload
         their_payload
+    }
+
+    /// Returns an iterator over all packets that need sending.
+    pub fn timed_out(&self) -> impl Iterator<Item = (u16, &Bytes)> {
+        let now = Instant::now();
+        self.unacked_messages.iter()
+            .filter(move |(k, v)| {
+                v.time.duration_since(now) > DROPPED_TIMEOUT
+            })
+            .map(|(k, v)| (*k, &v.data))
     }
 }

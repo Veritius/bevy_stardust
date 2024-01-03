@@ -1,4 +1,12 @@
+use std::time::Instant;
+use bytes::Bytes;
+
 mod river;
+
+struct SentPacket {
+    pub data: Bytes,
+    pub time: Instant,
+}
 
 // Glenn Fiedler's wrap-around sequence identifier algorithm
 // https://www.gafferongames.com/post/reliability_ordering_and_congestion_avoidance_over_udp/
