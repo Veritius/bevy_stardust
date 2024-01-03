@@ -2,6 +2,8 @@ use std::collections::BTreeMap;
 use bytes::Bytes;
 use super::sequence_greater_than;
 
+const BITMASK: u128 = 1 << 127;
+
 pub(super) struct ReliableRiver {
     /// The sequence ID we're using to send messages.
     /// Used when we send messages
@@ -69,8 +71,12 @@ impl ReliableRiver {
         // Update the remote sequence
         let seq_diff = super::wrapping_diff(their_remote, self.remote_sequence);
         if sequence_greater_than(their_remote, self.remote_sequence) {
+            // Shift the bitfield to account for the new maximum
             self.remote_sequence = their_remote;
             self.received_packets >>= seq_diff;
+        } else {
+            // Flag the packet as registered
+            self.received_packets |= BITMASK >> seq_diff;
         }
 
         // Acknowledge the ack sequence packet
