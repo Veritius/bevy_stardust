@@ -1,4 +1,4 @@
-use bevy::ecs::system::Resource;
+use bevy::prelude::*;
 
 #[derive(Resource)]
 pub(crate) struct PluginConfig {
