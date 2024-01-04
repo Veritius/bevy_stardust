@@ -141,8 +141,13 @@ mod tests {
         let mut two = ReliableRiver::new(0);
 
         let len = one.send(&PLUGIN_CONFIG, &mut scratch, Bytes::from("hello"));
-        let pld = one.receive(&PLUGIN_CONFIG, &scratch[..len]);
-
+        assert_eq!(one.unacked_messages.get(&0).unwrap().data.as_ref(), b"hello");
+        let pld = two.receive(&PLUGIN_CONFIG, &scratch[..len]);
         assert_eq!(pld, b"hello");
+
+        let len = two.send(&PLUGIN_CONFIG, &mut scratch, Bytes::from("world"));
+        assert_eq!(two.unacked_messages.get(&0).unwrap().data.as_ref(), b"world");
+        let pld = one.receive(&PLUGIN_CONFIG, &scratch[..len]);
+        assert_eq!(pld, b"world");
     }
 }
