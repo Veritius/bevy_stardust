@@ -129,6 +129,7 @@ mod tests {
     use crate::config::PluginConfig;
     use super::ReliableRiver;
 
+    // TODO: hide this warning
     const PLUGIN_CONFIG: PluginConfig = PluginConfig {
         river_count: 8,
         bitfield_bytes: 4,
@@ -136,19 +137,26 @@ mod tests {
 
     #[test]
     fn simple_reliable_no_drop() {
+        fn message_cycle(
+            sender: &mut ReliableRiver,
+            receiver: &mut ReliableRiver,
+            scratch: &mut [u8; 256],
+            message: Bytes,
+        ) {
+            let len = sender.send(&PLUGIN_CONFIG, scratch, message.clone());
+            let pld = receiver.receive(&PLUGIN_CONFIG, &scratch[..len]);
+            assert_eq!(pld, message.as_ref());
+        }
+
         let mut scratch = [0u8; 256];
 
         let mut one = ReliableRiver::new(0);
         let mut two = ReliableRiver::new(0);
 
-        let len = one.send(&PLUGIN_CONFIG, &mut scratch, Bytes::from("hello"));
-        assert_eq!(one.unacked_messages.get(&0).unwrap().data.as_ref(), b"hello");
-        let pld = two.receive(&PLUGIN_CONFIG, &scratch[..len]);
-        assert_eq!(pld, b"hello");
-
-        let len = two.send(&PLUGIN_CONFIG, &mut scratch, Bytes::from("world"));
-        assert_eq!(two.unacked_messages.get(&0).unwrap().data.as_ref(), b"world");
-        let pld = one.receive(&PLUGIN_CONFIG, &scratch[..len]);
-        assert_eq!(pld, b"world");
+        message_cycle(&mut one, &mut two, &mut scratch, Bytes::from("hello"));
+        message_cycle(&mut two, &mut one, &mut scratch, Bytes::from("world"));
+        message_cycle(&mut one, &mut two, &mut scratch, Bytes::from("my name is"));
+        message_cycle(&mut two, &mut one, &mut scratch, Bytes::from("ronald"));
+        message_cycle(&mut one, &mut two, &mut scratch, Bytes::from("ronaldson"));
     }
 }
