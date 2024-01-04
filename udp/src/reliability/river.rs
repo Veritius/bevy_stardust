@@ -119,3 +119,28 @@ impl ReliableRiver {
             .map(|(k, v)| (*k, &v.data))
     }
 }
+
+#[allow(unused_imports)]
+mod tests {
+    use bytes::Bytes;
+    use crate::config::PluginConfig;
+    use super::ReliableRiver;
+
+    const PLUGIN_CONFIG: PluginConfig = PluginConfig {
+        river_count: 8,
+        bitfield_bytes: 4,
+    };
+
+    #[test]
+    fn simple_reliable_no_drop() {
+        let mut scratch = [0u8; 256];
+
+        let mut one = ReliableRiver::new(0);
+        let mut two = ReliableRiver::new(0);
+
+        let len = one.send(&mut scratch, Bytes::from("hello"));
+        let pld = one.receive(&PLUGIN_CONFIG, &scratch[..len]);
+
+        assert_eq!(pld, b"hello");
+    }
+}
