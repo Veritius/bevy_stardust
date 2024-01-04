@@ -46,7 +46,10 @@ impl ReliableRiver {
     /// and writing the reliable header and `payload` to `scratch`.
     /// 
     /// Panics if `scratch` is too short. It must be at least 8 + `payload`'s length.
-    pub fn send(&mut self, scratch: &mut [u8], payload: Bytes) -> usize {
+    pub fn send(&mut self, config: &PluginConfig, scratch: &mut [u8], payload: Bytes) -> usize {
+        // Some values we use later
+        let bitfield_idx = config.bitfield_bytes as usize + 4;
+
         // Append to the unacknowledged messages map
         let seq = self.local_sequence.clone();
         self.local_sequence = self.local_sequence.wrapping_add(1);
@@ -56,14 +59,13 @@ impl ReliableRiver {
         });
 
         // Create the 'scratch' buffer
-        let length = 8 + &payload.len();
         scratch[0..2].clone_from_slice(&self.local_sequence.to_be_bytes());
         scratch[2..4].clone_from_slice(&self.remote_sequence.to_be_bytes());
-        scratch[4..8].clone_from_slice(&self.received_packets.to_be_bytes()[0..4]);
-        scratch[8..length].clone_from_slice(&payload);
+        scratch[4..bitfield_idx].clone_from_slice(&self.received_packets.to_be_bytes()[0..4]);
+        scratch[bitfield_idx..bitfield_idx+payload.len()].clone_from_slice(&payload);
 
         // Return bytes written
-        return length
+        return bitfield_idx+payload.len()
     }
 
     /// "Receives" the contents of a reliable packet, removing the header and returning a slice containing the payload.
@@ -81,7 +83,7 @@ impl ReliableRiver {
         let bit_len = bytes_usize as usize * 8;
 
         // Payload slice for returning it later
-        let their_payload = &buffer[8..];
+        let their_payload = &buffer[4+bytes_usize..];
 
         // Update the remote sequence
         let seq_diff = super::wrapping_diff(their_remote, self.remote_sequence);
@@ -138,7 +140,7 @@ mod tests {
         let mut one = ReliableRiver::new(0);
         let mut two = ReliableRiver::new(0);
 
-        let len = one.send(&mut scratch, Bytes::from("hello"));
+        let len = one.send(&PLUGIN_CONFIG, &mut scratch, Bytes::from("hello"));
         let pld = one.receive(&PLUGIN_CONFIG, &scratch[..len]);
 
         assert_eq!(pld, b"hello");
