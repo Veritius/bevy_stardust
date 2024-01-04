@@ -48,7 +48,8 @@ impl ReliableRiver {
     /// Panics if `scratch` is too short. It must be at least 8 + `payload`'s length.
     pub fn send(&mut self, config: &PluginConfig, scratch: &mut [u8], payload: Bytes) -> usize {
         // Some values we use later
-        let bitfield_idx = config.bitfield_bytes as usize + 4;
+        let bitfield_size = config.bitfield_bytes as usize;
+        let bitfield_idx = bitfield_size + 4;
 
         // Append to the unacknowledged messages map
         let seq = self.local_sequence.clone();
@@ -61,7 +62,7 @@ impl ReliableRiver {
         // Create the 'scratch' buffer
         scratch[0..2].clone_from_slice(&self.local_sequence.to_be_bytes());
         scratch[2..4].clone_from_slice(&self.remote_sequence.to_be_bytes());
-        scratch[4..bitfield_idx].clone_from_slice(&self.received_packets.to_be_bytes()[0..4]);
+        scratch[4..bitfield_idx].clone_from_slice(&self.received_packets.to_be_bytes()[0..bitfield_size]);
         scratch[bitfield_idx..bitfield_idx+payload.len()].clone_from_slice(&payload);
 
         // Return bytes written
