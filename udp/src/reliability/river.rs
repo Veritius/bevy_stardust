@@ -100,8 +100,9 @@ impl ReliableRiver {
         // Acknowledge all sequences in the bitfield
         for idx in 0..bit_len {
             let mask = BITMASK >> idx;
-            if !(their_bitfield & mask > 0) { continue }
-            todo!()
+            if their_bitfield & mask == 0 { continue }
+            let ack = their_ack.wrapping_sub(idx as u16);
+            self.unacked_messages.remove(&ack);
         }
 
         // Return the payload
