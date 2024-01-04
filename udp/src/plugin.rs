@@ -29,7 +29,7 @@ impl Plugin for UdpTransportPlugin {
 
         // Make sure values are within acceptable ranges
         // Fields also have knock-on effects with eachother, so process that here
-        let river_count = self.river_count;
+        let river_count = self.river_count.clamp(0, u16::MAX-2); // two rivers are reserved
         let bitfield_bytes = match river_count {
             0 => 0,
             _ => self.bitfield_bytes.clamp(1, 16),
