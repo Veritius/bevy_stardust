@@ -1,5 +1,7 @@
 use std::{collections::BTreeMap, time::{Instant, Duration}};
 use bytes::Bytes;
+use crate::config::PluginConfig;
+
 use super::{sequence_greater_than, SentPacket};
 
 const DROPPED_TIMEOUT: Duration = Duration::from_millis(1000);
@@ -65,11 +67,20 @@ impl ReliableRiver {
     }
 
     /// "Receives" the contents of a reliable packet, removing the header and returning a slice containing the payload.
-    pub fn receive<'a>(&mut self, buffer: &'a [u8]) -> &'a [u8] {
-        // Create some variables
+    pub fn receive<'a>(&mut self, config: &PluginConfig, buffer: &'a [u8]) -> &'a [u8] {
+        // Sequence values
         let their_remote = u16::from_be_bytes(buffer[0..2].try_into().unwrap());
         let their_ack = u16::from_be_bytes(buffer[2..4].try_into().unwrap());
-        let their_bitfield = u32::from_be_bytes(buffer[4..8].try_into().unwrap());
+
+        // Create the bitfield var
+        let bytes_usize = config.bitfield_bytes as usize;
+        let mut field_bytes = [0u8; 16];
+        field_bytes[..(config.bitfield_bytes as usize)]
+            .clone_from_slice(&buffer[4..4+bytes_usize]);
+        let their_bitfield = u128::from_ne_bytes(field_bytes);
+        let bit_len = bytes_usize as usize * 8;
+
+        // Payload slice for returning it later
         let their_payload = &buffer[8..];
 
         // Update the remote sequence
@@ -87,7 +98,11 @@ impl ReliableRiver {
         self.unacked_messages.remove(&their_ack);
 
         // Acknowledge all sequences in the bitfield
-        todo!();
+        for idx in 0..bit_len {
+            let mask = BITMASK >> idx;
+            if !(their_bitfield & mask > 0) { continue }
+            todo!()
+        }
 
         // Return the payload
         their_payload
