@@ -135,28 +135,49 @@ mod tests {
         bitfield_bytes: 4,
     };
 
-    #[test]
-    fn simple_reliable_no_drop() {
-        fn message_cycle(
-            sender: &mut ReliableRiver,
-            receiver: &mut ReliableRiver,
-            scratch: &mut [u8; 256],
-            message: Bytes,
-        ) {
-            let len = sender.send(&PLUGIN_CONFIG, scratch, message.clone());
-            let pld = receiver.receive(&PLUGIN_CONFIG, &scratch[..len]);
-            assert_eq!(pld, message.as_ref());
-        }
+    fn ack_n_messages(
+        config: &PluginConfig,
+        message: &'static [u8],
+        total_loops: u32,
+        picker: impl Fn(u32) -> bool,
+    ) {
+        let message = message.into();
 
         let mut scratch = [0u8; 256];
 
         let mut one = ReliableRiver::new(0);
         let mut two = ReliableRiver::new(0);
 
-        message_cycle(&mut one, &mut two, &mut scratch, Bytes::from("hello"));
-        message_cycle(&mut two, &mut one, &mut scratch, Bytes::from("world"));
-        message_cycle(&mut one, &mut two, &mut scratch, Bytes::from("my name is"));
-        message_cycle(&mut two, &mut one, &mut scratch, Bytes::from("ronald"));
-        message_cycle(&mut one, &mut two, &mut scratch, Bytes::from("ronaldson"));
+        for idx in 0..total_loops {
+            let len = one.send(config, &mut scratch, Bytes::from_static(message));
+            let val = two.receive(config, &scratch[..len]);
+            assert_eq!(val, message);
+
+            let len = two.send(config, &mut scratch, Bytes::from_static(message));
+            if picker(idx) {
+                let val = one.receive(config, &scratch[..len]);
+                assert_eq!(val, message);
+            }
+        }
+    }
+
+    #[test]
+    fn simple_reliable_no_drop() {
+        ack_n_messages(
+            &PLUGIN_CONFIG,
+            b"Hello, world!",
+            128,
+            |_| true,
+        );
+    }
+
+    #[test]
+    fn simple_reliable_with_drop() {
+        ack_n_messages(
+            &PLUGIN_CONFIG,
+            b"Hello, world!",
+            128,
+            |v| v % 4 == 0,
+        );
     }
 }
