@@ -46,7 +46,7 @@ impl ReliableRiver {
     /// and writing the reliable header and `payload` to `scratch`.
     /// 
     /// Panics if `scratch` is too short. It must be at least 8 + `payload`'s length.
-    pub fn send(&mut self, config: &PluginConfig, scratch: &mut [u8], payload: Bytes) -> usize {
+    pub fn outgoing(&mut self, config: &PluginConfig, scratch: &mut [u8], payload: Bytes) -> usize {
         // Some values we use later
         let bitfield_size = config.bitfield_bytes as usize;
         let bitfield_idx = bitfield_size + 4;
@@ -70,7 +70,7 @@ impl ReliableRiver {
     }
 
     /// "Receives" the contents of a reliable packet, removing the header and returning a slice containing the payload.
-    pub fn receive<'a>(&mut self, config: &PluginConfig, buffer: &'a [u8]) -> &'a [u8] {
+    pub fn incoming<'a>(&mut self, config: &PluginConfig, buffer: &'a [u8]) -> &'a [u8] {
         // Sequence values
         let their_remote = u16::from_be_bytes(buffer[0..2].try_into().unwrap());
         let their_ack = u16::from_be_bytes(buffer[2..4].try_into().unwrap());
@@ -149,13 +149,13 @@ mod tests {
         let mut two = ReliableRiver::new(0);
 
         for idx in 0..total_loops {
-            let len = one.send(config, &mut scratch, Bytes::from_static(message));
-            let val = two.receive(config, &scratch[..len]);
+            let len = one.outgoing(config, &mut scratch, Bytes::from_static(message));
+            let val = two.incoming(config, &scratch[..len]);
             assert_eq!(val, message);
 
-            let len = two.send(config, &mut scratch, Bytes::from_static(message));
+            let len = two.outgoing(config, &mut scratch, Bytes::from_static(message));
             if picker(idx) {
-                let val = one.receive(config, &scratch[..len]);
+                let val = one.incoming(config, &scratch[..len]);
                 assert_eq!(val, message);
             }
         }
