@@ -177,7 +177,7 @@ mod tests {
             &PLUGIN_CONFIG,
             b"Hello, world!",
             128,
-            |v| v % 4 == 0,
+            |v| v % 4 != 0,
         );
     }
 }
