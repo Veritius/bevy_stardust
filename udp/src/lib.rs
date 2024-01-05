@@ -4,6 +4,7 @@
 
 mod config;
 mod connection;
+mod handshake;
 mod plugin;
 mod reliability;
 
