@@ -10,6 +10,9 @@ pub(super) const STABLE_HASHER_SEED: i64 = 0x68066CFE6F752C27;
 /// This must always feed the same bytes into the hasher no matter the architecture, platform, Rust version, or compilation.
 /// If this guarantee is not upheld, different compilations of the same application may become incompatible.
 /// If possible, you should always go through the `StableHash` implementation of a type, rather than using the `Hasher`'s API.
+/// 
+/// Notes for implementors:
+/// - Only write bytes (`write`, `write_u8`) - don't use other functions
 pub trait StableHash {
     /// Hashes the type through `H`.
     fn hash<H: Hasher>(&self, state: &mut H);
