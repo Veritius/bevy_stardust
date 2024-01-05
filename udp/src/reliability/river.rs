@@ -45,7 +45,7 @@ impl ReliableRiver {
     /// "Sends" a payload, storing it for potential resending,
     /// and writing the reliable header and `payload` to `scratch`.
     /// 
-    /// Panics if `scratch` is too short. It must be at least 8 + `payload`'s length.
+    /// Panics if `scratch` is too short. It must be at least `config.bitfield_bytes` + `payload.len()`.
     pub fn outgoing(&mut self, config: &PluginConfig, scratch: &mut [u8], payload: Bytes) -> usize {
         // Some values we use later
         let bitfield_size = config.bitfield_bytes as usize;
