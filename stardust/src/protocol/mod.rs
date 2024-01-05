@@ -1,5 +1,4 @@
-//! The "safety net" of Stardust, used to prevent weird and hard-to-find issues.
-//! By creating a hashed value at startup from networking-related actions, like adding channels, hard to debug issues can be effectively prevented.
+//! A 'layer of security' that prevents games with different configurations from connecting to eachother.
 
 mod stablehash;
 mod resource;

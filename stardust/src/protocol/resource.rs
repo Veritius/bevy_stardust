@@ -11,7 +11,15 @@ pub struct ProtocolConfigHash {
 }
 
 impl ProtocolConfigHash {
+    /// Returns the integer representation of the hash.
+    pub fn int(&self) -> u64 {
+        self.int
+    }
 
+    /// Returns the hexadecimal representation of the hash.
+    pub fn str(&self) -> &str {
+        std::str::from_utf8(&self.hex).unwrap()
+    }
 }
 
 /// Stores the state of the hasher before a result is finalized
@@ -33,7 +41,7 @@ pub fn finalise_hasher_system(
     world: &mut World
 ) {
     // Remove hasher resource
-    let mut hasher = world.remove_resource::<PendingHashValues>().unwrap();
+    let hasher = world.remove_resource::<PendingHashValues>().unwrap();
 
     // Get hasher values
     let int = hasher.state.finish();

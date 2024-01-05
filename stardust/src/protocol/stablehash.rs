@@ -1,4 +1,4 @@
-use std::{hash::Hasher, any::TypeId};
+use std::hash::Hasher;
 
 /// Pre-defined seed used in GxHasher.
 pub(super) const STABLE_HASHER_SEED: i64 = 0x68066CFE6F752C27;
@@ -18,7 +18,7 @@ pub trait StableHash {
 }
 
 impl StableHash for () {
-    fn hash<H: Hasher>(&self, state: &mut H) {}
+    fn hash<H: Hasher>(&self, _state: &mut H) {}
 }
 
 macro_rules! impl_stablehash_simple {
