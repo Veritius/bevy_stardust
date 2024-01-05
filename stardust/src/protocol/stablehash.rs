@@ -63,3 +63,21 @@ impl StableHash for &str {
         state.write_u8(0xFF);
     }
 }
+
+// Simple (and probably ineffective) check for hash stability in gxhash and our StableHash impls.
+// The reference point is a Surface Pro 7 with an Intel i5-1035G4 (8) @ 3.700GHz CPU.
+// The computer is running Linux Mint 21.2 x86_64 on kernel 6.6.6-surface-1.
+// Compiled on rustc 1.72.1 (d5c2e9c34 2023-09-13) on the release channel.
+// If this test ever fails, you should report it immediately.
+#[test]
+fn hash_stability_check() {
+    let mut hasher = gxhash::GxHasher::with_seed(STABLE_HASHER_SEED);
+
+    false.hash(&mut hasher);
+    123456789u32.hash(&mut hasher);
+    123456789i32.hash(&mut hasher);
+    "Hello, World!".hash(&mut hasher);
+
+    let hash = hasher.finish();
+    assert_eq!(hash, 0xCE46E06873D99619);
+}
