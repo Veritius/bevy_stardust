@@ -7,11 +7,9 @@ pub(super) const STABLE_HASHER_SEED: i64 = 0x68066CFE6F752C27;
 /// Since `#[derive(Hash)]` does not guarantee stability, this trait exists instead.
 /// You should implement it manually.
 /// 
-/// This must always feed the same bytes into the hasher no matter the platform, Rust version, or compilation.
+/// This must always feed the same bytes into the hasher no matter the architecture, platform, Rust version, or compilation.
 /// If this guarantee is not upheld, different compilations of the same application may become incompatible.
-/// 
-/// This guarantee becomes invalid if the choice of `H` is not a stable hashing algorithm.
-/// Since Stardust always uses GxHasher with a set seed, this doesn't really matter much.
+/// If possible, you should always go through the `StableHash` implementation of a type, rather than using the `Hasher`'s API.
 pub trait StableHash {
     /// Hashes the type through `H`.
     fn hash<H: Hasher>(&self, state: &mut H);
@@ -22,27 +20,27 @@ impl StableHash for () {
 }
 
 macro_rules! impl_stablehash_simple {
-    ($type:ident, $func:ident) => {
+    ($type:ident) => {
         impl StableHash for $type {
             fn hash<H: Hasher>(&self, state: &mut H) {
-                state.$func(*self);
+                state.write(&self.to_be_bytes());
             }
         }
     };
 }
 
-impl_stablehash_simple!(u8, write_u8);
-impl_stablehash_simple!(u16, write_u16);
-impl_stablehash_simple!(u32, write_u32);
-impl_stablehash_simple!(u64, write_u64);
-impl_stablehash_simple!(u128, write_u128);
-impl_stablehash_simple!(usize, write_usize);
-impl_stablehash_simple!(i8, write_i8);
-impl_stablehash_simple!(i16, write_i16);
-impl_stablehash_simple!(i32, write_i32);
-impl_stablehash_simple!(i64, write_i64);
-impl_stablehash_simple!(i128, write_i128);
-impl_stablehash_simple!(isize, write_isize);
+impl_stablehash_simple!(u8);
+impl_stablehash_simple!(u16);
+impl_stablehash_simple!(u32);
+impl_stablehash_simple!(u64);
+impl_stablehash_simple!(u128);
+impl_stablehash_simple!(usize);
+impl_stablehash_simple!(i8);
+impl_stablehash_simple!(i16);
+impl_stablehash_simple!(i32);
+impl_stablehash_simple!(i64);
+impl_stablehash_simple!(i128);
+impl_stablehash_simple!(isize);
 
 impl StableHash for &[u8] {
     fn hash<H: Hasher>(&self, state: &mut H) {
