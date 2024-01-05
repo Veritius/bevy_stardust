@@ -52,9 +52,7 @@ impl ReliableRiver {
         let bitfield_idx = bitfield_size + 4;
 
         // Append to the unacknowledged messages map
-        let seq = self.local_sequence.clone();
-        self.local_sequence = self.local_sequence.wrapping_add(1);
-        self.unacked_messages.insert(seq, SentPacket {
+        self.unacked_messages.insert(self.local_sequence, SentPacket {
             data: payload.clone(),
             time: Instant::now()
         });
@@ -64,6 +62,9 @@ impl ReliableRiver {
         scratch[2..4].clone_from_slice(&self.remote_sequence.to_be_bytes());
         scratch[4..bitfield_idx].clone_from_slice(&self.received_packets.to_be_bytes()[0..bitfield_size]);
         scratch[bitfield_idx..bitfield_idx+payload.len()].clone_from_slice(&payload);
+
+        // Increment counter
+        self.local_sequence = self.local_sequence.wrapping_add(1);
 
         // Return bytes written
         return bitfield_idx+payload.len()
@@ -135,7 +136,7 @@ mod tests {
         bitfield_bytes: 4,
     };
 
-    fn ack_n_messages(
+    fn conversation(
         config: &PluginConfig,
         message: &'static [u8],
         total_loops: u32,
@@ -163,7 +164,7 @@ mod tests {
 
     #[test]
     fn simple_reliable_no_drop() {
-        ack_n_messages(
+        conversation(
             &PLUGIN_CONFIG,
             b"Hello, world!",
             128,
@@ -173,7 +174,7 @@ mod tests {
 
     #[test]
     fn simple_reliable_with_drop() {
-        ack_n_messages(
+        conversation(
             &PLUGIN_CONFIG,
             b"Hello, world!",
             128,
