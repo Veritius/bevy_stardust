@@ -44,6 +44,12 @@ impl_stablehash_simple!(i64, write_i64);
 impl_stablehash_simple!(i128, write_i128);
 impl_stablehash_simple!(isize, write_isize);
 
+impl StableHash for &[u8] {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        state.write(self);
+    }
+}
+
 impl StableHash for bool {
     fn hash<H: Hasher>(&self, state: &mut H) {
         match self {
