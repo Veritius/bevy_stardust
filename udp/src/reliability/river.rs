@@ -1,7 +1,7 @@
 use std::{collections::BTreeMap, time::{Instant, Duration}};
 use bytes::Bytes;
+use rand::Rng;
 use crate::config::PluginConfig;
-
 use super::{sequence_greater_than, SentPacket};
 
 const DROPPED_TIMEOUT: Duration = Duration::from_millis(1000);
@@ -28,7 +28,7 @@ impl ReliableRiver {
     /// Creates a new `ReliableRiver` with a random `local` sequence value.
     pub fn new() -> Self {
         Self {
-            local_sequence: fastrand::u16(..),
+            local_sequence: rand::thread_rng().gen::<u16>(),
             remote_sequence: 0,
             unacked_messages: BTreeMap::new(),
             received_packets: 0,
