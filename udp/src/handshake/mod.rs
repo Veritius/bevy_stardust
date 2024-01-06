@@ -1,6 +1,5 @@
-mod packet;
+mod incoming;
+mod outgoing;
 
-/// An in-progress handshake
-pub(crate) struct PendingConnection {
-
-}
+pub(crate) use incoming::IncomingConnectionAttempt;
+pub(crate) use outgoing::OutgoingConnectionAttempt;
