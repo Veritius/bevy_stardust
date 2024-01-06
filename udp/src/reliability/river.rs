@@ -7,7 +7,7 @@ use super::{sequence_greater_than, SentPacket};
 const DROPPED_TIMEOUT: Duration = Duration::from_millis(1000);
 const BITMASK: u128 = 1 << 127;
 
-pub(super) struct ReliableRiver {
+pub(crate) struct ReliableRiver {
     /// The sequence ID we're using to send messages.
     /// Used when we send messages
     local_sequence: u16,
@@ -25,10 +25,10 @@ pub(super) struct ReliableRiver {
 }
 
 impl ReliableRiver {
-    /// Creates a new `ReliableRiver` with a sequence ID.
-    pub fn new(local: u16) -> Self {
+    /// Creates a new `ReliableRiver` with a random `local` sequence value.
+    pub fn new() -> Self {
         Self {
-            local_sequence: local,
+            local_sequence: fastrand::u16(..),
             remote_sequence: 0,
             unacked_messages: BTreeMap::new(),
             received_packets: 0,

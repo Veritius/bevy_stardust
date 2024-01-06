@@ -3,6 +3,8 @@ use bytes::Bytes;
 
 mod river;
 
+pub(crate) use river::ReliableRiver;
+
 struct SentPacket {
     pub data: Bytes,
     pub time: Instant,
