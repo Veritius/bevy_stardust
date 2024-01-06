@@ -1,15 +1,11 @@
 use std::{net::SocketAddr, time::{Instant, Duration}};
 use bytes::Bytes;
 use crate::{reliability::ReliableRiver, connection::UdpConnection};
-use super::error::HandshakeError;
+use super::{error::HandshakeError, outgoing::OutgoingAttemptData, incoming::IncomingAttemptData};
 
 pub(crate) struct ConnectionAttempt {
-    address: SocketAddr,
-    started: Instant,
-    timeout: Duration,
-    last_sent: Option<Instant>,
-    last_recv: Option<Instant>,
-    river: ReliableRiver,
+    shared: AttemptShared,
+    direction: AttemptDirection,
 }
 
 impl ConnectionAttempt {
@@ -18,17 +14,23 @@ impl ConnectionAttempt {
         timeout: Duration,
     ) -> Self {
         Self {
-            address,
-            started: Instant::now(),
-            timeout,
-            last_sent: None,
-            last_recv: None,
-            river: ReliableRiver::new(),
+            shared: AttemptShared {
+                address,
+                started: Instant::now(),
+                timeout,
+                last_sent: None,
+                last_recv: None,
+                river: ReliableRiver::new(),
+            },
+            direction: AttemptDirection::Outgoing(
+                OutgoingAttemptData::default()
+            )
         }
     }
 
     pub fn start_incoming(
         address: SocketAddr,
+        timeout: Duration,
         payload: &[u8],
     ) -> Result<Self, HandshakeError> {
         todo!()
@@ -49,4 +51,18 @@ impl ConnectionAttempt {
     pub fn try_complete(self) -> Result<UdpConnection, Self> {
         todo!()
     }
+}
+
+pub(super) struct AttemptShared {
+    address: SocketAddr,
+    started: Instant,
+    timeout: Duration,
+    last_sent: Option<Instant>,
+    last_recv: Option<Instant>,
+    river: ReliableRiver,
+}
+
+enum AttemptDirection {
+    Outgoing(OutgoingAttemptData),
+    Incoming(IncomingAttemptData),
 }
