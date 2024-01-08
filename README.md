@@ -6,8 +6,6 @@ Stardust is an opinionated networking crate built for Bevy, with a focus on exte
 [![Bevy version](https://img.shields.io/badge/bevy-0.12-blue?color=blue)](https://bevyengine.org/)
 [![Crates.io](https://img.shields.io/crates/v/bevy_stardust)](https://crates.io/crates/bevy_stardust)
 
-<p align="center"><font color="yellow">At the time of writing, no transport layers exist for Stardust. One is being worked on as a separate crate, but in the meantime I wouldn't use this for any projects.</font></p>
-
 ## Features
 - Tightly integrated with Bevy ECS - everything is part of the `World` and `App`, using the scheduler for parallel network code, even in your game systems.
 - Architecture agnostic - use client/server, peer to peer, mesh networks, you name it.
@@ -22,6 +20,7 @@ Stardust is an opinionated networking crate built for Bevy, with a focus on exte
 ## Usage
 | Bevy | Stardust | UDP transport |
 | ---- | -------- | ------------- |
+| 0.12 | 0.3      | N/A           |
 | 0.12 | 0.2      | N/A           |
 | 0.11 | 0.1      | Included      |
 
@@ -42,11 +41,14 @@ fn main() {
 
     // Register the channel
     app.add_channel::<MyChannel>(ChannelConfiguration {
-        reliable: true,
-        ordered: true,
+        reliable: ReliabilityGuarantee::Reliable,
+        ordered: OrderingGuarantee::Ordered,
         fragmented: true,
         string_size: 0..=5,
     });
+
+    // Any and all systems can send and receive messages
+    app.add_systems(Update, my_system);
 }
 
 // A simple system to read and write messages
@@ -62,3 +64,5 @@ fn my_system(
     assert_eq!(std::str::from_utf8(&read).unwrap(), "hello");
 }
 ```
+
+You also need a transport layer to send your messages.

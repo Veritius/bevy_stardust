@@ -18,7 +18,7 @@ impl Plugin for StardustPlugin {
         app.add_event::<PeerConnectedEvent>();
 
         // Channel and hasher things
-        app.insert_resource(ProtocolIdHasher::new());
-        app.add_systems(PreStartup, complete_hasher);
+        app.insert_resource(PendingHashValues::new());
+        app.add_systems(PreStartup, finalise_hasher_system);
     }
 }

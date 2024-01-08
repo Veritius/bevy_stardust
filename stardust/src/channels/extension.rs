@@ -17,17 +17,6 @@ mod sealed {
 /// Adds channel-related functions to the `App`.
 pub trait ChannelSetupAppExt: sealed::Sealed {
     /// Registers a channel with type `T` and the config and components given.
-    /// 
-    /// ```ignore
-    /// // Simple example
-    /// app.add_channel::<MyChannel>(ChannelConfiguration {
-    ///     reliable: ChannelReliability::Reliable,
-    ///     ordering: ChannelOrdering::Ordered,
-    ///     fragmentation: ChannelFragmentation::Disabled,
-    ///     compression: ChannelCompression::Disabled,
-    ///     validation: MessageValidation::Disabled,
-    /// });
-    /// ```
     fn add_channel<C: Channel>(&mut self, config: ChannelConfiguration);
 }
 
@@ -37,8 +26,10 @@ impl ChannelSetupAppExt for App {
         config: ChannelConfiguration,
     ) {
         // Change hash value
-        self.net_hash_value(("channel", C::type_path(), &config));
-        
+        self.net_hash_value("channel");
+        self.net_hash_value(C::type_path());
+        self.net_hash_value(&config);
+
         // Spawn entity
         let entity = self.world.spawn((
             ChannelMarker::<C>::default(),
