@@ -1,3 +1,6 @@
-# Summary
+# User Guide
 
-- [Chapter 1](./chapter_1.md)
+- [User Guide](./guide/introduction.md)
+    - [Plugins](./guide/plugins.md)
+    - [Channels](./guide/channels.md)
+    - [Scheduling](./guide/scheduling.md)
