@@ -7,6 +7,7 @@ mod connection;
 mod handshake;
 mod plugin;
 mod reliability;
+mod sockets;
 mod systems;
 
 pub use plugin::UdpTransportPlugin;
