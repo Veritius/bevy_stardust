@@ -71,6 +71,7 @@ impl StableHash for &str {
 // The reference point is a Surface Pro 7 with an Intel i5-1035G4 (8) @ 3.700GHz CPU.
 // The computer is running Linux Mint 21.2 x86_64 on kernel 6.6.6-surface-1.
 // Compiled on rustc 1.72.1 (d5c2e9c34 2023-09-13) on the release channel.
+// gxhash is version 3.0.0 exactly
 // If this test ever fails, you should report it immediately.
 #[test]
 fn hash_stability_check() {
