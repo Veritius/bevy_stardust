@@ -1,12 +1,14 @@
 //! UDP connections.
 
+use bevy::prelude::*;
+use std::net::SocketAddr;
+
 pub(crate) mod inner;
 
 pub use inner::ConnectionDirection;
 
-use std::net::SocketAddr;
-
 /// An active UDP connection.
+#[derive(Component)]
 pub struct UdpConnection {
     connection: inner::Connection,
 }
