@@ -9,5 +9,7 @@ mod plugin;
 mod reliability;
 mod sockets;
 mod systems;
+mod manager;
 
 pub use plugin::UdpTransportPlugin;
+pub use manager::UdpConnectionManager;

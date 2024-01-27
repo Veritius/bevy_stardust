@@ -1,5 +1,4 @@
 use std::{net::UdpSocket, collections::BTreeMap};
-
 use bevy::prelude::*;
 use super::socket::Socket;
 
@@ -26,5 +25,41 @@ impl SocketManager {
 
         self.peers.clear();
         self.sockets.clear();
+    }
+}
+
+#[derive(Event)]
+pub(crate) enum SocketManagerEvent {
+    PushSocket {
+        socket: UdpSocket
+    },
+    ClearSockets {
+        disconnect: bool,
+    },
+}
+
+pub(crate) fn socket_manager_system(
+    mut reader: EventReader<SocketManagerEvent>,
+    mut manager: ResMut<SocketManager>,
+) {
+    for item in reader.read() {
+        match item {
+            // Adds a socket to the manager
+            SocketManagerEvent::PushSocket { socket } => {
+                // Clone the socket
+                let cloned = socket.try_clone();
+                if let Err(ref error) = cloned {
+                    error!("Failed to clone UdpSocket for address {:?}: {error}", socket.local_addr());
+                }
+
+                // Pushes the socket
+                manager.push_socket(cloned.unwrap());
+            },
+
+            // Clears the bound sockets in the manager
+            SocketManagerEvent::ClearSockets { disconnect } => {
+                manager.clear_sockets(*disconnect);
+            },
+        }
     }
 }

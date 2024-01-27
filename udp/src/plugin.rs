@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use bevy_stardust::scheduling::*;
-use crate::systems::*;
+use crate::{systems::*, sockets::socket_manager_system};
 
 /// The UDP transport plugin. Adds the minimal functionality.
 /// 
@@ -42,11 +42,12 @@ impl Plugin for UdpTransportPlugin {
             river_count,
             bitfield_bytes,
         });
-        
+
         // Add systems
+        app.add_systems(PostUpdate, socket_manager_system);
         app.add_systems(PreUpdate, packet_listener_system
             .in_set(NetworkRead::Receive));
-        app.add_systems(PreUpdate, packet_sender_system
+        app.add_systems(PostUpdate, packet_sender_system
             .in_set(NetworkWrite::Send));
 
         todo!();
