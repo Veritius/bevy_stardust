@@ -13,4 +13,8 @@ impl Socket {
             peers: vec![],
         }
     }
+
+    pub fn socket(&self) -> &UdpSocket {
+        &self.socket
+    }
 }
