@@ -6,8 +6,4 @@
 
 pub mod plugin;
 
-mod events;
-mod manager;
-mod endpoint;
-
-pub use manager::QuicManager;
+mod executor;

@@ -1,7 +1,6 @@
 //! The QUIC transport layer plugin.
 
 use bevy::prelude::*;
-use crate::endpoint::{endpoint_manager_system, Endpoint};
 
 /// Adds a QUIC transport layer to the `App`.
 pub struct QuicTransportPlugin {
@@ -17,8 +16,6 @@ pub struct QuicTransportPlugin {
 
 impl Plugin for QuicTransportPlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<Endpoint>();
-        app.add_event::<crate::events::EndpointManagerEvent>();
-        app.add_systems(PostUpdate, endpoint_manager_system);
+        todo!();
     }
 }
