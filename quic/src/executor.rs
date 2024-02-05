@@ -1,9 +1,10 @@
 use std::task::{ready, Poll};
-use bevy::tasks::{AsyncComputeTaskPool, ComputeTaskPool};
+use bevy::tasks::{AsyncComputeTaskPool, ComputeTaskPool, IoTaskPool};
 
 /// Schedules tasks for processing on Bevy task pools.
 #[derive(Debug)]
 pub(crate) enum BevyAsyncExecutor {
+    IoCompute,
     SyncCompute,
     AsyncCompute,
 }
@@ -15,6 +16,10 @@ impl quinn::Runtime for BevyAsyncExecutor {
 
     fn spawn(&self, future: std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>>) {
         match self {
+            Self::IoCompute => {
+                let pool = IoTaskPool::get();
+                pool.spawn(future).detach();
+            }
             Self::SyncCompute => {
                 let pool = ComputeTaskPool::get();
                 pool.spawn(future).detach();
