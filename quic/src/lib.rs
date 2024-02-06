@@ -6,4 +6,8 @@
 
 pub mod plugin;
 
+mod connection;
+mod endpoints;
 mod executor;
+mod reader;
+mod writer;
