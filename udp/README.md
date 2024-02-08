@@ -3,7 +3,9 @@ A native UDP transport layer for [bevy_stardust](https://crates.io/crates/bevy_s
 
 ## Features
 - Lightweight and simple with feature flags
-- Pure UDP using the standard library
+- Native UDP using the standard library
+- Connection and message-oriented API
 - Reliability, ordering, and fragmentation
 - Horizontally scalable with load balancing
 - Flexible protocol with versioning
+- Encryption and authentication

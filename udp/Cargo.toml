@@ -16,3 +16,14 @@ bevy_stardust = { version = "0.2", path = "../stardust" }
 bytes = "1.5.0"
 rayon = "1.8"
 rand = "0.8"
+
+# Encryption dependencies
+rustls = { version = "0.22", optional = true }
+ring = { version = "0.17", optional = true }
+
+[features]
+default = ["encryption"]
+encryption = [
+    "dep:rustls",
+    "dep:ring",
+]

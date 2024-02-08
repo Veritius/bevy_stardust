@@ -11,5 +11,8 @@ mod sockets;
 mod systems;
 mod manager;
 
+#[cfg(feature="encryption")]
+pub mod encryption;
+
 pub use plugin::UdpTransportPlugin;
 pub use manager::UdpConnectionManager;
