@@ -19,7 +19,6 @@ impl TrustAnchors {
     }
 }
 
-/// Trust anchors for connection authentication.
 pub(crate) enum TrustAnchorsInner {
     Owned(Vec<TrustAnchor<'static>>),
     Borrowed(&'static [TrustAnchor<'static>])
