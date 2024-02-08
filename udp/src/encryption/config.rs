@@ -1,5 +1,5 @@
 use std::sync::Arc;
-use rustls::pki_types::{CertificateDer, PrivateKeyDer, CertificateRevocationListDer};
+use rustls::pki_types::{TrustAnchor, CertificateDer, PrivateKeyDer};
 
 /// Trust anchors for connection authentication.
 pub struct TrustAnchors(pub(crate) Arc<TrustAnchorsInner>);
@@ -7,20 +7,22 @@ pub struct TrustAnchors(pub(crate) Arc<TrustAnchorsInner>);
 impl TrustAnchors {
     /// Creates a new TrustAnchors object from component parts.
     pub fn new(
-        anchors: Vec<CertificateDer<'static>>,
-        revocations: CertificateRevocationListDer<'static>,
+        anchors: Vec<TrustAnchor<'static>>,
     ) -> Self {
-        Self(Arc::new(TrustAnchorsInner {
-            anchors,
-            revocations,
-        }))
+        Self(Arc::new(TrustAnchorsInner::Owned(anchors)))
+    }
+
+    /// Use compiled-in trust anchors from the `webpki-roots` crate.
+    #[cfg(feature="encryption-webpki-roots")]
+    pub fn webpki() -> Self {
+        Self(Arc::new(TrustAnchorsInner::Borrowed(webpki_roots::TLS_SERVER_ROOTS)))
     }
 }
 
 /// Trust anchors for connection authentication.
-pub(crate) struct TrustAnchorsInner {
-    pub anchors: Vec<CertificateDer<'static>>,
-    pub revocations: CertificateRevocationListDer<'static>,
+pub(crate) enum TrustAnchorsInner {
+    Owned(Vec<TrustAnchor<'static>>),
+    Borrowed(&'static [TrustAnchor<'static>])
 }
 
 /// Certificate chain used to authenticate this peer.

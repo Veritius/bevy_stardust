@@ -16,14 +16,20 @@ bevy_stardust = { version = "0.2", path = "../stardust" }
 bytes = "1.5.0"
 rayon = "1.8"
 rand = "0.8"
+anyhow = "1"
 
 # Encryption dependencies
 rustls = { version = "0.22", optional = true }
 ring = { version = "0.17", optional = true }
+webpki-roots = { version = "0.26.1", optional = true }
 
 [features]
-default = ["encryption"]
+default = ["encryption", "encryption-webpki-roots"]
 encryption = [
     "dep:rustls",
     "dep:ring",
+]
+encryption-webpki-roots = [
+    "encryption",
+    "dep:webpki-roots",
 ]
