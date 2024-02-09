@@ -4,3 +4,4 @@ pub const ACCEPTABLE_TRANSPORT_VERSIONS: &[&[u8]] = &[
 ];
 
 mod initial;
+mod failure;

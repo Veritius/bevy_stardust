@@ -14,6 +14,10 @@ pub struct UdpTransportPlugin {
     /// The number of bytes to use for reliability. Minimum of 1, maximum of 16.
     /// It's best to leave this on 4 unless you know what you're doing.
     pub bitfield_bytes: u8,
+
+    /// Rejects all connections if they don't provide any encryption methods.
+    #[cfg(feature="encryption")]
+    pub mandate_encryption: bool,
 }
 
 impl Default for UdpTransportPlugin {
@@ -21,6 +25,8 @@ impl Default for UdpTransportPlugin {
         Self {
             river_count: 8,
             bitfield_bytes: 4,
+            #[cfg(feature="encryption")]
+            mandate_encryption: true,
         }
     }
 }

@@ -1,4 +1,12 @@
 use untrusted::*;
+use super::failure::HandshakeFailureMessage;
+
+const ENCRYPTION_REQUIRED: u16 = 0b0000_0000_0001;
+const ENCRYPTION_USE_X509: u16 = 0b0000_0000_0010;
+
+pub(crate) fn send_outgoing_initial() -> std::io::Result<()> {
+    todo!()
+}
 
 /// Process the very first packet received from an unknown peer.
 pub(crate) fn read_incoming_initial(
@@ -19,6 +27,21 @@ pub(crate) fn read_incoming_initial(
     let seq_bytes = TryInto::<[u8;2]>::try_into(reader.read_bytes(2)?.as_slice_less_safe()).unwrap();
     let seq = u16::from_be_bytes(seq_bytes);
 
+    // Check any encryption related values
+    let encryption_flags = u16::from_be_bytes(TryInto::<[u8;2]>::try_into(reader.read_bytes(2)?.as_slice_less_safe()).unwrap());
+    let encryption_required = (encryption_flags | ENCRYPTION_REQUIRED) > 0;
+
+    #[cfg(not(feature="encryption"))]
+    if encryption_required {
+        // We don't support encryption, so we reject them immediately.
+        return Ok(HandshakeFailureMessage::EncryptionNotSupported.into());
+    }
+
+    // #[cfg(feature="encryption")]
+    // if encryption_required && true {
+    //     todo!();
+    // }
+
     // They've passed all the checks for this stage of the transaction
     return Ok(InitialPacketOutcome::Continue {
         seq,
@@ -26,13 +49,18 @@ pub(crate) fn read_incoming_initial(
 }
 
 pub(crate) enum InitialPacketOutcome {
-    /// Continue to further things.
+    /// Continue to further into the handshake.
     Continue {
         seq: u16,
     },
-    /// Inform them that we don't want to connect.
-    Rejected {
 
-    },
+    /// Inform them that we don't want to connect.
+    Rejected(HandshakeFailureMessage),
     
+}
+
+impl From<HandshakeFailureMessage> for InitialPacketOutcome {
+    fn from(value: HandshakeFailureMessage) -> Self {
+        Self::Rejected(value)
+    }
 }
