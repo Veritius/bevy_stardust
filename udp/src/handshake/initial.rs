@@ -1,16 +1,16 @@
 use untrusted::*;
 use super::failure::HandshakeFailureMessage;
 
-const ENCRYPTION_REQUIRED: u16 = 0b0000_0000_0001;
-const ENCRYPTION_USE_X509: u16 = 0b0000_0000_0010;
-
 pub(crate) fn send_outgoing_initial() -> std::io::Result<()> {
     todo!()
 }
 
 /// Process the very first packet received from an unknown peer.
+/// 
+/// If `match_flag` contains duplicate elements, this function will always reject the peer.
 pub(crate) fn read_incoming_initial(
     bytes: &[u8],
+    match_flags: &[&[u8]],
 ) -> Result<InitialPacketOutcome, EndOfInput> {
     let mut reader = Reader::new(Input::from(bytes));
 
@@ -27,20 +27,22 @@ pub(crate) fn read_incoming_initial(
     let seq_bytes = TryInto::<[u8;2]>::try_into(reader.read_bytes(2)?.as_slice_less_safe()).unwrap();
     let seq = u16::from_be_bytes(seq_bytes);
 
-    // Check any encryption related values
-    let encryption_flags = u16::from_be_bytes(TryInto::<[u8;2]>::try_into(reader.read_bytes(2)?.as_slice_less_safe()).unwrap());
-    let encryption_required = (encryption_flags | ENCRYPTION_REQUIRED) > 0;
+    // Read through the handshake flags
+    let flag_count = reader.read_byte()? as usize;
+    if flag_count > 128 { return Err(EndOfInput) } // flag limit is 128
+    let mut matched_flags = 0u128;
+    for idx in 0..flag_count {
+        let flag_length = reader.read_byte()? as usize;
+        let flag_value = reader.read_bytes(flag_length)?.as_slice_less_safe();
 
-    #[cfg(not(feature="encryption"))]
-    if encryption_required {
-        // We don't support encryption, so we reject them immediately.
-        return Ok(HandshakeFailureMessage::EncryptionNotSupported.into());
+        // Check if the flag is in match_flags
+        if let Some(idx) = match_flags.iter().position(|v| *v == flag_value) {
+            matched_flags |= 1u128 << idx; // set bit to true
+        }
     }
 
-    // #[cfg(feature="encryption")]
-    // if encryption_required && true {
-    //     todo!();
-    // }
+    // Check that we've matched enough handshake flags
+    todo!();
 
     // They've passed all the checks for this stage of the transaction
     return Ok(InitialPacketOutcome::Continue {
