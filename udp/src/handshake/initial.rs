@@ -18,8 +18,7 @@ pub(crate) fn read_incoming_initial(
     let version_length = reader.read_byte()? as usize;
     let version_value = reader.read_bytes(version_length)?;
     if !super::ACCEPTABLE_TRANSPORT_VERSIONS.contains(&version_value.as_slice_less_safe()) {
-        // return Ok(InitialPacketOutcome::Rejected {})
-        todo!();
+        return Ok(InitialPacketOutcome::Rejected(HandshakeFailureMessage::UnsupportedTransportVersion))
     }
 
     // Read their starting sequence id for reliability
