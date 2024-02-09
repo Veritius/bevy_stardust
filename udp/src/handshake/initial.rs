@@ -7,7 +7,7 @@ pub(crate) fn send_outgoing_initial() -> std::io::Result<()> {
 
 /// Process the very first packet received from an unknown peer.
 /// 
-/// If `match_flag` contains duplicate elements, this function will always reject the peer.
+/// If `match_flag` contains duplicate elements or is above 128 elements in length, this function will always reject the peer.
 pub(crate) fn read_incoming_initial(
     bytes: &[u8],
     match_flags: &[&[u8]],
@@ -29,7 +29,6 @@ pub(crate) fn read_incoming_initial(
 
     // Read through the handshake flags
     let flag_count = reader.read_byte()? as usize;
-    if flag_count > 128 { return Err(EndOfInput) } // flag limit is 128
     let mut matched_flags = 0u128;
     for idx in 0..flag_count {
         let flag_length = reader.read_byte()? as usize;
@@ -37,6 +36,7 @@ pub(crate) fn read_incoming_initial(
 
         // Check if the flag is in match_flags
         if let Some(idx) = match_flags.iter().position(|v| *v == flag_value) {
+            if idx > 128 { break } // too many match flags
             matched_flags |= 1u128 << idx; // set bit to true
         }
     }
