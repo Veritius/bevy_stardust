@@ -33,16 +33,6 @@ pub(crate) fn read_incoming_initial(
         let flag_length = reader.read_byte()? as usize;
         let flag_value = reader.read_bytes(flag_length)?.as_slice_less_safe();
 
-        // Check encryption-related flags
-        // TODO: This isn't finished
-        match flag_value {
-            #[cfg(not(feature="encryption"))]
-            b"encryption/required" => {
-                return Ok(InitialPacketOutcome::Rejected(HandshakeFailureMessage::EncryptionNotSupported))
-            },
-            _ => {} // do nothing
-        }
-
         // Check if the flag is in match_flags
         if let Some(idx) = match_flags.iter().position(|v| *v == flag_value) {
             if idx > 128 { break } // too many match flags

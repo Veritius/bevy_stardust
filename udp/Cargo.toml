@@ -18,19 +18,3 @@ untrusted = "0.9"
 rayon = "1.8"
 rand = "0.8"
 anyhow = "1"
-
-# encryption feature dependencies
-ring = { version = "0.17", features = ["std"], optional = true }
-
-# encryption-x509 feature dependencies
-rustls-webpki = { version = "0.102", optional = true }
-
-[features]
-default = ["encryption", "encryption-x509"]
-encryption = [
-    "dep:ring"
-]
-encryption-x509 = [
-    "encryption",
-    "dep:rustls-webpki",
-]

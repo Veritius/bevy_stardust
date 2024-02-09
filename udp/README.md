@@ -8,4 +8,3 @@ A native UDP transport layer for [bevy_stardust](https://crates.io/crates/bevy_s
 - Reliability, ordering, and fragmentation
 - Horizontally scalable with load balancing
 - Flexible protocol with versioning
-- Encryption and authentication
