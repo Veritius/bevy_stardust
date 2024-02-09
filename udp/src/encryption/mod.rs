@@ -1,5 +1,4 @@
-//! Encryption and authentication functionality using TLS.
+//! Encryption and authentication functionality.
 
-mod config;
-
-pub use config::*;
+#[cfg(feature="encryption-x509")]
+pub mod x509;
