@@ -1,8 +1,31 @@
+use bytes::{BufMut, Buf};
 use untrusted::*;
-use super::failure::HandshakeFailureMessage;
+use super::{failure::HandshakeFailureMessage, TRANSPORT_VERSION};
 
-pub(crate) fn send_outgoing_initial() -> std::io::Result<()> {
-    todo!()
+pub(crate) fn write_outgoing_initial(
+    scratch: &mut impl BufMut,
+    local_seq: u16,
+    attach_flags: &[&[u8]],
+    additional: Option<impl Buf>,
+) {
+    // Write transport version string
+    scratch.put_u8(TRANSPORT_VERSION.len() as u8);
+    scratch.put(TRANSPORT_VERSION);
+
+    // Write sequence number
+    scratch.put(&local_seq.to_be_bytes()[..]);
+
+    // Write flags
+    scratch.put_u8(attach_flags.len() as u8);
+    for flag in attach_flags {
+        scratch.put_u8(flag.len() as u8);
+        scratch.put(*flag);
+    }
+
+    // Write additional data
+    if let Some(additional) = additional {
+        scratch.put(additional);
+    }
 }
 
 /// Process the very first packet received from an unknown peer.
