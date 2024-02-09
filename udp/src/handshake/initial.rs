@@ -42,7 +42,14 @@ pub(crate) fn read_incoming_initial(
     }
 
     // Check that we've matched enough handshake flags
-    todo!();
+    // this is inefficient as written but the compiler probably optimises it so eh
+    for bit in 0..128 {
+        if 1u128 >> bit & matched_flags > 0 {
+            return Ok(InitialPacketOutcome::Rejected(
+                HandshakeFailureMessage::MandatoryFlagMismatch,
+            ))
+        }
+    }
 
     // They've passed all the checks for this stage of the transaction
     return Ok(InitialPacketOutcome::Continue {
