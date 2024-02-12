@@ -30,7 +30,8 @@ pub struct NetworkPeer {
 
     /// The quality of the connection, from `0.0` to `1.0`.
     /// This is subjective and defined by the transport layer.
-    pub quality: f32,
+    /// `None` means a value is not provided.
+    pub quality: Option<f32>,
 
     /// Round-trip time, in milliseconds.
     pub ping: u32,
@@ -39,6 +40,18 @@ pub struct NetworkPeer {
 }
 
 impl NetworkPeer {
+    /// Creates the component in the `Connecting` state.
+    pub fn new() -> Self {
+        Self {
+            joined: Instant::now(),
+            state: NetworkPeerState::Connecting,
+            uuid: None,
+            quality: None,
+            ping: 0,
+            disconnect_requested: false,
+        }
+    }
+
     /// Signals to the transport layer to disconnect the peer.
     /// This operation cannot be undone.
     pub fn disconnect(&mut self) {
