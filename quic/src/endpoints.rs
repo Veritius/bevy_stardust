@@ -104,7 +104,7 @@ impl QuicConnectionManager<'_, '_> {
     /// The first value provided by the `ToSocketAddr` implementation will be used.
     pub fn try_connect_remote(
         &mut self,
-        local: SocketAddr,
+        endpoint: Entity,
         remote: impl ToSocketAddrs,
         server_name: &str,
     ) -> Result<Entity> {
@@ -113,9 +113,7 @@ impl QuicConnectionManager<'_, '_> {
             .context("No SocketAddr provided")?;
 
         // Find component for endpoint
-        let mut endpoint = self.endpoints.iter_mut()
-            .find(|p| p.udp_socket.local_addr().unwrap() == local)
-            .context(format!("No endpoint bound to {local}"))?;
+        let mut endpoint = self.endpoints.get_mut(endpoint)?;
 
         // Connect to target with endpoint
         let (_, connection) = endpoint.connect(remote, server_name)?;
