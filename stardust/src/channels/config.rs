@@ -6,7 +6,7 @@ use std::{ops::RangeInclusive, hash::Hasher};
 use crate::protocol::StableHash;
 
 /// Configuration for a channel.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ChannelConfiguration {
     /// Whether messages will be resent if they're missed.
     pub reliable: ReliabilityGuarantee,
@@ -36,7 +36,7 @@ impl StableHash for &ChannelConfiguration {
 }
 
 /// The reliability guarantee of a channel.
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ReliabilityGuarantee {
     /// If a message is lost, it's lost. There will be no attempt to get it back.
     Unreliable,
@@ -54,7 +54,7 @@ impl StableHash for ReliabilityGuarantee {
 }
 
 /// The ordering guarantee of a channel.
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum OrderingGuarantee {
     /// Messages will be read in the order they are received.
     Unordered,
