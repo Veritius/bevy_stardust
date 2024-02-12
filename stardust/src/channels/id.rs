@@ -33,8 +33,8 @@ use bevy::prelude::*;
 /// 
 ///     app.add_event::<MovementEvent>();
 ///     app.add_channel::<MovementEvent>(ChannelConfiguration {
-///         reliable: true,
-///         ordered: false,
+///         reliable: ReliabilityGuarantee::Unreliable,
+///         ordered: OrderingGuarantee::Unordered,
 ///         fragmented: false,
 ///         string_size: ..=16,
 ///     });

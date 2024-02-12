@@ -1,0 +1,6 @@
+[book]
+authors = ["veritius"]
+language = "en"
+multilingual = false
+src = "src"
+title = "Stardust Documentation"
