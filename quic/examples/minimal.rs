@@ -1,5 +1,5 @@
 use std::sync::Arc;
-use bevy::{app::{AppLabel, SubApp}, ecs::schedule::ExecutorKind, prelude::*};
+use bevy::{app::{AppLabel, SubApp}, ecs::schedule::ExecutorKind, prelude::*, log::LogPlugin};
 use bevy_stardust::prelude::*;
 use bevy_stardust_quic::*;
 use rustls::{Certificate, PrivateKey, RootCertStore};
@@ -55,7 +55,7 @@ fn main() {
     #[derive(Debug, Clone, Hash, PartialEq, Eq, AppLabel)]
     enum AppLabel { Client, Server }
     let mut master = App::new();
-    master.add_plugins(MinimalPlugins);
+    master.add_plugins((MinimalPlugins, LogPlugin::default()));
     master.insert_sub_app(AppLabel::Client, SubApp::new(client, |_,_| {}));
     master.insert_sub_app(AppLabel::Server, SubApp::new(server, |_,_| {}));
 
