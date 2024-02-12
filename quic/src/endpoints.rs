@@ -1,20 +1,10 @@
-use std::{net::{SocketAddr, ToSocketAddrs, UdpSocket}, sync::{Arc, Exclusive}, time::Instant};
+use std::{net::{SocketAddr, ToSocketAddrs, UdpSocket}, sync::{Arc, Exclusive}};
 use anyhow::{Context, Result};
 use bevy::{ecs::system::SystemParam, prelude::*};
-use bevy_stardust::connections::peer::{NetworkPeer, NetworkPeerState};
+use bevy_stardust::connections::peer::NetworkPeer;
 use quinn_proto::*;
 use rustls::{Certificate, PrivateKey, RootCertStore};
-
-use crate::{connections::QuicConnectionBundle, QuicConnection};
-
-#[derive(Resource)]
-pub(crate) struct SharedEndpointConfig(pub Arc<EndpointConfig>);
-
-impl FromWorld for SharedEndpointConfig {
-    fn from_world(world: &mut World) -> Self {
-        todo!()
-    }
-}
+use crate::{connections::QuicConnectionBundle, plugin::PluginConfig, QuicConnection};
 
 /// An active QUIC endpoint.
 #[derive(Component)]
@@ -59,7 +49,7 @@ impl QuicEndpoint {
 /// Tool for opening QUIC endpoints.
 #[derive(SystemParam)]
 pub struct QuicConnectionManager<'w, 's> {
-    endpt_cfg: Res<'w, SharedEndpointConfig>,
+    plugin_config: Res<'w, PluginConfig>,
     endpoints: Query<'w, 's, &'static mut QuicEndpoint>,
     commands: Commands<'w, 's>,
 }
@@ -73,7 +63,7 @@ impl QuicConnectionManager<'_, '_> {
     ) -> Result<Entity> {
         Ok(self.commands.spawn(QuicEndpoint {
             quic_endpoint: Endpoint::new(
-                self.endpt_cfg.0.clone(),
+                self.plugin_config.endpoint_config.clone(),
                 None,
                 true).into(),
             udp_socket: Self::try_open_socket(address)?,
@@ -99,7 +89,7 @@ impl QuicConnectionManager<'_, '_> {
 
         Ok(self.commands.spawn(QuicEndpoint {
             quic_endpoint: Endpoint::new(
-                self.endpt_cfg.0.clone(),
+                self.plugin_config.endpoint_config.clone(),
                 Some(Arc::new(ServerConfig::with_crypto(Arc::new(crypto)))),
                 true).into(),
             udp_socket: Self::try_open_socket(address)?,
