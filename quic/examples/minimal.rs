@@ -4,7 +4,7 @@ use bevy_stardust::prelude::*;
 use bevy_stardust_quic::*;
 use rustls::{Certificate, PrivateKey, RootCertStore};
 
-const SERVER_ALT_NAME: &str = "https://www.icann.org/";
+const SERVER_ALT_NAME: &str = "www.icann.org";
 const SERVER_ADDRESS: &str = "127.0.0.1:12344";
 const CLIENT_ADDRESS: &str = "127.0.0.1:12345";
 
@@ -26,7 +26,7 @@ fn main() {
     #[derive(Resource)] struct RootCerts(Arc<RootCertStore>);
 
     // Client
-    let mut client = App::new();
+    let mut client = setup_app();
     client.insert_resource(RootCerts(root_certs.clone()));
     client.add_systems(Startup, |certs: Res<RootCerts>, mut manager: QuicConnectionManager| {
         manager.open_client_endpoint(
@@ -39,7 +39,7 @@ fn main() {
     });
 
     // Server
-    let mut server = App::new();
+    let mut server = setup_app();
     server.insert_resource(RootCerts(root_certs.clone()));
     server.insert_resource(ServerPair(cert, key));
     server.add_systems(Startup, |certs: Res<RootCerts>, pair: Res<ServerPair>, mut manager: QuicConnectionManager| {
@@ -55,6 +55,7 @@ fn main() {
     #[derive(Debug, Clone, Hash, PartialEq, Eq, AppLabel)]
     enum AppLabel { Client, Server }
     let mut master = App::new();
+    master.add_plugins(MinimalPlugins);
     master.insert_sub_app(AppLabel::Client, SubApp::new(client, |_,_| {}));
     master.insert_sub_app(AppLabel::Server, SubApp::new(server, |_,_| {}));
 
@@ -68,7 +69,6 @@ fn setup_app() -> App {
         f.set_executor_kind(ExecutorKind::SingleThreaded) ;
     });
 
-    app.add_plugins(MinimalPlugins);
     app.add_plugins(StardustPlugin);
 
     app.add_channel::<MyMessage>(ChannelConfiguration {
