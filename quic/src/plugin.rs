@@ -26,6 +26,7 @@ impl Plugin for QuicTransportPlugin {
             .in_set(NetworkRead::Receive));
         app.add_systems(PostUpdate, crate::outgoing::quic_process_outgoing_system
             .in_set(NetworkWrite::Send));
+        app.add_systems(Update, crate::logging::log_quic_events_system);
 
         app.insert_resource(PluginConfig {
             allow_self_signed: self.allow_self_signed,

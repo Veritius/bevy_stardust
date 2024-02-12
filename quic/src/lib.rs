@@ -7,8 +7,9 @@
 mod connections;
 mod endpoints;
 mod incoming;
-mod outgoing;
+mod logging;
 mod misc;
+mod outgoing;
 mod plugin;
 
 pub use plugin::QuicTransportPlugin;
