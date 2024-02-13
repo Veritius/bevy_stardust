@@ -2,30 +2,52 @@ use std::{io::ErrorKind, time::Instant};
 use bevy::prelude::*;
 use bevy_stardust::prelude::*;
 use bytes::BytesMut;
-use untrusted::{EndOfInput, Input, Reader};
-use crate::{QuicConnection, QuicEndpoint};
+use untrusted::{EndOfInput, Reader};
+use crate::{connections::{ConnectionHandleMap, QuicConnectionBundle}, QuicConnection, QuicEndpoint};
 
-pub(super) fn quic_process_incoming_system(
-    mut endpoints: Query<&mut QuicEndpoint>,
-    mut connections: Query<&mut QuicConnection>,
-    channels: Res<ChannelRegistry>,
-    mut writer: NetworkIncomingWriter,
+pub(super) fn quic_receive_packets_system(
+    mut endpoints: Query<(Entity, &mut QuicEndpoint)>,
+    handle_map: Res<ConnectionHandleMap>,
+    connections: Query<&QuicConnection>,
+    commands: ParallelCommands,
 ) {
     // Receive as many packets as we can
-    endpoints.par_iter_mut().for_each(|mut endpoint| {
+    endpoints.par_iter_mut().for_each(|(endpoint_id, mut endpoint)| {
         let mut scratch = Vec::with_capacity(1472); // todo make this configurable
 
         loop {
             match endpoint.udp_socket.recv_from(&mut scratch) {
                 // Packet received, forward it to the endpoint
                 Ok((bytes, address)) => {
-                    endpoint.inner.get_mut().handle(
+                    if let Some((handle, event)) = endpoint.inner.get_mut().handle(
                         Instant::now(),
                         address,
                         None,
                         None,
                         BytesMut::from(&scratch[..bytes]),
-                    );
+                    ) {
+                        match event {
+                            // Relay connection events
+                            quinn_proto::DatagramEvent::ConnectionEvent(event) => {
+                                if let Some(id) = handle_map.0.get(&handle) {
+                                    let connection = connections.get(*id).unwrap();
+                                    connection.events.lock().unwrap().push(event);
+                                } else {
+                                    todo!();
+                                }
+                            },
+
+                            // Spawn new connection entities
+                            quinn_proto::DatagramEvent::NewConnection(connection) => {
+                                commands.command_scope(|mut commands| {
+                                    commands.spawn(QuicConnectionBundle {
+                                        peer_comp: NetworkPeer::new(),
+                                        quic_comp: QuicConnection::new(endpoint_id, handle, connection),
+                                    });
+                                });
+                            },
+                        }
+                    }
                 },
 
                 // We've run out of packets to read
@@ -38,26 +60,6 @@ pub(super) fn quic_process_incoming_system(
                     error!("IO error while reading packets: {e}");
                     break
                 }
-            }
-        }
-    });
-
-    // Process packets and turn them into usable messages
-    let cid_len = crate::misc::bytes_for_channel_id(channels.channel_count());
-    // let packets = Mutex::new(Vec::new());
-    connections.par_iter_mut().for_each(|mut connection| {
-        // let mut local_packets = Vec::new();
-        let mut connection = connection.inner.get_mut();
-
-        // Read datagrams
-        let mut datagrams = connection.datagrams();
-        while let Some(datagram) = datagrams.recv() {
-            let mut reader = Reader::new(Input::from(&datagram));
-            match read_datagram(&mut reader, &channels, cid_len) {
-                Ok((channel_id, ordering, payload)) => {
-                    todo!()
-                },
-                Err(_) => continue,
             }
         }
     });

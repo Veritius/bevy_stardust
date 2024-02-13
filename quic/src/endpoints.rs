@@ -121,11 +121,7 @@ impl QuicConnectionManager<'_, '_> {
         // Spawn entity to hold Connection
         Ok(self.commands.spawn(QuicConnectionBundle {
             peer_comp: NetworkPeer::new(),
-            quic_comp: QuicConnection {
-                handle,
-                endpoint,
-                inner: Exclusive::new(connection),
-            },
+            quic_comp: QuicConnection::new(endpoint, handle, connection),
         }).id())
     }
 
