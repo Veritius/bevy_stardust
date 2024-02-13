@@ -13,11 +13,18 @@ pub(crate) struct QuicConnectionBundle {
 /// An active QUIC connection.
 #[derive(Component)]
 pub struct QuicConnection {
+    pub(crate) endpoint: Entity,
     pub(crate) handle: ConnectionHandle,
     pub(crate) inner: Exclusive<Connection>,
+    pub(crate) timeout: Option<Instant>,
 }
 
 impl QuicConnection {
+    /// Returns the entity ID of the endpoint performing IO for this connection.
+    pub fn endpoint(&self) -> Entity {
+        self.endpoint
+    }
+
     /// Closes the connection.
     pub fn close(&mut self, reason: Bytes) {
         self.inner.get_mut().close(Instant::now(), VarInt::default(), reason)

@@ -9,7 +9,7 @@ use crate::{connections::QuicConnectionBundle, plugin::PluginConfig, QuicConnect
 /// An active QUIC endpoint.
 #[derive(Component)]
 pub struct QuicEndpoint {
-    pub(crate) quic_endpoint: Exclusive<Endpoint>,
+    pub(crate) inner: Exclusive<Endpoint>,
     pub(crate) udp_socket: UdpSocket,
     pub(crate) root_certs: Arc<RootCertStore>,
 
@@ -25,7 +25,7 @@ impl QuicEndpoint {
     /// Marks the endpoint for closing, disconnecting all clients and shutting down the connection.
     pub fn close(&mut self) {
         self.close_requested = true;
-        self.quic_endpoint.get_mut().reject_new_connections();
+        self.inner.get_mut().reject_new_connections();
     }
 
     /// Returns `true` if the endpoint is marked for closing.
@@ -42,7 +42,7 @@ impl QuicEndpoint {
             .with_root_certificates(self.root_certs.clone())
             .with_no_client_auth();
 
-        Ok(self.quic_endpoint.get_mut().connect(ClientConfig::new(Arc::new(client_config)), address, server_name)?)
+        Ok(self.inner.get_mut().connect(ClientConfig::new(Arc::new(client_config)), address, server_name)?)
     }
 }
 
@@ -62,7 +62,7 @@ impl QuicConnectionManager<'_, '_> {
         root_certs: Arc<RootCertStore>,
     ) -> Result<Entity> {
         Ok(self.commands.spawn(QuicEndpoint {
-            quic_endpoint: Endpoint::new(
+            inner: Endpoint::new(
                 self.plugin_config.endpoint_config.clone(),
                 None,
                 true).into(),
@@ -88,7 +88,7 @@ impl QuicConnectionManager<'_, '_> {
             .with_single_cert(certificate_chain, private_key)?;
 
         Ok(self.commands.spawn(QuicEndpoint {
-            quic_endpoint: Endpoint::new(
+            inner: Endpoint::new(
                 self.plugin_config.endpoint_config.clone(),
                 Some(Arc::new(ServerConfig::with_crypto(Arc::new(crypto)))),
                 true).into(),
@@ -113,16 +113,18 @@ impl QuicConnectionManager<'_, '_> {
             .context("No SocketAddr provided")?;
 
         // Find component for endpoint
-        let mut endpoint = self.endpoints.get_mut(endpoint)?;
+        let mut endpoint_comp = self.endpoints.get_mut(endpoint)?;
 
         // Connect to target with endpoint
-        let (handle, connection) = endpoint.connect(remote, server_name)?;
+        let (handle, mut connection) = endpoint_comp.connect(remote, server_name)?;
 
         // Spawn entity to hold Connection
         Ok(self.commands.spawn(QuicConnectionBundle {
             peer_comp: NetworkPeer::new(),
             quic_comp: QuicConnection {
                 handle,
+                endpoint,
+                timeout: connection.poll_timeout(),
                 inner: Exclusive::new(connection),
             },
         }).id())

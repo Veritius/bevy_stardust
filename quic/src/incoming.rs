@@ -19,7 +19,7 @@ pub(super) fn quic_process_incoming_system(
             match endpoint.udp_socket.recv_from(&mut scratch) {
                 // Packet received, forward it to the endpoint
                 Ok((bytes, address)) => {
-                    endpoint.quic_endpoint.get_mut().handle(
+                    endpoint.inner.get_mut().handle(
                         Instant::now(),
                         address,
                         None,
