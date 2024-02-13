@@ -12,7 +12,7 @@ A QUIC transport layer for [bevy_stardust](https://crates.io/crates/bevy_stardus
 - Connection and message oriented API
 - Reliability and ordering for messages
 - Simple, easy to use API that abstracts the hard stuff
-- Authentication and encryption with TLS
+- Secure-by-default authentication and encryption with TLS
 - Supports clients, servers, and listen servers
 
 ### Future features

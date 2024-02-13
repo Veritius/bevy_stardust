@@ -5,6 +5,7 @@
 #![feature(exclusive_wrapper)]
 
 mod connections;
+mod crypto;
 mod endpoints;
 mod incoming;
 mod logging;
@@ -13,6 +14,6 @@ mod outgoing;
 mod plugin;
 mod polling;
 
-pub use plugin::QuicTransportPlugin;
+pub use plugin::{QuicTransportPlugin, TlsAuthentication};
 pub use endpoints::{QuicEndpoint, QuicConnectionManager};
 pub use connections::QuicConnection;

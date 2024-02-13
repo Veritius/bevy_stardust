@@ -15,13 +15,17 @@ bevy_stardust = { version = "0.2", path = "../stardust" }
 bytes = "1"
 untrusted = "0.9"
 quinn-proto = { version = "0.10" }
-rustls = { version = "0.21", features = ["quic", "dangerous_configuration"] }
+rustls = { version = "0.21", features = ["quic"] }
 ring = "0.17"
 anyhow = "1"
 
 [dev-dependencies]
 rcgen = "0.12"
 rustls-pemfile = "1"
+
+[features]
+default = []
+dangerous = ["rustls/dangerous_configuration"]
 
 [[example]]
 name = "minimal-server"
