@@ -21,3 +21,12 @@ anyhow = "1"
 
 [dev-dependencies]
 rcgen = "0.12"
+rustls-pemfile = "1"
+
+[[example]]
+name = "minimal-server"
+path = "examples/minimal/server.rs"
+
+[[example]]
+name = "minimal-client"
+path = "examples/minimal/client.rs"
