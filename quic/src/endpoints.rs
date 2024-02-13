@@ -116,7 +116,7 @@ impl QuicConnectionManager<'_, '_> {
         let mut endpoint_comp = self.endpoints.get_mut(endpoint)?;
 
         // Connect to target with endpoint
-        let (handle, mut connection) = endpoint_comp.connect(remote, server_name)?;
+        let (handle, connection) = endpoint_comp.connect(remote, server_name)?;
 
         // Spawn entity to hold Connection
         Ok(self.commands.spawn(QuicConnectionBundle {
@@ -124,7 +124,6 @@ impl QuicConnectionManager<'_, '_> {
             quic_comp: QuicConnection {
                 handle,
                 endpoint,
-                timeout: connection.poll_timeout(),
                 inner: Exclusive::new(connection),
             },
         }).id())

@@ -16,7 +16,6 @@ pub struct QuicConnection {
     pub(crate) endpoint: Entity,
     pub(crate) handle: ConnectionHandle,
     pub(crate) inner: Exclusive<Connection>,
-    pub(crate) timeout: Option<Instant>,
 }
 
 impl QuicConnection {
