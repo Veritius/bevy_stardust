@@ -4,7 +4,6 @@ use shared::*;
 use std::sync::Arc;
 use rustls::RootCertStore;
 use bevy::prelude::*;
-use bevy_stardust::prelude::*;
 use bevy_stardust_quic::*;
 
 fn main() {

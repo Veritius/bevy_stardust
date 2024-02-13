@@ -2,7 +2,7 @@ use std::time::{Duration, Instant};
 use bevy::prelude::*;
 use crate::{QuicConnection, QuicEndpoint};
 
-pub(super) fn connection_polling_system(
+pub(super) fn event_exchange_polling_system(
     mut connections: Query<&mut QuicConnection>,
     mut endpoints: Query<&mut QuicEndpoint>,
 ) {
@@ -27,12 +27,15 @@ pub(super) fn connection_polling_system(
             }
         }
     }
+}
 
-    // Handle connection events
+pub(super) fn connection_events_polling_system(
+    mut connections: Query<&mut QuicConnection>
+) {
     connections.par_iter_mut().for_each(|mut connection_comp| {
         let connection = connection_comp.inner.get_mut();
         while let Some(event) = connection.poll() {
             todo!();
         }
-    })
+    });
 }
