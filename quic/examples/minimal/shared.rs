@@ -29,7 +29,6 @@ pub fn setup_app() -> App {
     });
 
     app.add_plugins(QuicTransportPlugin {
-        allow_self_signed: true,
         reliable_streams: 8,
         timeout_delay: 30,
     });
