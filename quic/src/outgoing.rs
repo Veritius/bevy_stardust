@@ -46,10 +46,11 @@ pub(super) fn quic_process_outgoing_system(
 fn send_packet(socket: &UdpSocket, payload: &[u8], address: SocketAddr) {
     match socket.send_to(payload, address) {
         Ok(len) => {
-            trace!("Sent a packet of length {len} to {}", address);
+            assert_eq!(payload.len(), len); // this should not be different
+            trace!("Sent a packet of length {len} to {address}");
         },
         Err(e) => {
-            error!("IO error while reading packets: {e}");
+            error!("IO error while sending packet of length {} to {address}: {e}", payload.len());
         },
     }
 }
