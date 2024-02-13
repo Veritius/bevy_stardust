@@ -7,18 +7,12 @@ use super::stablehash::STABLE_HASHER_SEED;
 #[derive(Resource)]
 pub struct ProtocolConfigHash {
     int: u64,
-    hex: [u8; 16],
 }
 
 impl ProtocolConfigHash {
     /// Returns the integer representation of the hash.
     pub fn int(&self) -> u64 {
         self.int
-    }
-
-    /// Returns the hexadecimal representation of the hash.
-    pub fn str(&self) -> &str {
-        std::str::from_utf8(&self.hex).unwrap()
     }
 }
 
@@ -45,8 +39,7 @@ pub fn finalise_hasher_system(
 
     // Get hasher values
     let int = hasher.state.finish();
-    let hex = format!("{:X}", int).as_bytes().try_into().unwrap();
 
     // Insert hash resource
-    world.insert_resource(ProtocolConfigHash { int, hex });
+    world.insert_resource(ProtocolConfigHash { int });
 }
