@@ -13,7 +13,6 @@ pub struct MyMessage;
 
 pub fn setup_app() -> App {
     let mut app = App::new();
-    app.set_runner(app_runner);
     app.edit_schedule(Main, |f| {
         // We don't need parallelism here.
         f.set_executor_kind(ExecutorKind::SingleThreaded) ;
@@ -36,10 +35,6 @@ pub fn setup_app() -> App {
     });
 
     app
-}
-
-fn app_runner(mut app: App) {
-    todo!()
 }
 
 // This certificate is self signed and the key is public for the sake of demonstration.
