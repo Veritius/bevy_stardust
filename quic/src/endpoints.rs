@@ -116,12 +116,13 @@ impl QuicConnectionManager<'_, '_> {
         let mut endpoint = self.endpoints.get_mut(endpoint)?;
 
         // Connect to target with endpoint
-        let (_, connection) = endpoint.connect(remote, server_name)?;
+        let (handle, connection) = endpoint.connect(remote, server_name)?;
 
         // Spawn entity to hold Connection
         Ok(self.commands.spawn(QuicConnectionBundle {
             peer_comp: NetworkPeer::new(),
             quic_comp: QuicConnection {
+                handle,
                 inner: Exclusive::new(connection),
             },
         }).id())

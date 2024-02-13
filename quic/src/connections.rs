@@ -13,6 +13,7 @@ pub(crate) struct QuicConnectionBundle {
 /// An active QUIC connection.
 #[derive(Component)]
 pub struct QuicConnection {
+    pub(crate) handle: ConnectionHandle,
     pub(crate) inner: Exclusive<Connection>,
 }
 
