@@ -1,4 +1,4 @@
-use std::io::Cursor;
+use std::{io::Cursor, iter};
 use bevy::{ecs::schedule::ExecutorKind, prelude::*};
 use bevy_stardust::prelude::*;
 use bevy_stardust_quic::*;
@@ -44,19 +44,11 @@ static PRIVATE_KEY: &str = include_str!("private_key.key");
 pub fn certificate() -> Certificate {
     let mut read = Cursor::new(CERTIFICATE);
     let mut certs = rustls_pemfile::certs(&mut read).unwrap();
-    println!("{certs:?}");
     Certificate(certs.remove(0))
 }
 
 pub fn private_key() -> PrivateKey {
-    let mut read = Cursor::new(CERTIFICATE);
+    let mut read = Cursor::new(PRIVATE_KEY);
     let mut keys = rustls_pemfile::pkcs8_private_keys(&mut read).unwrap();
-    println!("{keys:?}");
-    PrivateKey(vec![])
-}
-
-#[test]
-fn cert() {
-    certificate();
-    private_key();
+    PrivateKey(keys.remove(0))
 }
