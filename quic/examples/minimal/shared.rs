@@ -1,3 +1,5 @@
+#![allow(unused)] // rustc doesn't detect usage in other examples
+
 use std::io::Cursor;
 use bevy::{ecs::schedule::ExecutorKind, log::LogPlugin, prelude::*};
 use bevy_stardust::prelude::*;
@@ -49,7 +51,7 @@ pub fn root_cert_store() -> RootCertStore {
     let mut read = Cursor::new(ROOT_CA);
     let mut certs = rustls_pemfile::certs(&mut read).unwrap();
     let cert = Certificate(certs.remove(0));
-    store.add(&cert);
+    store.add(&cert).unwrap();
     store
 }
 
