@@ -1,5 +1,6 @@
 use std::{sync::Mutex, time::{Duration, Instant}};
 use bevy::prelude::*;
+use bevy_stardust::prelude::*;
 use quinn_proto::{Connection, ConnectionEvent};
 use crate::{QuicConnection, QuicEndpoint};
 
@@ -45,13 +46,41 @@ pub(super) fn event_exchange_polling_system(
 }
 
 pub(super) fn connection_events_polling_system(
-    mut connections: Query<&mut QuicConnection>
+    mut connections: Query<(Entity, &NetworkPeer, &mut QuicConnection)>,
+    mut disconnect_events: EventWriter<PeerDisconnectedEvent>,
+    commands: ParallelCommands,
 ) {
-    connections.par_iter_mut().for_each(|mut connection_comp| {
+    // Put the event writer in a mutex so it can be accessed in parallel
+    // Disconnection events are very infrequent so this is fine to do
+    let events = Mutex::new(&mut disconnect_events);
+
+    connections.par_iter_mut().for_each(|(entity_id, peer_data, mut connection_comp)| {
+        let disconnect_logged = connection_comp.disconnect_logged;
+
         // Poll events from inner Quinn connection
         let connection = connection_comp.inner.get_mut();
         while let Some(event) = connection.poll() {
-            todo!();
+            match event {
+                quinn_proto::Event::ConnectionLost { reason } => {
+                    // Queue the entity's deletion
+                    commands.command_scope(|mut commands| {
+                        commands.entity(entity_id).despawn();
+                    });
+
+                    // Check if we need to do anything here
+                    if disconnect_logged { continue }
+
+                    // Send the disconnection event to alert game systems
+                    events.lock().unwrap().send(PeerDisconnectedEvent {
+                        entity_id,
+                        uuid: peer_data.uuid,
+                        reason: format!("{reason}").into(),
+                    });
+                },
+                quinn_proto::Event::Stream(_) => todo!(),
+                quinn_proto::Event::DatagramReceived => todo!(),
+                _ => {},
+            }
         }
     });
 }

@@ -20,6 +20,7 @@ pub struct QuicConnection {
     pub(crate) handle: ConnectionHandle,
     pub(crate) inner: Exclusive<Connection>,
     pub(crate) events: Mutex<Vec<ConnectionEvent>>,
+    pub(crate) disconnect_logged: bool,
 }
 
 impl QuicConnection {
@@ -33,6 +34,7 @@ impl QuicConnection {
             handle,
             inner: Exclusive::new(connection),
             events: Mutex::new(Vec::with_capacity(128)),
+            disconnect_logged: false,
         }
     }
 
