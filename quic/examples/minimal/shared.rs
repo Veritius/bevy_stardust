@@ -1,5 +1,5 @@
-use std::{io::Cursor, iter};
-use bevy::{ecs::schedule::ExecutorKind, prelude::*};
+use std::io::Cursor;
+use bevy::{ecs::schedule::ExecutorKind, log::LogPlugin, prelude::*};
 use bevy_stardust::prelude::*;
 use bevy_stardust_quic::*;
 use rustls::{Certificate, PrivateKey};
@@ -13,11 +13,13 @@ pub struct MyMessage;
 
 pub fn setup_app() -> App {
     let mut app = App::new();
+    app.set_runner(app_runner);
     app.edit_schedule(Main, |f| {
         // We don't need parallelism here.
         f.set_executor_kind(ExecutorKind::SingleThreaded) ;
     });
 
+    app.add_plugins((MinimalPlugins, LogPlugin::default()));
     app.add_plugins(StardustPlugin);
 
     app.add_channel::<MyMessage>(ChannelConfiguration {
@@ -34,6 +36,10 @@ pub fn setup_app() -> App {
     });
 
     app
+}
+
+fn app_runner(mut app: App) {
+    todo!()
 }
 
 // This certificate is self signed and the key is public for the sake of demonstration.
