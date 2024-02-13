@@ -14,8 +14,8 @@
 //!     app.add_plugins((DefaultPlugins, StardustPlugin));
 //! 
 //!     app.add_channel::<MyChannel>(ChannelConfiguration {
-//!         reliable: true,
-//!         ordered: false,
+//!         reliable: ReliabilityGuarantee::Unreliable,
+//!         ordered: OrderingGuarantee::Unordered,
 //!         fragmented: false,
 //!         string_size: 0..=16,
 //!     });

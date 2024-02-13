@@ -21,25 +21,62 @@ pub struct NetworkPeer {
     /// The point in time this peer was added to the `World`.
     pub joined: Instant,
 
+    /// The connection state of the network peer.
+    pub state: NetworkPeerState,
+
     /// A unique UUID, if it has one.
     /// This can be used to identify a peer across network sessions.
     pub uuid: Option<Uuid>,
 
     /// The quality of the connection, from `0.0` to `1.0`.
-    pub quality: f32,
+    /// This is subjective and defined by the transport layer.
+    /// `None` means a value is not provided.
+    pub quality: Option<f32>,
 
     /// Round-trip time, in milliseconds.
     pub ping: u32,
+
+    disconnect_requested: bool,
 }
 
 impl NetworkPeer {
-    /// Creates a new [NetworkPeer] component with `connected` set to now.
+    /// Creates the component in the `Connecting` state.
     pub fn new() -> Self {
         Self {
             joined: Instant::now(),
+            state: NetworkPeerState::Connecting,
             uuid: None,
-            quality: 1.0,
+            quality: None,
             ping: 0,
+            disconnect_requested: false,
         }
     }
+
+    /// Signals to the transport layer to disconnect the peer.
+    /// This operation cannot be undone.
+    pub fn disconnect(&mut self) {
+        self.disconnect_requested = true
+    }
+
+    /// Returns `true` if [`disconnect`] has been used.
+    /// This is intended for use by transport layers, and you should use [`NetworkPeerState`] instead.
+    pub fn disconnect_requested(&self) -> bool {
+        self.disconnect_requested
+    }
+}
+
+/// The connection state of a [`NetworkPeer`]. See variants for more documentation.
+#[derive(Debug, Reflect)]
+pub enum NetworkPeerState {
+    /// The peer is in the process of connecting and/or authenticating.
+    Connecting,
+
+    /// The peer is fully connected and ready for data transmission.
+    Connected,
+
+    /// The peer is being disconnected by a transport layer.
+    Disconnecting,
+
+    /// The peer has been fully disconnected and will be removed from the World soon.
+    Disconnected,
 }
