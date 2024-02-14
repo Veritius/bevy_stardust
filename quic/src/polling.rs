@@ -1,14 +1,14 @@
 use std::{sync::Mutex, time::{Duration, Instant}};
 use bevy::prelude::*;
 use bevy_stardust::prelude::*;
-use quinn_proto::{Connection, ConnectionEvent};
+use quinn_proto::{Connection, ConnectionEvent, ConnectionHandle, Endpoint, EndpointEvent};
 use crate::{QuicConnection, QuicEndpoint};
 
 pub(super) fn event_exchange_polling_system(
     mut connections: Query<&mut QuicConnection>,
     mut endpoints: Query<&mut QuicEndpoint>,
 ) {
-    // This can't be in parallel because we access the endpoints query
+    // TODO: This might be able to run in parallel too
     for mut connection_comp in connections.iter_mut() {
         let connection_handle = connection_comp.handle.clone();
         let target_endpoint = connection_comp.endpoint.clone();
@@ -21,31 +21,59 @@ pub(super) fn event_exchange_polling_system(
             }
         }
 
-        // Handle endpoint events and subsequent connection events
+        /*
+            TODO: See if a limit needs to be imposed on the amount of ping-ponging back and forth that occurs
+            The quinn-proto documentation doesn't say anything about if constant blocking exchange will ever halt
+            There could potentially be a situation where this process enters an infinite loop, which is obviously bad
+            Though this probably isn't a real concern since if that were the case it'd happen in the async Quinn too
+        */
+
+        fn access_dual(comp: &mut QuicConnection) -> (&mut Connection, &Mutex<Vec<ConnectionEvent>>) {
+            (comp.inner.get_mut(), &comp.events)
+        }
+
+        let (connection, queue) = access_dual(&mut connection_comp);
         let mut endpoint = endpoints.get_mut(target_endpoint).unwrap();
-        while let Some(event) = connection.poll_endpoint_events() {
-            if let Some(event) = endpoint.inner.get_mut().handle_event(connection_handle, event) {
-                connection.handle_event(event);
-            }
-        }
+        let endpoint = endpoint.inner.get_mut();
 
-        // We have to do this to access the connection mutably and connection immutably simultaneously
-        fn get_lock_and_connection(
-            connection_comp: &mut QuicConnection
-        ) -> (&mut Connection, &Mutex<Vec<ConnectionEvent>>) {
-            (connection_comp.inner.get_mut(), &connection_comp.events)
-        }
-
-        // Handle connection events stored in the component's queue
-        let (connection, mutex) = get_lock_and_connection(&mut connection_comp);
-        let mut queue_lock = mutex.lock().unwrap();
+        // Iterate over all queued messages
+        let mut queue_lock = queue.lock().unwrap();
         for event in queue_lock.drain(..) {
-            connection.handle_event(event);
+            handle_connection_event(connection_handle, connection, endpoint, event);
+        }
+
+        // Connection inners might want to talk
+        while let Some(event) = connection.poll_endpoint_events() {
+            handle_endpoint_event(connection_handle, connection, endpoint, event);
         }
     }
 }
 
-pub(super) fn connection_events_polling_system(
+fn handle_endpoint_event(
+    connection_handle: ConnectionHandle,
+    connection: &mut Connection,
+    endpoint: &mut Endpoint,
+    event: EndpointEvent,
+) {
+    if let Some(event) = endpoint.handle_event(connection_handle, event) {
+        handle_connection_event(connection_handle, connection, endpoint, event);
+    }
+}
+
+fn handle_connection_event(
+    connection_handle: ConnectionHandle,
+    connection: &mut Connection,
+    endpoint: &mut Endpoint,
+    event: ConnectionEvent,
+) {
+    connection.handle_event(event);
+    while let Some(event) = connection.poll_endpoint_events() {
+        handle_endpoint_event(connection_handle, connection, endpoint, event);
+    }
+}
+
+/// Gets application-facing Event objects from connections
+pub(super) fn application_events_polling_system(
     mut connections: Query<(Entity, &NetworkPeer, &mut QuicConnection)>,
     mut disconnect_events: EventWriter<PeerDisconnectedEvent>,
     commands: ParallelCommands,
