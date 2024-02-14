@@ -78,7 +78,7 @@ impl QuicConnectionManager<'_, '_> {
             inner: Endpoint::new(
                 self.plugin_config.endpoint_config.clone(),
                 None,
-                true).into(),
+                false).into(),
             udp_socket: Self::try_open_socket(address)?,
             root_certs,
             close_requested: false,
@@ -104,7 +104,7 @@ impl QuicConnectionManager<'_, '_> {
             inner: Endpoint::new(
                 self.plugin_config.endpoint_config.clone(),
                 Some(Arc::new(ServerConfig::with_crypto(Arc::new(crypto)))),
-                true).into(),
+                false).into(),
             udp_socket: Self::try_open_socket(address)?,
             root_certs,
             close_requested: false,
