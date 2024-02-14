@@ -16,7 +16,7 @@ fn main() {
     });
 
     client.add_systems(PostStartup, |endpoints: Query<Entity, With<QuicEndpoint>>, mut manager: QuicConnectionManager| {
-        manager.try_connect_remote(
+        manager.try_connect(
             endpoints.single(),
             SERVER_ADDRESS,
             SERVER_ALT_NAME

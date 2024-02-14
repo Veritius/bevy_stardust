@@ -7,6 +7,7 @@ use quinn_proto::EndpointConfig;
 /// Adds QUIC support to Stardust.
 pub struct QuicTransportPlugin {
     /// How certificates should be verified for outgoing connections.
+    /// See the [`TlsAuthentication`] documentation for details.
     pub authentication: TlsAuthentication,
 
     /// The number of reliable streams that are opened.
@@ -46,19 +47,23 @@ impl Plugin for QuicTransportPlugin {
     }
 }
 
-/// How certificates should be authenticated.
-/// By default, only `Secure` is available.
-/// Set the `dangerous` feature flag for more options.
+/// How certificates should be authenticated when using [`try_connect`](crate::endpoints::QuicConnectionManager::try_connect).
+/// 
+/// By default, only the `Secure` variant is available, providing the best security.
+/// Set the `dangerous` feature flag for more options, including disabling authentication.
 #[non_exhaustive]
 #[derive(Debug, Default)]
 pub enum TlsAuthentication {
     /// The certificate chain will be fully checked for authenticity.
-    /// This is the safest option and what you should use for almost all games.
+    /// 
+    /// This is the safest option and ensures the best security possible as long as your root CAs are good.
     #[default]
     Secure,
 
-    /// The certificate is basically irrelevant and will always be verified.
-    /// This is incredibly insecure and should only be used for testing.
+    /// The certificate provided by a remote connection will always be accepted as valid.
+    /// 
+    /// This completely invalidates all authentication and makes connections vulnerable to MITM attacks.
+    /// This is useful if you don't care about TLS authentication or you're doing testing.
     #[cfg(feature="dangerous")]
     AlwaysVerify,
 
