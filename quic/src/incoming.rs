@@ -13,7 +13,7 @@ pub(super) fn quic_receive_packets_system(
 ) {
     // Receive as many packets as we can
     endpoints.par_iter_mut().for_each(|(endpoint_id, mut endpoint)| {
-        let mut scratch = Vec::with_capacity(1472); // todo make this configurable
+        let mut scratch = BytesMut::with_capacity(1472); // todo make this configurable
 
         loop {
             match endpoint.udp_socket.recv_from(&mut scratch) {
@@ -24,7 +24,7 @@ pub(super) fn quic_receive_packets_system(
                         address,
                         None,
                         None,
-                        BytesMut::from(&scratch[..bytes]),
+                        scratch.clone(),
                     ) {
                         match event {
                             // Relay connection events
@@ -61,6 +61,9 @@ pub(super) fn quic_receive_packets_system(
                     break
                 }
             }
+
+            // Clear the buffer
+            scratch.clear();
         }
     });
 }
