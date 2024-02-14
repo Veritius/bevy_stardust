@@ -13,6 +13,7 @@ A QUIC transport layer for [bevy_stardust](https://crates.io/crates/bevy_stardus
 - Reliability and ordering for messages
 - Simple, easy to use API that abstracts the hard stuff
 - Secure-by-default authentication and encryption with TLS
+- Easily disable TLS authentication for your game
 - Supports clients, servers, and listen servers
 
 ### Future features
