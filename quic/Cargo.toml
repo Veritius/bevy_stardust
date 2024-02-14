@@ -24,7 +24,7 @@ rcgen = "0.12"
 rustls-pemfile = "1"
 
 [features]
-default = ["dangerous"]
+default = []
 dangerous = []
 
 [[example]]
