@@ -17,7 +17,7 @@ A QUIC transport layer for [bevy_stardust](https://crates.io/crates/bevy_stardus
 - Supports clients, servers, and listen servers
 
 ### Future features
-- [ ] WASM support using WebTransport
+- WASM support using WebTransport
 
 ## Usage
 Adding the plugin:
