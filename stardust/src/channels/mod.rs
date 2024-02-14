@@ -30,8 +30,9 @@ pub(crate) mod extension;
 pub(crate) mod incoming;
 pub(crate) mod outgoing;
 
-pub(super) fn channels(app: &mut bevy::prelude::App) {
-    use bevy::prelude::*;
+pub(super) fn channels(app: &mut bevy_app::App) {
+    use bevy_app::prelude::*;
+    use bevy_ecs::prelude::*;
     use crate::scheduling::*;
 
     // Channel registry

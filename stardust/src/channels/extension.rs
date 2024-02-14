@@ -1,7 +1,7 @@
 //! Adds `add_channel` to the `App`.
 
-use bevy::prelude::*;
-use crate::{protocol::ProtocolIdAppExt, prelude::ChannelConfiguration};
+use bevy_app::App;
+use crate::channels::config::ChannelConfiguration;
 use super::{
     id::{Channel, ChannelMarker},
     registry::ChannelRegistry,
@@ -11,7 +11,7 @@ use super::{
 
 mod sealed {
     pub trait Sealed {}
-    impl Sealed for bevy::prelude::App {}
+    impl Sealed for bevy_app::App {}
 }
 
 /// Adds channel-related functions to the `App`.
@@ -26,9 +26,12 @@ impl ChannelSetupAppExt for App {
         config: ChannelConfiguration,
     ) {
         // Change hash value
-        self.net_hash_value("channel");
-        self.net_hash_value(C::type_path());
-        self.net_hash_value(&config);
+        #[cfg(feature="hashing")] {
+            use crate::hashing::HashingAppExt;
+            self.net_hash_value("channel");
+            self.net_hash_value(C::type_path());
+            self.net_hash_value(&config);
+        }
 
         // Spawn entity
         let entity = self.world.spawn((

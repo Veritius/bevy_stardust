@@ -19,11 +19,11 @@ Stardust is an opinionated networking crate built for Bevy, with a focus on exte
 - UDP, QUIC, and WebRTC transport layers
 
 ## Usage
-| Bevy | Stardust | UDP transport |
-| ---- | -------- | ------------- |
-| 0.12 | 0.3      | N/A           |
-| 0.12 | 0.2      | N/A           |
-| 0.11 | 0.1      | Included      |
+| Bevy | Stardust |
+| ---- | -------- |
+| 0.12 | 0.3      |
+| 0.12 | 0.2      |
+| 0.11 | 0.1      |
 
 ***
 

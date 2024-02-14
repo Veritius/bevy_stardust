@@ -2,8 +2,10 @@
 //! 
 //! All settings are not definitive, but hints to transport layers as how to treat channels.
 
-use std::{ops::RangeInclusive, hash::Hasher};
-use crate::protocol::StableHash;
+use std::ops::RangeInclusive;
+
+#[cfg(feature="hashing")]
+use {std::hash::Hasher, crate::hashing::StableHash};
 
 /// Configuration for a channel.
 #[derive(Debug, Clone)]
@@ -25,6 +27,7 @@ pub struct ChannelConfiguration {
     pub string_size: RangeInclusive<u32>,
 }
 
+#[cfg(feature="hashing")]
 impl StableHash for &ChannelConfiguration {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.reliable.hash(state);
@@ -44,6 +47,7 @@ pub enum ReliabilityGuarantee {
     Reliable,
 }
 
+#[cfg(feature="hashing")]
 impl StableHash for ReliabilityGuarantee {
     fn hash<H: Hasher>(&self, state: &mut H) {
         match self {
@@ -64,6 +68,7 @@ pub enum OrderingGuarantee {
     Ordered,
 }
 
+#[cfg(feature="hashing")]
 impl StableHash for OrderingGuarantee {
     fn hash<H: Hasher>(&self, state: &mut H) {
         match self {

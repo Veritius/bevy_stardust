@@ -1,7 +1,7 @@
 //! "Peers" aka other computers over the network.
 
 use std::time::Instant;
-use bevy::{prelude::*, utils::Uuid};
+use bevy_ecs::prelude::*;
 
 /// Another peer that this peer is aware of, representing someone else over the Internet.
 /// 
@@ -16,7 +16,8 @@ use bevy::{prelude::*, utils::Uuid};
 /// 
 /// Entities with `NetworkPeer` have their entity IDs used in the writing and reading APIs.
 /// They are used as the 'target' of messages, and the transport layer will handle the actual sending and receiving.
-#[derive(Debug, Component, Reflect)]
+#[derive(Debug, Component)]
+#[cfg_attr(feature="reflect", derive(bevy_reflect::Reflect))]
 pub struct NetworkPeer {
     /// The point in time this peer was added to the `World`.
     pub joined: Instant,
@@ -26,7 +27,7 @@ pub struct NetworkPeer {
 
     /// A unique UUID, if it has one.
     /// This can be used to identify a peer across network sessions.
-    pub uuid: Option<Uuid>,
+    pub uuid: Option<uuid::Uuid>,
 
     /// The quality of the connection, from `0.0` to `1.0`.
     /// This is subjective and defined by the transport layer.
@@ -66,7 +67,8 @@ impl NetworkPeer {
 }
 
 /// The connection state of a [`NetworkPeer`]. See variants for more documentation.
-#[derive(Debug, Reflect)]
+#[derive(Debug)]
+#[cfg_attr(feature="reflect", derive(bevy_reflect::Reflect))]
 pub enum NetworkPeerState {
     /// The peer is in the process of connecting and/or authenticating.
     Connecting,
