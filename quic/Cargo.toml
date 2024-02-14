@@ -10,18 +10,21 @@ repository="https://github.com/veritius/bevy_stardust/"
 keywords=["bevy", "gamedev", "networking"]
 
 [dependencies]
-bevy = { version = "0.12", default-features=false }
+bevy_app = "0.12"
+bevy_ecs = "0.12"
 bevy_stardust = { version = "0.2", path = "../stardust" }
+quinn-proto = { version = "0.10" }
 bytes = "1"
 untrusted = "0.9"
-quinn-proto = { version = "0.10" }
 rustls = { version = "0.21", features = ["quic", "dangerous_configuration"] }
 ring = "0.17"
 anyhow = "1"
+tracing = "0.1"
 
 [dev-dependencies]
 rcgen = "0.12"
 rustls-pemfile = "1"
+bevy_log = "0.12"
 
 [features]
 default = []

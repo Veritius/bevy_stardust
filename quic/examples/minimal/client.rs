@@ -2,7 +2,8 @@ mod shared;
 use shared::*;
 
 use std::sync::Arc;
-use bevy::prelude::*;
+use bevy_app::prelude::*;
+use bevy_ecs::prelude::*;
 use bevy_stardust_quic::*;
 
 fn main() {

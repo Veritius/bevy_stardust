@@ -1,6 +1,7 @@
 
 use std::sync::Arc;
-use bevy::prelude::*;
+use bevy_app::prelude::*;
+use bevy_ecs::prelude::*;
 use bevy_stardust::scheduling::{NetworkRead, NetworkWrite};
 use quinn_proto::EndpointConfig;
 

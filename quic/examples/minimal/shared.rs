@@ -1,7 +1,9 @@
 #![allow(unused)] // rustc doesn't detect usage in other examples
 
 use std::io::Cursor;
-use bevy::{ecs::schedule::ExecutorKind, log::LogPlugin, prelude::*};
+use bevy_app::prelude::*;
+use bevy_ecs::prelude::*;
+use bevy_log::LogPlugin;
 use bevy_stardust::prelude::*;
 use bevy_stardust_quic::*;
 use rustls::{Certificate, PrivateKey, RootCertStore};
@@ -10,17 +12,19 @@ pub const SERVER_ALT_NAME: &str = "www.icann.org";
 pub const SERVER_ADDRESS: &str = "127.0.0.1:12344";
 pub const CLIENT_ADDRESS: &str = "127.0.0.1:12345";
 
-#[derive(TypePath)]
 pub struct MyMessage;
 
 pub fn setup_app() -> App {
     let mut app = App::new();
     app.edit_schedule(Main, |f| {
         // We don't need parallelism here.
-        f.set_executor_kind(ExecutorKind::SingleThreaded) ;
+        f.set_executor_kind(bevy_ecs::schedule::ExecutorKind::SingleThreaded) ;
     });
 
-    app.add_plugins((MinimalPlugins, LogPlugin::default()));
+    app.add_plugins(bevy_app::ScheduleRunnerPlugin {
+        run_mode: bevy_app::RunMode::Loop { wait: None }
+    });
+    app.add_plugins(LogPlugin::default());
     app.add_plugins(StardustPlugin);
 
     app.add_channel::<MyMessage>(ChannelConfiguration {

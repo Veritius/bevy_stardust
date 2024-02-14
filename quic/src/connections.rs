@@ -1,7 +1,7 @@
-use std::{sync::{Exclusive, Mutex}, time::Instant};
+use std::{collections::HashMap, sync::{Exclusive, Mutex}, time::Instant};
 use bytes::*;
 use quinn_proto::*;
-use bevy::{prelude::*, utils::hashbrown::HashMap};
+use bevy_ecs::prelude::*;
 use bevy_stardust::prelude::*;
 
 #[derive(Resource, Default)]

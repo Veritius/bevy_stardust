@@ -1,6 +1,6 @@
 use std::{net::{SocketAddr, ToSocketAddrs, UdpSocket}, sync::{Arc, Exclusive}};
 use anyhow::{Context, Result};
-use bevy::{ecs::system::SystemParam, prelude::*};
+use bevy_ecs::{prelude::*, system::SystemParam};
 use bevy_stardust::connections::peer::NetworkPeer;
 use quinn_proto::*;
 use rustls::{Certificate, PrivateKey, RootCertStore};

@@ -1,5 +1,5 @@
 use std::{io::ErrorKind, time::Instant};
-use bevy::prelude::*;
+use bevy_ecs::prelude::*;
 use bevy_stardust::prelude::*;
 use bytes::BytesMut;
 use untrusted::{EndOfInput, Reader};
@@ -57,7 +57,7 @@ pub(super) fn quic_receive_packets_system(
 
                 // Actual IO error
                 Err(e) => {
-                    error!("IO error while reading packets: {e}");
+                    tracing::error!("IO error while reading packets: {e}");
                     break
                 }
             }

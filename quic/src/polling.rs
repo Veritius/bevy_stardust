@@ -1,5 +1,5 @@
 use std::{sync::Mutex, time::{Duration, Instant}};
-use bevy::prelude::*;
+use bevy_ecs::prelude::*;
 use bevy_stardust::prelude::*;
 use quinn_proto::{Connection, ConnectionEvent, ConnectionHandle, Endpoint, EndpointEvent};
 use crate::{QuicConnection, QuicEndpoint};
