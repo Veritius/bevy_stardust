@@ -15,7 +15,7 @@ Stardust is an opinionated networking crate built for Bevy, with a focus on exte
 - Full, flexible support for network-enabled plugins.
 
 ### Planned features
-- Replication and state synchronisation API
+- Replication and state synchronisation plugin
 - UDP, QUIC, and WebRTC transport layers
 
 ## Usage
@@ -66,4 +66,8 @@ fn my_system(
 }
 ```
 
-You also need a transport layer to send your messages.
+## Related plugins
+The following is a list of plugins related to Stardust. If you want your plugin added to the list, feel free to PR it.
+
+### Transport layers
+- [bevy_stardust_quic](https://crates.io/crate/bevy_stardust_quic)
