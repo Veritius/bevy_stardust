@@ -16,7 +16,7 @@ pub(super) fn event_exchange_polling_system(
 
         // Handle timeouts
         if let Some(timeout) = connection.poll_timeout() {
-            if timeout.duration_since(Instant::now()) == Duration::ZERO {
+            if Instant::now().duration_since(timeout) > Duration::ZERO {
                 connection.handle_timeout(Instant::now());
             }
         }
