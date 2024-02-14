@@ -38,7 +38,11 @@ impl Plugin for QuicTransportPlugin {
             endpoint_config: Arc::new(EndpointConfig::default()),
             server_cert_verifier: match &self.authentication {
                 TlsAuthentication::Secure => Arc::new(crate::crypto::WebPkiVerifier),
+
+                #[cfg(feature="dangerous")]
                 TlsAuthentication::AlwaysVerify => Arc::new(crate::crypto::dangerous::AlwaysTrueVerifier),
+
+                #[cfg(feature="dangerous")]
                 TlsAuthentication::Custom(verifier) => verifier.clone(),
             },
         });
