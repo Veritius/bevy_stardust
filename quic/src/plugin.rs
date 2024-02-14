@@ -36,12 +36,10 @@ impl Plugin for QuicTransportPlugin {
         app.insert_resource(PluginConfig {
             reliable_streams: self.reliable_streams,
             endpoint_config: Arc::new(EndpointConfig::default()),
-
-            #[cfg(feature="dangerous")]
-            server_cert_replacement: match &self.authentication {
-                TlsAuthentication::Secure => None,
-                TlsAuthentication::AlwaysVerify => Some(crate::crypto::dangerous::always_true_server_cert_verifier()),
-                TlsAuthentication::Custom(verifier) => Some(verifier.clone()),
+            server_cert_verifier: match &self.authentication {
+                TlsAuthentication::Secure => Arc::new(crate::crypto::WebPkiVerifier),
+                TlsAuthentication::AlwaysVerify => Arc::new(crate::crypto::dangerous::AlwaysTrueVerifier),
+                TlsAuthentication::Custom(verifier) => verifier.clone(),
             },
         });
     }
@@ -69,7 +67,7 @@ pub enum TlsAuthentication {
 
     /// Use a custom implementation of `ServerCertVerifier`.
     #[cfg(feature="dangerous")]
-    Custom(Arc<dyn rustls::client::ServerCertVerifier>),
+    Custom(Arc<dyn crate::crypto::ServerCertVerifier>),
 }
 
 /// Resource added by the plugin to store values defined/created when it was added.
@@ -77,7 +75,5 @@ pub enum TlsAuthentication {
 pub(crate) struct PluginConfig {
     pub reliable_streams: u32,
     pub endpoint_config: Arc<EndpointConfig>,
-
-    #[cfg(feature="dangerous")]
-    pub server_cert_replacement: Option<Arc<dyn rustls::client::ServerCertVerifier>>,
+    pub server_cert_verifier: Arc<dyn crate::crypto::ServerCertVerifier>,
 }

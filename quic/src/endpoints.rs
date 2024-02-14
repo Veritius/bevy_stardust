@@ -34,21 +34,17 @@ impl QuicEndpoint {
     }
 
     #[must_use]
-    pub(crate) fn connect(&mut self, address: SocketAddr, server_name: &str) -> Result<(ConnectionHandle, Connection)> {
-        let client_config = Self::build_client_config(self.root_certs.clone())?;
-        Ok(self.inner.get_mut().connect(ClientConfig::new(Arc::new(client_config)), address, server_name)?)
-    }
-
-    #[must_use]
-    #[cfg(feature="dangerous")]
-    pub(crate) fn connect_with_custom_verifier(
+    pub(crate) fn connect(
         &mut self,
         address: SocketAddr,
         server_name: &str,
-        verifier: Arc<dyn rustls::client::ServerCertVerifier>
+        verifier: Arc<dyn crate::crypto::ServerCertVerifier>
     ) -> Result<(ConnectionHandle, Connection)> {
         let mut client_config = Self::build_client_config(self.root_certs.clone())?;
-        client_config.dangerous().set_certificate_verifier(verifier);
+        client_config.dangerous().set_certificate_verifier(Arc::new(crate::crypto::ServerCertVerifierWrapper {
+            roots: self.root_certs.clone(),
+            inner: verifier,
+        }));
 
         Ok(self.inner.get_mut().connect(ClientConfig::new(Arc::new(client_config)), address, server_name)?)
     }
@@ -133,16 +129,7 @@ impl QuicConnectionManager<'_, '_> {
         let mut endpoint_comp = self.endpoints.get_mut(endpoint)?;
 
         // Connect to target with endpoint
-        #[cfg(not(feature="dangerous"))]
-        let (handle, connection) = endpoint_comp.connect(remote, server_name)?;
-
-        // The same thing but potentially with a custom verifier from the plugin
-        #[cfg(feature="dangerous")]
-        let (handle, connection) = if let Some(verifier) = &self.plugin_config.server_cert_replacement {
-            endpoint_comp.connect_with_custom_verifier(remote, server_name, verifier.clone())?
-        } else {
-            endpoint_comp.connect(remote, server_name)?
-        };
+        let (handle, connection) = endpoint_comp.connect(remote, server_name, self.plugin_config.server_cert_verifier.clone())?;
 
         // Spawn entity to hold Connection
         Ok(self.commands.spawn(QuicConnectionBundle {
@@ -158,7 +145,7 @@ impl QuicConnectionManager<'_, '_> {
         endpoint: Entity,
         remote: impl ToSocketAddrs,
         server_name: &str,
-        verifier: Arc<dyn rustls::client::ServerCertVerifier>,
+        verifier: Arc<dyn crate::crypto::ServerCertVerifier>,
     ) -> Result<Entity> {
         // Get a single SocketAddr from remote
         let remote = remote.to_socket_addrs()?.nth(0)
@@ -168,7 +155,7 @@ impl QuicConnectionManager<'_, '_> {
         let mut endpoint_comp = self.endpoints.get_mut(endpoint)?;
 
         // Connect to target with endpoint using custom verifier
-        let (handle, connection) = endpoint_comp.connect_with_custom_verifier(remote, server_name, verifier)?;
+        let (handle, connection) = endpoint_comp.connect(remote, server_name, verifier)?;
 
         // Spawn entity to hold Connection
         Ok(self.commands.spawn(QuicConnectionBundle {
