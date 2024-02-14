@@ -70,4 +70,4 @@ fn my_system(
 The following is a list of plugins related to Stardust. If you want your plugin added to the list, feel free to PR it.
 
 ### Transport layers
-- [bevy_stardust_quic](https://crates.io/crate/bevy_stardust_quic)
+- [bevy_stardust_quic](https://crates.io/crates/bevy_stardust_quic)
