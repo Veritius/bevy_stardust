@@ -1,5 +1,5 @@
 use std::hash::Hasher;
-use bevy::prelude::*;
+use bevy_ecs::prelude::*;
 use gxhash::GxHasher;
 use super::stablehash::STABLE_HASHER_SEED;
 

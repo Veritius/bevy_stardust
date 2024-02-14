@@ -8,5 +8,7 @@ pub mod channels;
 pub mod connections;
 pub mod plugin;
 pub mod prelude;
-pub mod protocol;
 pub mod scheduling;
+
+#[cfg(feature="hashing")]
+pub mod hashing;

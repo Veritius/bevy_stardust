@@ -1,8 +1,7 @@
 //! The Stardust core plugin.
 
-use bevy::prelude::*;
+use bevy_app::prelude::*;
 use crate::prelude::*;
-use crate::protocol::*;
 
 /// The Stardust multiplayer plugin.
 /// Adds the core functionality of Stardust, but does not add a transport layer.
@@ -17,8 +16,11 @@ impl Plugin for StardustPlugin {
         app.add_event::<PeerDisconnectedEvent>();
         app.add_event::<PeerConnectedEvent>();
 
-        // Channel and hasher things
-        app.insert_resource(PendingHashValues::new());
-        app.add_systems(PreStartup, finalise_hasher_system);
+        // Hashing-related functionality
+        #[cfg(feature="hashing")] {
+            use crate::hashing::*;
+            app.insert_resource(PendingHashValues::new());
+            app.add_systems(PreStartup, finalise_hasher_system);    
+        }
     }
 }
