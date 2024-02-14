@@ -23,6 +23,8 @@ pub use rustls::{Certificate, PrivateKey, RootCertStore, Error as TlsError};
 pub use dangerous_pub_uses::*;
 
 mod dangerous_pub_uses {
+    #![allow(unused_imports)]
+
     use crate::*;
     pub use crypto::ServerCertVerifier;
 }
