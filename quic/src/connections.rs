@@ -48,3 +48,12 @@ impl QuicConnection {
         self.inner.get_mut().close(Instant::now(), VarInt::default(), reason)
     }
 }
+
+pub(super) fn update_handle_map_system(
+    mut handle_map: ResMut<ConnectionHandleMap>,
+    added: Query<(Entity, &QuicConnection), Added<QuicConnection>>,
+) {
+    for (id, comp) in added.iter() {
+        handle_map.0.insert(comp.handle.clone(), id);
+    }
+}

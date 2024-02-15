@@ -29,8 +29,11 @@ impl Plugin for QuicTransportPlugin {
             crate::polling::application_events_polling_system,
         ).chain().in_set(NetworkRead::Receive));
 
-        app.add_systems(PostUpdate, crate::outgoing::quic_process_outgoing_system
-            .in_set(NetworkWrite::Send));
+        app.add_systems(PostUpdate, (
+            crate::outgoing::quic_process_outgoing_system,
+            crate::connections::update_handle_map_system,
+        ).chain().in_set(NetworkWrite::Send));
+
         app.add_systems(Last, crate::logging::log_quic_events_system);
 
         // Check if a transport config is provided, if not, just use defaults that are good for us
