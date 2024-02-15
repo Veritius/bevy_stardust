@@ -38,7 +38,7 @@ impl Plugin for QuicTransportPlugin {
             config
         } else {
             let mut config = TransportConfig::default();
-            config.max_idle_timeout(Some(VarInt::from_u32(30_000).into())); // 30 seconds
+            config.max_idle_timeout(Some(VarInt::from_u32(15_000).into())); // 15 seconds
             Arc::new(config)
         };
 
