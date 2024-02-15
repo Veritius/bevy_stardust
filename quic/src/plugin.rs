@@ -25,6 +25,8 @@ impl Plugin for QuicTransportPlugin {
         // This step is a bit of a powerhouse
         app.add_systems(PreUpdate, (
             crate::incoming::quic_receive_packets_system,
+            crate::incoming::apply_deferred_entity_adds_from_incoming_system,
+            crate::incoming::apply_deferred_connection_events_from_incoming_system,
             crate::polling::event_exchange_polling_system,
             crate::polling::application_events_polling_system,
         ).chain().in_set(NetworkRead::Receive));
@@ -43,6 +45,7 @@ impl Plugin for QuicTransportPlugin {
         };
 
         // Add resources
+        app.init_resource::<crate::incoming::DeferredReceiveOperations>();
         app.init_resource::<crate::connections::ConnectionHandleMap>();
         app.insert_resource(PluginConfig {
             reliable_streams: self.reliable_streams,
