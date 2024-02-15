@@ -1,4 +1,4 @@
-use std::{collections::BTreeMap, time::Instant};
+use std::{collections::BTreeMap, time::{Instant, Duration}};
 use bytes::Bytes;
 use untrusted::{Reader, EndOfInput};
 use crate::sequences::*;
@@ -10,14 +10,14 @@ struct SentPacket {
     time: Instant,
 }
 
-pub(crate) struct ReliablePacket {
+pub(crate) struct ReliablePackets {
     local_sequence: u16,
     remote_sequence: u16,
     unacked_packets: BTreeMap<u16, SentPacket>,
     sequence_memory: u128,
 }
 
-impl ReliablePacket {
+impl ReliablePackets {
     /// Gets the header of a reliable packet.
     pub fn get_header(reader: &mut Reader<'_>, bitfield_bytes: usize) -> Result<ReliablePacketHeader, EndOfInput> {
         let sequence = u16::from_be_bytes([
@@ -78,6 +78,27 @@ impl ReliablePacket {
         self.local_sequence = self.local_sequence.wrapping_add(1);
 
         header
+    }
+
+    /// Returns the oldest packet that has timed out, if any, based on `timeout`.
+    /// Also removes it from the unacknowledged set, so make sure it isn't dropped.
+    pub fn pop_oldest_timed_out(&mut self, timeout: Duration, now: Instant) -> Option<Bytes> {
+        use std::cmp::Ordering;
+
+        self.unacked_packets
+            .iter()
+            .filter(|(_, v)| { now.duration_since(v.time) > timeout })
+            .max_by(|(_, a), (_, b)| {
+                // Turn a comparison between two instants into an Ordering
+                match a.time.checked_duration_since(b.time) {
+                    Some(duration) => match duration > Duration::ZERO {
+                        true => Ordering::Greater,
+                        false => Ordering::Equal,
+                    },
+                    None => Ordering::Less,
+                }
+            })
+            .map(|(_, sent)| sent.payload.clone())
     }
 
     /// Returns the packet corresponding to `id` if it hasn't been acknowledged yet.
