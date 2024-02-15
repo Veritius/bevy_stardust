@@ -1,5 +1,5 @@
 # bevy_stardust_udp
-A native UDP transport layer for [bevy_stardust](https://crates.io/crates/bevy_stardust).
+A highly customisable, native-UDP transport layer for [bevy_stardust](https://crates.io/crates/bevy_stardust).
 
 ## Features
 - Lightweight and simple with feature flags
