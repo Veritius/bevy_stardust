@@ -1,6 +1,5 @@
 use std::{collections::BTreeMap, time::{Instant, Duration}};
 use bytes::Bytes;
-use rand::Rng;
 use super::{sequence_greater_than, SentPacket};
 
 const DROPPED_TIMEOUT: Duration = Duration::from_millis(1000);
@@ -24,10 +23,10 @@ pub(crate) struct ReliableRiver {
 }
 
 impl ReliableRiver {
-    /// Creates a new `ReliableRiver` with a random `local` sequence value.
+    /// Creates a new `ReliableRiver` with a sequence value of `0`.
     pub fn new() -> Self {
         Self {
-            local_sequence: rand::thread_rng().gen::<u16>(),
+            local_sequence: 0,
             remote_sequence: 0,
             unacked_messages: BTreeMap::new(),
             received_packets: 0,
