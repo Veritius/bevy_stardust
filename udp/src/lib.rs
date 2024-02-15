@@ -2,12 +2,12 @@
 
 #![warn(missing_docs)]
 
-mod connection;
-mod handshake;
 mod plugin;
-mod reliability;
 mod manager;
 mod endpoint;
+mod connection;
+mod sequences;
+mod reliability;
 
 pub use plugin::UdpTransportPlugin;
 pub use manager::UdpManager;
