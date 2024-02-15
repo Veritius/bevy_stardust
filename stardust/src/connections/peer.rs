@@ -52,4 +52,33 @@ impl NetworkPeer {
             disconnect_requested: false,
         }
     }
+
+    /// Signals to the transport layer to disconnect the peer.
+    /// This operation cannot be undone.
+    pub fn disconnect(&mut self) {
+        self.disconnect_requested = true
+    }
+
+    /// Returns `true` if [`disconnect`] has been used.
+    /// This is intended for use by transport layers, and you should use [`NetworkPeerState`] instead.
+    pub fn disconnect_requested(&self) -> bool {
+        self.disconnect_requested
+    }
+}
+
+/// The connection state of a [`NetworkPeer`]. See variants for more documentation.
+#[derive(Debug)]
+#[cfg_attr(feature="reflect", derive(bevy_reflect::Reflect))]
+pub enum NetworkPeerState {
+    /// The peer is in the process of connecting and/or authenticating.
+    Connecting,
+
+    /// The peer is fully connected and ready for data transmission.
+    Connected,
+
+    /// The peer is being disconnected by a transport layer.
+    Disconnecting,
+
+    /// The peer has been fully disconnected and will be removed from the World soon.
+    Disconnected,
 }
