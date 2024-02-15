@@ -38,15 +38,23 @@ impl QuicEndpoint {
         &mut self,
         address: SocketAddr,
         server_name: &str,
+        transport: Arc<TransportConfig>,
         verifier: Arc<dyn crate::crypto::ServerCertVerifier>
     ) -> Result<(ConnectionHandle, Connection)> {
-        let mut client_config = Self::build_client_config(self.root_certs.clone())?;
-        client_config.dangerous().set_certificate_verifier(Arc::new(crate::crypto::ServerCertVerifierWrapper {
+        let mut crypto = Self::build_client_config(self.root_certs.clone())?;
+        crypto.dangerous().set_certificate_verifier(Arc::new(crate::crypto::ServerCertVerifierWrapper {
             roots: self.root_certs.clone(),
             inner: verifier,
         }));
 
-        Ok(self.inner.get_mut().connect(ClientConfig::new(Arc::new(client_config)), address, server_name)?)
+        let mut client_config = ClientConfig::new(Arc::new(crypto));
+        client_config.transport_config(transport);
+
+        Ok(self.inner.get_mut().connect(
+            client_config,
+            address,
+            server_name)?
+        )
     }
 
     fn build_client_config(root_certs: Arc<RootCertStore>) -> Result<rustls::ClientConfig> {
@@ -100,10 +108,13 @@ impl QuicConnectionManager<'_, '_> {
             .with_no_client_auth()
             .with_single_cert(certificate_chain, private_key)?;
 
+        let mut config = ServerConfig::with_crypto(Arc::new(crypto));
+        config.transport_config(self.plugin_config.transport_config.clone());
+
         Ok(self.commands.spawn(QuicEndpoint {
             inner: Endpoint::new(
                 self.plugin_config.endpoint_config.clone(),
-                Some(Arc::new(ServerConfig::with_crypto(Arc::new(crypto)))),
+                Some(Arc::new(config)),
                 false).into(),
             udp_socket: Self::try_open_socket(address)?,
             root_certs,
@@ -129,7 +140,12 @@ impl QuicConnectionManager<'_, '_> {
         let mut endpoint_comp = self.endpoints.get_mut(endpoint)?;
 
         // Connect to target with endpoint
-        let (handle, connection) = endpoint_comp.connect(remote, server_name, self.plugin_config.server_cert_verifier.clone())?;
+        let (handle, connection) = endpoint_comp.connect(
+            remote,
+            server_name,
+            self.plugin_config.transport_config.clone(),
+            self.plugin_config.server_cert_verifier.clone()
+        )?;
 
         // Spawn entity to hold Connection
         Ok(self.commands.spawn(QuicConnectionBundle {
@@ -155,7 +171,12 @@ impl QuicConnectionManager<'_, '_> {
         let mut endpoint_comp = self.endpoints.get_mut(endpoint)?;
 
         // Connect to target with endpoint using custom verifier
-        let (handle, connection) = endpoint_comp.connect(remote, server_name, verifier)?;
+        let (handle, connection) = endpoint_comp.connect(
+            remote,
+            server_name,
+            self.plugin_config.transport_config.clone(),
+            verifier
+        )?;
 
         // Spawn entity to hold Connection
         Ok(self.commands.spawn(QuicConnectionBundle {

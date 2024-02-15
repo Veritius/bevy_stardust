@@ -9,8 +9,8 @@ use bevy_stardust_quic::*;
 use rustls::{Certificate, PrivateKey, RootCertStore};
 
 pub const SERVER_ALT_NAME: &str = "www.icann.org";
-pub const SERVER_ADDRESS: &str = "127.0.0.1:12344";
-pub const CLIENT_ADDRESS: &str = "127.0.0.1:12345";
+pub const SERVER_ADDRESS: &str = "localhost:12345";
+pub const CLIENT_ADDRESS: &str = "localhost:0";
 
 pub struct MyMessage;
 
@@ -37,7 +37,7 @@ pub fn setup_app() -> App {
     app.add_plugins(QuicTransportPlugin {
         authentication: TlsAuthentication::Secure,
         reliable_streams: 8,
-        timeout_delay: 30,
+        transport_config_override: None,
     });
 
     app

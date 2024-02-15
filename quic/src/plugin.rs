@@ -3,7 +3,7 @@ use std::sync::Arc;
 use bevy_app::prelude::*;
 use bevy_ecs::prelude::*;
 use bevy_stardust::scheduling::{NetworkRead, NetworkWrite};
-use quinn_proto::EndpointConfig;
+use quinn_proto::{EndpointConfig, TransportConfig, VarInt};
 
 /// Adds QUIC support to Stardust.
 pub struct QuicTransportPlugin {
@@ -15,9 +15,9 @@ pub struct QuicTransportPlugin {
     /// Higher values reduce head of line blocking.
     pub reliable_streams: u32,
 
-    /// The maximum duration of inactivity that is allowed before a connection is timed out, in seconds.
-    /// Set this to something reasonable, like 30 seconds.
-    pub timeout_delay: u32,
+    /// Overrides the `TransportConfig` used in connections.
+    /// This is for advanced users - the defaults are good enough for almost all applications.
+    pub transport_config_override: Option<Arc<quinn_proto::TransportConfig>>,
 }
 
 impl Plugin for QuicTransportPlugin {
@@ -33,9 +33,20 @@ impl Plugin for QuicTransportPlugin {
             .in_set(NetworkWrite::Send));
         app.add_systems(Last, crate::logging::log_quic_events_system);
 
+        // Check if a transport config is provided, if not, just use defaults that are good for us
+        let transport_config = if let Some(config) = self.transport_config_override.clone() {
+            config
+        } else {
+            let mut config = TransportConfig::default();
+            config.max_idle_timeout(Some(VarInt::from_u32(30_000).into())); // 30 seconds
+            Arc::new(config)
+        };
+
+        // Add resources
         app.init_resource::<crate::connections::ConnectionHandleMap>();
         app.insert_resource(PluginConfig {
             reliable_streams: self.reliable_streams,
+            transport_config: transport_config,
             endpoint_config: Arc::new(EndpointConfig::default()),
             server_cert_verifier: match &self.authentication {
                 TlsAuthentication::Secure => Arc::new(crate::crypto::WebPkiVerifier),
@@ -79,6 +90,7 @@ pub enum TlsAuthentication {
 #[derive(Resource)]
 pub(crate) struct PluginConfig {
     pub reliable_streams: u32,
+    pub transport_config: Arc<TransportConfig>,
     pub endpoint_config: Arc<EndpointConfig>,
     pub server_cert_verifier: Arc<dyn crate::crypto::ServerCertVerifier>,
 }
