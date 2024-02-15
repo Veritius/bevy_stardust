@@ -1,11 +1,34 @@
 use std::{collections::HashMap, sync::{Exclusive, Mutex}, time::Instant};
 use bytes::*;
 use quinn_proto::*;
-use bevy_ecs::prelude::*;
+use bevy_ecs::{entity::Entities, prelude::*};
 use bevy_stardust::prelude::*;
 
 #[derive(Resource, Default)]
 pub(crate) struct ConnectionHandleMap(pub HashMap<ConnectionHandle, Entity>);
+
+#[derive(Resource, Default)]
+pub(crate) struct PendingConnections(pub HashMap<ConnectionHandle, (Entity, Instant, Box<Exclusive<Connection>>, Entity)>);
+
+impl PendingConnections {
+    pub fn insert(
+        &mut self,
+        entities: &Entities,
+        handle: ConnectionHandle,
+        connection: Connection,
+        endpoint: Entity,
+    ) {
+        self.0.insert(handle, (entities.reserve_entity(), Instant::now(), Box::new(connection.into()), endpoint));
+    }
+
+    pub fn incorporate(&mut self, other: Self) {
+        let mut other = other;
+        for (handle, connection) in other.0.drain() {
+            self.0.insert(handle, connection);
+        }
+    }
+}
+
 
 #[derive(Bundle)]
 pub(crate) struct QuicConnectionBundle {
@@ -46,5 +69,24 @@ impl QuicConnection {
     /// Closes the connection.
     pub fn close(&mut self, reason: Bytes) {
         self.inner.get_mut().close(Instant::now(), VarInt::default(), reason)
+    }
+}
+
+pub(super) fn spawn_pending_connections_system(
+    mut handle_map: ResMut<ConnectionHandleMap>,
+    mut pending: ResMut<PendingConnections>,
+    mut commands: Commands,
+) {
+    for (handle, (entity, then, connection, endpoint)) in pending.0.drain() {
+        let mut peer_comp = NetworkPeer::new();
+        peer_comp.joined = then;
+
+        commands.get_or_spawn(entity)
+        .insert(QuicConnectionBundle {
+            peer_comp,
+            quic_comp: QuicConnection::new(endpoint, handle, (*connection).into_inner()),
+        });
+
+        handle_map.0.insert(handle, entity);
     }
 }

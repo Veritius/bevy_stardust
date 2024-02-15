@@ -49,7 +49,7 @@ pub(super) fn event_exchange_polling_system(
     }
 }
 
-fn handle_endpoint_event(
+pub(crate) fn handle_endpoint_event(
     connection_handle: ConnectionHandle,
     connection: &mut Connection,
     endpoint: &mut Endpoint,
@@ -60,7 +60,7 @@ fn handle_endpoint_event(
     }
 }
 
-fn handle_connection_event(
+pub(crate) fn handle_connection_event(
     connection_handle: ConnectionHandle,
     connection: &mut Connection,
     endpoint: &mut Endpoint,

@@ -1,26 +1,22 @@
 use std::{io::ErrorKind, sync::Mutex, time::Instant};
-use bevy_ecs::prelude::*;
+use bevy_ecs::{entity::Entities, prelude::*};
 use bevy_stardust::prelude::*;
 use bytes::BytesMut;
-use quinn_proto::{Connection, ConnectionEvent, ConnectionHandle};
 use untrusted::{EndOfInput, Reader};
-use crate::{connections::{ConnectionHandleMap, QuicConnectionBundle}, QuicConnection, QuicEndpoint};
-
-/// Deferred operations coming from [quic_receive_packets_system].
-#[derive(Resource, Default)]
-pub(crate) struct DeferredReceiveOperations {
-    pub new_connections: Mutex<Vec<(ConnectionHandle, Entity, Instant, Connection)>>,
-    pub connection_events: Mutex<Vec<(ConnectionHandle, ConnectionEvent)>>,
-}
+use crate::{connections::{ConnectionHandleMap, PendingConnections, QuicConnectionBundle}, QuicConnection, QuicEndpoint};
 
 pub(super) fn quic_receive_packets_system(
     mut endpoints: Query<(Entity, &mut QuicEndpoint)>,
     handle_map: Res<ConnectionHandleMap>,
     connections: Query<&QuicConnection>,
-    deferred_quic: Res<DeferredReceiveOperations>,
+    pending: ResMut<PendingConnections>,
+    entities: &Entities,
 ) {
+    let pending_mutex = Mutex::new(pending);
+
     // Receive as many packets as we can
     endpoints.par_iter_mut().for_each(|(endpoint_id, mut endpoint)| {
+        let mut pending_local = PendingConnections::default();
         let mut scratch = [0u8; 1472]; // TODO: make this configurable
 
         loop {
@@ -42,14 +38,21 @@ pub(super) fn quic_receive_packets_system(
                                     let connection = connections.get(*id).unwrap();
                                     connection.events.lock().unwrap().push(event);
                                 } else {
-                                    let mut queue = deferred_quic.connection_events.lock().unwrap();
-                                    queue.push((handle, event));
+                                    if let Some((_, _, conn, _)) = pending_local.0.get_mut(&handle) {
+                                        crate::polling::handle_connection_event(
+                                            handle,
+                                            conn.get_mut(),
+                                            endpoint.inner.get_mut(),
+                                            event,
+                                        )
+                                    } else {
+                                        todo!();
+                                    }
                                 }
                             },
 
                             quinn_proto::DatagramEvent::NewConnection(connection) => {
-                                let mut queue = deferred_quic.new_connections.lock().unwrap();
-                                queue.push((handle, endpoint_id, Instant::now(), connection));
+                                pending_local.insert(entities, handle, connection, endpoint_id);
                             },
                         }
                     }
@@ -67,44 +70,12 @@ pub(super) fn quic_receive_packets_system(
                 }
             }
         }
+
+        // Incorporate new connections if there are any
+        if pending_local.0.len() > 0 {
+            pending_mutex.lock().unwrap().incorporate(pending_local);
+        }
     });
-}
-
-pub(super) fn apply_deferred_entity_adds_from_incoming_system(
-    world: &mut World,
-) {
-    let mut deferred = world.remove_resource::<DeferredReceiveOperations>().unwrap();
-    let mut conn_map = world.remove_resource::<ConnectionHandleMap>().unwrap();
-
-    let new_adds_queue = deferred.new_connections.get_mut().unwrap();
-    for (handle, endpoint, added, connection) in new_adds_queue.drain(..) {
-        let mut peer_comp = NetworkPeer::new();
-        peer_comp.joined = added;
-
-        let entity = world.spawn(QuicConnectionBundle {
-            peer_comp,
-            quic_comp: QuicConnection::new(endpoint, handle.clone(), connection),
-        }).id();
-
-        conn_map.0.insert(handle, entity);
-    }
-
-    world.insert_resource(deferred);
-    world.insert_resource(conn_map);
-}
-
-pub(super) fn apply_deferred_connection_events_from_incoming_system(
-    deferred: Res<DeferredReceiveOperations>,
-    handle_map: Res<ConnectionHandleMap>,
-    mut connections: Query<(Entity, &mut QuicConnection)>,
-) {
-    let mut def_conn_events = deferred.connection_events.lock().unwrap();
-    for (handle, event) in def_conn_events.drain(..) {
-        let entity = handle_map.0.get(&handle).unwrap();
-        let qres = connections.get_mut(*entity).unwrap();
-        let mut events = qres.1.events.lock().unwrap();
-        events.push(event);
-    }
 }
 
 fn read_datagram(
