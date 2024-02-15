@@ -1,7 +1,6 @@
 use std::{collections::BTreeMap, time::{Instant, Duration}};
 use bytes::Bytes;
 use rand::Rng;
-use crate::config::PluginConfig;
 use super::{sequence_greater_than, SentPacket};
 
 const DROPPED_TIMEOUT: Duration = Duration::from_millis(1000);
@@ -46,9 +45,9 @@ impl ReliableRiver {
     /// and writing the reliable header and `payload` to `scratch`.
     /// 
     /// Panics if `scratch` is too short. It must be at least `config.bitfield_bytes` + `payload.len()`.
-    pub fn outgoing(&mut self, config: &PluginConfig, scratch: &mut [u8], payload: Bytes) -> usize {
+    pub fn outgoing(&mut self, scratch: &mut [u8], payload: Bytes) -> usize {
         // Some values we use later
-        let bitfield_size = config.bitfield_bytes as usize;
+        let bitfield_size = todo!();
         let bitfield_idx = bitfield_size + 4;
 
         // Append to the unacknowledged messages map
@@ -71,15 +70,15 @@ impl ReliableRiver {
     }
 
     /// "Receives" the contents of a reliable packet, removing the header and returning a slice containing the payload.
-    pub fn incoming<'a>(&mut self, config: &PluginConfig, buffer: &'a [u8]) -> &'a [u8] {
+    pub fn incoming<'a>(&mut self, buffer: &'a [u8]) -> &'a [u8] {
         // Sequence values
         let their_remote = u16::from_be_bytes(buffer[0..2].try_into().unwrap());
         let their_ack = u16::from_be_bytes(buffer[2..4].try_into().unwrap());
 
         // Create the bitfield var
-        let bytes_usize = config.bitfield_bytes as usize;
+        let bytes_usize = todo!();
         let mut field_bytes = [0u8; 16];
-        field_bytes[..(config.bitfield_bytes as usize)]
+        field_bytes[..(bytes_usize)]
             .clone_from_slice(&buffer[4..4+bytes_usize]);
         let their_bitfield = u128::from_ne_bytes(field_bytes);
         let bit_len = bytes_usize as usize * 8;

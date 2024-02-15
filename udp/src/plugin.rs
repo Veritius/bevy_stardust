@@ -1,6 +1,4 @@
-use bevy::prelude::*;
-use bevy_stardust::scheduling::*;
-use crate::{systems::*, sockets::socket_manager_system};
+use bevy_app::prelude::*;
 
 /// The UDP transport plugin. Adds the minimal functionality.
 /// 
@@ -27,8 +25,6 @@ impl Default for UdpTransportPlugin {
 
 impl Plugin for UdpTransportPlugin {
     fn build(&self, app: &mut App) {
-        use crate::config::*;
-
         // Make sure values are within acceptable ranges
         // Fields also have knock-on effects with eachother, so process that here
         let river_count = self.river_count.clamp(0, u16::MAX-2); // two rivers are reserved
@@ -36,19 +32,6 @@ impl Plugin for UdpTransportPlugin {
             0 => 0,
             _ => self.bitfield_bytes.clamp(1, 16),
         };
-
-        // Add the config resource
-        app.insert_resource(PluginConfig {
-            river_count,
-            bitfield_bytes,
-        });
-
-        // Add systems
-        app.add_systems(PostUpdate, socket_manager_system);
-        app.add_systems(PreUpdate, packet_listener_system
-            .in_set(NetworkRead::Receive));
-        app.add_systems(PostUpdate, packet_sender_system
-            .in_set(NetworkWrite::Send));
 
         todo!();
     }
