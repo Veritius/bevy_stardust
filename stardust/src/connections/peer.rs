@@ -22,9 +22,6 @@ pub struct NetworkPeer {
     /// The point in time this peer was added to the `World`.
     pub joined: Instant,
 
-    /// The connection state of the network peer.
-    pub state: NetworkPeerState,
-
     /// A unique UUID, if it has one.
     /// This can be used to identify a peer across network sessions.
     pub uuid: Option<uuid::Uuid>,
@@ -45,7 +42,6 @@ impl NetworkPeer {
     pub fn new() -> Self {
         Self {
             joined: Instant::now(),
-            state: NetworkPeerState::Connecting,
             uuid: None,
             quality: None,
             ping: 0,
@@ -64,21 +60,4 @@ impl NetworkPeer {
     pub fn disconnect_requested(&self) -> bool {
         self.disconnect_requested
     }
-}
-
-/// The connection state of a [`NetworkPeer`]. See variants for more documentation.
-#[derive(Debug)]
-#[cfg_attr(feature="reflect", derive(bevy_reflect::Reflect))]
-pub enum NetworkPeerState {
-    /// The peer is in the process of connecting and/or authenticating.
-    Connecting,
-
-    /// The peer is fully connected and ready for data transmission.
-    Connected,
-
-    /// The peer is being disconnected by a transport layer.
-    Disconnecting,
-
-    /// The peer has been fully disconnected and will be removed from the World soon.
-    Disconnected,
 }

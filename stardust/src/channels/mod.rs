@@ -1,11 +1,8 @@
 //! Channel definitions and message storage.
 //! 
 //! You can add a channel when setting up the `App`.
-//! ```
-//! use bevy::prelude::*;
-//! use bevy_stardust::prelude::*;
-//! 
-//! #[derive(Debug, Reflect)]
+//! ```ignore
+//! #[derive(Reflect)] // Only necessary with the reflect feature
 //! struct MyChannel;
 //! 
 //! fn main() {
