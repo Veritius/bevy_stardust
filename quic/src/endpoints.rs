@@ -176,10 +176,7 @@ impl QuicConnectionManager<'_, '_> {
         )?;
 
         // Spawn entity to hold Connection
-        Ok(self.commands.spawn(QuicConnectionBundle {
-            peer_comp: NetworkPeer::new(),
-            quic_comp: QuicConnection::new(endpoint, handle, connection),
-        }).id())
+        Ok(self.commands.spawn(QuicConnection::new(endpoint, handle, connection)).id())
     }
 
     fn try_open_socket(address: impl ToSocketAddrs) -> Result<UdpSocket> {
