@@ -1,7 +1,5 @@
 use std::{net::{SocketAddr, UdpSocket}, time::Instant};
-
 use bevy_ecs::prelude::*;
-use bevy_stardust::prelude::*;
 use crate::{QuicConnection, QuicEndpoint};
 
 pub(super) fn quic_process_outgoing_system(
