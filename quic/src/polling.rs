@@ -83,32 +83,10 @@ pub(super) fn application_events_polling_system(
     let events = Mutex::new(&mut disconnect_events);
 
     connections.par_iter_mut().for_each(|(entity_id, peer_data, mut connection_comp)| {
-        let disconnect_logged = connection_comp.disconnect_logged;
-
         // Poll events from inner Quinn connection
         let connection = connection_comp.inner.get_mut();
         while let Some(event) = connection.poll() {
-            match event {
-                quinn_proto::Event::ConnectionLost { reason } => {
-                    // Queue the entity's deletion
-                    commands.command_scope(|mut commands| {
-                        commands.entity(entity_id).despawn();
-                    });
-
-                    // Check if we need to do anything here
-                    if disconnect_logged { continue }
-
-                    // Send the disconnection event to alert game systems
-                    events.lock().unwrap().send(PeerDisconnectedEvent {
-                        entity_id,
-                        uuid: peer_data.uuid,
-                        reason: format!("{reason}").into(),
-                    });
-                },
-                quinn_proto::Event::Stream(_) => todo!(),
-                quinn_proto::Event::DatagramReceived => todo!(),
-                _ => {},
-            }
+            todo!()
         }
     });
 }

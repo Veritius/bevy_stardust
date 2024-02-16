@@ -94,7 +94,7 @@ impl QuicConnectionManager<'_, '_> {
             close_requested: false,
         }).id();
 
-        tracing::info!("Opening client endpoint on {address}");
+        tracing::info!("Opened client endpoint {id:?} on {address}");
         Ok(id)
     }
 
@@ -129,7 +129,7 @@ impl QuicConnectionManager<'_, '_> {
             close_requested: false,
         }).id();
 
-        tracing::info!("Opening server endpoint on {address}");
+        tracing::info!("Opened server endpoint {id:?} on {address}");
         Ok(id)
     }
 
