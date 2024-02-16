@@ -48,8 +48,21 @@ impl QuicConnection {
 pub(super) fn update_handle_map_system(
     mut handle_map: ResMut<ConnectionHandleMap>,
     added: Query<(Entity, &QuicConnection), Added<QuicConnection>>,
+    mut removed: RemovedComponents<QuicConnection>,
 ) {
+    // Add new components to handle map
     for (id, comp) in added.iter() {
         handle_map.0.insert(comp.handle.clone(), id);
+    }
+
+    // Remove old components from handle map
+    for id in removed.read() {
+        let handle = handle_map.0.iter()
+            .find(|(_,v)| **v == id)
+            .map(|(k,_)| k.clone());
+
+        if let Some(handle) = handle {
+            handle_map.0.remove(&handle);
+        }
     }
 }
