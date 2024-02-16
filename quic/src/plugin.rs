@@ -35,8 +35,6 @@ impl Plugin for QuicTransportPlugin {
             crate::connections::update_handle_map_system,
         ).chain().in_set(NetworkWrite::Send));
 
-        app.add_systems(Last, crate::logging::log_quic_events_system);
-
         // Check if a transport config is provided, if not, just use defaults that are good for us
         let transport_config = if let Some(config) = self.transport_config_override.clone() {
             config

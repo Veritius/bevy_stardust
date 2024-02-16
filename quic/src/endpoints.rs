@@ -81,15 +81,21 @@ impl QuicConnectionManager<'_, '_> {
         address: impl ToSocketAddrs,
         root_certs: Arc<RootCertStore>,
     ) -> Result<Entity> {
-        Ok(self.commands.spawn(QuicEndpoint {
+        let address = address.to_socket_addrs()?.nth(0)
+            .context("No SocketAddr provided")?;
+
+        let id = self.commands.spawn(QuicEndpoint {
             inner: Endpoint::new(
                 self.plugin_config.endpoint_config.clone(),
                 None,
                 false).into(),
-            udp_socket: Self::try_open_socket(address)?,
+            udp_socket: Self::try_open_socket(address.clone())?,
             root_certs,
             close_requested: false,
-        }).id())
+        }).id();
+
+        tracing::info!("Opening client endpoint on {address}");
+        Ok(id)
     }
 
     /// Opens a server (outgoing or incoming) endpoint.
@@ -100,6 +106,9 @@ impl QuicConnectionManager<'_, '_> {
         certificate_chain: Vec<Certificate>,
         private_key: PrivateKey,
     ) -> Result<Entity> {
+        let address = address.to_socket_addrs()?.nth(0)
+            .context("No SocketAddr provided")?;
+
         let crypto = rustls::ServerConfig::builder()
             .with_safe_default_cipher_suites()
             .with_safe_default_kx_groups()
@@ -110,15 +119,18 @@ impl QuicConnectionManager<'_, '_> {
         let mut config = ServerConfig::with_crypto(Arc::new(crypto));
         config.transport_config(self.plugin_config.transport_config.clone());
 
-        Ok(self.commands.spawn(QuicEndpoint {
+        let id = self.commands.spawn(QuicEndpoint {
             inner: Endpoint::new(
                 self.plugin_config.endpoint_config.clone(),
                 Some(Arc::new(config)),
                 false).into(),
-            udp_socket: Self::try_open_socket(address)?,
+            udp_socket: Self::try_open_socket(address.clone())?,
             root_certs,
             close_requested: false,
-        }).id())
+        }).id();
+
+        tracing::info!("Opening server endpoint on {address}");
+        Ok(id)
     }
 
     /// Try to connect to a remote server.
@@ -140,14 +152,17 @@ impl QuicConnectionManager<'_, '_> {
 
         // Connect to target with endpoint
         let (handle, connection) = endpoint_comp.connect(
-            remote,
+            remote.clone(),
             server_name,
             self.plugin_config.transport_config.clone(),
             self.plugin_config.server_cert_verifier.clone()
         )?;
 
         // Spawn entity to hold Connection
-        Ok(self.commands.spawn(QuicConnection::new(endpoint, handle, connection)).id())
+        let id = self.commands.spawn(QuicConnection::new(endpoint, handle, connection)).id();
+
+        tracing::info!("Connecting to remote peer {remote} on endpoint {endpoint:?}");
+        Ok(id)
     }
 
     /// Like [`try_connect`](Self::try_connect) but with a custom certificate verifier.
@@ -168,14 +183,17 @@ impl QuicConnectionManager<'_, '_> {
 
         // Connect to target with endpoint using custom verifier
         let (handle, connection) = endpoint_comp.connect(
-            remote,
+            remote.clone(),
             server_name,
             self.plugin_config.transport_config.clone(),
             verifier
         )?;
 
         // Spawn entity to hold Connection
-        Ok(self.commands.spawn(QuicConnection::new(endpoint, handle, connection)).id())
+        let id = self.commands.spawn(QuicConnection::new(endpoint, handle, connection)).id();
+
+        tracing::info!("Connecting to remote peer {remote} on endpoint {endpoint:?} with custom verifier");
+        Ok(id)
     }
 
     fn try_open_socket(address: impl ToSocketAddrs) -> Result<UdpSocket> {

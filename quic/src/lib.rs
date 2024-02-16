@@ -8,7 +8,6 @@ mod connections;
 mod crypto;
 mod endpoints;
 mod receive;
-mod logging;
 mod misc;
 mod outgoing;
 mod plugin;
