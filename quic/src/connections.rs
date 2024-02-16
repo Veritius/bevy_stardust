@@ -2,18 +2,14 @@ use std::{collections::HashMap, sync::{Exclusive, Mutex}, time::Instant};
 use bytes::*;
 use quinn_proto::*;
 use bevy_ecs::prelude::*;
-use bevy_stardust::prelude::*;
 
 #[derive(Resource, Default)]
 pub(crate) struct ConnectionHandleMap(pub HashMap<ConnectionHandle, Entity>);
 
-#[derive(Bundle)]
-pub(crate) struct QuicConnectionBundle {
-    pub peer_comp: NetworkPeer,
-    pub quic_comp: QuicConnection,
-}
-
-/// An active QUIC connection.
+/// A QUIC connection.
+/// 
+/// This component will be present even during a handshake.
+/// Once the handshake is complete, the `NetworkPeer` component will be added.
 #[derive(Component)]
 pub struct QuicConnection {
     pub(crate) endpoint: Entity,

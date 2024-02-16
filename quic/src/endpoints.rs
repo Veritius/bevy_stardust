@@ -4,7 +4,7 @@ use bevy_ecs::{prelude::*, system::SystemParam};
 use bevy_stardust::connections::peer::NetworkPeer;
 use quinn_proto::*;
 use rustls::{Certificate, PrivateKey, RootCertStore};
-use crate::{connections::QuicConnectionBundle, plugin::PluginConfig, QuicConnection};
+use crate::{plugin::PluginConfig, QuicConnection};
 
 /// An active QUIC endpoint.
 #[derive(Component)]
@@ -148,10 +148,7 @@ impl QuicConnectionManager<'_, '_> {
         )?;
 
         // Spawn entity to hold Connection
-        Ok(self.commands.spawn(QuicConnectionBundle {
-            peer_comp: NetworkPeer::new(),
-            quic_comp: QuicConnection::new(endpoint, handle, connection),
-        }).id())
+        Ok(self.commands.spawn(QuicConnection::new(endpoint, handle, connection)).id())
     }
 
     /// Like [`try_connect`](Self::try_connect) but with a custom certificate verifier.

@@ -3,7 +3,7 @@ use bevy_ecs::prelude::*;
 use bevy_stardust::prelude::*;
 use bytes::BytesMut;
 use untrusted::{EndOfInput, Reader};
-use crate::{connections::{ConnectionHandleMap, QuicConnectionBundle}, QuicConnection, QuicEndpoint};
+use crate::{connections::ConnectionHandleMap, QuicConnection, QuicEndpoint};
 
 pub(super) fn quic_receive_packets_system(
     mut endpoints: Query<(Entity, &mut QuicEndpoint)>,
@@ -75,10 +75,7 @@ pub(super) fn quic_receive_packets_system(
         // Spawn connection entities
         commands.command_scope(|mut commands| {
             for (handle, connection) in pending_local.drain() {
-                commands.spawn(QuicConnectionBundle {
-                    peer_comp: NetworkPeer::new(),
-                    quic_comp: QuicConnection::new(endpoint_id, handle, connection),
-                });
+                commands.spawn(QuicConnection::new(endpoint_id, handle, connection));
             }
         });
     });
