@@ -3,6 +3,8 @@ use bytes::*;
 use quinn_proto::*;
 use bevy_ecs::prelude::*;
 
+use crate::QuicEndpoint;
+
 #[derive(Resource, Default)]
 pub(crate) struct ConnectionHandleMap(pub HashMap<ConnectionHandle, Entity>);
 
@@ -63,6 +65,18 @@ pub(super) fn update_handle_map_system(
 
         if let Some(handle) = handle {
             handle_map.0.remove(&handle);
+        }
+    }
+}
+
+pub(super) fn despawn_drained_connections_system(
+    mut commands: Commands,
+    mut connections: Query<(Entity, &mut QuicConnection)>,
+) {
+    for (entity, mut connection) in connections.iter_mut() {
+        let connection = connection.inner.get_mut();
+        if connection.is_drained() {
+            commands.entity(entity).despawn();
         }
     }
 }
