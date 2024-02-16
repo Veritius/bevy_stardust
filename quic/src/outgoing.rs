@@ -7,8 +7,6 @@ use crate::{QuicConnection, QuicEndpoint};
 pub(super) fn quic_process_outgoing_system(
     mut endpoints: Query<&mut QuicEndpoint>,
     mut connections: Query<&mut QuicConnection>,
-    channels: Res<ChannelRegistry>,
-    mut reader: NetworkOutgoingReader,
 ) {
     // Transmit all packets the endpoint has queued
     endpoints.par_iter_mut().for_each(|mut endpoint| {

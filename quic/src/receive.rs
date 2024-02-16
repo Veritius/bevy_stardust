@@ -1,8 +1,6 @@
 use std::{collections::HashMap, io::ErrorKind, time::Instant};
 use bevy_ecs::prelude::*;
-use bevy_stardust::prelude::*;
 use bytes::BytesMut;
-use untrusted::{EndOfInput, Reader};
 use crate::{connections::ConnectionHandleMap, QuicConnection, QuicEndpoint};
 
 pub(super) fn quic_receive_packets_system(
