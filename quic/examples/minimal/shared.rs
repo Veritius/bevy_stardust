@@ -24,7 +24,12 @@ pub fn setup_app() -> App {
     app.add_plugins(bevy_app::ScheduleRunnerPlugin {
         run_mode: bevy_app::RunMode::Loop { wait: None }
     });
-    app.add_plugins(LogPlugin::default());
+
+    app.add_plugins(LogPlugin {
+        level: tracing::Level::INFO,
+        filter: "".to_string(),
+    });
+
     app.add_plugins(StardustPlugin);
 
     app.add_channel::<MyMessage>(ChannelConfiguration {
