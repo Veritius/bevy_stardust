@@ -78,6 +78,7 @@ fn exchange_messages_system(
             scratch.push_str(fastrand::choice(GREEK_ALPHABET).unwrap());
         }
 
+        tracing::info!("Sent a message to {id:?}: {scratch}");
         writer.send(id, Bytes::from(scratch));
     }
 }
