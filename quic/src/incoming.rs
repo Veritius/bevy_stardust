@@ -7,7 +7,7 @@ use crate::{connections::{ConnectionHandleMap, QuicConnectionBundle}, QuicConnec
 
 pub(super) fn quic_receive_packets_system(
     mut endpoints: Query<(Entity, &mut QuicEndpoint)>,
-    mut handle_map: ResMut<ConnectionHandleMap>,
+    handle_map: Res<ConnectionHandleMap>,
     connections: Query<&QuicConnection>,
     commands: ParallelCommands,
 ) {

@@ -49,7 +49,7 @@ impl Plugin for QuicTransportPlugin {
         app.init_resource::<crate::connections::ConnectionHandleMap>();
         app.insert_resource(PluginConfig {
             reliable_streams: self.reliable_streams,
-            transport_config: transport_config,
+            transport_config,
             endpoint_config: Arc::new(EndpointConfig::default()),
             server_cert_verifier: match &self.authentication {
                 TlsAuthentication::Secure => Arc::new(crate::crypto::WebPkiVerifier),
