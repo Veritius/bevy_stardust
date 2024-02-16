@@ -21,4 +21,10 @@ smallvec = "1.11.1"
 anyhow = "1"
 
 [features]
-reflect = ["dep:bevy_reflect"]
+default = ["reflect"]
+reflect = [
+    "dep:bevy_reflect",
+    "bevy_stardust/reflect",
+    "bevy_ecs/bevy_reflect",
+    "bevy_app/bevy_reflect"
+]
