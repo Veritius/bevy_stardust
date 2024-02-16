@@ -24,7 +24,7 @@ impl Plugin for QuicTransportPlugin {
     fn build(&self, app: &mut App) {
         // This step is a bit of a powerhouse
         app.add_systems(PreUpdate, (
-            crate::incoming::quic_receive_packets_system,
+            crate::receive::quic_receive_packets_system,
             crate::polling::event_exchange_polling_system,
             crate::polling::application_events_polling_system,
             crate::connections::despawn_drained_connections_system,

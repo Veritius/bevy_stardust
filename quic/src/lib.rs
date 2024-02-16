@@ -7,7 +7,7 @@
 mod connections;
 mod crypto;
 mod endpoints;
-mod incoming;
+mod receive;
 mod logging;
 mod misc;
 mod outgoing;
