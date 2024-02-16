@@ -1,6 +1,6 @@
 #![allow(unused)] // rustc doesn't detect usage in other examples
 
-use std::io::Cursor;
+use std::{io::Cursor, time::Duration};
 use bevy_app::prelude::*;
 use bevy_ecs::prelude::*;
 use bevy_log::LogPlugin;
@@ -23,7 +23,7 @@ pub fn setup_app() -> App {
     });
 
     app.add_plugins(bevy_app::ScheduleRunnerPlugin {
-        run_mode: bevy_app::RunMode::Loop { wait: None }
+        run_mode: bevy_app::RunMode::Loop { wait: Some(Duration::from_secs(1)) }
     });
 
     app.add_plugins(LogPlugin {
