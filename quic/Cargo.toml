@@ -23,7 +23,6 @@ tracing = "0.1"
 
 [dev-dependencies]
 rcgen = "0.12"
-rustls-pemfile = "1"
 bevy_log = "0.12"
 
 [features]
@@ -33,7 +32,9 @@ dangerous = []
 [[example]]
 name = "minimal-server"
 path = "examples/minimal/server.rs"
+required-features = ["dangerous"]
 
 [[example]]
 name = "minimal-client"
 path = "examples/minimal/client.rs"
+required-features = ["dangerous"]

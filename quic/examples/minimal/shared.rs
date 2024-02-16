@@ -35,7 +35,7 @@ pub fn setup_app() -> App {
     });
 
     app.add_plugins(QuicTransportPlugin {
-        authentication: TlsAuthentication::Secure,
+        authentication: TlsAuthentication::AlwaysVerify,
         reliable_streams: 8,
         transport_config_override: None,
     });
@@ -43,30 +43,6 @@ pub fn setup_app() -> App {
     app
 }
 
-// All cryptographic information here is fully public for the sake of demonstration.
-// Under no circumstances should you ever, ever, EVER use this in a real program.
-// If you want to set up a real system, you should use 
-static ROOT_CA: &str = include_str!("root-ca.crt");
-static CERTIFICATE: &str = include_str!("server.crt");
-static PRIVATE_KEY: &str = include_str!("server.key");
-
 pub fn root_cert_store() -> RootCertStore {
-    let mut store = RootCertStore::empty();
-    let mut read = Cursor::new(ROOT_CA);
-    let mut certs = rustls_pemfile::certs(&mut read).unwrap();
-    let cert = Certificate(certs.remove(0));
-    store.add(&cert).unwrap();
-    store
-}
-
-pub fn certificate() -> Certificate {
-    let mut read = Cursor::new(CERTIFICATE);
-    let mut certs = rustls_pemfile::certs(&mut read).unwrap();
-    Certificate(certs.remove(0))
-}
-
-pub fn private_key() -> PrivateKey {
-    let mut read = Cursor::new(PRIVATE_KEY);
-    let mut keys = rustls_pemfile::pkcs8_private_keys(&mut read).unwrap();
-    PrivateKey(keys.remove(0))
+    RootCertStore::empty()
 }
