@@ -9,15 +9,11 @@ A QUIC transport layer for [bevy_stardust](https://crates.io/crates/bevy_stardus
 
 ## Features
 - Fully synchronous and runs inside the Bevy scheduler
-- Connection and message oriented API
-- Reliability and ordering for messages
+- Connection and message oriented API using framing
+- Reliability and ordering for Stardust messages
 - Simple, easy to use API that abstracts the hard stuff
 - Secure-by-default authentication and encryption with TLS
-- Easily disable TLS authentication if you don't want it
 - Supports clients, servers, and listen servers
-
-### Future features
-- WASM support using WebTransport
 
 ## Usage
 Adding the plugin:
