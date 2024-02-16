@@ -3,8 +3,6 @@ use bytes::*;
 use quinn_proto::*;
 use bevy_ecs::prelude::*;
 
-use crate::QuicEndpoint;
-
 #[derive(Resource, Default)]
 pub(crate) struct ConnectionHandleMap(pub HashMap<ConnectionHandle, Entity>);
 
