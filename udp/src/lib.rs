@@ -6,6 +6,7 @@ mod plugin;
 mod manager;
 mod endpoint;
 mod connection;
+mod datagram;
 mod sequences;
 mod reliability;
 
