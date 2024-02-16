@@ -104,9 +104,9 @@ impl ReliablePackets {
     /// Returns the packet corresponding to `id` if it hasn't been acknowledged yet.
     pub fn get_unacked_packet(&self, id: u16) -> Option<Bytes> {
         if let Some(packet) = self.unacked_packets.get(&id) {
-            return Some(packet.payload.clone())
+            Some(packet.payload.clone())
         } else { 
-            return None ;
+            None
         }
     }
 }
