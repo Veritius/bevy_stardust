@@ -1,4 +1,4 @@
-use std::net::{SocketAddr, UdpSocket};
+use std::net::UdpSocket;
 use bevy_ecs::prelude::*;
 use bytes::Bytes;
 use smallvec::SmallVec;
@@ -9,7 +9,17 @@ use smallvec::SmallVec;
 /// Any information from the client that hasn't been received will never be received.
 /// Instead of removing this component, consider using the [`close`](Self::close) method.
 #[derive(Component)]
-pub struct Endpoint(pub(crate) EndpointInner);
+#[cfg_attr(feature="reflect", derive(bevy_reflect::Reflect), reflect(from_reflect = false))]
+pub struct Endpoint {
+    #[cfg_attr(feature="reflect", reflect(ignore))]
+    pub(crate) socket: UdpSocket,
+
+    #[cfg_attr(feature="reflect", reflect(ignore))]
+    pub(crate) connections: SmallVec::<[Entity; 16]>,
+
+    /// Whether or not to accept new incoming connections on this endpoint.
+    pub listening: bool,
+}
 
 impl Endpoint {
     /// Marks the endpoint for closure.
@@ -22,21 +32,4 @@ impl Endpoint {
     pub fn close(&mut self, hard: bool, reason: Option<Bytes>) {
         todo!()
     }
-
-    /// Sets whether or not to accept new incoming connections.
-    pub fn set_listen(&mut self, listen: bool) {
-        self.0.listening = listen;
-    }
-
-    /// Returns the local IP address that this Endpoint is bound to.
-    pub fn local_addr(&self) -> SocketAddr {
-        // Unwrapping is fine because an Endpoint always has a local address
-        self.0.socket.local_addr().unwrap()
-    }
-}
-
-pub(crate) struct EndpointInner {
-    pub socket: UdpSocket,
-    pub listening: bool,
-    pub connections: SmallVec::<[Entity; 16]>,
 }
