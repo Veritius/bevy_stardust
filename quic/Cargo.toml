@@ -13,7 +13,8 @@ keywords=["bevy", "gamedev", "networking"]
 bevy_app = "0.12"
 bevy_ecs = "0.12"
 bevy_stardust = { version = "0.2", path = "../stardust" }
-quinn-proto = { version = "0.10" }
+quinn-proto = "0.10"
+quinn-udp = "0.4"
 bytes = "1"
 untrusted = "0.9"
 rustls = { version = "0.21", features = ["quic", "dangerous_configuration"] }

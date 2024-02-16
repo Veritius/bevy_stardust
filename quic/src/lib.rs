@@ -9,7 +9,7 @@ mod crypto;
 mod endpoints;
 mod receive;
 mod misc;
-mod outgoing;
+mod sending;
 mod plugin;
 mod polling;
 

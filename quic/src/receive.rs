@@ -1,6 +1,7 @@
-use std::{collections::HashMap, io::ErrorKind, time::Instant};
+use std::{collections::HashMap, io::{ErrorKind, IoSliceMut}, time::Instant};
 use bevy_ecs::prelude::*;
 use bytes::BytesMut;
+use quinn_udp::{RecvMeta, UdpSockRef};
 use crate::{connections::ConnectionHandleMap, QuicConnection, QuicEndpoint};
 
 pub(super) fn quic_receive_packets_system(
@@ -11,49 +12,36 @@ pub(super) fn quic_receive_packets_system(
 ) {
     // Receive as many packets as we can
     endpoints.par_iter_mut().for_each(|(endpoint_id, mut endpoint)| {
+        let local_address = endpoint.local_address().ip();
         let mut pending_local: HashMap<quinn_proto::ConnectionHandle, quinn_proto::Connection> = HashMap::default();
+
         let mut scratch = [0u8; 1472]; // TODO: make this configurable
+        let recv_meta = &mut [RecvMeta::default()];
+
+        let (endpoint, socket, state, capabilities) = endpoint.socket_io_with_endpoint();
 
         loop {
-            match endpoint.udp_socket.recv_from(&mut scratch) {
-                // Packet received, forward it to the endpoint
-                Ok((bytes, address)) => {
-                    tracing::trace!("Received a packet of length {bytes} from {address}");
-                    if let Some((handle, event)) = endpoint.inner.get_mut().handle(
-                        Instant::now(),
-                        address,
-                        None,
-                        None,
-                        BytesMut::from(&scratch[..bytes]),
-                    ) {
-                        match event {
-                            // Relay connection events
-                            quinn_proto::DatagramEvent::ConnectionEvent(event) => {
-                                if let Some(id) = handle_map.0.get(&handle) {
-                                    // Connection exists as an entity, just push to its queue
-                                    let connection = connections.get(*id).unwrap();
-                                    connection.events.lock().unwrap().push(event);
-                                } else {
-                                    if let Some(conn) = pending_local.get_mut(&handle) {
-                                        // Connection exists in thread-local storage, handle event directly
-                                        crate::polling::handle_connection_event(
-                                            handle,
-                                            conn,
-                                            endpoint.inner.get_mut(),
-                                            event,
-                                        )
-                                    } else {
-                                        // Shouldn't happen
-                                        todo!();
-                                    }
-                                }
-                            },
+            match state.recv(UdpSockRef::from(socket), &mut [IoSliceMut::new(&mut scratch[..])], recv_meta) {
+                // Packet successfully received
+                Ok(_) => {
+                    // Get packet values
+                    let (addr, len) = (recv_meta[0].addr, recv_meta[0].len);
+                    let ecn = if let Some(ecn) = recv_meta[0].ecn {
+                        // EcnCodepoint is defined seperately in quinn_proto and quinn-udp for some reason,
+                        // so we have to convert it manually. It's easy enough, though.
+                        quinn_proto::EcnCodepoint::from_bits(ecn as u8)
+                    } else { None };
+                    tracing::trace!("Received a packet of length {len} from {addr}");
 
-                            quinn_proto::DatagramEvent::NewConnection(connection) => {
-                                // Add connection to thread-local storage
-                                pending_local.insert(handle, connection);
-                            },
-                        }
+                    // Hand off the datagram to the Endpoint
+                    if let Some((handle, event)) = endpoint.handle(
+                        Instant::now(),
+                        addr,
+                        Some(local_address.clone()),
+                        ecn,
+                        BytesMut::from(&scratch[..len])
+                    ) {
+                        todo!()
                     }
                 },
 

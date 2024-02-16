@@ -2,6 +2,8 @@ use std::{net::{SocketAddr, ToSocketAddrs, UdpSocket}, sync::{Arc, Exclusive}};
 use anyhow::{Context, Result};
 use bevy_ecs::{prelude::*, system::SystemParam};
 use quinn_proto::*;
+// UdpState is such a terrible type name I needed to rename it
+use quinn_udp::{UdpSockRef, UdpSocketState, UdpState as UdpCapability};
 use rustls::{Certificate, PrivateKey, RootCertStore};
 use crate::{plugin::PluginConfig, QuicConnection};
 
@@ -9,27 +11,33 @@ use crate::{plugin::PluginConfig, QuicConnection};
 #[derive(Component)]
 pub struct QuicEndpoint {
     pub(crate) inner: Exclusive<Endpoint>,
-    pub(crate) udp_socket: UdpSocket,
-    pub(crate) root_certs: Arc<RootCertStore>,
+
+    root_certs: Arc<RootCertStore>,
+
+    udp_socket: UdpSocket,
+    socket_state: UdpSocketState,
+    socket_capabilities: UdpCapability,
 
     close_requested: bool,
 }
 
 impl QuicEndpoint {
-    /// Returns the local address that the endpoint is connected to.
-    pub fn local_address(&self) -> SocketAddr {
-        self.udp_socket.local_addr().unwrap()
-    }
+    pub(crate) fn new(
+        endpoint: Endpoint,
+        root_certs: Arc<RootCertStore>,
+        socket_addr: impl ToSocketAddrs,
+    ) -> Result<Self> {
+        let udp_socket = UdpSocket::bind(socket_addr)?;
+        UdpSocketState::configure(UdpSockRef::from(&udp_socket))?;
 
-    /// Marks the endpoint for closing, disconnecting all clients and shutting down the connection.
-    pub fn close(&mut self) {
-        self.close_requested = true;
-        self.inner.get_mut().reject_new_connections();
-    }
-
-    /// Returns `true` if the endpoint is marked for closing.
-    pub fn is_closing(&self) -> bool {
-        self.close_requested
+        Ok(Self {
+            inner: Exclusive::new(endpoint),
+            root_certs,
+            udp_socket,
+            socket_state: UdpSocketState::new(),
+            socket_capabilities: UdpCapability::new(),
+            close_requested: false,
+        })
     }
 
     #[must_use]
@@ -54,6 +62,30 @@ impl QuicEndpoint {
             address,
             server_name)?
         )
+    }
+
+    pub(crate) fn socket_io_with_endpoint(&mut self) -> (&mut Endpoint, &UdpSocket, &UdpSocketState, &UdpCapability) {
+        (self.inner.get_mut(), &self.udp_socket, &self.socket_state, &self.socket_capabilities)
+    }
+
+    pub(crate) fn socket_io(&self) -> (&UdpSocket, &UdpSocketState, &UdpCapability) {
+        (&self.udp_socket, &self.socket_state, &self.socket_capabilities)
+    }
+
+    /// Returns the local address that the endpoint is connected to.
+    pub fn local_address(&self) -> SocketAddr {
+        self.udp_socket.local_addr().unwrap()
+    }
+
+    /// Marks the endpoint for closing, disconnecting all clients and shutting down the connection.
+    pub fn close(&mut self) {
+        self.close_requested = true;
+        self.inner.get_mut().reject_new_connections();
+    }
+
+    /// Returns `true` if the endpoint is marked for closing.
+    pub fn is_closing(&self) -> bool {
+        self.close_requested
     }
 
     fn build_client_config(root_certs: Arc<RootCertStore>) -> Result<rustls::ClientConfig> {
@@ -84,15 +116,17 @@ impl QuicConnectionManager<'_, '_> {
         let address = address.to_socket_addrs()?.nth(0)
             .context("No SocketAddr provided")?;
 
-        let id = self.commands.spawn(QuicEndpoint {
-            inner: Endpoint::new(
-                self.plugin_config.endpoint_config.clone(),
-                None,
-                false).into(),
-            udp_socket: Self::try_open_socket(address.clone())?,
+        let endpoint = Endpoint::new(
+            self.plugin_config.endpoint_config.clone(),
+            None,
+            false
+        );
+
+        let id = self.commands.spawn(QuicEndpoint::new(
+            endpoint,
             root_certs,
-            close_requested: false,
-        }).id();
+            address
+        )?).id();
 
         tracing::info!("Opened client endpoint {id:?} on {address}");
         Ok(id)
@@ -119,15 +153,17 @@ impl QuicConnectionManager<'_, '_> {
         let mut config = ServerConfig::with_crypto(Arc::new(crypto));
         config.transport_config(self.plugin_config.transport_config.clone());
 
-        let id = self.commands.spawn(QuicEndpoint {
-            inner: Endpoint::new(
-                self.plugin_config.endpoint_config.clone(),
-                Some(Arc::new(config)),
-                false).into(),
-            udp_socket: Self::try_open_socket(address.clone())?,
+        let endpoint = Endpoint::new(
+            self.plugin_config.endpoint_config.clone(),
+            Some(Arc::new(config)),
+            false
+        );
+
+        let id = self.commands.spawn(QuicEndpoint::new(
+            endpoint,
             root_certs,
-            close_requested: false,
-        }).id();
+            address
+        )?).id();
 
         tracing::info!("Opened server endpoint {id:?} on {address}");
         Ok(id)
