@@ -59,7 +59,7 @@ fn exchange_messages_system(
     mut writer: NetworkWriter<MyMessage>,
 ) {
     // A set of random (UTF-8) strings we can choose from
-    static GREEK_ALPHABET: &[str] = [
+    static GREEK_ALPHABET: &[&str] = &[
         "Alpha", "Beta", "Gamma", "Delta", "Epsilon", "Zeta", "Eta", "Theta",
         "Iota", "Kappa", "Lambda", "Mu", "Nu", "Xi", "Omicron", "Pi", "Rho",
         "Sigma", "Tau", "Upsilon", "Phi", "Chi", "Psi", "Omega",
@@ -68,11 +68,11 @@ fn exchange_messages_system(
     // Read messages and print them to the console
     for (origin, message) in reader.iter() {
         let string = std::str::from_utf8(&message).unwrap();
-        tracing::info!("Received a message from {origin}: {string}");
+        tracing::info!("Received a message from {origin:?}: {string}");
     }
 
     // Write some random data to send to our friend
-    if let Some(id) = other.get_single() {
+    if let Ok(id) = other.get_single() {
         let mut scratch = String::new();
         for i in 0..8 {
             scratch.push_str(fastrand::choice(GREEK_ALPHABET).unwrap());
