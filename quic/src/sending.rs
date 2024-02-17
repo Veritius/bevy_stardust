@@ -13,7 +13,7 @@ pub(super) fn quic_poll_transmit_system(
         loop {
             match endpoint.inner.get_mut().poll_transmit() {
                 Some(transmit) => {
-                    let (socket, state, capabilities) = endpoint.socket_io();
+                    let (socket, state, capabilities) = endpoint.send_split_borrow();
                     do_transmit(state, UdpSockRef::from(socket), capabilities, &transmit)
                 },
                 None => { break },
@@ -28,7 +28,7 @@ pub(super) fn quic_poll_transmit_system(
         let connection = connection.inner.get_mut();
         while let Some(transmit) = connection.poll_transmit(Instant::now(), 64) {
             if let Ok(endpoint) = endpoints.get(target_endpoint) {
-                let (socket, state, capabilities) = endpoint.socket_io();
+                let (socket, state, capabilities) = endpoint.send_split_borrow();
                 do_transmit(state, UdpSockRef::from(socket), capabilities, &transmit)
             }
         }

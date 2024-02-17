@@ -1,14 +1,30 @@
 use std::{collections::HashMap, io::{ErrorKind, IoSliceMut}, time::Instant};
 use bevy_ecs::prelude::*;
 use bytes::BytesMut;
+use quinn_proto::{Endpoint, Connection, ConnectionEvent};
 use quinn_udp::{RecvMeta, UdpSockRef};
 use crate::{QuicConnection, QuicEndpoint};
 
 pub(super) fn quic_receive_packets_system(
     mut endpoints: Query<(Entity, &mut QuicEndpoint)>,
-    mut connections: Query<&mut QuicConnection>,
+    connections: Query<&mut QuicConnection>,
     commands: ParallelCommands,
 ) {
+    // Sanity (and safety) check to make sure an endpoint doesn't consider more than one connection owned by itself
+    // If that occurs, we panic, because otherwise it would result in multiple mutable references to the same component, breaking aliasing rules
+    // TODO: Should this be behind a debug assert? It's certainly not performant. Does that even matter with servers that have like 16 clients?
+    let mut owned = Vec::with_capacity(connections.iter().len());
+    for (_, endpoint) in endpoints.iter() {
+        for (_, entity) in &endpoint.connections {
+            if owned.contains(entity) { panic!("Connection owned by more than one endpoint at a time. Panic because this would cause a data race. Report me immediately!") }
+            owned.push(entity.clone());
+        }
+    }
+
+    // We're done with the sanity check.
+    // Doing this might free up some resources earlier.
+    drop(owned);
+
     // Receive as many packets as we can
     endpoints.par_iter_mut().for_each(|(endpoint_id, mut endpoint_component)| {
         let local_address = endpoint_component.local_address().ip();
@@ -17,7 +33,7 @@ pub(super) fn quic_receive_packets_system(
         let mut scratch = [0u8; 1472]; // TODO: make this configurable
         let recv_meta = &mut [RecvMeta::default()];
 
-        let (endpoint, socket, state, capabilities) = endpoint_component.socket_io_with_endpoint();
+        let (endpoint, handle_map, socket, state) = endpoint_component.recv_split_borrow();
 
         loop {
             match state.recv(UdpSockRef::from(socket), &mut [IoSliceMut::new(&mut scratch[..])], recv_meta) {
@@ -32,15 +48,37 @@ pub(super) fn quic_receive_packets_system(
                     } else { None };
                     tracing::trace!("Received a packet of length {len} from {addr}");
 
-                    // Hand off the datagram to the Endpoint
+                    // Give the datagram to the Endpoint to handle it
                     if let Some((handle, event)) = endpoint.handle(
                         Instant::now(),
                         addr,
                         Some(local_address.clone()),
                         ecn,
                         BytesMut::from(&scratch[..len])
-                    ) {
-                        todo!()
+                    ) { 
+                        match event {
+                            quinn_proto::DatagramEvent::ConnectionEvent(event) => {
+                                if let Some(entity) = handle_map.get(&handle) {
+                                    // This is safe because a Connection can only be 'owned' by one Endpoint at a time (we check this earlier too)
+                                    // and since we're iterating only endpoints, it's the only mutable reference to the Connection
+                                    // TODO: Handle error outcomes without unwrapping/panicking
+                                    let mut comp = unsafe { connections.get_unchecked(*entity).unwrap() };
+                                    crate::polling::handle_connection_event(endpoint, comp.inner.get_mut(), event);
+                                } else {
+                                    if let Some(connection) = pending_local.get_mut(&handle) {
+                                        // This connection is in thread local storage (just joined)
+                                        crate::polling::handle_connection_event(endpoint, connection, event);
+                                    } else {
+                                        tracing::debug!("Connection event intended for {handle:?}:{endpoint_id:?} was discarded");
+                                        continue
+                                    }
+                                }
+                            },
+                            quinn_proto::DatagramEvent::NewConnection(connection) => {
+                                // Add connection to map
+                                pending_local.insert(handle, connection);
+                            },
+                        }
                     }
                 },
 

@@ -70,11 +70,11 @@ impl QuicEndpoint {
         Ok((id, connection))
     }
 
-    pub(crate) fn socket_io_with_endpoint(&mut self) -> (&mut Endpoint, &UdpSocket, &UdpSocketState, &UdpCapability) {
-        (self.inner.get_mut(), &self.udp_socket, &self.socket_state, &self.socket_capabilities)
+    pub(crate) fn recv_split_borrow(&mut self) -> (&mut Endpoint, &HashMap<ConnectionHandle, Entity>, &UdpSocket, &UdpSocketState) {
+        (self.inner.get_mut(), &self.connections, &self.udp_socket, &self.socket_state)
     }
 
-    pub(crate) fn socket_io(&self) -> (&UdpSocket, &UdpSocketState, &UdpCapability) {
+    pub(crate) fn send_split_borrow(&self) -> (&UdpSocket, &UdpSocketState, &UdpCapability) {
         (&self.udp_socket, &self.socket_state, &self.socket_capabilities)
     }
 
