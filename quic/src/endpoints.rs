@@ -50,7 +50,7 @@ impl QuicEndpoint {
         server_name: &str,
         transport: Arc<TransportConfig>,
         verifier: Arc<dyn crate::crypto::ServerCertVerifier>
-    ) -> Result<(Entity, Connection)> {
+    ) -> Result<(Entity, ConnectionHandle, Connection)> {
         let crypto = Self::build_client_config(Arc::new(crate::crypto::ServerCertVerifierWrapper {
             roots: self.root_certs.clone(),
             inner: verifier,
@@ -67,7 +67,7 @@ impl QuicEndpoint {
 
         let id = entities.reserve_entity();
         self.connections.insert(handle, id);
-        Ok((id, connection))
+        Ok((id, handle, connection))
     }
 
     pub(crate) fn recv_split_borrow(&mut self) -> (&mut Endpoint, &HashMap<ConnectionHandle, Entity>, &UdpSocket, &UdpSocketState) {
@@ -194,7 +194,7 @@ impl QuicConnectionManager<'_, '_> {
         let mut endpoint_comp = self.endpoints.get_mut(endpoint)?;
 
         // Connect to target with endpoint
-        let (entity, connection) = endpoint_comp.connect(
+        let (entity, handle, connection) = endpoint_comp.connect(
             self.entities,
             remote.clone(),
             server_name,
@@ -203,7 +203,7 @@ impl QuicConnectionManager<'_, '_> {
         )?;
 
         // Spawn entity to hold Connection
-        self.commands.get_or_spawn(entity).insert(QuicConnection::new(endpoint, connection));
+        self.commands.get_or_spawn(entity).insert(QuicConnection::new(endpoint, handle, connection));
 
         tracing::info!("Created new connection {entity:?} to remote peer {remote} on endpoint {endpoint:?}");
         Ok(entity)
@@ -226,7 +226,7 @@ impl QuicConnectionManager<'_, '_> {
         let mut endpoint_comp = self.endpoints.get_mut(endpoint)?;
 
         // Connect to target with endpoint using custom verifier
-        let (entity, connection) = endpoint_comp.connect(
+        let (entity, handle, connection) = endpoint_comp.connect(
             self.entities,
             remote.clone(),
             server_name,
@@ -235,7 +235,7 @@ impl QuicConnectionManager<'_, '_> {
         )?;
 
         // Spawn entity to hold Connection
-        self.commands.get_or_spawn(entity).insert(QuicConnection::new(endpoint, connection));
+        self.commands.get_or_spawn(entity).insert(QuicConnection::new(endpoint, handle, connection));
 
         tracing::info!("Connecting to remote peer {remote} on endpoint {endpoint:?} with custom verifier");
         Ok(entity)

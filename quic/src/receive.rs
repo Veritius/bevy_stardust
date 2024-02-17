@@ -1,7 +1,6 @@
 use std::{collections::HashMap, io::{ErrorKind, IoSliceMut}, time::Instant};
 use bevy_ecs::prelude::*;
 use bytes::BytesMut;
-use quinn_proto::{Endpoint, Connection, ConnectionEvent};
 use quinn_udp::{RecvMeta, UdpSockRef};
 use crate::{QuicConnection, QuicEndpoint};
 
@@ -98,7 +97,7 @@ pub(super) fn quic_receive_packets_system(
         // Spawn connection entities
         commands.command_scope(|mut commands| {
             for (handle, connection) in pending_local.drain() {
-                let entity = commands.spawn(QuicConnection::new(endpoint_id, connection)).id();
+                let entity = commands.spawn(QuicConnection::new(endpoint_id, handle, connection)).id();
                 endpoint_component.connections.insert(handle, entity);
             }
         });

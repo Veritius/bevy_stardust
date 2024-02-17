@@ -10,16 +10,19 @@ use bevy_ecs::prelude::*;
 #[derive(Component)]
 pub struct QuicConnection {
     pub(crate) endpoint: Entity,
+    pub(crate) handle: ConnectionHandle,
     pub(crate) inner: Exclusive<Connection>,
 }
 
 impl QuicConnection {
     pub(crate) fn new(
         endpoint: Entity,
+        handle: ConnectionHandle,
         connection: Connection
     ) -> Self {
         Self {
             endpoint,
+            handle,
             inner: Exclusive::new(connection),
         }
     }
