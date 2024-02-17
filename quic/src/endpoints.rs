@@ -51,11 +51,10 @@ impl QuicEndpoint {
         transport: Arc<TransportConfig>,
         verifier: Arc<dyn crate::crypto::ServerCertVerifier>
     ) -> Result<(Entity, Connection)> {
-        let mut crypto = Self::build_client_config(self.root_certs.clone())?;
-        crypto.dangerous().set_certificate_verifier(Arc::new(crate::crypto::ServerCertVerifierWrapper {
+        let crypto = Self::build_client_config(Arc::new(crate::crypto::ServerCertVerifierWrapper {
             roots: self.root_certs.clone(),
             inner: verifier,
-        }));
+        }))?;
 
         let mut client_config = ClientConfig::new(Arc::new(crypto));
         client_config.transport_config(transport);
@@ -95,12 +94,12 @@ impl QuicEndpoint {
         self.close_requested
     }
 
-    fn build_client_config(root_certs: Arc<RootCertStore>) -> Result<rustls::ClientConfig> {
+    fn build_client_config(verifier: Arc<dyn rustls::client::ServerCertVerifier>) -> Result<rustls::ClientConfig> {
         Ok(rustls::ClientConfig::builder()
             .with_safe_default_cipher_suites()
             .with_safe_default_kx_groups()
             .with_protocol_versions(&[&rustls::version::TLS13])?
-            .with_root_certificates(root_certs)
+            .with_custom_certificate_verifier(verifier)
             .with_no_client_auth())
     }
 }
