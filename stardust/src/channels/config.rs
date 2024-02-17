@@ -22,6 +22,11 @@ pub struct ChannelConfiguration {
     /// If enabled, each octet string will have a tiny bit more overhead.
     pub fragmented: bool,
 
+    /// The priority of messages on this channel.
+    /// Transport values will send messages on channels with higher `priority` values first.
+    /// Channel priority is not hashed when the `hashing` feature is enabled.
+    pub priority: u32,
+
     /// How long an octet string sent over this channel will be, used for optimisations.
     /// Octet strings with lengths outside this range may cause warnings or panics in transport layers.
     pub string_size: RangeInclusive<u32>,
