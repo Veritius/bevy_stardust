@@ -9,22 +9,31 @@ pub(super) fn quic_receive_packets_system(
     connections: Query<&mut QuicConnection>,
     commands: ParallelCommands,
 ) {
-    // Sanity (and safety) check to make sure an endpoint doesn't consider more than one connection owned by itself
-    // If that occurs, we panic, because otherwise it would result in multiple mutable references to the same component, breaking aliasing rules
-    // TODO: Should this be behind a debug assert? It's certainly not performant. Does that even matter with servers that have like 16 clients?
+
+    /*
+        This section of code is used as a sanity and safety check so we don't have multiple mutable references to the same object occurring
+        Since each Connection is "owned" by one Endpoint entity, we can iterate endpoints in parallel and safely access Components within those parallel tasks
+        However, Query doesn't normally allow that, so we have to use the unsafe function 'get_unchecked'. Because of the above, this should be fine.
+        We still check that two endpoints don't lay claim to the same connection, just in case. This is a relatively cheap operation considering the syscalls and I/O.
+    */
+
     let mut owned = Vec::with_capacity(connections.iter().len());
     for (_, endpoint) in endpoints.iter() {
         for (_, entity) in &endpoint.connections {
-            if owned.contains(entity) { panic!("Connection owned by more than one endpoint at a time. Panic because this would cause a data race. Report me immediately!") }
             owned.push(entity.clone());
         }
     }
 
-    // We're done with the sanity check.
-    // Doing this might free up some resources earlier.
+    owned.sort_unstable();
+    let mut last = Entity::PLACEHOLDER;
+    for item in &owned {
+        if *item == last { panic!("Connection owned by more than one endpoint at a time. Panic because this would cause a data race. Report me immediately!"); }
+        last = item.clone();
+    }
+
     drop(owned);
 
-    // Receive as many packets as we can
+    // I/O starts here :)
     endpoints.par_iter_mut().for_each(|(endpoint_id, mut endpoint_component)| {
         let local_address = endpoint_component.local_address().ip();
         let mut pending_local: HashMap<quinn_proto::ConnectionHandle, quinn_proto::Connection> = HashMap::default();
