@@ -106,8 +106,10 @@ pub(super) fn quic_receive_packets_system(
         // Spawn connection entities
         commands.command_scope(|mut commands| {
             for (handle, connection) in pending_local.drain() {
+                let remote_address = connection.remote_address();
                 let entity = commands.spawn(QuicConnection::new(endpoint_id, handle, connection)).id();
                 endpoint_component.connections.insert(handle, entity);
+                tracing::info!("New incoming connection {entity:?} ({remote_address}) on endpoint {endpoint_id:?}");
             }
         });
     });

@@ -46,3 +46,21 @@ pub(super) fn event_recursing_exchange_system(
         }
     }
 }
+
+pub(super) fn application_event_system(
+    mut connections: Query<(Entity, &mut QuicConnection)>,
+) {
+    for (entity, mut connection) in connections.iter_mut() {
+        let connection = connection.inner.get_mut();
+
+        while let Some(event) = connection.poll() {
+            match event {
+                quinn_proto::Event::Connected => { tracing::info!("Connection {entity:?} successfully established") },
+                quinn_proto::Event::ConnectionLost { reason } => { tracing::info!("Connection {entity:?} lost connection: {reason}") },
+                quinn_proto::Event::Stream(_) => todo!(),
+                quinn_proto::Event::DatagramReceived => todo!(),
+                _ => {} // we don't care about the other events
+            }
+        }
+    }
+}
