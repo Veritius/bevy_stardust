@@ -25,12 +25,10 @@ impl Plugin for QuicTransportPlugin {
         // This step is a bit of a powerhouse
         app.add_systems(PreUpdate, (
             crate::receive::quic_receive_packets_system,
-            crate::connections::despawn_drained_connections_system,
         ).chain().in_set(NetworkRead::Receive));
 
         app.add_systems(PostUpdate, (
             crate::sending::quic_poll_transmit_system,
-            crate::connections::update_handle_map_system,
         ).chain().in_set(NetworkWrite::Send));
 
         // Check if a transport config is provided, if not, just use defaults that are good for us
@@ -43,7 +41,6 @@ impl Plugin for QuicTransportPlugin {
         };
 
         // Add resources
-        app.init_resource::<crate::connections::ConnectionHandleMap>();
         app.insert_resource(PluginConfig {
             reliable_streams: self.reliable_streams,
             transport_config,

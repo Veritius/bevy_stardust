@@ -1,6 +1,6 @@
-use std::{net::{SocketAddr, ToSocketAddrs, UdpSocket}, sync::{Arc, Exclusive}};
+use std::{net::{SocketAddr, ToSocketAddrs, UdpSocket}, sync::{Arc, Exclusive}, collections::HashMap};
 use anyhow::{Context, Result};
-use bevy_ecs::{prelude::*, system::SystemParam};
+use bevy_ecs::{prelude::*, system::SystemParam, entity::Entities};
 use quinn_proto::*;
 // UdpState is such a terrible type name I needed to rename it
 use quinn_udp::{UdpSockRef, UdpSocketState, UdpState as UdpCapability};
@@ -11,6 +11,7 @@ use crate::{plugin::PluginConfig, QuicConnection};
 #[derive(Component)]
 pub struct QuicEndpoint {
     pub(crate) inner: Exclusive<Endpoint>,
+    pub(crate) connections: HashMap<ConnectionHandle, Entity>,
 
     root_certs: Arc<RootCertStore>,
 
@@ -32,6 +33,7 @@ impl QuicEndpoint {
 
         Ok(Self {
             inner: Exclusive::new(endpoint),
+            connections: HashMap::new(),
             root_certs,
             udp_socket,
             socket_state: UdpSocketState::new(),
@@ -43,11 +45,12 @@ impl QuicEndpoint {
     #[must_use]
     pub(crate) fn connect(
         &mut self,
+        entities: &Entities,
         address: SocketAddr,
         server_name: &str,
         transport: Arc<TransportConfig>,
         verifier: Arc<dyn crate::crypto::ServerCertVerifier>
-    ) -> Result<(ConnectionHandle, Connection)> {
+    ) -> Result<(Entity, Connection)> {
         let mut crypto = Self::build_client_config(self.root_certs.clone())?;
         crypto.dangerous().set_certificate_verifier(Arc::new(crate::crypto::ServerCertVerifierWrapper {
             roots: self.root_certs.clone(),
@@ -57,11 +60,15 @@ impl QuicEndpoint {
         let mut client_config = ClientConfig::new(Arc::new(crypto));
         client_config.transport_config(transport);
 
-        Ok(self.inner.get_mut().connect(
+        let (handle, connection) = self.inner.get_mut().connect(
             client_config,
             address,
-            server_name)?
-        )
+            server_name
+        )?;
+
+        let id = entities.reserve_entity();
+        self.connections.insert(handle, id);
+        Ok((id, connection))
     }
 
     pub(crate) fn socket_io_with_endpoint(&mut self) -> (&mut Endpoint, &UdpSocket, &UdpSocketState, &UdpCapability) {
@@ -103,6 +110,7 @@ impl QuicEndpoint {
 pub struct QuicConnectionManager<'w, 's> {
     plugin_config: Res<'w, PluginConfig>,
     endpoints: Query<'w, 's, &'static mut QuicEndpoint>,
+    entities: &'w Entities,
     commands: Commands<'w, 's>,
 }
 
@@ -187,7 +195,8 @@ impl QuicConnectionManager<'_, '_> {
         let mut endpoint_comp = self.endpoints.get_mut(endpoint)?;
 
         // Connect to target with endpoint
-        let (handle, connection) = endpoint_comp.connect(
+        let (entity, connection) = endpoint_comp.connect(
+            self.entities,
             remote.clone(),
             server_name,
             self.plugin_config.transport_config.clone(),
@@ -195,10 +204,10 @@ impl QuicConnectionManager<'_, '_> {
         )?;
 
         // Spawn entity to hold Connection
-        let id = self.commands.spawn(QuicConnection::new(endpoint, handle, connection)).id();
+        self.commands.get_or_spawn(entity).insert(QuicConnection::new(endpoint, connection));
 
-        tracing::info!("Connecting to remote peer {remote} on endpoint {endpoint:?}");
-        Ok(id)
+        tracing::info!("Created new connection {entity:?} to remote peer {remote} on endpoint {endpoint:?}");
+        Ok(entity)
     }
 
     /// Like [`try_connect`](Self::try_connect) but with a custom certificate verifier.
@@ -218,7 +227,8 @@ impl QuicConnectionManager<'_, '_> {
         let mut endpoint_comp = self.endpoints.get_mut(endpoint)?;
 
         // Connect to target with endpoint using custom verifier
-        let (handle, connection) = endpoint_comp.connect(
+        let (entity, connection) = endpoint_comp.connect(
+            self.entities,
             remote.clone(),
             server_name,
             self.plugin_config.transport_config.clone(),
@@ -226,10 +236,10 @@ impl QuicConnectionManager<'_, '_> {
         )?;
 
         // Spawn entity to hold Connection
-        let id = self.commands.spawn(QuicConnection::new(endpoint, handle, connection)).id();
+        self.commands.get_or_spawn(entity).insert(QuicConnection::new(endpoint, connection));
 
         tracing::info!("Connecting to remote peer {remote} on endpoint {endpoint:?} with custom verifier");
-        Ok(id)
+        Ok(entity)
     }
 
     fn try_open_socket(address: impl ToSocketAddrs) -> Result<UdpSocket> {

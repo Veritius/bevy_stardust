@@ -2,23 +2,22 @@ use std::{collections::HashMap, io::{ErrorKind, IoSliceMut}, time::Instant};
 use bevy_ecs::prelude::*;
 use bytes::BytesMut;
 use quinn_udp::{RecvMeta, UdpSockRef};
-use crate::{connections::ConnectionHandleMap, QuicConnection, QuicEndpoint};
+use crate::{QuicConnection, QuicEndpoint};
 
 pub(super) fn quic_receive_packets_system(
     mut endpoints: Query<(Entity, &mut QuicEndpoint)>,
-    handle_map: Res<ConnectionHandleMap>,
-    connections: Query<&QuicConnection>,
+    mut connections: Query<&mut QuicConnection>,
     commands: ParallelCommands,
 ) {
     // Receive as many packets as we can
-    endpoints.par_iter_mut().for_each(|(endpoint_id, mut endpoint)| {
-        let local_address = endpoint.local_address().ip();
+    endpoints.par_iter_mut().for_each(|(endpoint_id, mut endpoint_component)| {
+        let local_address = endpoint_component.local_address().ip();
         let mut pending_local: HashMap<quinn_proto::ConnectionHandle, quinn_proto::Connection> = HashMap::default();
 
         let mut scratch = [0u8; 1472]; // TODO: make this configurable
         let recv_meta = &mut [RecvMeta::default()];
 
-        let (endpoint, socket, state, capabilities) = endpoint.socket_io_with_endpoint();
+        let (endpoint, socket, state, capabilities) = endpoint_component.socket_io_with_endpoint();
 
         loop {
             match state.recv(UdpSockRef::from(socket), &mut [IoSliceMut::new(&mut scratch[..])], recv_meta) {
@@ -61,7 +60,8 @@ pub(super) fn quic_receive_packets_system(
         // Spawn connection entities
         commands.command_scope(|mut commands| {
             for (handle, connection) in pending_local.drain() {
-                commands.spawn(QuicConnection::new(endpoint_id, handle, connection));
+                let entity = commands.spawn(QuicConnection::new(endpoint_id, connection)).id();
+                endpoint_component.connections.insert(handle, entity);
             }
         });
     });
