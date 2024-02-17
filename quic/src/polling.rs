@@ -64,3 +64,16 @@ pub(super) fn application_event_system(
         }
     }
 }
+
+pub(super) fn remove_drained_connections_system(
+    mut endpoints: Query<&mut QuicEndpoint>,
+    mut connections: Query<(Entity, &mut QuicConnection)>,
+    mut commands: Commands,
+) {
+    for (entity, mut connection) in connections.iter_mut() {
+        if connection.inner.get_mut().is_drained() || connection.force_despawn {
+            commands.entity(entity).despawn();
+            endpoints.get_mut(connection.endpoint()).unwrap().connections.retain(|_, id| entity == *id);
+        }
+    }
+}

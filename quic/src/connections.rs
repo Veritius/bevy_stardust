@@ -12,6 +12,8 @@ pub struct QuicConnection {
     pub(crate) endpoint: Entity,
     pub(crate) handle: ConnectionHandle,
     pub(crate) inner: Exclusive<Connection>,
+
+    pub(crate) force_despawn: bool,
 }
 
 impl QuicConnection {
@@ -24,6 +26,7 @@ impl QuicConnection {
             endpoint,
             handle,
             inner: Exclusive::new(connection),
+            force_despawn: false,
         }
     }
 
