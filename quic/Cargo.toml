@@ -10,8 +10,8 @@ repository="https://github.com/veritius/bevy_stardust/"
 keywords=["bevy", "gamedev", "networking"]
 
 [dependencies]
-bevy_app = "0.12"
-bevy_ecs = "0.12"
+bevy_app = { version = "0.12", default-features = false }
+bevy_ecs = { version = "0.12", default-features = false }
 bevy_stardust = { version = "0.3", path = "../stardust", default-features = false }
 quinn-proto = "0.10"
 quinn-udp = "0.4"
