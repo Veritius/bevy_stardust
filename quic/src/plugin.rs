@@ -31,6 +31,7 @@ impl Plugin for QuicTransportPlugin {
         ).chain().in_set(NetworkRead::Receive));
 
         app.add_systems(PostUpdate, (
+            crate::writing::write_messages_to_streams_system,
             crate::sending::quic_poll_transmit_system,
         ).chain().in_set(NetworkWrite::Send));
 

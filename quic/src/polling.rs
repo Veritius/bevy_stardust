@@ -1,4 +1,5 @@
 use bevy_ecs::prelude::*;
+use bevy_stardust::connections::peer::NetworkPeer;
 use quinn_proto::{Endpoint, Connection, ConnectionHandle, ConnectionEvent, EndpointEvent};
 use crate::{QuicEndpoint, QuicConnection};
 
@@ -49,13 +50,17 @@ pub(super) fn event_recursing_exchange_system(
 
 pub(super) fn application_event_system(
     mut connections: Query<(Entity, &mut QuicConnection)>,
+    mut commands: Commands,
 ) {
     for (entity, mut connection) in connections.iter_mut() {
         let connection = connection.inner.get_mut();
 
         while let Some(event) = connection.poll() {
             match event {
-                quinn_proto::Event::Connected => { tracing::info!("Connection {entity:?} successfully established") },
+                quinn_proto::Event::Connected => {
+                    commands.entity(entity).insert(NetworkPeer::new());
+                    tracing::info!("Connection {entity:?} successfully established")
+                },
                 quinn_proto::Event::ConnectionLost { reason } => { tracing::info!("Connection {entity:?} lost connection: {reason}") },
                 quinn_proto::Event::Stream(_) => todo!(),
                 quinn_proto::Event::DatagramReceived => todo!(),

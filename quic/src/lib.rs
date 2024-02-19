@@ -12,6 +12,7 @@ mod misc;
 mod sending;
 mod plugin;
 mod polling;
+mod writing;
 
 pub use plugin::{QuicTransportPlugin, TlsAuthentication};
 pub use endpoints::{QuicEndpoint, QuicConnectionManager};
