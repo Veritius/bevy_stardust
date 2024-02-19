@@ -28,7 +28,8 @@ pub fn setup_app() -> App {
 
     app.add_plugins(LogPlugin {
         level: tracing::Level::INFO,
-        filter: "".to_string(),
+        filter: "wgpu=error,naga=warn".to_string(),
+        update_subscriber: None,
     });
 
     app.add_plugins(StardustPlugin);
