@@ -12,4 +12,4 @@ mod reliability;
 pub use plugin::UdpTransportPlugin;
 pub use manager::UdpManager;
 pub use endpoint::Endpoint;
-pub use connection::Connection;
+pub use connection::{Connection, ConnectionDirection, ConnectionState};
