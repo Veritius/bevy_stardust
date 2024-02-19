@@ -1,5 +1,5 @@
 <h1><p align="center">✨ bevy_stardust</p></h1>
-Stardust is an opinionated networking crate built for Bevy, with a focus on extensibility and parallelism.
+Stardust is a flexible networking crate built for Bevy, with a focus on extensibility and parallelism.
 <br></br>
 
 ![License](https://img.shields.io/badge/license-MIT_or_Apache_2.0-green)
@@ -18,8 +18,9 @@ This also means you can use multiple protocols for connections. Use a native UDP
 Not that it needs to be a game server. The way Stardust is written, it has no concept of network topology, just connections. That means you can even use this plugin for P2P connections in a mesh topology, though make sure the plugins you use support that sort of thing.
 
 ### Planned features
-- Replication and state synchronisation API
-- UDP, QUIC, and WebRTC transport layers
+- Replication and state synchronisation plugins
+- UDP and WebTransport plugins
+- Real time voice plugin
 
 ## Usage
 | Bevy | Stardust |
@@ -71,4 +72,4 @@ fn my_system(
 }
 ```
 
-You also need a transport layer to send your messages.
+Note that your messages will **not be sent** without a transport plugin.
