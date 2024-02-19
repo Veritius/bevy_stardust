@@ -1,6 +1,6 @@
 //! Schedules used in Stardust.
 
-use bevy::prelude::*;
+use bevy_ecs::prelude::*;
 
 /// Systems dealing with incoming octet strings. Run in the `PreUpdate` schedule.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, SystemSet)]

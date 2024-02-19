@@ -1,3 +1,6 @@
 # Cargo stuff
 /target
 Cargo.lock
+
+# Mdbook stuff
+docs/book

@@ -1,6 +1,6 @@
 [package]
 name="bevy_stardust"
-version="0.2.0"
+version="0.3.0"
 edition="2021"
 authors=["Veritius <veritiusgaming@gmail.com>"]
 readme="../README.md"
@@ -10,6 +10,19 @@ repository="https://github.com/veritius/bevy_stardust/"
 keywords=["bevy", "gamedev", "networking"]
 
 [dependencies]
-bevy = { version = "0.12", default-features=false }
+bevy_ecs = { version = "0.13", default-features = false }
+bevy_app = { version = "0.13", default-features = false }
+bevy_reflect = { version = "0.13", optional = true }
 bytes = "1.5.0"
 smallvec = "1.11.1"
+uuid = "1.7"
+gxhash = { version = "=3.0.0", optional = true } # 3.1 is broken, remove this bound when it's fixed
+
+[features]
+default = ["reflect"]
+reflect = [
+    "dep:bevy_reflect",
+    "bevy_ecs/bevy_reflect",
+    "bevy_app/bevy_reflect"
+]
+hashing = ["reflect", "dep:gxhash"]

@@ -1,7 +1,7 @@
 //! The channel registry.
 
 use std::{collections::BTreeMap, any::TypeId};
-use bevy::prelude::*;
+use bevy_ecs::prelude::*;
 use crate::prelude::ChannelConfiguration;
 use super::id::{Channel, ChannelId};
 
@@ -9,7 +9,9 @@ use super::id::{Channel, ChannelId};
 pub struct ChannelData {
     /// The channel's `TypeId`.
     pub type_id: TypeId,
+
     /// The channel's `TypePath` (from `bevy_reflect`)
+    #[cfg(feature="reflect")]
     pub type_path: &'static str,
 
     /// The channel's sequential ID assigned by the registry.
@@ -59,14 +61,20 @@ impl ChannelRegistry {
         
         // Check the channel doesn't already exist
         let type_id = TypeId::of::<C>();
+        #[cfg(feature="reflect")]
         let type_path = C::type_path();
         if self.channel_type_ids.get(&type_id).is_some() {
+            #[cfg(feature="reflect")]
             panic!("A channel was registered twice: {type_path}");
+            #[cfg(not(feature="reflect"))]
+            panic!("A channel was registered twice: {type_id:?}");
         }
 
         // Add to map
         let channel_id = ChannelId::try_from(self.channel_count).unwrap();
         self.channel_type_ids.insert(type_id, channel_id);
+        
+        #[cfg(feature="reflect")]
         self.channel_data.push(ChannelData {
             type_id,
             type_path,
@@ -75,13 +83,24 @@ impl ChannelRegistry {
             entity_id: entity,
             config,
         });
+
+        #[cfg(not(feature="reflect"))]
+        self.channel_data.push(ChannelData {
+            type_id,
+            channel_id,
+
+            entity_id: entity,
+            config,
+        });
+
         self.channel_count += 1;
 
         channel_id
     }
 
     /// Returns the channel ID if `reflect` is a registered type
-    pub fn get_from_reflect(&self, reflect: &dyn Reflect) -> Option<(ChannelId, &ChannelData)> {
+    #[cfg(feature="reflect")]
+    pub fn get_from_reflect(&self, reflect: &dyn bevy_reflect::Reflect) -> Option<(ChannelId, &ChannelData)> {
         self.get_from_type_inner(reflect.as_any().type_id())
     }
 
