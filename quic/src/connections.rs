@@ -1,4 +1,5 @@
-use std::{sync::Exclusive, time::Instant};
+use std::{collections::HashMap, sync::Exclusive, time::Instant};
+use bevy_stardust::channels::id::ChannelId;
 use bytes::*;
 use quinn_proto::*;
 use bevy_ecs::prelude::*;
@@ -13,6 +14,9 @@ pub struct QuicConnection {
     pub(crate) handle: ConnectionHandle,
     pub(crate) inner: Exclusive<Connection>,
 
+    pub(crate) send_streams: HashMap<ChannelId, StreamId>,
+    pub(crate) recv_streams: HashMap<StreamId, ChannelId>,
+
     pub(crate) force_despawn: bool,
 }
 
@@ -26,6 +30,8 @@ impl QuicConnection {
             endpoint,
             handle,
             inner: Exclusive::new(connection),
+            send_streams: HashMap::default(),
+            recv_streams: HashMap::default(),
             force_despawn: false,
         }
     }
