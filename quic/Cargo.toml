@@ -1,0 +1,42 @@
+[package]
+name="bevy_stardust_quic"
+version="0.1.0"
+edition="2021"
+authors=["Veritius <veritiusgaming@gmail.com>"]
+readme="../README.md"
+license="MIT OR Apache-2.0"
+description="A transport layer for bevy_stardust that uses QUIC."
+repository="https://github.com/veritius/bevy_stardust/"
+keywords=["bevy", "gamedev", "networking"]
+
+[dependencies]
+bevy_app = { version = "0.13", default-features = false }
+bevy_ecs = { version = "0.13", default-features = false }
+bevy_stardust = { version = "0.3", path = "../stardust", default-features = false }
+quinn-proto = "0.10"
+quinn-udp = "0.4"
+bytes = "1"
+untrusted = "0.9"
+rustls = { version = "0.21", features = ["quic", "dangerous_configuration"] }
+ring = "0.17"
+anyhow = "1"
+tracing = "0.1"
+
+[dev-dependencies]
+rcgen = "0.12"
+fastrand = "2"
+bevy_log = "0.13"
+
+[features]
+default = []
+dangerous = []
+
+[[example]]
+name = "minimal-server"
+path = "examples/minimal/server.rs"
+required-features = ["dangerous"]
+
+[[example]]
+name = "minimal-client"
+path = "examples/minimal/client.rs"
+required-features = ["dangerous"]

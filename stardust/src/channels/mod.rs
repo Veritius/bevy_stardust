@@ -1,11 +1,8 @@
 //! Channel definitions and message storage.
 //! 
 //! You can add a channel when setting up the `App`.
-//! ```
-//! use bevy::prelude::*;
-//! use bevy_stardust::prelude::*;
-//! 
-//! #[derive(Debug, Reflect)]
+//! ```ignore
+//! #[derive(Reflect)] // Only necessary with the reflect feature
 //! struct MyChannel;
 //! 
 //! fn main() {
@@ -14,8 +11,8 @@
 //!     app.add_plugins((DefaultPlugins, StardustPlugin));
 //! 
 //!     app.add_channel::<MyChannel>(ChannelConfiguration {
-//!         reliable: true,
-//!         ordered: false,
+//!         reliable: ReliabilityGuarantee::Unreliable,
+//!         ordered: OrderingGuarantee::Unordered,
 //!         fragmented: false,
 //!         string_size: 0..=16,
 //!     });
@@ -30,8 +27,9 @@ pub(crate) mod extension;
 pub(crate) mod incoming;
 pub(crate) mod outgoing;
 
-pub(super) fn channels(app: &mut bevy::prelude::App) {
-    use bevy::prelude::*;
+pub(super) fn channels(app: &mut bevy_app::App) {
+    use bevy_app::prelude::*;
+    use bevy_ecs::prelude::*;
     use crate::scheduling::*;
 
     // Channel registry

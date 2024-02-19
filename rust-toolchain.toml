@@ -1,0 +1,5 @@
+# The toolchain must be nightly because of the QUIC transport layer which uses Exclusive (tracking issue #98407)
+# Once Exclusive is stabilised, this file can be safely removed.
+
+[toolchain]
+channel = "nightly"

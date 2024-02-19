@@ -1,4 +1,4 @@
-use bevy::{prelude::*, ecs::system::SystemParam};
+use bevy_ecs::{prelude::*, system::SystemParam};
 use bytes::Bytes;
 use crate::prelude::*;
 use super::{id::ChannelMarker, CHANNEL_ENTITY_DELETED_MESSAGE};
@@ -6,11 +6,11 @@ use super::{id::ChannelMarker, CHANNEL_ENTITY_DELETED_MESSAGE};
 /// Systemparam for reading messages received in channel `C`.
 /// 
 /// ## Examples
-/// ```
+/// ```ignore
 /// use bevy::prelude::*;
 /// use bevy_stardust::prelude::*;
 /// 
-/// #[derive(TypePath)]
+/// #[derive(TypePath)] // Only necessary with the reflect feature
 /// struct MyChannel;
 /// 
 /// // Simple example
