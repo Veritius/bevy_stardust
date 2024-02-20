@@ -64,7 +64,12 @@ fn write_message_to_connection(
             // Queue bytes to write and append it to the queue if it doesn't finish immediately
             stream_data.push(&bytes);
             stream_data.try_write(&mut send_stream).unwrap(); // TODO: Handle without panic
-            if !stream_data.is_drained() { connection.transient_send_streams.push_back(stream_data); }
+            if stream_data.is_drained() {
+                // If we finish sending the message, finish the stream
+                send_stream.finish().unwrap();
+            } else {
+                connection.transient_send_streams.push_back(stream_data)
+            }
         },
 
         // Reliable message that needs ordering
@@ -82,6 +87,7 @@ fn write_message_to_connection(
 
             // Queue bytes then try to send some of it
             let mut send_stream = connection.inner.get_mut().send_stream(stream_data.id);
+            stream_data.push(&(bytes.len() as u32).to_be_bytes()); // Length prefix for message framing
             stream_data.push(&bytes);
             stream_data.try_write(&mut send_stream).unwrap(); // TODO: Handle without panic
         },
