@@ -37,8 +37,6 @@ impl OutgoingStreamData {
     pub fn push(&mut self, data: &[u8]) {
         if data.len() == 0 { return }
 
-        dbg!(self.buffer.len(), data.len());
-
         let mut buf: Vec<u8> = Vec::with_capacity(self.buffer.len() + data.len());
         buf.extend_from_slice(&self.buffer);
         buf.extend_from_slice(data);
