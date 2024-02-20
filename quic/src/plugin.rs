@@ -26,7 +26,7 @@ impl Plugin for QuicTransportPlugin {
         app.add_systems(PreUpdate, (
             crate::receive::quic_receive_packets_system,
             crate::polling::event_recursing_exchange_system,
-            crate::polling::application_event_system,
+            crate::polling::poll_application_event_system,
             crate::polling::remove_drained_connections_system,
         ).chain().in_set(NetworkRead::Receive));
 

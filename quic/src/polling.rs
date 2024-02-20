@@ -48,7 +48,7 @@ pub(super) fn event_recursing_exchange_system(
     }
 }
 
-pub(super) fn application_event_system(
+pub(super) fn poll_application_event_system(
     mut connections: Query<(Entity, &mut QuicConnection)>,
     mut commands: Commands,
 ) {
