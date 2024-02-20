@@ -56,9 +56,12 @@ fn write_message_to_connection(
         // Reliable message that doesn't need ordering
         // This is put on a "transient" stream in a queue
         (ReliabilityGuarantee::Reliable, OrderingGuarantee::Unordered) => {
+            // Create new stream data buffering object
             let sid = connection.inner.get_mut().streams().open(quinn_proto::Dir::Uni).unwrap();
             let mut send_stream = connection.inner.get_mut().send_stream(sid);
             let mut stream_data = OutgoingStreamData::new(sid, &channel_bytes[..bytes_for_channel]);
+
+            // Queue bytes to write and append it to the queue if it doesn't finish immediately
             stream_data.push(&bytes);
             stream_data.try_write(&mut send_stream).unwrap(); // TODO: Handle without panic
             if !stream_data.is_drained() { connection.transient_send_streams.push_back(stream_data); }
