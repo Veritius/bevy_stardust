@@ -13,7 +13,7 @@ pub(super) fn read_messages_from_streams_system(
     connections.par_iter_mut().for_each(|(entity, mut connection)| {
         // Accept all new streams
         while let Some(stream_id) = connection.inner.get_mut().streams().accept(Dir::Uni) {
-            connection.pending_recv_streams.push(stream_id);
+            connection.pending_recv_streams.push((stream_id, Vec::new()));
         }
 
         todo!()

@@ -1,6 +1,6 @@
 use bevy_ecs::prelude::*;
 use bevy_stardust::{connections::groups::NetworkGroup, prelude::*};
-use crate::{streams::OutgoingStreamData, QuicConnection};
+use crate::{streams::{OutgoingBufferedStreamData, StreamPurposeHeader}, QuicConnection};
 
 pub(super) fn write_messages_to_streams_system(
     network_groups: Query<&NetworkGroup>,
@@ -58,7 +58,9 @@ fn write_message_to_connection(
             // Create new stream data buffering object
             let sid = connection.inner.get_mut().streams().open(quinn_proto::Dir::Uni).unwrap();
             let mut send_stream = connection.inner.get_mut().send_stream(sid);
-            let mut stream_data = OutgoingStreamData::new(sid, &channel_bytes);
+            let mut stream_data = OutgoingBufferedStreamData::new(sid);
+            stream_data.push(&[StreamPurposeHeader::StardustPayloads as u8]);
+            stream_data.push(&channel_bytes);
 
             // Queue bytes to write and append it to the queue if it doesn't finish immediately
             stream_data.push(&bytes);
@@ -67,6 +69,7 @@ fn write_message_to_connection(
                 // If we finish sending the message, finish the stream
                 send_stream.finish().unwrap();
             } else {
+                // We didn't receive anything so just queue it for a later read
                 connection.transient_send_streams.push_back(stream_data)
             }
         },
@@ -81,7 +84,10 @@ fn write_message_to_connection(
             .or_insert_with(|| {
                 let c_inner = connection.inner.get_mut();
                 let sid = c_inner.streams().open(quinn_proto::Dir::Uni).unwrap();
-                OutgoingStreamData::new(sid, &channel_bytes)
+                let mut stream_data = OutgoingBufferedStreamData::new(sid);
+                stream_data.push(&[StreamPurposeHeader::StardustPayloads as u8]);
+                stream_data.push(&channel_bytes);
+                stream_data
             });
 
             // Queue bytes then try to send some of it

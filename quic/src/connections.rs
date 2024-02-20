@@ -3,7 +3,7 @@ use bevy_stardust::channels::id::ChannelId;
 use bytes::*;
 use quinn_proto::*;
 use bevy_ecs::prelude::*;
-use crate::streams::{IncomingStreamData, OutgoingStreamData};
+use crate::streams::{IncomingStardustStreamData, OutgoingBufferedStreamData};
 
 /// A QUIC connection.
 /// 
@@ -15,10 +15,10 @@ pub struct QuicConnection {
     pub(crate) handle: ConnectionHandle,
     pub(crate) inner: Exclusive<Connection>,
 
-    pub(crate) transient_send_streams: VecDeque<OutgoingStreamData>,
-    pub(crate) persistent_send_streams: HashMap<ChannelId, OutgoingStreamData>,
-    pub(crate) active_recv_streams: HashMap<StreamId, IncomingStreamData>,
-    pub(crate) pending_recv_streams: Vec<StreamId>,
+    pub(crate) transient_send_streams: VecDeque<OutgoingBufferedStreamData>,
+    pub(crate) persistent_send_streams: HashMap<ChannelId, OutgoingBufferedStreamData>,
+    pub(crate) active_recv_streams: HashMap<StreamId, IncomingStardustStreamData>,
+    pub(crate) pending_recv_streams: Vec<(StreamId, Vec<u8>)>,
 
     pub(crate) force_despawn: bool,
 }

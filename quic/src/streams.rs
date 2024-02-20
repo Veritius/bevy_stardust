@@ -1,5 +1,5 @@
 use std::collections::VecDeque;
-use bevy_stardust::channels::id::ChannelId;
+use bevy_stardust::channels::{id::ChannelId, registry::ChannelRegistry};
 use bytes::Bytes;
 use quinn_proto::{SendStream, StreamId, WriteError};
 
@@ -21,16 +21,16 @@ impl TryFrom<u8> for StreamPurposeHeader {
     }
 }
 
-pub(crate) struct OutgoingStreamData {
+pub(crate) struct OutgoingBufferedStreamData {
     pub id: StreamId,
     buffer: Box<[u8]>,
 }
 
-impl OutgoingStreamData {
-    pub fn new(id: StreamId, prefix: &[u8]) -> Self {
+impl OutgoingBufferedStreamData {
+    pub fn new(id: StreamId) -> Self {
         Self {
             id,
-            buffer: Box::from(prefix),
+            buffer: Box::default(),
         }
     }
 
@@ -62,13 +62,13 @@ impl OutgoingStreamData {
     }
 }
 
-pub(crate) struct IncomingStreamData {
+pub(crate) struct IncomingStardustStreamData {
     pub id: ChannelId,
     buffer: Box<[u8]>,
     plds: VecDeque<Bytes>,
 }
 
-impl IncomingStreamData {
+impl IncomingStardustStreamData {
     pub fn new(id: ChannelId) -> Self {
         Self {
             id,
@@ -81,7 +81,7 @@ impl IncomingStreamData {
         self.plds.pop_front()
     }
 
-    pub fn read(&mut self, bytes: &[u8]) {
+    pub fn read(&mut self, registry: &ChannelRegistry, bytes: &[u8]) {
         todo!()
     }
 }
