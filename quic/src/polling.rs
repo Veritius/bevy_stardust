@@ -59,9 +59,12 @@ pub(super) fn poll_application_event_system(
             match event {
                 quinn_proto::Event::Connected => {
                     commands.entity(entity).insert(NetworkPeer::new());
-                    tracing::info!("Connection {entity:?} successfully established")
+                    tracing::info!("Connection {entity:?} successfully established");
                 },
-                quinn_proto::Event::ConnectionLost { reason } => { tracing::info!("Connection {entity:?} lost connection: {reason}") },
+                quinn_proto::Event::ConnectionLost { reason } => {
+                    commands.entity(entity).despawn();
+                    tracing::info!("Connection {entity:?} lost connection: {reason}");
+                },
                 quinn_proto::Event::Stream(_) => todo!(),
                 quinn_proto::Event::DatagramReceived => todo!(),
                 _ => {} // we don't care about the other events
