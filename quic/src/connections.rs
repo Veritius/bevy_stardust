@@ -17,7 +17,8 @@ pub struct QuicConnection {
 
     pub(crate) transient_send_streams: VecDeque<OutgoingStreamData>,
     pub(crate) persistent_send_streams: HashMap<ChannelId, OutgoingStreamData>,
-    pub(crate) persistent_recv_streams: HashMap<StreamId, IncomingStreamData>,
+    pub(crate) active_recv_streams: HashMap<StreamId, IncomingStreamData>,
+    pub(crate) pending_recv_streams: Vec<StreamId>,
 
     pub(crate) force_despawn: bool,
 }
@@ -34,7 +35,8 @@ impl QuicConnection {
             inner: Exclusive::new(connection),
             transient_send_streams: VecDeque::default(),
             persistent_send_streams: HashMap::default(),
-            persistent_recv_streams: HashMap::default(),
+            active_recv_streams: HashMap::default(),
+            pending_recv_streams: Vec::default(),
             force_despawn: false,
         }
     }

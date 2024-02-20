@@ -8,11 +8,11 @@ mod connections;
 mod crypto;
 mod endpoints;
 mod receive;
-mod misc;
 mod sending;
 mod plugin;
 mod polling;
 mod streams;
+mod reading;
 mod writing;
 
 pub use plugin::{QuicTransportPlugin, TlsAuthentication};

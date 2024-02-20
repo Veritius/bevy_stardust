@@ -42,7 +42,6 @@ fn write_message_to_connection(
     connection: &mut QuicConnection,
     bytes: &Bytes,
 ) {
-    let bytes_for_channel = crate::misc::bytes_for_channel_id(registry.channel_count()) as usize;
     let channel_bytes = Into::<[u8;4]>::into(channel);
 
     // TODO: This repeatedly iterates streams that we can remember to be blocked.
@@ -59,7 +58,7 @@ fn write_message_to_connection(
             // Create new stream data buffering object
             let sid = connection.inner.get_mut().streams().open(quinn_proto::Dir::Uni).unwrap();
             let mut send_stream = connection.inner.get_mut().send_stream(sid);
-            let mut stream_data = OutgoingStreamData::new(sid, &channel_bytes[..bytes_for_channel]);
+            let mut stream_data = OutgoingStreamData::new(sid, &channel_bytes);
 
             // Queue bytes to write and append it to the queue if it doesn't finish immediately
             stream_data.push(&bytes);
@@ -82,7 +81,7 @@ fn write_message_to_connection(
             .or_insert_with(|| {
                 let c_inner = connection.inner.get_mut();
                 let sid = c_inner.streams().open(quinn_proto::Dir::Uni).unwrap();
-                OutgoingStreamData::new(sid, &channel_bytes[..bytes_for_channel])
+                OutgoingStreamData::new(sid, &channel_bytes)
             });
 
             // Queue bytes then try to send some of it

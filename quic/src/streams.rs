@@ -3,6 +3,24 @@ use bevy_stardust::channels::id::ChannelId;
 use bytes::Bytes;
 use quinn_proto::{SendStream, StreamId, WriteError};
 
+#[repr(u8)]
+pub(crate) enum StreamPurposeHeader {
+    ConnectionEvents = 0,
+    StardustPayloads = 1,
+}
+
+impl TryFrom<u8> for StreamPurposeHeader {
+    type Error = ();
+
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        Ok(match value {
+            0 => Self::ConnectionEvents,
+            1 => Self::StardustPayloads,
+            _ => return Err(())
+        })
+    }
+}
+
 pub(crate) struct OutgoingStreamData {
     pub id: StreamId,
     buffer: Box<[u8]>,
