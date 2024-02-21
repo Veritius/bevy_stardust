@@ -22,7 +22,6 @@ pub(super) fn quic_poll_transmit_system(
     });
 
     // Transmit all packets the connection has queued
-    // TODO: This can run in parallel very easily
     connections.par_iter_mut().for_each(|mut connection| {
         let target_endpoint = connection.endpoint.clone();
         let connection = connection.inner.get_mut();
