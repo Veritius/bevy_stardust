@@ -90,8 +90,8 @@ impl ServerCertVerifier for WebPkiVerifier {
     }
 }
 
-#[cfg(feature="dangerous")]
-pub mod dangerous {
+#[cfg(feature="insecure")]
+pub mod insecure_verifiers {
     use std::sync::Arc;
     use super::ServerCertVerifier;
 

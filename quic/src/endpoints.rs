@@ -210,7 +210,7 @@ impl QuicConnectionManager<'_, '_> {
     }
 
     /// Like [`try_connect`](Self::try_connect) but with a custom certificate verifier.
-    #[cfg(feature="dangerous")]
+    #[cfg(feature="insecure")]
     pub fn try_connect_with_custom_verifier(
         &mut self,
         endpoint: Entity,

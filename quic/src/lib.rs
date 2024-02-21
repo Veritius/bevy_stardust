@@ -21,11 +21,11 @@ pub use connections::QuicConnection;
 pub use rustls::{Certificate, PrivateKey, RootCertStore, Error as TlsError};
 pub use quinn_proto::TransportConfig;
 
-#[cfg(feature="dangerous")]
-pub use dangerous_pub_uses::*;
+#[cfg(feature="insecure")]
+pub use insecure_pub_uses::*;
 
-mod dangerous_pub_uses {
-    #![allow(unused_imports)]
+mod insecure_pub_uses {
+    #![cfg_attr(not(feature="insecure"), allow(unused_imports))]
 
     use crate::*;
     pub use crypto::ServerCertVerifier;

@@ -29,14 +29,14 @@ bevy_log = "0.13"
 
 [features]
 default = []
-dangerous = []
+insecure = []
 
 [[example]]
 name = "minimal-server"
 path = "examples/minimal/server.rs"
-required-features = ["dangerous"]
+required-features = ["insecure"]
 
 [[example]]
 name = "minimal-client"
 path = "examples/minimal/client.rs"
-required-features = ["dangerous"]
+required-features = ["insecure"]

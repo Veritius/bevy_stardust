@@ -54,10 +54,10 @@ impl Plugin for QuicTransportPlugin {
             server_cert_verifier: match &self.authentication {
                 TlsAuthentication::Secure => Arc::new(crate::crypto::WebPkiVerifier),
 
-                #[cfg(feature="dangerous")]
-                TlsAuthentication::AlwaysVerify => Arc::new(crate::crypto::dangerous::AlwaysTrueVerifier),
+                #[cfg(feature="insecure")]
+                TlsAuthentication::AlwaysVerify => Arc::new(crate::crypto::insecure_verifiers::AlwaysTrueVerifier),
 
-                #[cfg(feature="dangerous")]
+                #[cfg(feature="insecure")]
                 TlsAuthentication::Custom(verifier) => verifier.clone(),
             },
         });
@@ -67,7 +67,7 @@ impl Plugin for QuicTransportPlugin {
 /// How certificates should be authenticated when using [`try_connect`](crate::endpoints::QuicConnectionManager::try_connect).
 /// 
 /// By default, only the `Secure` variant is available, providing the best security.
-/// Set the `dangerous` feature flag for more options, including disabling authentication.
+/// Set the `insecure` feature flag for more options, including disabling authentication.
 #[non_exhaustive]
 #[derive(Debug, Default)]
 pub enum TlsAuthentication {
@@ -81,11 +81,11 @@ pub enum TlsAuthentication {
     /// 
     /// This completely invalidates all authentication and makes connections vulnerable to MITM attacks.
     /// This is useful if you don't care about TLS authentication or you're doing testing.
-    #[cfg(feature="dangerous")]
+    #[cfg(feature="insecure")]
     AlwaysVerify,
 
     /// Use a custom implementation of `ServerCertVerifier`.
-    #[cfg(feature="dangerous")]
+    #[cfg(feature="insecure")]
     Custom(Arc<dyn crate::crypto::ServerCertVerifier>),
 }
 
