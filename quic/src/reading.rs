@@ -76,7 +76,7 @@ pub(super) fn read_messages_from_streams_system(
 
                     // Try to read again later
                     Err(ReadError::Blocked) => { break },
-                    
+
                     // Stream reset
                     Err(ReadError::Reset(error_code)) => todo!(),
                 }}
