@@ -1,10 +1,16 @@
-use std::collections::VecDeque;
-use bevy_stardust::channels::{id::ChannelId, registry::ChannelRegistry};
-use bytes::Bytes;
+use bevy_stardust::channels::id::ChannelId;
 use quinn_proto::{SendStream, StreamId, VarInt, WriteError};
 
-pub const STREAM_CLOSED_DISCONNECTING: VarInt = VarInt::from_u32(0);
-pub const STREAM_CLOSED_INVALID_HEADER: VarInt = VarInt::from_u32(1);
+#[repr(u32)]
+enum StreamErrorCode {
+    Disconnecting = 0,
+}
+
+impl From<StreamErrorCode> for VarInt {
+    fn from(value: StreamErrorCode) -> Self {
+        Self::from_u32(value as u32)
+    }
+}
 
 #[repr(u8)]
 pub(crate) enum StreamPurposeHeader {
@@ -65,8 +71,10 @@ impl OutgoingBufferedStreamData {
     }
 }
 
-pub(crate) enum IncomingBufferedStreamData {
-    Unverified(Vec<u8>),
+pub(crate) enum IncomingStream {
+    Unverified {
+        buffer: Vec<u8>,
+    },
     ConnectionManagement {
 
     },
@@ -74,5 +82,7 @@ pub(crate) enum IncomingBufferedStreamData {
         id: ChannelId,
         buffer: Vec<u8>,
     },
-
+    NeedsRemoval {
+        reason: Option<VarInt>,
+    },
 }
