@@ -34,7 +34,7 @@ pub(super) fn handle_endpoint_event_recurse(
     }
 }
 
-pub(super) fn event_recursing_exchange_system(
+pub(super) fn endpoint_connection_comm_system(
     mut endpoints: Query<&mut QuicEndpoint>,
     mut connections: Query<&mut QuicConnection>,
 ) {
