@@ -12,6 +12,17 @@ impl From<StreamErrorCode> for VarInt {
     }
 }
 
+impl TryFrom<VarInt> for StreamErrorCode {
+    type Error = VarInt;
+
+    fn try_from(value: VarInt) -> Result<Self, Self::Error> {
+        Ok(match u64::from(value) {
+            0 => Self::Disconnecting,
+            _ => { return Err(value) }
+        })
+    }
+}
+
 #[repr(u8)]
 pub(crate) enum StreamPurposeHeader {
     ConnectionEvents = 0,
