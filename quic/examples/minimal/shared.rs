@@ -44,7 +44,6 @@ pub fn setup_app() -> App {
 
     app.add_plugins(QuicTransportPlugin {
         authentication: TlsAuthentication::AlwaysVerify,
-        reliable_streams: 8,
         transport_config_override: None,
     });
 
