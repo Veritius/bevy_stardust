@@ -4,7 +4,6 @@ use quinn_proto::{Endpoint, Connection, ConnectionHandle, ConnectionEvent, Endpo
 use crate::{QuicEndpoint, QuicConnection};
 
 pub(super) fn handle_connection_event(
-    endpoint: &mut Endpoint,
     connection: &mut Connection,
     event: ConnectionEvent,
 ) {
@@ -17,7 +16,7 @@ pub(super) fn handle_connection_event_recurse(
     conn_handle: ConnectionHandle,
     event: ConnectionEvent,
 ) {
-    handle_connection_event(endpoint, connection, event);
+    handle_connection_event(connection, event);
     while let Some(event) = connection.poll_endpoint_events() {
         handle_endpoint_event_recurse(endpoint, connection, conn_handle, event);
     }

@@ -11,10 +11,6 @@ pub struct QuicTransportPlugin {
     /// See the [`TlsAuthentication`] documentation for details.
     pub authentication: TlsAuthentication,
 
-    /// The number of reliable streams that are opened.
-    /// Higher values reduce head of line blocking.
-    pub reliable_streams: u32,
-
     /// Overrides the `TransportConfig` used in connections.
     /// This is for advanced users - the defaults are good enough for almost all applications.
     pub transport_config_override: Option<Arc<quinn_proto::TransportConfig>>,
@@ -48,7 +44,6 @@ impl Plugin for QuicTransportPlugin {
 
         // Add resources
         app.insert_resource(PluginConfig {
-            reliable_streams: self.reliable_streams,
             transport_config,
             endpoint_config: Arc::new(EndpointConfig::default()),
             server_cert_verifier: match &self.authentication {
@@ -92,7 +87,6 @@ pub enum TlsAuthentication {
 /// Resource added by the plugin to store values defined/created when it was added.
 #[derive(Resource)]
 pub(crate) struct PluginConfig {
-    pub reliable_streams: u32,
     pub transport_config: Arc<TransportConfig>,
     pub endpoint_config: Arc<EndpointConfig>,
     pub server_cert_verifier: Arc<dyn crate::crypto::ServerCertVerifier>,

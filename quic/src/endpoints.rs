@@ -240,10 +240,4 @@ impl QuicConnectionManager<'_, '_> {
         tracing::info!("Connecting to remote peer {remote} on endpoint {endpoint:?} with custom verifier");
         Ok(entity)
     }
-
-    fn try_open_socket(address: impl ToSocketAddrs) -> Result<UdpSocket> {
-        let socket = UdpSocket::bind(address)?;
-        socket.set_nonblocking(true)?;
-        Ok(socket)
-    }
 }

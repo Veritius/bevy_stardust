@@ -71,11 +71,11 @@ pub(super) fn quic_receive_packets_system(
                                     // and since we're iterating only endpoints, it's the only mutable reference to the Connection
                                     // TODO: Handle error outcomes without unwrapping/panicking
                                     let mut comp = unsafe { connections.get_unchecked(*entity).unwrap() };
-                                    crate::polling::handle_connection_event(endpoint, comp.inner.get_mut(), event);
+                                    crate::polling::handle_connection_event(comp.inner.get_mut(), event);
                                 } else {
                                     if let Some(connection) = pending_local.get_mut(&handle) {
                                         // This connection is in thread local storage (just joined)
-                                        crate::polling::handle_connection_event(endpoint, connection, event);
+                                        crate::polling::handle_connection_event(connection, event);
                                     } else {
                                         tracing::debug!("Connection event intended for {handle:?}:{endpoint_id:?} was discarded");
                                         continue
