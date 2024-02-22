@@ -12,7 +12,6 @@ impl Plugin for StardustPlugin {
         crate::channels::channels(app);
 
         // Add events
-        app.add_event::<DisconnectPeerEvent>();
         app.add_event::<PeerDisconnectedEvent>();
         app.add_event::<PeerConnectedEvent>();
 

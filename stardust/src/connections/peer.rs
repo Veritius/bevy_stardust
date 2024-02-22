@@ -24,6 +24,7 @@ pub struct NetworkPeer {
 
     /// A unique UUID, if it has one.
     /// This can be used to identify a peer across network sessions.
+    #[cfg(feature="uuids")]
     pub uuid: Option<uuid::Uuid>,
 
     /// The quality of the connection, from `0.0` to `1.0`.
@@ -42,6 +43,7 @@ impl NetworkPeer {
     pub fn new() -> Self {
         Self {
             joined: Instant::now(),
+            #[cfg(feature="uuids")]
             uuid: None,
             quality: None,
             ping: 0,
