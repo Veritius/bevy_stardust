@@ -19,7 +19,7 @@ uuid = { version = "1.7", optional = true }
 gxhash = { version = "=3.0.0", optional = true } # 3.1 is broken, remove this bound when it's fixed
 
 [features]
-default = ["reflect"]
+default = []
 uuids = [
     "dep:uuid"
 ]
