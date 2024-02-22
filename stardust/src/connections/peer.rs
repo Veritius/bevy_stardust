@@ -71,14 +71,12 @@ impl NetworkPeer {
 
 /// How secure a connection is.
 /// This is set by the transport layer that controls the connection.
-///
 /// See variant documentation for more.
 /// 
 /// This type implements `Ord`, with 'greater' orderings corresponding to better security.
 ///
-/// *Unless otherwise specified, `bevy_stardust` is licensed to you under the MIT License or Apache 2.0 License at your discretion, neither of which give any warranty.*
-/// *You are solely responsible for your usage of this product, and no bevy_stardust contributor may be held liable for your fuck-ups.*
-/// *Note that this is not legal text, just a human-readable reminder, and you can view the full, legally binding license text at the root directory of your copy of this code.*
+/// This value is set by the transport layer managing this peer.
+/// It's up to it to provide an appropriate value here.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 #[cfg_attr(feature="reflect", derive(bevy_reflect::Reflect))]
 pub enum PeerSecurity {
