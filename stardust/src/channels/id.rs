@@ -1,63 +1,63 @@
-//! Types and traits for accessing channels.
+//! Types that can be used to interface with Stardust's message reading and writing APIs.
+//!
+//! Note: In the following examples, `#[derive(TypePath)]` is only needed with the `reflect` feature flag.
+//! 
+//! ```ignore
+//! // Defining a channel type is simple
+//! #[derive(TypePath)]
+//! pub struct MyChannel;
+//! 
+//! // You can make channels private
+//! #[derive(TypePath)]
+//! struct MyPrivateChannel;
+//! 
+//! // You can make channels with generic type bounds too
+//! #[derive(TypePath)]
+//! struct MyGenericChannel<T: Channel>(PhantomData<T>);
+//! ```
+//! 
+//! In Stardust, `Channel` trait objects are just used for their type data.
+//! The type itself isn't actually stored. That means you can do things like this.
+//! 
+//! ```ignore
+//! #[derive(TypePath, Event)]
+//! pub struct MovementEvent(pub Vec3);
+//!
+//! fn main() {
+//!     let mut app = App::new();
+//! 
+//!     app.add_plugins((DefaultPlugins, StardustPlugin));
+//! 
+//!     app.add_event::<MovementEvent>();
+//!     app.add_channel::<MovementEvent>(ChannelConfiguration {
+//!         reliable: ReliabilityGuarantee::Unreliable,
+//!         ordered: OrderingGuarantee::Unordered,
+//!         fragmented: false,
+//!         string_size: ..=16,
+//!     });
+//! 
+//!     app.add_systems(PostUpdate, |mut events: EventReader<MovementEvent>, mut writer: NetworkWriter<MovementEvent>| {
+//!         let target = Entity::PLACEHOLDER;
+//!         for event in events.read() {
+//!             // Serialisation logic goes here.
+//!             let bytes = Bytes::from("Hello, world!");
+//!             writer.send(target, bytes);
+//!         }
+//!     });
+//! }
+//! ```
 
 use std::marker::PhantomData;
 use bevy_ecs::prelude::*;
 
-/// Types that can be used to interface with Stardust's message reading and writing APIs.
-/// 
-/// ```ignore
-/// // Defining a channel type is simple
-/// #[derive(TypePath)]
-/// pub struct MyChannel;
-/// 
-/// // You can make channels private
-/// #[derive(TypePath)]
-/// struct MyPrivateChannel;
-/// 
-/// // You can make channels with generic type bounds too
-/// #[derive(TypePath)]
-/// struct MyGenericChannel<T: Channel>(PhantomData<T>);
-/// ```
-/// 
-/// In Stardust, `Channel` trait objects are just used for their type data.
-/// The type itself isn't actually stored. That means you can do things like this.
-/// 
-/// ```ignore
-/// #[derive(TypePath, Event)]
-/// pub struct MovementEvent(pub Vec3);
-///
-/// fn main() {
-///     let mut app = App::new();
-/// 
-///     app.add_plugins((DefaultPlugins, StardustPlugin));
-/// 
-///     app.add_event::<MovementEvent>();
-///     app.add_channel::<MovementEvent>(ChannelConfiguration {
-///         reliable: ReliabilityGuarantee::Unreliable,
-///         ordered: OrderingGuarantee::Unordered,
-///         fragmented: false,
-///         string_size: ..=16,
-///     });
-/// 
-///     app.add_systems(PostUpdate, |mut events: EventReader<MovementEvent>, mut writer: NetworkWriter<MovementEvent>| {
-///         let target = Entity::PLACEHOLDER;
-///         for event in events.read() {
-///             // Serialisation logic goes here.
-///             let bytes = Bytes::from("Hello, world!");
-///             writer.send(target, bytes);
-///         }
-///     });
-/// }
-/// ```
-
-/// Marker trait for channels.
+/// Marker trait for channels. See the [module level documentation](self) for more information.
 #[cfg(not(feature="reflect"))]
 pub trait Channel: Send + Sync + 'static {}
 
 #[cfg(not(feature="reflect"))]
 impl<T: Send + Sync + 'static> Channel for T {}
 
-/// Marker trait for channels.
+/// Marker trait for channels. See the [module level documentation](self) for more information.
 #[cfg(feature="reflect")]
 pub trait Channel: bevy_reflect::TypePath + Send + Sync + 'static {}
 
