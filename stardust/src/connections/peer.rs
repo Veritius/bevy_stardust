@@ -36,6 +36,7 @@ pub struct NetworkPeer {
     pub ping: u32,
 
     /// How secure the connection to this peer is.
+    /// Set to [`Unprotected`](PeerSecurity::Unprotected) by default when using `NetworkPeer::new()`.
     pub security: PeerSecurity,
 
     disconnect_requested: bool,
@@ -50,6 +51,7 @@ impl NetworkPeer {
             uuid: None,
             quality: None,
             ping: 0,
+            security: PeerSecurity::Unprotected,
             disconnect_requested: false,
         }
     }
