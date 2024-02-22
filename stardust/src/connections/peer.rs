@@ -75,8 +75,8 @@ impl NetworkPeer {
 /// This type implements `Ord`, with 'greater' orderings corresponding to better security.
 ///
 /// *Unless otherwise specified, `bevy_stardust` is licensed to you under the MIT License or Apache 2.0 License at your discretion, neither of which give any warranty.*
-/// *You are solely responsible for your usage of this product, and no bevy_stardust contributor (unless otherwise specified) may be held liable for your fuck-ups.*
-/// *Note that this is not legal text, and you can view the full, legally binding license text at the root directory of your copy of this code.*
+/// *You are solely responsible for your usage of this product, and no bevy_stardust contributor may be held liable for your fuck-ups.*
+/// *Note that this is not legal text, just a human-readable reminder, and you can view the full, legally binding license text at the root directory of your copy of this code.*
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 #[cfg_attr(feature="reflect", derive(bevy_reflect::Reflect))]
 pub enum PeerSecurity {
