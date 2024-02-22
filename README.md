@@ -25,7 +25,7 @@ Not that it needs to be a game server. The way Stardust is written, it has no co
 ## Usage
 | Bevy | Stardust |
 | ---- | -------- |
-| 0.13 | 0.3      |
+| 0.13 | 0.4      |
 | 0.12 | 0.2      |
 | 0.11 | 0.1      |
 
