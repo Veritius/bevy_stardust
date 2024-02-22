@@ -19,13 +19,19 @@
 //! }
 //! ```
 
-pub mod config;
-pub mod id;
-pub mod registry;
+mod config;
+mod id;
+mod registry;
+mod extension;
+mod incoming;
+mod outgoing;
 
-pub(crate) mod extension;
-pub(crate) mod incoming;
-pub(crate) mod outgoing;
+pub use config::*;
+pub use id::*;
+pub use registry::*;
+pub use extension::ChannelSetupAppExt;
+pub use incoming::{NetworkIncomingWriter, NetworkReader};
+pub use outgoing::{NetworkOutgoingReader, NetworkWriter};
 
 pub(super) fn channels(app: &mut bevy_app::App) {
     use bevy_app::prelude::*;

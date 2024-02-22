@@ -4,10 +4,10 @@
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
+pub mod prelude;
 pub mod channels;
 pub mod connections;
 pub mod plugin;
-pub mod prelude;
 pub mod scheduling;
 
 #[cfg(feature="hashing")]
