@@ -3,7 +3,7 @@ use bevy_stardust::channels::id::ChannelId;
 use bytes::*;
 use quinn_proto::*;
 use bevy_ecs::prelude::*;
-use crate::streams::{IncomingStream, OutgoingBufferedStreamData};
+use crate::{reading::IncomingStream, streams::OutgoingBufferedStreamData};
 
 /// A QUIC connection.
 /// 

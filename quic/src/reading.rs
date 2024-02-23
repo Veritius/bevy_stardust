@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 use bevy_ecs::prelude::*;
-use bevy_stardust::{channels::registry::ChannelRegistry, connections::peer::NetworkPeer};
+use bevy_stardust::{channels::{id::ChannelId, registry::ChannelRegistry}, connections::peer::NetworkPeer};
 use quinn_proto::{Chunks, Dir, ReadError, ReadableError};
-use crate::{streams::IncomingStream, QuicConnection};
+use crate::{streams::StreamErrorCode, QuicConnection};
 
 pub(super) fn read_messages_from_streams_system(
     mut connections: Query<(Entity, &mut QuicConnection), With<NetworkPeer>>,
@@ -12,7 +12,7 @@ pub(super) fn read_messages_from_streams_system(
     connections.par_iter_mut().for_each(|(entity, mut connection)| {
         // Accept all new streams
         while let Some(stream_id) = connection.inner.get_mut().streams().accept(Dir::Uni) {
-            connection.recv_streams.insert(stream_id, IncomingStream);
+            connection.recv_streams.insert(stream_id, IncomingStream::default());
         }
 
         // Split borrow function to help out borrowck
@@ -73,4 +73,37 @@ pub(super) fn read_messages_from_streams_system(
             process_chunks(&registry, &mut chunks, stream_data);
         }
     });
+}
+
+pub(crate) struct IncomingStream {
+    buffer: IncomingStreamBuffer,
+    data: IncomingStreamData,
+}
+
+impl Default for IncomingStream {
+    fn default() -> Self {
+        Self {
+            buffer: IncomingStreamBuffer(Vec::with_capacity(32)),
+            data: IncomingStreamData::PendingPurpose,
+        }
+    }
+}
+
+struct IncomingStreamBuffer(Vec<u8>);
+
+impl IncomingStreamBuffer {
+    pub fn put(&mut self, slice: &[u8]) {
+        self.0.extend_from_slice(slice);
+    }
+}
+
+enum IncomingStreamData {
+    PendingPurpose,
+    ConnectionManagement,
+    StardustPayloads {
+        id: ChannelId,
+    },
+    NeedsClosing {
+        reason: StreamErrorCode
+    },
 }

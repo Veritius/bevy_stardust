@@ -1,14 +1,19 @@
-use bevy_stardust::channels::id::ChannelId;
 use quinn_proto::{SendStream, StreamId, VarInt, WriteError};
 
 #[repr(u32)]
-enum StreamErrorCode {
+pub(crate) enum StreamErrorCode {
     Disconnecting = 0,
 }
 
 impl From<StreamErrorCode> for VarInt {
     fn from(value: StreamErrorCode) -> Self {
         Self::from_u32(value as u32)
+    }
+}
+
+impl From<StreamErrorCode> for Option<VarInt> {
+    fn from(value: StreamErrorCode) -> Self {
+        Some(value.into())
     }
 }
 
@@ -81,5 +86,3 @@ impl OutgoingBufferedStreamData {
         self.buffer.len() == 0
     }
 }
-
-pub(crate) struct IncomingStream;
