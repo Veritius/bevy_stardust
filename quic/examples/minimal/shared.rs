@@ -13,6 +13,7 @@ pub const SERVER_ALT_NAME: &str = "www.icann.org";
 pub const SERVER_ADDRESS: &str = "localhost:12345";
 pub const CLIENT_ADDRESS: &str = "localhost:0";
 
+#[derive(TypePath)]
 pub struct MyMessage;
 
 pub fn setup_app() -> App {
