@@ -25,7 +25,7 @@ impl TryFrom<VarInt> for StreamErrorCode {
 
 #[repr(u8)]
 pub(crate) enum StreamPurposeHeader {
-    ConnectionEvents = 0,
+    ConnectionManagement = 0,
     StardustPayloads = 1,
 }
 
@@ -34,7 +34,7 @@ impl TryFrom<u8> for StreamPurposeHeader {
 
     fn try_from(value: u8) -> Result<Self, Self::Error> {
         Ok(match value {
-            0 => Self::ConnectionEvents,
+            0 => Self::ConnectionManagement,
             1 => Self::StardustPayloads,
             _ => return Err(())
         })
@@ -82,18 +82,4 @@ impl OutgoingBufferedStreamData {
     }
 }
 
-pub(crate) enum IncomingStream {
-    Unverified {
-        buffer: Vec<u8>,
-    },
-    ConnectionManagement {
-
-    },
-    StardustChannel {
-        id: ChannelId,
-        buffer: Vec<u8>,
-    },
-    NeedsRemoval {
-        reason: Option<VarInt>,
-    },
-}
+pub(crate) struct IncomingStream;
