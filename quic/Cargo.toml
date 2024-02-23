@@ -28,8 +28,9 @@ fastrand = "2"
 bevy_log = "0.13"
 
 [features]
-default = []
+default = ["hash_check"] #TODO remove this before merge
 insecure = []
+hash_check = ["bevy_stardust/hashing"]
 
 [[example]]
 name = "minimal-server"

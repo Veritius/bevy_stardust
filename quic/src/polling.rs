@@ -1,7 +1,7 @@
 use bevy_ecs::prelude::*;
 use bevy_stardust::connections::peer::NetworkPeer;
 use quinn_proto::{Endpoint, Connection, ConnectionHandle, ConnectionEvent, EndpointEvent};
-use crate::{QuicEndpoint, QuicConnection};
+use crate::{connections::ConnectionStage, QuicConnection, QuicEndpoint};
 
 pub(super) fn handle_connection_event(
     connection: &mut Connection,
@@ -52,20 +52,31 @@ pub(super) fn poll_application_event_system(
     mut commands: Commands,
 ) {
     for (entity, mut connection) in connections.iter_mut() {
-        let connection = connection.inner.get_mut();
+        // make borrowck happy
+        fn split_borrow(conn: &mut QuicConnection) -> (&mut Connection, &mut ConnectionStage) {
+            (conn.inner.get_mut(), &mut conn.stage)
+        }
 
-        while let Some(event) = connection.poll() {
+        let (connection_inner, connection_stage) = split_borrow(&mut connection);
+
+        while let Some(event) = connection_inner.poll() {
             match event {
                 quinn_proto::Event::Connected => {
-                    commands.entity(entity).insert(NetworkPeer::new());
-                    tracing::info!("Connection {entity:?} successfully established");
+                    // The QUIC handshake is done, but we run our own checks.
+                    *connection_stage = ConnectionStage::GameHandshake {
+                        passed_version_check: false,
+
+                        #[cfg(feature="hash_check")]
+                        passed_hash_check: false,
+                    }
                 },
+
                 quinn_proto::Event::ConnectionLost { reason } => {
+                    *connection_stage = ConnectionStage::Disconnected;
                     commands.entity(entity).despawn();
                     tracing::info!("Connection {entity:?} lost connection: {reason}");
                 },
-                quinn_proto::Event::Stream(_) => todo!(),
-                quinn_proto::Event::DatagramReceived => todo!(),
+
                 _ => {} // we don't care about the other events
             }
         }

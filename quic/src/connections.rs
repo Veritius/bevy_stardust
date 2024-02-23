@@ -19,6 +19,7 @@ pub struct QuicConnection {
     pub(crate) persistent_send_streams: HashMap<ChannelId, OutgoingBufferedStreamData>,
     pub(crate) recv_streams: HashMap<StreamId, IncomingStream>,
 
+    pub(crate) stage: ConnectionStage,
     pub(crate) force_despawn: bool,
 }
 
@@ -35,6 +36,7 @@ impl QuicConnection {
             transient_send_streams: VecDeque::default(),
             persistent_send_streams: HashMap::default(),
             recv_streams: HashMap::default(),
+            stage: ConnectionStage::QuicHandshake,
             force_despawn: false,
         }
     }
@@ -48,4 +50,18 @@ impl QuicConnection {
     pub fn close(&mut self, reason: Bytes) {
         self.inner.get_mut().close(Instant::now(), VarInt::default(), reason)
     }
+}
+
+#[derive(Debug)]
+pub(crate) enum ConnectionStage {
+    QuicHandshake,
+    GameHandshake {
+        passed_version_check: bool,
+
+        #[cfg(feature="hash_check")]
+        passed_hash_check: bool,
+    },
+    Connected,
+    Disconnecting,
+    Disconnected,
 }
