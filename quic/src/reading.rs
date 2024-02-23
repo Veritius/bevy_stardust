@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 use bevy_ecs::prelude::*;
 use bevy_stardust::{channels::registry::ChannelRegistry, connections::{groups::NetworkGroup, peer::NetworkPeer}};
-use quinn_proto::{Chunks, Dir, ReadError, ReadableError};
-use crate::{streams::IncomingStream, QuicConnection};
+use quinn_proto::{Chunk, Chunks, Dir, ReadError, ReadableError};
+use crate::{streams::{IncomingStream, StreamPurposeHeader}, QuicConnection};
 
 const UNVERIFIED_BUFFER_SIZE: usize = 32;
 
@@ -56,15 +56,12 @@ pub(super) fn read_messages_from_streams_system(
 
             // This is a function so we can change the stream state
             // and then go back to processing it, since we're in a for loop
-            fn process_chunks(chunks: &mut Chunks, stream_data: &mut IncomingStream) {
+            fn process_chunks(registry: &ChannelRegistry, chunks: &mut Chunks, stream_data: &mut IncomingStream) {
                 // Iterate chunks until we run out or an error occurs
                 loop { match chunks.next(usize::MAX) {
                     // We can read some data
-                    Ok(Some(chunk)) => match stream_data {
-                        IncomingStream::Unverified { buffer } => todo!(),
-                        IncomingStream::ConnectionManagement { } => todo!(),
-                        IncomingStream::StardustChannel { id, buffer } => todo!(),
-                        IncomingStream::NeedsRemoval { reason } => todo!(),
+                    Ok(Some(chunk)) =>  {
+                        process_byte_chunk(registry, stream_data, chunks, chunk);
                     },
 
                     // Stream finished
@@ -84,7 +81,62 @@ pub(super) fn read_messages_from_streams_system(
             }
 
             // Start processing chunks :)
-            process_chunks(&mut chunks, stream_data);
+            process_chunks(&registry, &mut chunks, stream_data);
         }
     });
+}
+
+fn process_byte_chunk(
+    registry: &ChannelRegistry,
+    stream_data: &mut IncomingStream,
+    chunks: &mut Chunks,
+    chunk: Chunk,
+) {
+    use untrusted::{Input, Reader};
+    let mut chunk_reader = Reader::new(Input::from(&chunk.bytes));
+
+    match stream_data {
+        IncomingStream::Unverified { buffer } => {
+            // Check buffer capacity
+            let buffer_remaining = buffer.capacity() - buffer.len();
+            if buffer_remaining == 0 {
+                *stream_data = IncomingStream::NeedsRemoval { reason: todo!() };
+                return;
+            }
+
+            // Fill buffer
+            if let Ok(input) = chunk_reader.read_bytes(buffer_remaining) {
+                buffer.extend_from_slice(input.as_slice_less_safe());
+            } else {
+                *stream_data = IncomingStream::NeedsRemoval { reason: todo!() };
+                return;
+            }
+
+            // Try to figure out what the purpose of the stream is
+            let mut buffer_reader = Reader::new(Input::from(&buffer));
+            let purpose_header = match buffer_reader.read_byte().ok() {
+                Some(byte) => byte,
+                None => {
+                    *stream_data = IncomingStream::NeedsRemoval { reason: todo!() };
+                    return;
+                },
+            };
+            let purpose_header = match StreamPurposeHeader::try_from(purpose_header).ok() {
+                Some(header) => header,
+                None => {
+                    *stream_data = IncomingStream::NeedsRemoval { reason: todo!() };
+                    return;
+                },
+            };
+
+            // Extra data from purpose header
+            match purpose_header {
+                StreamPurposeHeader::ConnectionEvents => todo!(),
+                StreamPurposeHeader::StardustPayloads => todo!(),
+            }
+        },
+        IncomingStream::ConnectionManagement { } => todo!(),
+        IncomingStream::StardustChannel { id, buffer } => todo!(),
+        IncomingStream::NeedsRemoval { reason } => todo!(),
+    }
 }
