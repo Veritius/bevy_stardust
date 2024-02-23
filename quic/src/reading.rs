@@ -1,20 +1,21 @@
 use std::collections::HashMap;
 use bevy_ecs::prelude::*;
-use bevy_stardust::{prelude::*, channels::registry::ChannelRegistry, connections::{groups::NetworkGroup, peer::NetworkPeer}};
+use bevy_stardust::{channels::registry::ChannelRegistry, connections::{groups::NetworkGroup, peer::NetworkPeer}};
 use quinn_proto::{Chunks, Dir, ReadError, ReadableError};
 use crate::{streams::IncomingStream, QuicConnection};
+
+const UNVERIFIED_BUFFER_SIZE: usize = 32;
 
 pub(super) fn read_messages_from_streams_system(
     network_groups: Query<&NetworkGroup>,
     mut connections: Query<(Entity, &mut QuicConnection), With<NetworkPeer>>,
     registry: Res<ChannelRegistry>,
-    mut reader: NetworkIncomingWriter,
 ) {
     // Any processing that can run in parallel runs here
     connections.par_iter_mut().for_each(|(entity, mut connection)| {
         // Accept all new streams
         while let Some(stream_id) = connection.inner.get_mut().streams().accept(Dir::Uni) {
-            connection.recv_streams.insert(stream_id, IncomingStream::Unverified { buffer: Vec::new() });
+            connection.recv_streams.insert(stream_id, IncomingStream::Unverified { buffer: Vec::with_capacity(UNVERIFIED_BUFFER_SIZE) });
         }
 
         // Split borrow function to help out borrowck
