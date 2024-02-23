@@ -6,16 +6,49 @@ Stardust is a flexible networking crate built for Bevy, with a focus on extensib
 [![Bevy version](https://img.shields.io/badge/bevy-0.13-blue?color=blue)](https://bevyengine.org/)
 [![Crates.io](https://img.shields.io/crates/v/bevy_stardust)](https://crates.io/crates/bevy_stardust)
 
-## Features and design
-Rather than being a monolith including everything you could possibly need, the core of Stardust is simply an API for sending and reading bytes, and managing connections.
+## Why Stardust?
+### Bevy-oriented and parallel
+Stardust is made with Bevy, for Bevy. Everything can be modified and controlled by systems. All data is stored in the ECS. Everything runs in parallel, writing bytes, receiving bytes, controlled by the scheduler using `SystemParam` implementations.
 
-Just like Bevy, if you don't like something, swap it out. If you're unsatisfied with your current replication plugin, you can choose a different one without rewriting all your network-related game systems for a new API.
+### Simple
+Want to send something?
+```rust
+// Messages are distinguished with the type system
+fn my_writer_system(mut writer: NetworkWriter<MyMessage>) {
+    writer.send(
+        // Connections are entities, just use their ID!
+        Entity::PLACEHOLDER,
+        // Send anything you can turn into bytes
+        b"Hello, world!".into()
+    );
+}
+```
 
-Stardust is designed with this in mind, enabling the easy addition of Bevy plugins to the app that have full access to networking. Plugins and your very own game systems can be written once and apply to every situation effortlessly, without needing to know anything about how bytes are sent to and from connections.
+Want to receive something?
+```rust
+// Reading messages is not blocking
+fn my_reader_system(reader: NetworkReader<MyMessage>) {
+    let v = reader.iter().next().unwrap().1;
+    assert_eq!(b"Hello, world!", &v);
+}
+```
 
-This also means you can use multiple protocols for connections. Use a native UDP transport plugin for PC players, a QUIC transport plugin for web players, some kind of proprietary transport plugin for consoles, and even something that communicates using [maritime signal flags](https://en.wikipedia.org/wiki/International_maritime_signal_flags) - all at once, on the same game server. Crossplay has never been easier or more flexible.
+Want to close a connection?
+```rust
+// Because you use queries, you can filter your accesses
+fn my_disconnection_system(mut connections: Query<&mut NetworkPeer>) {
+    for connection in connections.iter_mut() {
+        connection.disconnect();
+    }
+}
+```
 
-Not that it needs to be a game server. The way Stardust is written, it has no concept of network topology, just connections. That means you can even use this plugin for P2P connections in a mesh topology, though make sure the plugins you use support that sort of thing.
+### Modular
+Rather than being a monolith, the core of Stardust is simple: provide an API for sending and reading bytes, and an API for managing connections.
+
+You can use any transport layer you want, and it just works. Use UDP, TCP, QUIC, HTTP, some homebrew transport layer, I2C, AM radio, or even [maritime signal flags](https://en.wikipedia.org/wiki/International_maritime_signal_flags), anything you want - all at the same time, with no extra effort. Crossplay has never been easier or more flexible.
+
+You can use any replication or extra features you want. If you prefer a specific crate for replication, it's really easy to integrate it into Stardust, as long as it has some kind of API for taking in and outputting bytes. It'll just work.
 
 ### Planned features
 - Replication and state synchronisation plugins
@@ -64,11 +97,11 @@ fn my_system(
     reader: ChannelReader<MyChannel>,
 ) {
     // Sending a message is simple
-    writer.send(Entity::PLACEHOLDER, "hello".into());
+    writer.send(Entity::PLACEHOLDER, b"Hello, world!".into());
 
     // And it's not much effort to get a string back
     let read = reader.iter().next().unwrap().1;
-    assert_eq!(std::str::from_utf8(&read).unwrap(), "hello");
+    assert_eq!(b"Hello, world!", &read);
 }
 ```
 
