@@ -19,7 +19,7 @@ pub struct QuicConnection {
     pub(crate) persistent_send_streams: HashMap<ChannelId, OutgoingBufferedStreamData>,
     pub(crate) recv_streams: HashMap<StreamId, IncomingStream>,
 
-    pub(crate) stage: ConnectionStage,
+    pub(crate) connection_state: ConnectionStateData,
     pub(crate) force_despawn: bool,
 }
 
@@ -36,7 +36,7 @@ impl QuicConnection {
             transient_send_streams: VecDeque::default(),
             persistent_send_streams: HashMap::default(),
             recv_streams: HashMap::default(),
-            stage: ConnectionStage::QuicHandshake,
+            connection_state: ConnectionStateData::QuicHandshake,
             force_despawn: false,
         }
     }
@@ -46,14 +46,19 @@ impl QuicConnection {
         self.endpoint
     }
 
+    /// Returns the state of the connection.
+    pub fn state(&self) -> ConnectionState {
+        self.connection_state.flat()
+    }
+
     /// Closes the connection.
     pub fn close(&mut self, reason: Bytes) {
-        self.inner.get_mut().close(Instant::now(), VarInt::default(), reason)
+        self.connection_state = ConnectionStateData::Disconnecting { reason };
     }
 }
 
 #[derive(Debug)]
-pub(crate) enum ConnectionStage {
+pub(crate) enum ConnectionStateData {
     QuicHandshake,
     GameHandshake {
         passed_version_check: bool,
@@ -61,6 +66,45 @@ pub(crate) enum ConnectionStage {
         #[cfg(feature="hash_check")]
         passed_hash_check: bool,
     },
+    Connected,
+    Disconnecting {
+        reason: Bytes,
+    },
+    Disconnected,
+}
+
+impl ConnectionStateData {
+    /// Returns a variant without additional data.
+    pub fn flat(&self) -> ConnectionState {
+        match self {
+            ConnectionStateData::QuicHandshake => ConnectionState::Handshake,
+
+            #[cfg(not(feature="hash_check"))]
+            ConnectionStateData::GameHandshake {
+                passed_version_check: _,
+            } => ConnectionState::Handshake,
+
+            #[cfg(feature="hash_check")]
+            ConnectionStateData::GameHandshake {
+                passed_version_check: _,
+                passed_hash_check: _,
+            } => ConnectionState::Handshake,
+
+            ConnectionStateData::Connected => ConnectionState::Connected,
+
+            ConnectionStateData::Disconnecting {
+                reason: _
+            } => ConnectionState::Disconnecting,
+
+            ConnectionStateData::Disconnected => ConnectionState::Disconnected,
+        }
+    }
+}
+
+// this is exposed, ConnectionStateData isn't
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum ConnectionState {
+    Handshake,
     Connected,
     Disconnecting,
     Disconnected,

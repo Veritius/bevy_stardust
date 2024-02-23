@@ -1,7 +1,7 @@
 use bevy_ecs::prelude::*;
 use bevy_stardust::connections::peer::NetworkPeer;
 use quinn_proto::{Endpoint, Connection, ConnectionHandle, ConnectionEvent, EndpointEvent};
-use crate::{connections::ConnectionStage, QuicConnection, QuicEndpoint};
+use crate::{connections::ConnectionStateData, QuicConnection, QuicEndpoint};
 
 pub(super) fn handle_connection_event(
     connection: &mut Connection,
@@ -53,8 +53,8 @@ pub(super) fn poll_application_event_system(
 ) {
     for (entity, mut connection) in connections.iter_mut() {
         // make borrowck happy
-        fn split_borrow(conn: &mut QuicConnection) -> (&mut Connection, &mut ConnectionStage) {
-            (conn.inner.get_mut(), &mut conn.stage)
+        fn split_borrow(conn: &mut QuicConnection) -> (&mut Connection, &mut ConnectionStateData) {
+            (conn.inner.get_mut(), &mut conn.connection_state)
         }
 
         let (connection_inner, connection_stage) = split_borrow(&mut connection);
@@ -63,7 +63,7 @@ pub(super) fn poll_application_event_system(
             match event {
                 quinn_proto::Event::Connected => {
                     // The QUIC handshake is done, but we run our own checks.
-                    *connection_stage = ConnectionStage::GameHandshake {
+                    *connection_stage = ConnectionStateData::GameHandshake {
                         passed_version_check: false,
 
                         #[cfg(feature="hash_check")]
@@ -72,7 +72,7 @@ pub(super) fn poll_application_event_system(
                 },
 
                 quinn_proto::Event::ConnectionLost { reason } => {
-                    *connection_stage = ConnectionStage::Disconnected;
+                    *connection_stage = ConnectionStateData::Disconnected;
                     commands.entity(entity).despawn();
                     tracing::info!("Connection {entity:?} lost connection: {reason}");
                 },

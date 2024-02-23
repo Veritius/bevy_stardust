@@ -17,7 +17,7 @@ mod writing;
 
 pub use plugin::{QuicTransportPlugin, TlsAuthentication};
 pub use endpoints::{QuicEndpoint, QuicConnectionManager};
-pub use connections::QuicConnection;
+pub use connections::{QuicConnection, ConnectionState};
 pub use rustls::{Certificate, PrivateKey, RootCertStore, Error as TlsError};
 pub use quinn_proto::TransportConfig;
 
