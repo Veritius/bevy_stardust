@@ -84,6 +84,7 @@ pub(super) fn read_messages_from_streams_system(
                         let mut reader = Reader::new(Input::from(stream_data.buffer.read_slice()));
 
                         match &mut stream_data.data {
+                            // The initial data is the packet
                             IncomingStreamData::PendingPurpose => {
                                 // Get the purpose header that should be at the start of new streams
                                 let purpose_header = match reader.read_byte().ok() {
@@ -99,17 +100,28 @@ pub(super) fn read_messages_from_streams_system(
                                     StreamPurposeHeader::ConnectionManagement => {
                                         stream_data.buffer.remove_front(scratch, 1);
                                         stream_data.data = IncomingStreamData::ConnectionManagement;
+                                        return process_chunks(registry, scratch, chunks, stream_data);
                                     },
                                     StreamPurposeHeader::StardustPayloads => {
                                         let channel_id = match reader.read_bytes(4).ok() {
-                                            Some(val) => val.as_slice_less_safe(),
+                                            Some(val) => ChannelId::from(u32::from_be_bytes(TryInto::<[u8;4]>::try_into(val.as_slice_less_safe()).unwrap())),
                                             None => { close_stream!(StreamErrorCode::InvalidOpeningHeader); },
                                         };
+
+                                        stream_data.buffer.remove_front(scratch, 5);
+                                        stream_data.data = IncomingStreamData::StardustPayloads { id: channel_id };
+                                        return process_chunks(registry, scratch, chunks, stream_data);
                                     },
                                 }
                             },
+
+                            // Connection management stuff
                             IncomingStreamData::ConnectionManagement => todo!(),
+
+                            // Payload data
                             IncomingStreamData::StardustPayloads { id } => todo!(),
+
+                            // Closed channel
                             IncomingStreamData::NeedsClosing { reason } => todo!(),
                         }
                     },
