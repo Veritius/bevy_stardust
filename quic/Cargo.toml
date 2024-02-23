@@ -28,7 +28,7 @@ fastrand = "2"
 bevy_log = "0.13"
 
 [features]
-default = ["hash_check"] #TODO remove this before merge
+default = []
 insecure = []
 hash_check = ["bevy_stardust/hashing"]
 
