@@ -92,8 +92,31 @@ impl Default for IncomingStream {
 struct IncomingStreamBuffer(Vec<u8>);
 
 impl IncomingStreamBuffer {
-    pub fn put(&mut self, slice: &[u8]) {
+    fn read_slice(&self) -> &[u8] {
+        &self.0
+    }
+
+    fn insert_back(&mut self, slice: &[u8]) {
         self.0.extend_from_slice(slice);
+    }
+
+    fn remove_front(&mut self, scratch: &mut Vec<u8>, amount: usize) {
+        // Check we're not wasting any time
+        if amount >= self.0.len() {
+            self.0.clear();
+        }
+
+        // Ensure scratch is the right size for the operation
+        let min_size = self.0.len() - amount;
+        if scratch.len() < min_size {
+            scratch.reserve_exact(min_size - scratch.len());
+        }
+
+        // Use scratch to remove a section of ourselves
+        scratch.clear();
+        scratch.clone_from_slice(&self.0[amount..]);
+        self.0.clear();
+        self.0.clone_from_slice(&scratch);
     }
 }
 
