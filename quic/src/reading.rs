@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use bevy_ecs::prelude::*;
 use bevy_stardust::{channels::{id::ChannelId, registry::ChannelRegistry}, connections::peer::NetworkPeer};
-use quinn_proto::{Chunks, Dir, ReadError, ReadableError};
+use quinn_proto::{Chunks, Dir, ReadError, ReadableError, StreamId};
 use crate::{streams::StreamErrorCode, QuicConnection};
 
 pub(super) fn read_messages_from_streams_system(
@@ -10,6 +10,9 @@ pub(super) fn read_messages_from_streams_system(
 ) {
     // Any processing that can run in parallel runs here
     connections.par_iter_mut().for_each(|(entity, mut connection)| {
+        // Scratch space for some operations
+        let mut scratch: Vec<u8> = Vec::with_capacity(512); // 512 seems like a reasonable default
+
         // Accept all new streams
         while let Some(stream_id) = connection.inner.get_mut().streams().accept(Dir::Uni) {
             connection.recv_streams.insert(stream_id, IncomingStream::default());
@@ -33,6 +36,7 @@ pub(super) fn read_messages_from_streams_system(
         ) = split_borrow(&mut connection);
 
         // Iterate over all known streams and handle incoming data
+        let mut remove_streams = Vec::new();
         for (stream_id, stream_data) in active_recv_streams.iter_mut() {
             let mut recv_stream = connection_inner.recv_stream(*stream_id);
 
@@ -52,11 +56,27 @@ pub(super) fn read_messages_from_streams_system(
 
             // This is a function so we can change the stream state
             // and then go back to processing it, since we're in a for loop
-            fn process_chunks(registry: &ChannelRegistry, chunks: &mut Chunks, stream_data: &mut IncomingStream) {
+            fn process_chunks(
+                registry: &ChannelRegistry,
+                removes: &mut Vec<StreamId>,
+                scratch: &mut Vec<u8>,
+                chunks: &mut Chunks,
+                stream_data: &mut IncomingStream,
+            ) {
                 // Iterate chunks until we run out or an error occurs
                 loop { match chunks.next(usize::MAX) {
                     // We can read some data
-                    Ok(Some(chunk)) => todo!(),
+                    Ok(Some(chunk)) => {
+                        stream_data.buffer.insert_back(&chunk.bytes);
+                        let mut reader = untrusted::Reader::new(untrusted::Input::from(stream_data.buffer.read_slice()));
+
+                        match &mut stream_data.data {
+                            IncomingStreamData::PendingPurpose => todo!(),
+                            IncomingStreamData::ConnectionManagement => todo!(),
+                            IncomingStreamData::StardustPayloads { id } => todo!(),
+                            IncomingStreamData::NeedsClosing { reason } => todo!(),
+                        }
+                    },
 
                     // Stream finished
                     Ok(None) => todo!(),
@@ -70,7 +90,13 @@ pub(super) fn read_messages_from_streams_system(
             }
 
             // Start processing chunks :)
-            process_chunks(&registry, &mut chunks, stream_data);
+            process_chunks(
+                &registry,
+                &mut remove_streams,
+                &mut scratch,
+                &mut chunks,
+                stream_data,
+            );
         }
     });
 }
