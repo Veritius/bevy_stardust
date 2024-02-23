@@ -1,8 +1,12 @@
 use quinn_proto::{SendStream, StreamId, VarInt, WriteError};
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u32)]
 pub(crate) enum StreamErrorCode {
-    Disconnecting = 0,
+    NoReasonGiven = 0,
+    Disconnecting = 1,
+    InvalidOpeningHeader = 2,
+    BadStardustChannel = 3,
 }
 
 impl From<StreamErrorCode> for VarInt {
