@@ -65,7 +65,8 @@ impl IncomingStreamData for PendingStreamData {
                 };
 
                 actions.push(new_state.process_chunk(context, UnprocessedChunk::Payload(reader)));
-                actions.push(ProcessingOutputAction::ReplaceSelf(new_state)); // TODO: Put this before the above statement, somehow
+                actions.push(ProcessingOutputAction::ReplaceSelf(new_state));
+                actions.swap(0, 1);
                 return ProcessingOutputAction::Multiple(actions);
             },
 
