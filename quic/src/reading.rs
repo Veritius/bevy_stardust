@@ -71,7 +71,7 @@ pub(super) fn read_messages_from_streams_system(
                 // Convenient macro to not repeat ourselves
                 macro_rules! close_stream {
                     ($r:expr) => {
-                        stream_data.data = IncomingStreamData::NeedsClosing { reason: $r };
+                        stream_data.data = IncomingStreamData::NeedsClosing(NeedsClosingStream { reason: $r });
                         return ProcessChunksOutcome::Remove;
                     };
                 }
@@ -85,7 +85,7 @@ pub(super) fn read_messages_from_streams_system(
 
                         match &mut stream_data.data {
                             // The initial data is the packet
-                            IncomingStreamData::PendingPurpose => {
+                            IncomingStreamData::PendingPurpose(_) => {
                                 // Get the purpose header that should be at the start of new streams
                                 let purpose_header = match reader.read_byte().ok() {
                                     Some(val) => match StreamPurposeHeader::try_from(val).ok() {
@@ -99,7 +99,7 @@ pub(super) fn read_messages_from_streams_system(
                                 match purpose_header {
                                     StreamPurposeHeader::ConnectionManagement => {
                                         stream_data.buffer.remove_front(scratch, 1);
-                                        stream_data.data = IncomingStreamData::ConnectionManagement;
+                                        stream_data.data = IncomingStreamData::ConnectionManagement(ConnectionManagementStream);
                                         return process_chunks(registry, scratch, chunks, stream_data);
                                     },
                                     StreamPurposeHeader::StardustPayloads => {
@@ -109,20 +109,20 @@ pub(super) fn read_messages_from_streams_system(
                                         };
 
                                         stream_data.buffer.remove_front(scratch, 5);
-                                        stream_data.data = IncomingStreamData::StardustPayloads { id: channel_id };
+                                        stream_data.data = IncomingStreamData::StardustPayloads(StardustPayloadsStream { id: channel_id });
                                         return process_chunks(registry, scratch, chunks, stream_data);
                                     },
                                 }
                             },
 
                             // Connection management stuff
-                            IncomingStreamData::ConnectionManagement => todo!(),
+                            IncomingStreamData::ConnectionManagement(_) => todo!(),
 
                             // Payload data
-                            IncomingStreamData::StardustPayloads { id } => todo!(),
+                            IncomingStreamData::StardustPayloads(_) => todo!(),
 
                             // Closed channel
-                            IncomingStreamData::NeedsClosing { reason } => todo!(),
+                            IncomingStreamData::NeedsClosing(_) => todo!(),
                         }
                     },
 
@@ -160,7 +160,7 @@ pub(super) fn read_messages_from_streams_system(
                 let reason = match active_recv_streams.get(&stream_id) {
                     Some(val) => {
                         match val.data {
-                            IncomingStreamData::NeedsClosing { reason } => reason.clone(),
+                            IncomingStreamData::NeedsClosing(NeedsClosingStream { reason }) => reason.clone(),
                             _ => StreamErrorCode::NoReasonGiven,
                         }
                     },
@@ -185,7 +185,7 @@ impl Default for IncomingStream {
     fn default() -> Self {
         Self {
             buffer: IncomingStreamBuffer(Vec::with_capacity(32)),
-            data: IncomingStreamData::PendingPurpose,
+            data: IncomingStreamData::PendingPurpose(PendingPurposeStream),
         }
     }
 }
@@ -222,12 +222,20 @@ impl IncomingStreamBuffer {
 }
 
 enum IncomingStreamData {
-    PendingPurpose,
-    ConnectionManagement,
-    StardustPayloads {
-        id: ChannelId,
-    },
-    NeedsClosing {
-        reason: StreamErrorCode
-    },
+    PendingPurpose(PendingPurposeStream),
+    ConnectionManagement(ConnectionManagementStream),
+    StardustPayloads(StardustPayloadsStream),
+    NeedsClosing(NeedsClosingStream),
+}
+
+struct PendingPurposeStream;
+
+struct ConnectionManagementStream;
+
+struct StardustPayloadsStream {
+    id: ChannelId,
+}
+
+struct NeedsClosingStream {
+    reason: StreamErrorCode,
 }
