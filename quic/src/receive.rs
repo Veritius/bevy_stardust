@@ -27,7 +27,7 @@ pub(super) fn quic_receive_packets_system(
     owned.sort_unstable();
     let mut last = Entity::PLACEHOLDER;
     for item in &owned {
-        if *item == last { panic!("Connection owned by more than one endpoint at a time. Panic because this would cause a data race. Report me immediately!"); }
+        if *item == last { panic!("Connection owned by more than one endpoint at a time"); }
         last = item.clone();
     }
 
