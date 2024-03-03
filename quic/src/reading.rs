@@ -13,6 +13,7 @@ pub(super) fn read_messages_from_streams_system(
     connections.par_iter_mut().for_each(|(entity, mut connection)| {
         // Scratch space for some operations
         let mut scratch: Vec<u8> = Vec::with_capacity(512); // 512 seems like a reasonable default
+        let scratch = &mut scratch;
 
         // Accept all new streams
         while let Some(stream_id) = connection.inner.get_mut().streams().accept(Dir::Uni) {
@@ -55,103 +56,74 @@ pub(super) fn read_messages_from_streams_system(
                 Err(ReadableError::IllegalOrderedRead) => panic!(),
             };
 
-            enum ProcessChunksOutcome {
-                Nothing,
-                Remove,
-            }
-
-            // This is a function so we can change the stream state
-            // and then go back to processing it, since we're in a for loop
-            fn process_chunks(
-                registry: &ChannelRegistry,
-                scratch: &mut Vec<u8>,
-                chunks: &mut Chunks,
-                stream_data: &mut IncomingStream,
-            ) -> ProcessChunksOutcome {
-                // Convenient macro to not repeat ourselves
-                macro_rules! close_stream {
-                    ($r:expr) => {
-                        stream_data.data = IncomingStreamData::NeedsClosing(NeedsClosingStream { reason: $r });
-                        return ProcessChunksOutcome::Remove;
-                    };
-                }
-
-                // Iterate chunks until we run out or an error occurs
-                loop { match chunks.next(usize::MAX) {
-                    // We can read some data
+            'rloop: loop {
+                match chunks.next(0) {
+                    // A chunk of bytes was received for processing.
                     Ok(Some(chunk)) => {
+                        // Buffer reader
                         stream_data.buffer.insert_back(&chunk.bytes);
                         let mut reader = Reader::new(Input::from(stream_data.buffer.read_slice()));
+                        let mut pending_removals = 0;
 
-                        match &mut stream_data.data {
-                            // The initial data is the packet
-                            IncomingStreamData::PendingPurpose(_) => {
-                                // Get the purpose header that should be at the start of new streams
-                                let purpose_header = match reader.read_byte().ok() {
-                                    Some(val) => match StreamPurposeHeader::try_from(val).ok() {
-                                        Some(val) => val,
-                                        None => { close_stream!(StreamErrorCode::InvalidOpeningHeader); },
-                                    },
-                                    None => { close_stream!(StreamErrorCode::InvalidOpeningHeader); },
-                                };
-
-                                // Turn the purpose header into a valid stream state
-                                match purpose_header {
-                                    StreamPurposeHeader::ConnectionManagement => {
-                                        stream_data.buffer.remove_front(scratch, 1);
-                                        stream_data.data = IncomingStreamData::ConnectionManagement(ConnectionManagementStream);
-                                        return process_chunks(registry, scratch, chunks, stream_data);
-                                    },
-                                    StreamPurposeHeader::StardustPayloads => {
-                                        let channel_id = match reader.read_bytes(4).ok() {
-                                            Some(val) => ChannelId::from(u32::from_be_bytes(TryInto::<[u8;4]>::try_into(val.as_slice_less_safe()).unwrap())),
-                                            None => { close_stream!(StreamErrorCode::InvalidOpeningHeader); },
-                                        };
-
-                                        stream_data.buffer.remove_front(scratch, 5);
-                                        stream_data.data = IncomingStreamData::StardustPayloads(StardustPayloadsStream { id: channel_id });
-                                        return process_chunks(registry, scratch, chunks, stream_data);
-                                    },
-                                }
-                            },
-
-                            // Connection management stuff
-                            IncomingStreamData::ConnectionManagement(_) => todo!(),
-
-                            // Payload data
-                            IncomingStreamData::StardustPayloads(_) => todo!(),
-
-                            // Closed channel
-                            IncomingStreamData::NeedsClosing(_) => todo!(),
+                        // Process individual pieces of information within the chunk
+                        'iloop: loop {
+                            match &mut stream_data.data {
+                                // The initial data is the packet
+                                IncomingStreamData::PendingPurpose(_) => {
+                                    // Get the purpose header that should be at the start of new streams
+                                    let purpose_header = match reader.read_byte().ok() {
+                                        Some(val) => match StreamPurposeHeader::try_from(val).ok() {
+                                            Some(val) => val,
+                                            None => { todo!() },
+                                        },
+                                        None => { todo!() },
+                                    };
+    
+                                    // Turn the purpose header into a valid stream state
+                                    match purpose_header {
+                                        StreamPurposeHeader::ConnectionManagement => {
+                                            pending_removals += 1;
+                                            stream_data.data = IncomingStreamData::ConnectionManagement(ConnectionManagementStream);
+                                            continue 'iloop;
+                                        },
+                                        StreamPurposeHeader::StardustPayloads => {
+                                            let channel_id = match reader.read_bytes(4).ok() {
+                                                Some(val) => ChannelId::from(u32::from_be_bytes(TryInto::<[u8;4]>::try_into(val.as_slice_less_safe()).unwrap())),
+                                                None => { todo!() },
+                                            };
+    
+                                            pending_removals += 5;
+                                            stream_data.data = IncomingStreamData::StardustPayloads(StardustPayloadsStream { id: channel_id });
+                                            continue 'iloop
+                                        },
+                                    }
+                                },
+    
+                                // Connection management stuff
+                                IncomingStreamData::ConnectionManagement(_) => todo!(),
+    
+                                // Payload data
+                                IncomingStreamData::StardustPayloads(_) => todo!(),
+    
+                                // Closed channel
+                                IncomingStreamData::NeedsClosing(_) => todo!(),
+                            }
                         }
+
+                        // Remove a certain amount of bytes from the buffer
+                        stream_data.buffer.remove_front(scratch, pending_removals);
                     },
 
-                    // Stream finished
+                    // The stream is done sending.
                     Ok(None) => todo!(),
 
-                    // Try to read again later
-                    Err(ReadError::Blocked) => { return ProcessChunksOutcome::Nothing },
+                    // No more bytes to read for now, but the stream isn't done sending.
+                    Err(ReadError::Blocked) => todo!(),
 
                     // Stream reset
                     Err(ReadError::Reset(error_code)) => todo!(),
-                }}
+                }
             }
-
-            // Process chunks until return
-            match process_chunks(
-                &registry,
-                &mut scratch,
-                &mut chunks,
-                stream_data,
-            ) {
-                ProcessChunksOutcome::Nothing => {},
-                ProcessChunksOutcome::Remove => {
-                    remove_streams.push(stream_id.clone());
-                },
-            }
-
-            // Finalize chunks
-            let _ = chunks.finalize();
         }
 
         // Close and remove any streams queued for removal
