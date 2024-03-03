@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use bevy_ecs::prelude::*;
 use bevy_stardust::{channels::{id::ChannelId, registry::ChannelRegistry}, connections::peer::NetworkPeer};
-use quinn_proto::{Chunks, Dir, ReadError, ReadableError};
+use quinn_proto::{Chunks, Dir, ReadError, ReadableError, StreamId, Streams};
 use untrusted::{Input, Reader};
 use crate::{streams::{StreamErrorCode, StreamPurposeHeader}, QuicConnection};
 
@@ -15,13 +15,32 @@ pub(super) fn read_messages_from_streams_system(
         let mut scratch: Vec<u8> = Vec::with_capacity(512); // 512 seems like a reasonable default
         let scratch = &mut scratch;
 
-        // Accept all new streams
-        while let Some(stream_id) = connection.inner.get_mut().streams().accept(Dir::Uni) {
-            connection.recv_streams.insert(stream_id, IncomingStream::default());
+        // Split borrow function to help out borrowck
+        #[inline]
+        fn split_borrow_stream_ctrl(conn: &mut QuicConnection) -> (
+            Streams,
+            &mut HashMap<StreamId, IncomingStream>
+        ) {(
+            conn.inner.get_mut().streams(), &mut conn.recv_streams
+        )}
+
+        // Borrow many fields using the split borrow function
+        let (
+            mut streams,
+            recv_streams,
+        ) = split_borrow_stream_ctrl(&mut connection);
+
+        // Accept all new unidirectional streams
+        while let Some(stream_id) = streams.accept(Dir::Uni) {
+            recv_streams.insert(stream_id, IncomingStream::default());
         }
 
-        // Split borrow function to help out borrowck
-        // Mutably borrowing multiple struct fields is not valid apparently
+        // Accept all new bidirectional streams
+        while let Some(stream_id) = streams.accept(Dir::Bi) {
+            recv_streams.insert(stream_id, IncomingStream::default());
+        }
+
+        // Same as before
         #[inline]
         fn split_borrow(connection: &mut QuicConnection) -> (
             &mut quinn_proto::Connection,
@@ -31,7 +50,7 @@ pub(super) fn read_messages_from_streams_system(
             &mut connection.recv_streams
         )}
 
-        // Borrow many fields using the split borrow function
+        // Still the same as before
         let (
             connection_inner,
             active_recv_streams,
@@ -56,7 +75,17 @@ pub(super) fn read_messages_from_streams_system(
                 Err(ReadableError::IllegalOrderedRead) => panic!(),
             };
 
-            'rloop: loop {
+            // Macro for closing a stream because of a protocol error
+            macro_rules! close_stream {
+                ($c:tt, $r:expr) => {
+                    stream_data.data = IncomingStreamData::NeedsClosing(NeedsClosingStream { reason: $r });
+                    remove_streams.push(stream_id.clone());
+                    break $c
+                };
+            }
+
+            // Process all chunks
+            'c: loop {
                 match chunks.next(0) {
                     // A chunk of bytes was received for processing.
                     Ok(Some(chunk)) => {
@@ -66,7 +95,7 @@ pub(super) fn read_messages_from_streams_system(
                         let mut pending_removals = 0;
 
                         // Process individual pieces of information within the chunk
-                        'iloop: loop {
+                        'p: loop {
                             match &mut stream_data.data {
                                 // The initial data is the packet
                                 IncomingStreamData::PendingPurpose(_) => {
@@ -74,27 +103,36 @@ pub(super) fn read_messages_from_streams_system(
                                     let purpose_header = match reader.read_byte().ok() {
                                         Some(val) => match StreamPurposeHeader::try_from(val).ok() {
                                             Some(val) => val,
-                                            None => { todo!() },
+                                            None => { close_stream!('c, StreamErrorCode::InvalidOpeningHeader); },
                                         },
-                                        None => { todo!() },
+                                        None => { close_stream!('c, StreamErrorCode::InvalidOpeningHeader); },
                                     };
-    
+
                                     // Turn the purpose header into a valid stream state
                                     match purpose_header {
                                         StreamPurposeHeader::ConnectionManagement => {
+                                            if stream_id.dir() != Dir::Uni { close_stream!('c, StreamErrorCode::InvalidChannelDirection); }
+
                                             pending_removals += 1;
                                             stream_data.data = IncomingStreamData::ConnectionManagement(ConnectionManagementStream);
-                                            continue 'iloop;
+                                            continue 'p;
                                         },
+
                                         StreamPurposeHeader::StardustPayloads => {
+                                            if stream_id.dir() != Dir::Uni { close_stream!('c, StreamErrorCode::InvalidChannelDirection); }
+
                                             let channel_id = match reader.read_bytes(4).ok() {
                                                 Some(val) => ChannelId::from(u32::from_be_bytes(TryInto::<[u8;4]>::try_into(val.as_slice_less_safe()).unwrap())),
-                                                None => { todo!() },
+                                                None => { close_stream!('c, StreamErrorCode::InvalidOpeningHeader); },
                                             };
     
                                             pending_removals += 5;
                                             stream_data.data = IncomingStreamData::StardustPayloads(StardustPayloadsStream { id: channel_id });
-                                            continue 'iloop
+                                            continue 'p;
+                                        },
+
+                                        StreamPurposeHeader::UctrlStream => {
+                                            todo!()
                                         },
                                     }
                                 },
@@ -104,6 +142,9 @@ pub(super) fn read_messages_from_streams_system(
     
                                 // Payload data
                                 IncomingStreamData::StardustPayloads(_) => todo!(),
+
+                                // User-controlled stream
+                                IncomingStreamData::UctrlStream(_) => todo!(),
     
                                 // Closed channel
                                 IncomingStreamData::NeedsClosing(_) => todo!(),
@@ -197,6 +238,7 @@ enum IncomingStreamData {
     PendingPurpose(PendingPurposeStream),
     ConnectionManagement(ConnectionManagementStream),
     StardustPayloads(StardustPayloadsStream),
+    UctrlStream(UctrlStream),
     NeedsClosing(NeedsClosingStream),
 }
 
@@ -207,6 +249,8 @@ struct ConnectionManagementStream;
 struct StardustPayloadsStream {
     id: ChannelId,
 }
+
+struct UctrlStream;
 
 struct NeedsClosingStream {
     reason: StreamErrorCode,

@@ -6,7 +6,8 @@ pub(crate) enum StreamErrorCode {
     NoReasonGiven = 0,
     Disconnecting = 1,
     InvalidOpeningHeader = 2,
-    BadStardustChannel = 3,
+    InvalidChannelDirection = 3,
+    BadStardustChannel = 4,
 }
 
 impl From<StreamErrorCode> for VarInt {
@@ -26,7 +27,11 @@ impl TryFrom<VarInt> for StreamErrorCode {
 
     fn try_from(value: VarInt) -> Result<Self, Self::Error> {
         Ok(match u64::from(value) {
-            0 => Self::Disconnecting,
+            0 => Self::NoReasonGiven,
+            1 => Self::Disconnecting,
+            2 => Self::InvalidOpeningHeader,
+            3 => Self::InvalidChannelDirection,
+            4 => Self::BadStardustChannel,
             _ => { return Err(value) }
         })
     }
@@ -36,6 +41,7 @@ impl TryFrom<VarInt> for StreamErrorCode {
 pub(crate) enum StreamPurposeHeader {
     ConnectionManagement = 0,
     StardustPayloads = 1,
+    UctrlStream = 2,
 }
 
 impl TryFrom<u8> for StreamPurposeHeader {
@@ -45,6 +51,7 @@ impl TryFrom<u8> for StreamPurposeHeader {
         Ok(match value {
             0 => Self::ConnectionManagement,
             1 => Self::StardustPayloads,
+            2 => Self::UctrlStream,
             _ => return Err(())
         })
     }
