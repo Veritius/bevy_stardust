@@ -1,4 +1,4 @@
-use std::{collections::{HashMap, VecDeque}, sync::Exclusive, time::Instant};
+use std::{collections::{HashMap, VecDeque}, sync::Exclusive};
 use bevy_stardust::channels::id::ChannelId;
 use bytes::*;
 use quinn_proto::*;
@@ -53,7 +53,10 @@ impl QuicConnection {
 
     /// Closes the connection.
     pub fn close(&mut self, reason: Bytes) {
-        self.connection_state = ConnectionStateData::Disconnecting { reason };
+        self.connection_state = ConnectionStateData::Disconnecting {
+            reason,
+            fin_sent: false
+        };
     }
 }
 
@@ -62,13 +65,11 @@ pub(crate) enum ConnectionStateData {
     QuicHandshake,
     GameHandshake {
         passed_version_check: bool,
-
-        #[cfg(feature="hash_check")]
-        passed_hash_check: bool,
     },
     Connected,
     Disconnecting {
         reason: Bytes,
+        fin_sent: bool,
     },
     Disconnected,
 }
@@ -79,21 +80,15 @@ impl ConnectionStateData {
         match self {
             ConnectionStateData::QuicHandshake => ConnectionState::Handshake,
 
-            #[cfg(not(feature="hash_check"))]
             ConnectionStateData::GameHandshake {
                 passed_version_check: _,
-            } => ConnectionState::Handshake,
-
-            #[cfg(feature="hash_check")]
-            ConnectionStateData::GameHandshake {
-                passed_version_check: _,
-                passed_hash_check: _,
             } => ConnectionState::Handshake,
 
             ConnectionStateData::Connected => ConnectionState::Connected,
 
             ConnectionStateData::Disconnecting {
-                reason: _
+                reason: _,
+                fin_sent: _,
             } => ConnectionState::Disconnecting,
 
             ConnectionStateData::Disconnected => ConnectionState::Disconnected,

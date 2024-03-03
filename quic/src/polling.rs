@@ -65,9 +65,6 @@ pub(super) fn poll_application_event_system(
                     // The QUIC handshake is done, but we run our own checks.
                     *connection_stage = ConnectionStateData::GameHandshake {
                         passed_version_check: false,
-
-                        #[cfg(feature="hash_check")]
-                        passed_hash_check: false,
                     }
                 },
 
