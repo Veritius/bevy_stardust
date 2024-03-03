@@ -1,6 +1,3 @@
-use bevy_stardust::channels::id::ChannelId;
-use quinn_proto::Dir;
-
 use super::IncomingStreamData;
 use super::IncomingStreamProcessingContext;
 use super::ProcessingOutputAction;
@@ -8,7 +5,8 @@ use super::UnprocessedChunk::{self, *};
 
 use crate::streams::StreamErrorCode;
 use crate::streams::StreamPurposeHeader;
-
+use bevy_stardust::channels::id::ChannelId;
+use quinn_proto::Dir;
 
 pub(super) struct PendingStreamData;
 
@@ -26,7 +24,7 @@ impl IncomingStreamData for PendingStreamData {
                         Some(val) => val,
                         None => { return StreamErrorCode::InvalidOpeningHeader.into(); },
                     },
-                    None => { return StreamErrorCode::InvalidOpeningHeader.into(); },
+                    None => { return ProcessingOutputAction::DoNothing; },
                 };
 
                 // Turn the purpose header into a valid stream state
@@ -35,8 +33,7 @@ impl IncomingStreamData for PendingStreamData {
                         if context.stream_id.dir() != Dir::Uni { return StreamErrorCode::InvalidChannelDirection.into(); }
 
                         reader.commit_bytes(1);
-                        // stream_data.data = IncomingStreamData::ConnectionManagement(ConnectionManagementStream);
-                        return ProcessingOutputAction::DoNothing;
+                        return ProcessingOutputAction::ReplaceSelf(Box::from(super::manage::ConnectionManagementStream));
                     },
 
                     StreamPurposeHeader::StardustPayloads => {
@@ -48,8 +45,9 @@ impl IncomingStreamData for PendingStreamData {
                         };
 
                         reader.commit_bytes(5);
-                        // stream_data.data = IncomingStreamData::StardustPayloads(StardustPayloadsStream { id: channel_id });
-                        return ProcessingOutputAction::DoNothing;
+                        return ProcessingOutputAction::ReplaceSelf(Box::from(super::stardust::StardustPayloadsStream {
+                            channel_id,
+                        }));
                     },
 
                     StreamPurposeHeader::UctrlStream => {

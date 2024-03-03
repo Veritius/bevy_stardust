@@ -5,7 +5,10 @@ use quinn_proto::{Dir, ReadError, ReadableError, StreamId, Streams, VarInt};
 use untrusted::{Input, Reader};
 use crate::{streams::StreamErrorCode, QuicConnection};
 
-mod pending; use pending::*;
+mod manage;
+mod pending;
+mod stardust;
+mod uctrl;
 
 pub(super) fn read_messages_from_streams_system(
     mut connections: Query<(Entity, &mut QuicConnection), With<NetworkPeer>>,
