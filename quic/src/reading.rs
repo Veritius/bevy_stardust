@@ -1,9 +1,11 @@
 use std::collections::HashMap;
 use bevy_ecs::prelude::*;
-use bevy_stardust::{channels::{id::ChannelId, registry::ChannelRegistry}, connections::peer::NetworkPeer};
-use quinn_proto::{Chunks, Dir, ReadError, ReadableError, StreamId, Streams};
+use bevy_stardust::{channels::registry::ChannelRegistry, connections::peer::NetworkPeer};
+use quinn_proto::{Dir, ReadError, ReadableError, StreamId, Streams, VarInt};
 use untrusted::{Input, Reader};
-use crate::{streams::{StreamErrorCode, StreamPurposeHeader}, QuicConnection};
+use crate::{streams::StreamErrorCode, QuicConnection};
+
+mod pending; use pending::*;
 
 pub(super) fn read_messages_from_streams_system(
     mut connections: Query<(Entity, &mut QuicConnection), With<NetworkPeer>>,
@@ -57,7 +59,6 @@ pub(super) fn read_messages_from_streams_system(
         ) = split_borrow(&mut connection);
 
         // Iterate over all known streams and handle incoming data
-        let mut remove_streams = Vec::new();
         for (stream_id, stream_data) in active_recv_streams.iter_mut() {
             let mut recv_stream = connection_inner.recv_stream(*stream_id);
 
@@ -75,115 +76,58 @@ pub(super) fn read_messages_from_streams_system(
                 Err(ReadableError::IllegalOrderedRead) => panic!(),
             };
 
-            // Macro for closing a stream because of a protocol error
-            macro_rules! close_stream {
-                ($c:tt, $r:expr) => {
-                    stream_data.data = IncomingStreamData::NeedsClosing(NeedsClosingStream { reason: $r });
-                    remove_streams.push(stream_id.clone());
-                    break $c
-                };
-            }
+            // Context object for chunk reading
+            let context = IncomingStreamProcessingContext {
+                stream_id: stream_id.clone(),
+                registry: &registry,
+            };
 
-            // Process all chunks
-            'c: loop {
-                match chunks.next(0) {
-                    // A chunk of bytes was received for processing.
+            // Read all available chunks
+            loop {
+                let action = match chunks.next(usize::MAX) {
                     Ok(Some(chunk)) => {
-                        // Buffer reader
+                        // Tracker for reading chunks
                         stream_data.buffer.insert_back(&chunk.bytes);
                         let mut reader = Reader::new(Input::from(stream_data.buffer.read_slice()));
-                        let mut pending_removals = 0;
+                        let mut consumed = 0;
 
-                        // Process individual pieces of information within the chunk
-                        'p: loop {
-                            match &mut stream_data.data {
-                                // The initial data is the packet
-                                IncomingStreamData::PendingPurpose(_) => {
-                                    // Get the purpose header that should be at the start of new streams
-                                    let purpose_header = match reader.read_byte().ok() {
-                                        Some(val) => match StreamPurposeHeader::try_from(val).ok() {
-                                            Some(val) => val,
-                                            None => { close_stream!('c, StreamErrorCode::InvalidOpeningHeader); },
-                                        },
-                                        None => { close_stream!('c, StreamErrorCode::InvalidOpeningHeader); },
-                                    };
+                        // Construct payload variant
+                        let chunk = UnprocessedChunk::Payload(TrackingReader {
+                            consumed: &mut consumed,
+                            reader: &mut reader,
+                        });
 
-                                    // Turn the purpose header into a valid stream state
-                                    match purpose_header {
-                                        StreamPurposeHeader::ConnectionManagement => {
-                                            if stream_id.dir() != Dir::Uni { close_stream!('c, StreamErrorCode::InvalidChannelDirection); }
-
-                                            pending_removals += 1;
-                                            stream_data.data = IncomingStreamData::ConnectionManagement(ConnectionManagementStream);
-                                            continue 'p;
-                                        },
-
-                                        StreamPurposeHeader::StardustPayloads => {
-                                            if stream_id.dir() != Dir::Uni { close_stream!('c, StreamErrorCode::InvalidChannelDirection); }
-
-                                            let channel_id = match reader.read_bytes(4).ok() {
-                                                Some(val) => ChannelId::from(u32::from_be_bytes(TryInto::<[u8;4]>::try_into(val.as_slice_less_safe()).unwrap())),
-                                                None => { close_stream!('c, StreamErrorCode::InvalidOpeningHeader); },
-                                            };
-    
-                                            pending_removals += 5;
-                                            stream_data.data = IncomingStreamData::StardustPayloads(StardustPayloadsStream { id: channel_id });
-                                            continue 'p;
-                                        },
-
-                                        StreamPurposeHeader::UctrlStream => {
-                                            todo!()
-                                        },
-                                    }
-                                },
-    
-                                // Connection management stuff
-                                IncomingStreamData::ConnectionManagement(_) => todo!(),
-    
-                                // Payload data
-                                IncomingStreamData::StardustPayloads(_) => todo!(),
-
-                                // User-controlled stream
-                                IncomingStreamData::UctrlStream(_) => todo!(),
-    
-                                // Closed channel
-                                IncomingStreamData::NeedsClosing(_) => todo!(),
-                            }
-                        }
-
-                        // Remove a certain amount of bytes from the buffer
-                        stream_data.buffer.remove_front(scratch, pending_removals);
+                        // Pass off processing to the data object
+                        stream_data.data.process_chunk(&context, chunk)
                     },
 
-                    // The stream is done sending.
-                    Ok(None) => todo!(),
+                    Ok(None) => {
+                        // Construct finish variant
+                        let chunk = UnprocessedChunk::Finished;
 
-                    // No more bytes to read for now, but the stream isn't done sending.
-                    Err(ReadError::Blocked) => todo!(),
-
-                    // Stream reset
-                    Err(ReadError::Reset(error_code)) => todo!(),
-                }
-            }
-        }
-
-        // Close and remove any streams queued for removal
-        if remove_streams.len() != 0 {
-            for stream_id in remove_streams.drain(..) {
-                let reason = match active_recv_streams.get(&stream_id) {
-                    Some(val) => {
-                        match val.data {
-                            IncomingStreamData::NeedsClosing(NeedsClosingStream { reason }) => reason.clone(),
-                            _ => StreamErrorCode::NoReasonGiven,
-                        }
+                        // Pass off processing to the data object
+                        stream_data.data.process_chunk(&context, chunk)
                     },
-                    None => { continue },
+
+                    Err(ReadError::Reset(reason)) => {
+                        // Construct reset variant
+                        let chunk = UnprocessedChunk::Reset(reason);
+
+                        // Pass off processing to the data object
+                        stream_data.data.process_chunk(&context, chunk)
+                    }
+
+                    // We've run out of chunks to read for this stream
+                    Err(ReadError::Blocked) => break,
                 };
 
-                let _ = connection_inner
-                    .recv_stream(stream_id)
-                    .stop(reason.into());
-                active_recv_streams.remove(&stream_id);
+                // Apply the actions that our object has said to do
+                match action {
+                    ProcessingOutputAction::DoNothing => todo!(),
+                    ProcessingOutputAction::CloseStream(_) => todo!(),
+                    ProcessingOutputAction::ReplaceSelf(_) => todo!(),
+                    ProcessingOutputAction::Multiple(_) => todo!(),
+                }
             }
         }
     });
@@ -191,14 +135,14 @@ pub(super) fn read_messages_from_streams_system(
 
 pub(crate) struct IncomingStream {
     buffer: IncomingStreamBuffer,
-    data: IncomingStreamData,
+    data: Box<dyn IncomingStreamData>,
 }
 
 impl Default for IncomingStream {
     fn default() -> Self {
         Self {
             buffer: IncomingStreamBuffer(Vec::with_capacity(32)),
-            data: IncomingStreamData::PendingPurpose(PendingPurposeStream),
+            data: Box::from(pending::PendingStreamData),
         }
     }
 }
@@ -234,24 +178,59 @@ impl IncomingStreamBuffer {
     }
 }
 
-enum IncomingStreamData {
-    PendingPurpose(PendingPurposeStream),
-    ConnectionManagement(ConnectionManagementStream),
-    StardustPayloads(StardustPayloadsStream),
-    UctrlStream(UctrlStream),
-    NeedsClosing(NeedsClosingStream),
+enum UnprocessedChunk<'a> {
+    Payload(TrackingReader<'a>),
+    Finished,
+    Reset(VarInt),
 }
 
-struct PendingPurposeStream;
-
-struct ConnectionManagementStream;
-
-struct StardustPayloadsStream {
-    id: ChannelId,
+struct TrackingReader<'a> {
+    consumed: &'a mut usize,
+    reader: &'a mut Reader<'a>,
 }
 
-struct UctrlStream;
+impl TrackingReader<'_> {
+    fn commit_bytes(&mut self, amount: usize) {
+        *self.consumed += amount;
+    }
+}
 
-struct NeedsClosingStream {
-    reason: StreamErrorCode,
+impl<'a> std::ops::Deref for TrackingReader<'a> {
+    type Target = Reader<'a>;
+
+    fn deref(&self) -> &Self::Target {
+        self.reader
+    }
+}
+
+impl std::ops::DerefMut for TrackingReader<'_> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        self.reader
+    }
+}
+
+struct IncomingStreamProcessingContext<'a> {
+    stream_id: StreamId,
+    registry: &'a ChannelRegistry,
+}
+
+trait IncomingStreamData: Send + Sync {
+    fn process_chunk(
+        &mut self,
+        context: &IncomingStreamProcessingContext,
+        chunk: UnprocessedChunk,
+    ) -> ProcessingOutputAction;
+}
+
+enum ProcessingOutputAction {
+    DoNothing,
+    CloseStream(StreamErrorCode),
+    ReplaceSelf(Box<dyn IncomingStreamData>),
+    Multiple(Vec<ProcessingOutputAction>),
+}
+
+impl From<StreamErrorCode> for ProcessingOutputAction {
+    fn from(value: StreamErrorCode) -> Self {
+        Self::CloseStream(value)
+    }
 }
