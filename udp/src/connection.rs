@@ -36,8 +36,10 @@ impl Connection {
 #[cfg_attr(feature="reflect", derive(bevy_reflect::Reflect), reflect(from_reflect = false))]
 pub enum ConnectionDirection {
     /// Outgoing connection. We are acting as a client.
+    #[doc(alias = "Client")]
     Outgoing,
     /// Incoming connection. We are acting as a server.
+    #[doc(alias = "Server")]
     Incoming,
 }
 
