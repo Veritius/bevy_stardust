@@ -7,11 +7,6 @@ pub(crate) fn io_receiving_system(
 ) {
     // Iterate all endpoints
     endpoints.par_iter_mut().for_each(|mut endpoint| {
-        for connection in &endpoint.connections {
-            // SAFETY: This is safe because ConnectionOwnershipToken ensures that only one endpoint 'owns' a connection.
-            let mut connection = unsafe { connections.get_unchecked(connection.inner()).unwrap() };
-
-            todo!()
-        }
+        todo!()
     });
 }

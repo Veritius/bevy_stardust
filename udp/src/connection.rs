@@ -1,4 +1,4 @@
-use std::net::SocketAddr;
+use std::{collections::VecDeque, net::SocketAddr};
 use bevy_ecs::prelude::*;
 use bytes::Bytes;
 use tracing::warn;
@@ -22,10 +22,35 @@ pub struct Connection {
     pub(crate) statistics: ConnectionStatistics,
     pub(crate) connection_dir: ConnectionDirection,
     pub(crate) connection_state: ConnectionState,
+
+    #[cfg_attr(feature="reflect", reflect(ignore))]
+    pub(crate) outgoing_packets: VecDeque<Bytes>,
+
+    #[cfg_attr(feature="reflect", reflect(ignore))]
+    pub(crate) incoming_packets: VecDeque<Bytes>,
 }
 
 /// Functions for controlling the connection.
 impl Connection {
+    pub(crate) fn new(
+        owning_endpoint: Entity,
+        remote_address: SocketAddr,
+        direction: ConnectionDirection,
+    ) -> Self {
+        Self {
+            owning_endpoint,
+            remote_address,
+            statistics: ConnectionStatistics::default(),
+            connection_dir: direction,
+            connection_state: match direction {
+                ConnectionDirection::Outgoing => ConnectionState::Pending,
+                ConnectionDirection::Incoming => ConnectionState::Handshaking,
+            },
+            outgoing_packets: VecDeque::default(),
+            incoming_packets: VecDeque::default()
+        }
+    }
+
     /// Queues the connection for closing, informing the peer of why.
     /// 
     /// If `hard` is set to `true`, the connection will be closed immediately.
@@ -104,15 +129,46 @@ pub enum ConnectionState {
 #[derive(Debug, Default, Clone)]
 #[cfg_attr(feature="reflect", derive(bevy_reflect::Reflect), reflect(from_reflect = false))]
 pub struct ConnectionStatistics {
+    /// How many packets this client has sent, in total.
+    pub total_packets_sent: u64,
+
+    /// How many packets this client has received, in total.
+    pub total_packets_received: u64,
+
+    /// How many packets this client has dropped, in total.
+    pub total_packets_dropped: u64,
+
     /// How many messages this client has sent, in total.
     pub total_messages_sent: u64,
 
     /// How many messages this client has received, in total.
     pub total_messages_received: u64,
 
+    /// How many packets this client has sent, this tick.
+    pub tick_packets_sent: u32,
+
+    /// How many packets this client has sent, this tick.
+    pub tick_packets_received: u32,
+
     /// How many messages this client has sent, this tick.
     pub tick_messages_sent: u32,
 
     /// How many messages this client has sent, this tick.
     pub tick_messages_received: u32,
+}
+
+impl ConnectionStatistics {
+    pub(crate) fn track_send_packet(&mut self, messages: usize) {
+        self.total_packets_sent += 1;
+        self.total_messages_sent += messages as u64;
+        self.tick_packets_sent += 1;
+        self.tick_messages_sent += messages as u32;
+    }
+
+    pub(crate) fn track_recv_packet(&mut self, messages: usize) {
+        self.total_packets_received += 1;
+        self.total_messages_received += messages as u64;
+        self.tick_packets_received += 1;
+        self.tick_messages_received += messages as u32;
+    }
 }

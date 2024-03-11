@@ -8,6 +8,7 @@ A lightweight, highly customisable, native-UDP transport layer for [bevy_stardus
 - Reliability, ordering, and fragmentation
 
 ### Future features
+- Congestion control
 - Encrypted and authenticated communications
     - Authentication using a remote authentication server
     - Authentication using TLS and X.509 certificates
