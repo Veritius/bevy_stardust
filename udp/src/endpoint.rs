@@ -15,7 +15,7 @@ pub struct Endpoint {
     pub(crate) socket: UdpSocket,
 
     #[cfg_attr(feature="reflect", reflect(ignore))]
-    pub(crate) connections: SmallVec::<[Entity; 16]>,
+    pub(crate) connections: SmallVec::<[ConnectionOwnershipToken; 8]>,
 
     /// Whether or not to accept new incoming connections on this endpoint.
     pub listening: bool,
@@ -31,5 +31,35 @@ impl Endpoint {
     /// Messages from the client that haven't been received will never be received.
     pub fn close(&mut self, hard: bool, reason: Option<Bytes>) {
         todo!()
+    }
+}
+
+/// A wrapper around an entity ID that guarantees that a Connection is only 'owned' by one [`Endpoint`] at a time.
+/// 
+/// This is done by making it that only one ConnectionOwnershipToken exists for a given entity ID in the same World.
+/// Because of this, all constructor functions (`new`, `clone`) are marked as unsafe.
+/// 
+/// If this token ever ends up attached to more than one [`Endpoint`] it will lead to undefined behavior.
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[repr(transparent)]
+pub(crate) struct ConnectionOwnershipToken(Entity);
+
+impl ConnectionOwnershipToken {
+    /// Creates a new `ConnectionOwnershipToken`.
+    pub unsafe fn new(entity: Entity) -> Self {
+        Self(entity)
+    }
+
+    /// Returns the inner [`Entity`] id.
+    pub fn inner(&self) -> Entity {
+        self.0
+    }
+}
+
+impl std::ops::Deref for ConnectionOwnershipToken {
+    type Target = Entity;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
 }

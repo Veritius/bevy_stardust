@@ -1,5 +1,7 @@
 use std::time::Duration;
 use bevy_app::prelude::*;
+use bevy_ecs::prelude::*;
+use bevy_stardust::scheduling::*;
 
 /// The UDP transport plugin.
 pub struct UdpTransportPlugin {
@@ -23,6 +25,12 @@ impl Default for UdpTransportPlugin {
 
 impl Plugin for UdpTransportPlugin {
     fn build(&self, app: &mut App) {
-        todo!();
+        app.add_systems(PreUpdate, crate::receiving::io_receiving_system
+            .in_set(NetworkRead::Receive)
+            .before(NetworkRead::Read));
+
+        app.add_systems(PostUpdate, crate::sending::io_sending_system
+            .in_set(NetworkWrite::Send)
+            .before(NetworkWrite::Clear));
     }
 }

@@ -9,6 +9,8 @@ mod connection;
 mod sequences;
 mod reliability;
 mod ordering;
+mod sending;
+mod receiving;
 
 pub use plugin::UdpTransportPlugin;
 pub use manager::UdpManager;
