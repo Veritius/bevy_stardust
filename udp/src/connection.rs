@@ -19,9 +19,7 @@ pub struct Connection {
     #[cfg_attr(feature="reflect", reflect(ignore))]
     pub(crate) remote_address: SocketAddr,
 
-    #[cfg_attr(feature="reflect", reflect(ignore))]
     pub(crate) statistics: ConnectionStatistics,
-
     pub(crate) connection_dir: ConnectionDirection,
     pub(crate) connection_state: ConnectionState,
 }
@@ -104,6 +102,7 @@ pub enum ConnectionState {
 
 /// Statistics related to a [`Connection`].
 #[derive(Debug, Default, Clone)]
+#[cfg_attr(feature="reflect", derive(bevy_reflect::Reflect), reflect(from_reflect = false))]
 pub struct ConnectionStatistics {
     /// How many messages this client has sent, in total.
     pub total_messages_sent: u64,

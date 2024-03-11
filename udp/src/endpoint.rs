@@ -19,9 +19,7 @@ pub struct Endpoint {
     #[cfg_attr(feature="reflect", reflect(ignore))]
     pub(crate) connections: SmallVec::<[ConnectionOwnershipToken; 8]>,
 
-    #[cfg_attr(feature="reflect", reflect(ignore))]
     pub(crate) statistics: EndpointStatistics,
-
     pub(crate) state: EndpointState,
 
     /// Whether or not to accept new incoming connections on this endpoint.
@@ -134,6 +132,7 @@ impl std::ops::Deref for ConnectionOwnershipToken {
 
 /// Statistics related to an [`Endpoint`].
 #[derive(Debug, Default, Clone)]
+#[cfg_attr(feature="reflect", derive(bevy_reflect::Reflect), reflect(from_reflect = false))]
 pub struct EndpointStatistics {
     /// How many packets have been sent, in total.
     pub total_packets_sent: u64,
