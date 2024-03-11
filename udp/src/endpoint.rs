@@ -1,4 +1,5 @@
-use std::net::UdpSocket;
+use std::net::{SocketAddr, UdpSocket};
+use anyhow::Result;
 use bevy_ecs::prelude::*;
 use bytes::Bytes;
 use smallvec::SmallVec;
@@ -25,6 +26,18 @@ pub struct Endpoint {
 }
 
 impl Endpoint {
+    pub(crate) fn bind(address: SocketAddr) -> Result<Self> {
+        let socket = UdpSocket::bind(address)?;
+        socket.set_nonblocking(true)?;
+
+        Ok(Endpoint {
+            socket,
+            connections: SmallVec::new(),
+            statistics: EndpointStatistics::default(),
+            listening: false,
+        })
+    }
+
     /// Marks the endpoint for closure.
     /// This will inform all clients of the disconnection along with the `reason` if present,
     /// and waits for data exchange to stop. This is the best solution for most use cases.
@@ -78,7 +91,7 @@ impl std::ops::Deref for ConnectionOwnershipToken {
 }
 
 /// Statistics related to an [`Endpoint`].
-#[derive(Debug, Clone)]
+#[derive(Debug, Default, Clone)]
 pub struct EndpointStatistics {
     /// How many packets have been sent, in total.
     pub total_packets_sent: u64,

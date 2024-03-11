@@ -5,6 +5,8 @@ use bevy_ecs::prelude::*;
 #[derive(Component)]
 #[cfg_attr(feature="reflect", derive(bevy_reflect::Reflect), reflect(from_reflect = false))]
 pub struct Connection {
+    pub(crate) owning_endpoint: Entity,
+
     #[cfg_attr(feature="reflect", reflect(ignore))]
     pub(crate) remote_address: SocketAddr,
 
@@ -69,7 +71,7 @@ pub enum ConnectionState {
 }
 
 /// Statistics related to a [`Connection`].
-#[derive(Debug, Clone)]
+#[derive(Debug, Default, Clone)]
 pub struct ConnectionStatistics {
     /// How many messages this client has sent, in total.
     pub total_messages_sent: u64,
