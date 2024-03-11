@@ -1,45 +1,42 @@
-use std::{collections::BTreeMap, time::{Instant, Duration}};
+use std::{collections::BTreeMap, time::Instant};
 use bytes::Bytes;
 use untrusted::{Reader, EndOfInput};
 use crate::sequences::*;
 
 const BITMASK: u128 = 1 << 127;
 
-struct SentPacket {
-    payload: Bytes,
-    time: Instant,
-}
-
-pub(crate) struct ReliablePackets {
+pub(crate) struct ReliabilityData {
     local_sequence: u16,
     remote_sequence: u16,
-    unacked_packets: BTreeMap<u16, SentPacket>,
     sequence_memory: u128,
 }
 
-impl ReliablePackets {
-    /// Gets the header of a reliable packet.
-    pub fn get_header(reader: &mut Reader<'_>, bitfield_bytes: usize) -> Result<ReliablePacketHeader, EndOfInput> {
-        let sequence = u16::from_be_bytes([
-           reader.read_byte()?,
-           reader.read_byte()?, 
-        ]);
-
-        let ack = u16::from_be_bytes([
-            reader.read_byte()?,
-            reader.read_byte()?,
-        ]);
-
-        let mut ack_bitfield_bytes = [0u8; 16];
-        ack_bitfield_bytes[..bitfield_bytes].clone_from_slice(
-            reader.read_bytes(bitfield_bytes)?.as_slice_less_safe());
-        let ack_bitfield = u128::from_ne_bytes(ack_bitfield_bytes);
-
-        Ok(ReliablePacketHeader { sequence, ack, ack_bitfield })
+impl ReliabilityData {
+    pub fn new() -> Self {
+        Self {
+            local_sequence: 0,
+            remote_sequence: 0,
+            sequence_memory: 0,
+        }
     }
 
-    /// Acknowledge packets identified in a reliable header.
-    pub fn acknowledge(&mut self, header: ReliablePacketHeader, bitfield_bytes: usize) {
+    /// Creates a ReliablePacketHeader for your outgoing data.
+    pub fn header(&mut self) -> ReliablePacketHeader {
+        // Generate header
+        let header = ReliablePacketHeader {
+            sequence: self.local_sequence,
+            ack: self.remote_sequence,
+            ack_bitfield: self.sequence_memory
+        };
+
+        // Move up local sequence counter
+        self.local_sequence = self.local_sequence.wrapping_add(1);
+
+        header
+    }
+
+    /// Acknowledge packets identified in a reliable header. Returns an iterator over the sequences of packets that have been acknowledged by the remote peer.
+    pub fn ack(&mut self, header: ReliablePacketHeader, bitfield_bytes: u8) -> impl Iterator<Item = u16> + Clone {
         // Update bitfield and remote sequence
         let seq_diff = wrapping_diff(header.sequence, self.remote_sequence);
         if sequence_greater_than(header.sequence, self.remote_sequence) {
@@ -51,68 +48,81 @@ impl ReliablePackets {
             self.sequence_memory |= BITMASK >> seq_diff;
         }
 
-        // Acknowledge the packet identified by the ack seq id
-        self.unacked_packets.remove(&header.ack);
-
-        // Acknowledge all sequences in the ack bitfield
-        for idx in 0..(bitfield_bytes * 8) {
-            let mask = BITMASK >> idx;
-            if header.ack_bitfield & mask == 0 { continue }
-            let ack = header.ack.wrapping_sub(idx as u16);
-            self.unacked_packets.remove(&ack);
+        // Iterator object for acknowledgements
+        #[derive(Clone)]
+        struct AcknowledgementIterator {
+            origin: u16,
+            cursor: u8,
+            limit: u8,
+            bitfield: u128,
         }
-    }
 
-    pub fn handle_outgoing(&mut self, payload: Bytes, bitfield_bytes: usize) -> ReliablePacketHeader {
-        // Generate header
-        let header = ReliablePacketHeader {
-            sequence: self.local_sequence,
-            ack: self.remote_sequence,
-            ack_bitfield: self.sequence_memory
-        };
+        impl Iterator for AcknowledgementIterator {
+            type Item = u16;
+        
+            fn next(&mut self) -> Option<Self::Item> {
+                // Get the ack value
+                loop {
+                    // Check if we've reached the limit
+                    if self.cursor == self.limit { return None }
 
-        // Add to unacked packets list
-        self.unacked_packets.insert(header.sequence, SentPacket { payload, time: Instant::now() });
+                    // Get the ack value
+                    let mask = BITMASK >> self.cursor;
+                    if self.bitfield & mask == 0 { self.cursor += 1; continue }
+                    let ack = self.origin.wrapping_sub(self.origin);
 
-        // Move up local sequence counter
-        self.local_sequence = self.local_sequence.wrapping_add(1);
-
-        header
-    }
-
-    /// Returns the oldest packet that has timed out, if any, based on `timeout`.
-    /// Also removes it from the unacknowledged set, so make sure it isn't dropped.
-    pub fn pop_oldest_timed_out(&mut self, timeout: Duration, now: Instant) -> Option<Bytes> {
-        use std::cmp::Ordering;
-
-        self.unacked_packets
-            .iter()
-            .filter(|(_, v)| { now.duration_since(v.time) > timeout })
-            .max_by(|(_, a), (_, b)| {
-                // Turn a comparison between two instants into an Ordering
-                match a.time.checked_duration_since(b.time) {
-                    Some(duration) => match duration > Duration::ZERO {
-                        true => Ordering::Greater,
-                        false => Ordering::Equal,
-                    },
-                    None => Ordering::Less,
+                    // Success, advance cursor and return
+                    self.cursor += 1;
+                    return Some(ack)
                 }
-            })
-            .map(|(_, sent)| sent.payload.clone())
-    }
+            }
+        }
 
-    /// Returns the packet corresponding to `id` if it hasn't been acknowledged yet.
-    pub fn get_unacked_packet(&self, id: u16) -> Option<Bytes> {
-        if let Some(packet) = self.unacked_packets.get(&id) {
-            Some(packet.payload.clone())
-        } else { 
-            None
+        // Create iterator
+        AcknowledgementIterator {
+            origin: header.ack,
+            cursor: 0,
+            limit: (bitfield_bytes * 8),
+            bitfield: header.ack_bitfield
         }
     }
 }
 
+#[derive(Debug, Clone, Copy)]
 pub struct ReliablePacketHeader {
     pub sequence: u16,
     pub ack: u16,
     pub ack_bitfield: u128,
 }
+
+pub(crate) struct ReliablePackets {
+    unacked_packets: BTreeMap<u16, SentPacket>,
+    data: ReliabilityData,
+}
+
+struct SentPacket {
+    payload: Bytes,
+    time: Instant,
+}
+
+/// Gets the header of a reliable packet from a byte reader.
+pub fn get_header(reader: &mut Reader<'_>, bitfield_bytes: usize) -> Result<ReliablePacketHeader, EndOfInput> {
+    let sequence = u16::from_be_bytes([
+       reader.read_byte()?,
+       reader.read_byte()?, 
+    ]);
+
+    let ack = u16::from_be_bytes([
+        reader.read_byte()?,
+        reader.read_byte()?,
+    ]);
+
+    let mut ack_bitfield_bytes = [0u8; 16];
+    ack_bitfield_bytes[..bitfield_bytes].clone_from_slice(
+        reader.read_bytes(bitfield_bytes)?.as_slice_less_safe());
+    let ack_bitfield = u128::from_ne_bytes(ack_bitfield_bytes);
+
+    Ok(ReliablePacketHeader { sequence, ack, ack_bitfield })
+}
+
+// TODO: Tests
