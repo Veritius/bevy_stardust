@@ -8,6 +8,7 @@ mod endpoint;
 mod connection;
 mod sequences;
 mod reliability;
+mod ordering;
 
 pub use plugin::UdpTransportPlugin;
 pub use manager::UdpManager;
