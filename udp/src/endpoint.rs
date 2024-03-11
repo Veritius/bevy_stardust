@@ -17,6 +17,9 @@ pub struct Endpoint {
     #[cfg_attr(feature="reflect", reflect(ignore))]
     pub(crate) connections: SmallVec::<[ConnectionOwnershipToken; 8]>,
 
+    #[cfg_attr(feature="reflect", reflect(ignore))]
+    pub(crate) statistics: EndpointStatistics,
+
     /// Whether or not to accept new incoming connections on this endpoint.
     pub listening: bool,
 }
@@ -31,6 +34,16 @@ impl Endpoint {
     /// Messages from the client that haven't been received will never be received.
     pub fn close(&mut self, hard: bool, reason: Option<Bytes>) {
         todo!()
+    }
+
+    /// Returns an iterator over the entity IDs of all connections attached to this endpoint.
+    pub fn connections(&self) -> impl Iterator<Item = Entity> + '_ {
+        self.connections.iter().map(|f| f.inner())
+    }
+
+    /// Returns statistics related to the Endpoint. See [`EndpointStatistics`] for more.
+    pub fn statistics(&self) -> &EndpointStatistics {
+        &self.statistics
     }
 }
 
@@ -62,4 +75,26 @@ impl std::ops::Deref for ConnectionOwnershipToken {
     fn deref(&self) -> &Self::Target {
         &self.0
     }
+}
+
+/// Statistics related to an Endpoint.
+#[derive(Debug, Clone)]
+pub struct EndpointStatistics {
+    /// How many packets have been sent, in total.
+    pub total_packets_sent: u64,
+
+    /// How many packets have been received, in total.
+    pub total_packets_received: u64,
+
+    /// How many packets have been detected to be dropped, in total.
+    pub total_packets_dropped: u64,
+
+    /// How many packets have been sent, this tick.
+    pub tick_packets_sent: u32,
+
+    /// How many packets have been received, this tick.
+    pub tick_packets_received: u32,
+
+    /// How many packets have been detected to be dropped, this tick.
+    pub tick_packets_dropped: u32,
 }

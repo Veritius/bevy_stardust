@@ -8,6 +8,9 @@ pub struct Connection {
     #[cfg_attr(feature="reflect", reflect(ignore))]
     pub(crate) remote_address: SocketAddr,
 
+    #[cfg_attr(feature="reflect", reflect(ignore))]
+    pub(crate) statistics: ConnectionStatistics,
+
     pub(crate) connection_dir: ConnectionDirection,
     pub(crate) connection_state: ConnectionState,
 }
@@ -28,6 +31,11 @@ impl Connection {
     /// See the [`ConnectionState`] docs for more information.
     pub fn state(&self) -> ConnectionState {
         self.connection_state.clone()
+    }
+
+    /// Returns statistics related to the Connection. See [`ConnectionStatistics`] for more.
+    pub fn statistics(&self) -> &ConnectionStatistics {
+        &self.statistics
     }
 }
 
@@ -58,4 +66,20 @@ pub enum ConnectionState {
     Closing,
     /// The connection is closed and the entity will be despawned soon.
     Closed,
+}
+
+/// Statistics related to an Endpoint.
+#[derive(Debug, Clone)]
+pub struct ConnectionStatistics {
+    /// How many messages this client has sent, in total.
+    pub total_messages_sent: u64,
+
+    /// How many messages this client has received, in total.
+    pub total_messages_received: u64,
+
+    /// How many messages this client has sent, this tick.
+    pub tick_messages_sent: u32,
+
+    /// How many messages this client has sent, this tick.
+    pub tick_messages_received: u32,
 }

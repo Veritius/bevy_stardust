@@ -14,5 +14,5 @@ mod receiving;
 
 pub use plugin::UdpTransportPlugin;
 pub use manager::UdpManager;
-pub use endpoint::Endpoint;
-pub use connection::{Connection, ConnectionDirection, ConnectionState};
+pub use endpoint::{Endpoint, EndpointStatistics};
+pub use connection::{Connection, ConnectionDirection, ConnectionState, ConnectionStatistics};
