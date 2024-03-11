@@ -37,9 +37,9 @@ impl Endpoint {
 /// A wrapper around an entity ID that guarantees that a Connection is only 'owned' by one [`Endpoint`] at a time.
 /// 
 /// This is done by making it that only one ConnectionOwnershipToken exists for a given entity ID in the same World.
-/// Because of this, all constructor functions (`new`, `clone`) are marked as unsafe.
+/// Because of this, all constructor functions (currently only `new`) are marked as unsafe.
 /// 
-/// If this token ever ends up attached to more than one [`Endpoint`] it will lead to undefined behavior.
+/// If a token ever ends up attached to more than one [`Endpoint`] at a time, it will lead to undefined behavior.
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
 #[repr(transparent)]
 pub(crate) struct ConnectionOwnershipToken(Entity);
