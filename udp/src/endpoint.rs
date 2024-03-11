@@ -3,6 +3,7 @@ use anyhow::Result;
 use bevy_ecs::prelude::*;
 use bytes::Bytes;
 use smallvec::SmallVec;
+use tracing::warn;
 
 /// An endpoint, which is used for I/O.
 /// 
@@ -21,10 +22,13 @@ pub struct Endpoint {
     #[cfg_attr(feature="reflect", reflect(ignore))]
     pub(crate) statistics: EndpointStatistics,
 
+    pub(crate) state: EndpointState,
+
     /// Whether or not to accept new incoming connections on this endpoint.
     pub listening: bool,
 }
 
+/// Functions for controlling the connection.
 impl Endpoint {
     pub(crate) fn bind(address: SocketAddr) -> Result<Self> {
         let socket = UdpSocket::bind(address)?;
@@ -34,6 +38,7 @@ impl Endpoint {
             socket,
             connections: SmallVec::new(),
             statistics: EndpointStatistics::default(),
+            state: EndpointState::Active,
             listening: false,
         })
     }
@@ -48,6 +53,16 @@ impl Endpoint {
     pub fn close(&mut self, hard: bool, reason: Option<Bytes>) {
         todo!()
     }
+}
+
+/// Information and statistics about the endpoint.
+impl Endpoint {
+    /// Returns the local address of the endpoint.
+    /// This is the address assigned by the operating system.
+    /// It is **not** what other peers use to connect over the Internet.
+    pub fn address(&self) -> SocketAddr {
+        self.socket.local_addr().unwrap()
+    }
 
     /// Returns an iterator over the entity IDs of all connections attached to this endpoint.
     pub fn connections(&self) -> impl Iterator<Item = Entity> + '_ {
@@ -58,6 +73,33 @@ impl Endpoint {
     pub fn statistics(&self) -> &EndpointStatistics {
         &self.statistics
     }
+
+    /// Returns the current state of the endpoint.
+    pub fn state(&self) -> &EndpointState {
+        &self.state
+    }
+}
+
+// Logs a warning when a non-Closed endpoint is dropped
+// This happens with component removals and drops in scope
+impl Drop for Endpoint {
+    fn drop(&mut self) {
+        if self.state != EndpointState::Closed {
+            warn!("Endpoint dropped while in the {:?} state", self.state);
+        }
+    }
+}
+
+/// The state of the endpoint.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature="reflect", derive(bevy_reflect::Reflect), reflect(from_reflect = false))]
+pub enum EndpointState {
+    /// Working as normal.
+    Active,
+    /// The endpoint is closing, and all connections are performing the disconnect handshake.
+    Closing,
+    /// The endpoint is closed and will be despawned soon.
+    Closed,
 }
 
 /// A wrapper around an entity ID that guarantees that a Connection is only 'owned' by one [`Endpoint`] at a time.

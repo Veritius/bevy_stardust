@@ -1,7 +1,16 @@
 use std::net::SocketAddr;
 use bevy_ecs::prelude::*;
+use bytes::Bytes;
+use tracing::warn;
 
-/// A UDP connection.
+/// A running UDP connection.
+/// 
+/// This component exists throughout the entire lifecycle of the connection.
+/// However, the `NetworkPeer` component will only be present in the `Established` state.
+/// This behavior may change in future.
+/// 
+/// To close a connection, you should use the `close` method.
+/// If you drop the connection without it fully closing, a warning will be logged.
 #[derive(Component)]
 #[cfg_attr(feature="reflect", derive(bevy_reflect::Reflect), reflect(from_reflect = false))]
 pub struct Connection {
@@ -17,6 +26,19 @@ pub struct Connection {
     pub(crate) connection_state: ConnectionState,
 }
 
+/// Functions for controlling the connection.
+impl Connection {
+    /// Queues the connection for closing, informing the peer of why.
+    /// 
+    /// If `hard` is set to `true`, the connection will be closed immediately.
+    /// A packet will be sent to inform the end user of the closure, but it won't be reliable.
+    /// This should generally be avoided, as all data that is yet to be received will be lost.
+    pub fn close(&mut self, _hard: bool, _reason: Bytes) {
+        todo!()
+    }
+}
+
+/// Information and statistics about the connection.
 impl Connection {
     /// Returns the remote address of the connection.
     pub fn remote_address(&self) -> SocketAddr {
@@ -38,6 +60,16 @@ impl Connection {
     /// Returns statistics related to the Connection. See [`ConnectionStatistics`] for more.
     pub fn statistics(&self) -> &ConnectionStatistics {
         &self.statistics
+    }
+}
+
+// Logs a warning when a non-Closed connection is dropped
+// This happens with component removals and drops in scope
+impl Drop for Connection {
+    fn drop(&mut self) {
+        if self.connection_state != ConnectionState::Closed {
+            warn!("Connection dropped while in the {:?} state", self.connection_state);
+        }
     }
 }
 
