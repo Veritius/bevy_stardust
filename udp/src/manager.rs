@@ -41,7 +41,13 @@ impl UdpManager<'_, '_> {
         endpoint: Entity,
     ) -> Result<Entity> {
         let mut endpoint_ref = self.endpoints.get_mut(endpoint)?;
-        Self::open_connection_inner(&mut self.commands, address, endpoint, &mut endpoint_ref)
+
+        Self::open_connection_inner(
+            &mut self.commands,
+            address,
+            endpoint,
+            &mut endpoint_ref
+        )
     }
 
     fn open_connection_inner(
@@ -78,7 +84,12 @@ impl UdpManager<'_, '_> {
         let mut endpoint = self.open_endpoint_inner(address)?;
 
         // Create connection and spawn an entity for it
-        let connection_id = Self::open_connection_inner(&mut self.commands, remote, endpoint_id, &mut endpoint)?;
+        let connection_id = Self::open_connection_inner(
+            &mut self.commands,
+            remote,
+            endpoint_id,
+            &mut endpoint
+        )?;
 
         // Spawn the endpoint entity
         // We only do this here because by this point we cannot fail
