@@ -94,7 +94,4 @@ pub struct EndpointStatistics {
 
     /// How many packets have been received, this tick.
     pub tick_packets_received: u32,
-
-    /// How many packets have been detected to be dropped, this tick.
-    pub tick_packets_dropped: u32,
 }
