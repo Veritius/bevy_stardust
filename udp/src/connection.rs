@@ -68,7 +68,7 @@ pub enum ConnectionState {
     Closed,
 }
 
-/// Statistics related to an Endpoint.
+/// Statistics related to a [`Connection`].
 #[derive(Debug, Clone)]
 pub struct ConnectionStatistics {
     /// How many messages this client has sent, in total.

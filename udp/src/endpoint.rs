@@ -77,7 +77,7 @@ impl std::ops::Deref for ConnectionOwnershipToken {
     }
 }
 
-/// Statistics related to an Endpoint.
+/// Statistics related to an [`Endpoint`].
 #[derive(Debug, Clone)]
 pub struct EndpointStatistics {
     /// How many packets have been sent, in total.
