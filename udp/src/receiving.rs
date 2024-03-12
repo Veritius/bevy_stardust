@@ -3,6 +3,7 @@ use bevy_ecs::prelude::*;
 use bytes::Bytes;
 use crate::{packet::IncomingPacket, Connection, Endpoint};
 
+// Receives packets from UDP sockets
 pub(crate) fn io_receiving_system(
     endpoints: Query<&mut Endpoint>,
     connections: Query<&mut Connection>,
@@ -45,6 +46,31 @@ pub(crate) fn io_receiving_system(
                     todo!();
                 }
             }
+        }
+    });
+}
+
+// Processes packets into individual messages
+pub(crate) fn packet_parsing_system(
+    mut connections: Query<&mut Connection>,
+) {
+    use untrusted::*;
+
+    // Parses things in parallel
+    connections.par_iter_mut().for_each(|mut connection| {
+        // Iterate all packets this peer has received
+        while let Some(packet) = connection.incoming_packets.pop_front() {
+            let mut reader = Reader::new(Input::from(&packet.payload));
+
+            // Wrap in a closure so we can use the ? operator, which simplifies code significantly
+            let _: Result<(), EndOfInput> = (|| {
+                // Read the header of the packet
+                let header = reader.read_bytes(2)?;
+
+                todo!();
+
+                Ok(())
+            })();
         }
     });
 }

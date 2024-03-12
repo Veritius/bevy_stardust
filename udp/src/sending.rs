@@ -2,6 +2,7 @@ use std::{collections::HashMap, net::{SocketAddr, UdpSocket}};
 use bevy_ecs::prelude::*;
 use crate::{endpoint::ConnectionOwnershipToken, Connection, Endpoint, EndpointStatistics};
 
+// Sends packets to UDP sockets
 pub(crate) fn io_sending_system(
     mut endpoints: Query<&mut Endpoint>,
     connections: Query<&mut Connection>,

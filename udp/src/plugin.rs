@@ -25,12 +25,15 @@ impl Default for UdpTransportPlugin {
 
 impl Plugin for UdpTransportPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(PreUpdate, crate::receiving::io_receiving_system
-            .in_set(NetworkRead::Receive)
-            .before(NetworkRead::Read));
+        // Packet receiving systems
+        app.add_systems(PreUpdate, (
+            crate::receiving::io_receiving_system,
+            crate::receiving::packet_parsing_system,
+        ).chain().in_set(NetworkRead::Receive).before(NetworkRead::Read));
 
-        app.add_systems(PostUpdate, crate::sending::io_sending_system
-            .in_set(NetworkWrite::Send)
-            .before(NetworkWrite::Clear));
+        // Packet transmitting systems
+        app.add_systems(PostUpdate, (
+            crate::sending::io_sending_system
+        ).chain().in_set(NetworkWrite::Send).before(NetworkWrite::Clear));
     }
 }
