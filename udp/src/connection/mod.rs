@@ -2,14 +2,16 @@ pub mod statistics;
 
 mod statemachine;
 mod handshake;
+mod timing;
 
 use std::{net::SocketAddr, time::Instant};
 use bevy_ecs::prelude::*;
 use bytes::Bytes;
 use tracing::warn;
 use crate::packet::PacketQueue;
-use statistics::ConnectionStatistics;
 use statemachine::ConnectionStateMachine;
+use statistics::ConnectionStatistics;
+use timing::ConnectionTimings;
 
 /// A running UDP connection.
 /// 
@@ -22,19 +24,17 @@ use statemachine::ConnectionStateMachine;
 #[derive(Component)]
 #[cfg_attr(feature="reflect", derive(bevy_reflect::Reflect), reflect(from_reflect = false))]
 pub struct Connection {
-    pub(crate) owning_endpoint: Entity,
-
     #[cfg_attr(feature="reflect", reflect(ignore))]
     pub(crate) remote_address: SocketAddr,
 
     #[cfg_attr(feature="reflect", reflect(ignore))]
     pub(crate) state_machine: ConnectionStateMachine,
 
-    pub(crate) direction: ConnectionDirection,
-    pub(crate) statistics: ConnectionStatistics,
+    pub(crate) owning_endpoint: Entity,
 
-    pub(crate) last_recv: Option<Instant>,
-    pub(crate) last_send: Option<Instant>,
+    pub(crate) direction: ConnectionDirection,
+    pub(crate) timings: ConnectionTimings,
+    pub(crate) statistics: ConnectionStatistics,
 
     #[cfg_attr(feature="reflect", reflect(ignore))]
     pub(crate) packet_queue: PacketQueue,
@@ -56,14 +56,16 @@ impl Connection {
                 ConnectionDirection::Outgoing => ConnectionStateMachine::new_outgoing(),
                 ConnectionDirection::Incoming => ConnectionStateMachine::new_incoming(),
             },
-            last_recv: match direction {
-                ConnectionDirection::Outgoing => None,
-                ConnectionDirection::Incoming => Some(Instant::now()),
-            },
-            last_send: match direction {
-                ConnectionDirection::Outgoing => Some(Instant::now()),
-                ConnectionDirection::Incoming => None,
-            },
+            timings: ConnectionTimings::new(
+                match direction {
+                    ConnectionDirection::Outgoing => None,
+                    ConnectionDirection::Incoming => Some(Instant::now()),
+                },
+                match direction {
+                    ConnectionDirection::Outgoing => Some(Instant::now()),
+                    ConnectionDirection::Incoming => None,
+                },
+            ),
             packet_queue: PacketQueue::new(16, 16),
         }
     }
@@ -95,7 +97,7 @@ impl Connection {
     pub fn state(&self) -> ConnectionState {
         self.state_machine
             .as_simple_repr()
-            .recv_hack(self.last_recv.is_none())
+            .recv_hack(self.timings.last_recv.is_none())
     }
 
     /// Returns statistics related to the Connection. See [`ConnectionStatistics`] for more.
