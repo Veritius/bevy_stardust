@@ -38,7 +38,7 @@ impl Plugin for UdpTransportPlugin {
 
         // Reset tick statistics at the end of the tick
         app.add_systems(Last, (
-            crate::connection::reset_connection_statistics_system,
+            crate::connection::statistics::reset_connection_statistics_system,
             crate::endpoint::reset_endpoint_statistics_system,
         ));
     }

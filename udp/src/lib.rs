@@ -4,7 +4,6 @@
 
 mod connection;
 mod endpoint;
-mod handshake;
 mod manager;
 mod ordering;
 mod packet;
@@ -17,4 +16,4 @@ mod sequences;
 pub use plugin::UdpTransportPlugin;
 pub use manager::UdpManager;
 pub use endpoint::{Endpoint, EndpointState, EndpointStatistics};
-pub use connection::{Connection, ConnectionDirection, ConnectionState, ConnectionStatistics};
+pub use connection::{Connection, ConnectionDirection, ConnectionState, statistics::ConnectionStatistics};

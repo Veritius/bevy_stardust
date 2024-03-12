@@ -33,7 +33,7 @@ pub(crate) fn io_sending_system(
             let mut connection = unsafe { connections.get_unchecked(token.inner()).unwrap() };
 
             // Send all packets queued in this peer
-            while let Some(packet) = connection.outgoing_packets.pop_front() {
+            while let Some(packet) = connection.packet_queue.pop_outgoing() {
                 match socket.send_to(&packet.payload, connection.remote_address()) {
                     Ok(_) => {
                         // Add to statistics counters

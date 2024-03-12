@@ -34,4 +34,5 @@ This establishes the acknowledgement state of the Listener.
 */
 
 /// Handshake state machine for connections.
+#[derive(Debug)]
 pub(crate) struct ConnectionHandshake(());

@@ -22,7 +22,7 @@ pub(crate) fn io_receiving_system(
                             let mut connection = unsafe { connections.get_unchecked(token.inner()).unwrap() };
 
                             // We append it to the queue for later processing
-                            connection.incoming_packets.push_back(IncomingPacket {
+                            connection.packet_queue.push_incoming(IncomingPacket {
                                 payload: Bytes::copy_from_slice(&scratch[..bytes]),
                             });
                         },
@@ -59,7 +59,7 @@ pub(crate) fn packet_parsing_system(
     // Parses things in parallel
     connections.par_iter_mut().for_each(|mut connection| {
         // Iterate all packets this peer has received
-        while let Some(packet) = connection.incoming_packets.pop_front() {
+        while let Some(packet) = connection.packet_queue.pop_incoming() {
             let mut reader = Reader::new(Input::from(&packet.payload));
 
             // Wrap in a closure so we can use the ? operator, which simplifies code significantly
