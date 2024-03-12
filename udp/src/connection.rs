@@ -1,4 +1,4 @@
-use std::{collections::VecDeque, net::SocketAddr};
+use std::{collections::VecDeque, net::SocketAddr, time::Instant};
 use bevy_ecs::prelude::*;
 use bytes::Bytes;
 use tracing::warn;
@@ -25,6 +25,9 @@ pub struct Connection {
     pub(crate) connection_dir: ConnectionDirection,
     pub(crate) connection_state: ConnectionState,
 
+    pub(crate) last_recv: Option<Instant>,
+    pub(crate) last_send: Option<Instant>,
+
     #[cfg_attr(feature="reflect", reflect(ignore))]
     pub(crate) outgoing_packets: VecDeque<OutgoingPacket>,
 
@@ -47,6 +50,14 @@ impl Connection {
             connection_state: match direction {
                 ConnectionDirection::Outgoing => ConnectionState::Pending,
                 ConnectionDirection::Incoming => ConnectionState::Handshaking,
+            },
+            last_recv: match direction {
+                ConnectionDirection::Outgoing => None,
+                ConnectionDirection::Incoming => Some(Instant::now()),
+            },
+            last_send: match direction {
+                ConnectionDirection::Outgoing => Some(Instant::now()),
+                ConnectionDirection::Incoming => None,
             },
             outgoing_packets: VecDeque::default(),
             incoming_packets: VecDeque::default()
