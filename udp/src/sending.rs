@@ -1,4 +1,4 @@
-use std::net::UdpSocket;
+use std::{collections::HashMap, net::{SocketAddr, UdpSocket}};
 use bevy_ecs::prelude::*;
 use crate::{endpoint::ConnectionOwnershipToken, Connection, Endpoint, EndpointStatistics};
 
@@ -13,7 +13,7 @@ pub(crate) fn io_sending_system(
         #[inline]
         fn split_borrow(endpoint: &mut Endpoint) -> (
             &UdpSocket,
-            &[ConnectionOwnershipToken],
+            &HashMap<SocketAddr, ConnectionOwnershipToken>,
             &mut EndpointStatistics,
         ) {(
             &endpoint.socket,
@@ -23,21 +23,21 @@ pub(crate) fn io_sending_system(
 
         let (
             socket,
-            owned_connections,
+            connection_map,
             endpoint_statistics
         ) = split_borrow(&mut endpoint);
 
-        for connection in owned_connections {
+        for (_, token) in connection_map {
             // SAFETY: This is safe because ConnectionOwnershipToken ensures that only one endpoint 'owns' a connection.
-            let mut connection = unsafe { connections.get_unchecked(connection.inner()).unwrap() };
+            let mut connection = unsafe { connections.get_unchecked(token.inner()).unwrap() };
 
             // Send all packets queued in this peer
             while let Some(packet) = connection.outgoing_packets.pop_front() {
-                match socket.send_to(&packet, connection.remote_address()) {
+                match socket.send_to(&packet.payload, connection.remote_address()) {
                     Ok(_) => {
                         // Add to statistics counters
-                        endpoint_statistics.track_send_packet(packet.len());
-                        connection.statistics.track_send_packet(todo!());
+                        endpoint_statistics.track_send_packet(packet.payload.len());
+                        connection.statistics.track_send_packet(packet.messages as usize);
                     },
                     Err(_) => todo!(),
                 }

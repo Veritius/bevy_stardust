@@ -1,12 +1,50 @@
+use std::io::ErrorKind;
 use bevy_ecs::prelude::*;
-use crate::{Connection, Endpoint};
+use bytes::Bytes;
+use crate::{packet::IncomingPacket, Connection, Endpoint};
 
 pub(crate) fn io_receiving_system(
-    mut endpoints: Query<&mut Endpoint>,
-    mut connections: Query<&mut Connection>,
+    endpoints: Query<&mut Endpoint>,
+    connections: Query<&mut Connection>,
 ) {
     // Iterate all endpoints
-    endpoints.par_iter_mut().for_each(|mut endpoint| {
-        todo!()
+    endpoints.par_iter().for_each(|endpoint| {
+        loop {
+            let mut scratch = [0u8; 1478];
+            match endpoint.socket.recv_from(&mut scratch) {
+                // Received a UDP packet
+                Ok((bytes, origin)) => {
+                    match endpoint.connections.get(&origin) {
+                        // We know this peer
+                        Some(token) => {
+                            // SAFETY: This is fine because of ConnectionOwnershipToken's guarantees
+                            let mut connection = unsafe { connections.get_unchecked(token.inner()).unwrap() };
+
+                            // We append it to the queue for later processing
+                            connection.incoming_packets.push_back(IncomingPacket {
+                                payload: Bytes::copy_from_slice(&scratch[..bytes]),
+                            });
+                        },
+
+                        // We don't know this peer
+                        None => {
+                            todo!()
+                        },
+                    }
+                },
+
+                // No more packets to read
+                Err(err) if err.kind() == ErrorKind::WouldBlock => {
+                    // Break out of the loop
+                    break
+                },
+
+                // I/O error reported by the system
+                Err(err) => {
+                    // TODO: Close endpoints based on certain errors
+                    todo!();
+                }
+            }
+        }
     });
 }

@@ -2,15 +2,16 @@
 
 #![warn(missing_docs)]
 
-mod plugin;
-mod manager;
-mod endpoint;
 mod connection;
-mod sequences;
-mod reliability;
+mod endpoint;
+mod manager;
 mod ordering;
-mod sending;
+mod packet;
+mod plugin;
 mod receiving;
+mod reliability;
+mod sending;
+mod sequences;
 
 pub use plugin::UdpTransportPlugin;
 pub use manager::UdpManager;

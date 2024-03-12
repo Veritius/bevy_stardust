@@ -1,8 +1,7 @@
-use std::net::{SocketAddr, UdpSocket};
+use std::{collections::HashMap, net::{SocketAddr, UdpSocket}};
 use anyhow::Result;
 use bevy_ecs::prelude::*;
 use bytes::Bytes;
-use smallvec::SmallVec;
 use tracing::warn;
 
 /// An endpoint, which is used for I/O.
@@ -17,7 +16,7 @@ pub struct Endpoint {
     pub(crate) socket: UdpSocket,
 
     #[cfg_attr(feature="reflect", reflect(ignore))]
-    pub(crate) connections: SmallVec::<[ConnectionOwnershipToken; 8]>,
+    pub(crate) connections: HashMap<SocketAddr, ConnectionOwnershipToken>,
 
     pub(crate) statistics: EndpointStatistics,
     pub(crate) state: EndpointState,
@@ -34,7 +33,7 @@ impl Endpoint {
 
         Ok(Endpoint {
             socket,
-            connections: SmallVec::new(),
+            connections: HashMap::with_capacity(8),
             statistics: EndpointStatistics::default(),
             state: EndpointState::Active,
             listening: false,
@@ -64,7 +63,7 @@ impl Endpoint {
 
     /// Returns an iterator over the entity IDs of all connections attached to this endpoint.
     pub fn connections(&self) -> impl Iterator<Item = Entity> + '_ {
-        self.connections.iter().map(|f| f.inner())
+        self.connections.iter().map(|(_,v)| v.inner())
     }
 
     /// Returns statistics related to the Endpoint. See [`EndpointStatistics`] for more.

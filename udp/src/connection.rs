@@ -3,6 +3,8 @@ use bevy_ecs::prelude::*;
 use bytes::Bytes;
 use tracing::warn;
 
+use crate::packet::{IncomingPacket, OutgoingPacket};
+
 /// A running UDP connection.
 /// 
 /// This component exists throughout the entire lifecycle of the connection.
@@ -24,10 +26,10 @@ pub struct Connection {
     pub(crate) connection_state: ConnectionState,
 
     #[cfg_attr(feature="reflect", reflect(ignore))]
-    pub(crate) outgoing_packets: VecDeque<Bytes>,
+    pub(crate) outgoing_packets: VecDeque<OutgoingPacket>,
 
     #[cfg_attr(feature="reflect", reflect(ignore))]
-    pub(crate) incoming_packets: VecDeque<Bytes>,
+    pub(crate) incoming_packets: VecDeque<IncomingPacket>,
 }
 
 /// Functions for controlling the connection.
