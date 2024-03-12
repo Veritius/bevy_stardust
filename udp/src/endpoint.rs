@@ -176,3 +176,15 @@ impl EndpointStatistics {
         self.tick_bytes_received += bytes as u32;
     }
 }
+
+pub(crate) fn reset_endpoint_statistics_system(
+    mut endpoints: Query<&mut Endpoint>,
+) {
+    for mut endpoint in endpoints.iter_mut() {
+        let statistics = &mut endpoint.statistics;
+        statistics.tick_packets_sent = 0;
+        statistics.tick_packets_received = 0;
+        statistics.tick_bytes_sent = 0;
+        statistics.tick_bytes_received = 0;
+    }
+}

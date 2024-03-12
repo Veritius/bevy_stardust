@@ -35,5 +35,11 @@ impl Plugin for UdpTransportPlugin {
         app.add_systems(PostUpdate, (
             crate::sending::io_sending_system
         ).chain().in_set(NetworkWrite::Send).before(NetworkWrite::Clear));
+
+        // Reset tick statistics at the end of the tick
+        app.add_systems(Last, (
+            crate::connection::reset_connection_statistics_system,
+            crate::endpoint::reset_endpoint_statistics_system,
+        ));
     }
 }

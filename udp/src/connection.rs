@@ -174,3 +174,15 @@ impl ConnectionStatistics {
         self.tick_messages_received += messages as u32;
     }
 }
+
+pub(crate) fn reset_connection_statistics_system(
+    mut connections: Query<&mut Connection>,
+) {
+    for mut connection in connections.iter_mut() {
+        let statistics = &mut connection.statistics;
+        statistics.tick_packets_sent = 0;
+        statistics.tick_packets_received = 0;
+        statistics.tick_messages_sent = 0;
+        statistics.tick_messages_received;
+    }
+}
