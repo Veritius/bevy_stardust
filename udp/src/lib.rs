@@ -4,6 +4,7 @@
 
 mod connection;
 mod endpoint;
+mod handshake;
 mod manager;
 mod ordering;
 mod packet;

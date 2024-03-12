@@ -88,6 +88,7 @@ impl ReliabilityData {
     }
 }
 
+/// Required information for a reliable packet.
 #[derive(Debug, Clone, Copy)]
 pub struct ReliablePacketHeader {
     pub sequence: u16,
