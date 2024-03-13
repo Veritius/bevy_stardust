@@ -148,7 +148,7 @@ impl ConnectionHandshake {
                     }
                 }
 
-                // Check if we need to resend the packet
+                // Check if we need to send a response packet
                 let now = Instant::now();
                 if timeout_check(self.last_sent, now, HANDSHAKE_RESEND_DURATION) {
                     // Generate packet and queue it for sending
@@ -176,6 +176,20 @@ impl ConnectionHandshake {
                         PacketRecvOutcome::Valid(_) => todo!(),
                         PacketRecvOutcome::Failure(_) => todo!(),
                     }
+                }
+
+                // Check if we need to send a response packet
+                let now = Instant::now();
+                if timeout_check(self.last_sent, now, HANDSHAKE_RESEND_DURATION) {
+                    // Generate packet and queue it for sending
+                    let bytes = build_second_pkt_ok(&self.context, &self.reliability);
+                    packets.push_outgoing(OutgoingPacket {
+                        payload: bytes,
+                        messages: 0,
+                    });
+
+                    // Update time tracking info
+                    self.last_sent = Some(now);
                 }
 
                 // Do nothing
