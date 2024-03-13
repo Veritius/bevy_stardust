@@ -1,4 +1,4 @@
-use std::{net::{IpAddr, Ipv4Addr, SocketAddr, SocketAddrV4}, time::Duration};
+use std::{net::{SocketAddr, SocketAddrV4, Ipv4Addr}, time::Duration};
 use bevy_ecs::prelude::*;
 use bevy_app::{prelude::*, AppLabel, ScheduleRunnerPlugin, SubApp};
 use bevy_log::LogPlugin;

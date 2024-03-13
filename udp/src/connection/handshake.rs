@@ -65,7 +65,6 @@ The following response codes do not have any additional data and so do not appea
 use std::time::{Duration, Instant};
 use bytes::{BufMut, Bytes, BytesMut};
 use untrusted::{EndOfInput, Input, Reader};
-use bevy_ecs::prelude::Resource;
 use crate::{appdata::{ApplicationContext, TRANSPORT_IDENTIFIER, TRANSPORT_VERSION_MAJOR, TRANSPORT_VERSION_MINOR}, packet::{OutgoingPacket, PacketQueue}, utils::slice_to_array};
 use super::{reliability::{ReliabilityData, ReliablePacketHeader}, timing::timeout_check};
 
