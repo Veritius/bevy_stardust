@@ -238,17 +238,11 @@ fn recv_second_pkt(
 ) -> PacketRecvOutcome<[u16;3]> {
     // TODO: When try_trait_v2 stabilises, use FromResidual to make this code more concise
 
-    // Get the response code as an integer
-    let response_code_int = u16::from_be_bytes(match slice_to_array::<2>(reader) {
-        Ok(int) => int,
-        Err(_) => { return PacketRecvOutcome::WeRejected(HandshakeResponseCode::RejectBadPacket); },
-    });
-
-    // Turn integer into a response code enum variant
-    // If it fails, we just say their packet was invalid
-    let response_code = match HandshakeResponseCode::try_from(response_code_int) {
-        Ok(code) => code,
-        Err(_) => { return PacketRecvOutcome::WeRejected(HandshakeResponseCode::RejectBadPacket); },
+    // Get the response code from the packet
+    // If this fails, we just say their packet was invalid
+    let response_code = match resp_code_qfx(reader) {
+        Some(code) => code,
+        None => { return PacketRecvOutcome::WeRejected(HandshakeResponseCode::RejectBadPacket); }
     };
 
     // Check the response code
@@ -330,6 +324,33 @@ fn build_third_pkt_ok(
     return buf.freeze();
 }
 
+fn recv_third_pkt(
+    reader: &mut Reader,
+) -> PacketRecvOutcome<[u16;3]> {
+    // TODO: When try_trait_v2 stabilises, use FromResidual to make this code more concise
+
+    // Get the response code from the packet
+    // If this fails, we just say their packet was invalid
+    let response_code = match resp_code_qfx(reader) {
+        Some(code) => code,
+        None => { return PacketRecvOutcome::WeRejected(HandshakeResponseCode::RejectBadPacket); }
+    };
+
+    // Get reliability values from the packet
+    let mut return_value = [0u16; 3];
+    for i in 0..3 {
+        let val = u16::from_be_bytes(match slice_to_array::<2>(reader) {
+            Ok(ident) => ident,
+            Err(_) => { return PacketRecvOutcome::WeRejected(HandshakeResponseCode::RejectBadPacket); },
+        });
+
+        return_value[i] = val;
+    }
+
+    // We're done, return our values
+    return PacketRecvOutcome::Continue(return_value)
+}
+
 struct HandshakeResponse  {
     pub code: HandshakeResponseCode,
     pub payload: Option<Bytes>,
@@ -362,6 +383,23 @@ impl From<EndOfInput> for HandshakeResponseCode {
     fn from(value: EndOfInput) -> Self {
         Self::RejectBadPacket
     }
+}
+
+fn resp_code_qfx(reader: &mut Reader) -> Option<HandshakeResponseCode> {
+    // Get the response code as an integer
+    let response_code_int = u16::from_be_bytes(match slice_to_array::<2>(reader) {
+        Ok(int) => int,
+        Err(_) => { return None; },
+    });
+
+    // Turn integer into a response code enum variant
+    let response_code = match HandshakeResponseCode::try_from(response_code_int) {
+        Ok(code) => code,
+        Err(_) => { return None; },
+    };
+
+    // Success!
+    return Some(response_code)
 }
 
 enum PacketRecvOutcome<T> {
