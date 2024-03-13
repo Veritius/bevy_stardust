@@ -28,8 +28,8 @@ impl ConnectionStateMachine {
     }
 }
 
-pub(super) enum PotentialStateTransition<R, T> {
-    Nothing(R),
-    Transition(T),
-    Failure,
+pub(super) enum PotentialStateTransition<Repeat, Transition, Failure> {
+    Nothing(Repeat),
+    Transition(Transition),
+    Failure(Failure),
 }

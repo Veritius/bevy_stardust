@@ -64,10 +64,10 @@ The following response codes do not have any additional data and so do not appea
 
 use std::time::{Duration, Instant};
 use bytes::{BufMut, Bytes, BytesMut};
-use untrusted::{EndOfInput, Reader};
+use untrusted::{EndOfInput, Input, Reader};
 use bevy_ecs::prelude::Resource;
 use crate::{packet::{OutgoingPacket, PacketQueue}, utils::slice_to_array};
-use super::{reliability::ReliabilityData, statemachine::PotentialStateTransition, timing::{timeout_check, ConnectionTimings}};
+use super::{reliability::{ReliabilityData, ReliablePacketHeader}, statemachine::PotentialStateTransition, timing::{timeout_check, ConnectionTimings}};
 
 const HANDSHAKE_RESEND_DURATION: Duration = Duration::from_secs(5);
 
@@ -120,11 +120,14 @@ impl ConnectionHandshake {
     pub fn poll(
         mut self,
         packets: &mut PacketQueue,
-    ) -> PotentialStateTransition<Self, ()> {
+    ) -> PotentialStateTransition<Self, (), HandshakeFailure> {
         match self.state {
             HandshakeState::RelSynSent => {
                 // Check if we've received a response yet
                 if let Some(packet) = packets.pop_incoming() {
+                    let mut reader = Reader::new(Input::from(&packet.payload));
+
+                    // Parse packet to see if it's valid
                     todo!()
                 }
 
@@ -145,7 +148,22 @@ impl ConnectionHandshake {
                 // Do nothing
                 return PotentialStateTransition::Nothing(self);
             },
-            HandshakeState::RelSynRecv => todo!(),
+
+            HandshakeState::RelSynRecv => {
+                // Check if we've received a response yet
+                if let Some(packet) = packets.pop_incoming() {
+                    let mut reader = Reader::new(Input::from(&packet.payload));
+
+                    // Parse packet to see if it's valid
+                    match recv_third_pkt(&mut reader) {
+                        PacketRecvOutcome::Valid(_) => todo!(),
+                        PacketRecvOutcome::Failure(_) => todo!(),
+                    }
+                }
+
+                // Do nothing
+                return PotentialStateTransition::Nothing(self);
+            },
         }
     }
 }
@@ -235,41 +253,41 @@ fn build_second_pkt_ok(
 fn recv_second_pkt(
     context: &HandshakeContext,
     reader: &mut Reader,
-) -> PacketRecvOutcome<[u16;3]> {
+) -> PacketRecvOutcome<ReliablePacketHeader> {
     // TODO: When try_trait_v2 stabilises, use FromResidual to make this code more concise
 
     // Get the response code from the packet
     // If this fails, we just say their packet was invalid
     let response_code = match resp_code_qfx(reader) {
         Some(code) => code,
-        None => { return PacketRecvOutcome::WeRejected(HandshakeResponseCode::RejectBadPacket); }
+        None => { return HandshakeFailure::them(HandshakeResponseCode::RejectBadPacket).into(); }
     };
 
     // Check the response code
     if response_code != HandshakeResponseCode::Accept {
-        return PacketRecvOutcome::TheyRejected(response_code);
+        return HandshakeFailure::them(response_code).into();
     }
 
     // Get the transport identifier
     let tp_id = u64::from_be_bytes(match slice_to_array::<8>(reader) {
         Ok(ident) => ident,
-        Err(_) => { return PacketRecvOutcome::WeRejected(HandshakeResponseCode::RejectBadPacket); },
+        Err(_) => { return HandshakeFailure::us(HandshakeResponseCode::RejectBadPacket).into(); },
     });
 
     // Check the transport identifier
     if tp_id != context.transport_identifier {
-        return PacketRecvOutcome::WeRejected(HandshakeResponseCode::RejectIncompatibleTransport)
+        return HandshakeFailure::us(HandshakeResponseCode::RejectIncompatibleTransport).into()
     }
 
     // Get the major transport version
     let tp_maj_ver = u32::from_be_bytes(match slice_to_array::<4>(reader) {
         Ok(ident) => ident,
-        Err(_) => { return PacketRecvOutcome::WeRejected(HandshakeResponseCode::RejectBadPacket); },
+        Err(_) => { return HandshakeFailure::us(HandshakeResponseCode::RejectBadPacket).into(); },
     });
 
     // Check the major transport version
     if tp_maj_ver != context.transport_version_major {
-        return PacketRecvOutcome::WeRejected(HandshakeResponseCode::RejectIncompatibleVersion)
+        return HandshakeFailure::us(HandshakeResponseCode::RejectIncompatibleVersion).into();
     }
 
     // We don't check the minor version here either
@@ -278,12 +296,12 @@ fn recv_second_pkt(
     // Get the application identifier
     let app_id = u64::from_be_bytes(match slice_to_array::<8>(reader) {
         Ok(ident) => ident,
-        Err(_) => { return PacketRecvOutcome::WeRejected(HandshakeResponseCode::RejectBadPacket); },
+        Err(_) => { return HandshakeFailure::us(HandshakeResponseCode::RejectBadPacket).into(); },
     });
 
     // Check the application identifier
     if app_id != context.application_identifier {
-        return PacketRecvOutcome::WeRejected(HandshakeResponseCode::RejectIncompatibleApplication)
+        return HandshakeFailure::us(HandshakeResponseCode::RejectIncompatibleApplication).into();
     }
 
     // Get reliability values from the packet
@@ -291,14 +309,18 @@ fn recv_second_pkt(
     for i in 0..3 {
         let val = u16::from_be_bytes(match slice_to_array::<2>(reader) {
             Ok(ident) => ident,
-            Err(_) => { return PacketRecvOutcome::WeRejected(HandshakeResponseCode::RejectBadPacket); },
+            Err(_) => { return HandshakeFailure::us(HandshakeResponseCode::RejectBadPacket).into(); },
         });
 
         return_value[i] = val;
     }
 
     // We're done, return our values
-    return PacketRecvOutcome::Continue(return_value)
+    return PacketRecvOutcome::Valid(ReliablePacketHeader {
+        sequence: return_value[0],
+        ack: return_value[1],
+        ack_bitfield: extend_bitfield(return_value[2]),
+    })
 }
 
 fn build_third_pkt_ok(
@@ -326,14 +348,14 @@ fn build_third_pkt_ok(
 
 fn recv_third_pkt(
     reader: &mut Reader,
-) -> PacketRecvOutcome<[u16;3]> {
+) -> PacketRecvOutcome<ReliablePacketHeader> {
     // TODO: When try_trait_v2 stabilises, use FromResidual to make this code more concise
 
     // Get the response code from the packet
     // If this fails, we just say their packet was invalid
     let response_code = match resp_code_qfx(reader) {
         Some(code) => code,
-        None => { return PacketRecvOutcome::WeRejected(HandshakeResponseCode::RejectBadPacket); }
+        None => { return HandshakeFailure::us(HandshakeResponseCode::RejectBadPacket).into(); }
     };
 
     // Get reliability values from the packet
@@ -341,14 +363,18 @@ fn recv_third_pkt(
     for i in 0..3 {
         let val = u16::from_be_bytes(match slice_to_array::<2>(reader) {
             Ok(ident) => ident,
-            Err(_) => { return PacketRecvOutcome::WeRejected(HandshakeResponseCode::RejectBadPacket); },
+            Err(_) => { return HandshakeFailure::us(HandshakeResponseCode::RejectBadPacket).into(); },
         });
 
         return_value[i] = val;
     }
 
     // We're done, return our values
-    return PacketRecvOutcome::Continue(return_value)
+    return PacketRecvOutcome::Valid(ReliablePacketHeader {
+        sequence: return_value[0],
+        ack: return_value[1],
+        ack_bitfield: extend_bitfield(return_value[2]),
+    })
 }
 
 struct HandshakeResponse  {
@@ -358,7 +384,7 @@ struct HandshakeResponse  {
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 #[repr(u16)] // frees us from having to implement From<HandshakeResponseCode> for u16
-enum HandshakeResponseCode {
+pub(super) enum HandshakeResponseCode {
     Accept = 0,
     RejectNoReason = 1,
     RejectHumanReason = 2,
@@ -402,8 +428,55 @@ fn resp_code_qfx(reader: &mut Reader) -> Option<HandshakeResponseCode> {
     return Some(response_code)
 }
 
+fn extend_bitfield(val: u16) -> u128 {
+    let mut arr = 0u128.to_ne_bytes();
+    let spl = val.to_ne_bytes();
+    arr[0] = spl[0];
+    arr[1] = spl[1];
+
+    return u128::from_ne_bytes(arr);
+}
+
 enum PacketRecvOutcome<T> {
-    Continue(T),
-    WeRejected(HandshakeResponseCode),
-    TheyRejected(HandshakeResponseCode),
+    Valid(T),
+    Failure(HandshakeFailure),
+}
+
+pub(super) struct HandshakeFailure {
+    pub side: HandshakeFailureSide,
+    pub code: HandshakeResponseCode,
+}
+
+impl HandshakeFailure {
+    fn them(code: HandshakeResponseCode) -> Self {
+        Self {
+            side: HandshakeFailureSide::Them,
+            code,
+        }
+    }
+
+    fn us(code: HandshakeResponseCode) -> Self {
+        Self {
+            side: HandshakeFailureSide::Us,
+            code,
+        }
+    }
+}
+
+impl<Repeat, Transition> From<HandshakeFailure> for PotentialStateTransition<Repeat, Transition, HandshakeFailure> {
+    fn from(value: HandshakeFailure) -> Self {
+        Self::Failure(value)
+    }
+}
+
+impl<T> From<HandshakeFailure> for PacketRecvOutcome<T> {
+    fn from(value: HandshakeFailure) -> Self {
+        Self::Failure(value)
+    }
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub(super) enum HandshakeFailureSide {
+    Us,
+    Them,
 }
