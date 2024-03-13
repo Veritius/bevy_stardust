@@ -121,50 +121,7 @@ impl ConnectionHandshake {
         mut self,
         packets: &mut PacketQueue,
     ) -> PotentialStateTransition<Self, (), HandshakeFailure> {
-        match self.state {
-            HandshakeState::RelSynSent => {
-                // Check if we've received a response yet
-                if let Some(packet) = packets.pop_incoming() {
-                    let mut reader = Reader::new(Input::from(&packet.payload));
-
-                    // Parse packet to see if it's valid
-                    todo!()
-                }
-
-                // Check if we need to resend the packet
-                let now = Instant::now();
-                if timeout_check(self.last_sent, now, HANDSHAKE_RESEND_DURATION) {
-                    // Generate packet and queue it for sending
-                    let bytes = build_first_pkt(&self.context, &self.reliability);
-                    packets.push_outgoing(OutgoingPacket {
-                        payload: bytes,
-                        messages: 0,
-                    });
-
-                    // Update time tracking info
-                    self.last_sent = Some(now);
-                }
-
-                // Do nothing
-                return PotentialStateTransition::Nothing(self);
-            },
-
-            HandshakeState::RelSynRecv => {
-                // Check if we've received a response yet
-                if let Some(packet) = packets.pop_incoming() {
-                    let mut reader = Reader::new(Input::from(&packet.payload));
-
-                    // Parse packet to see if it's valid
-                    match recv_third_pkt(&mut reader) {
-                        PacketRecvOutcome::Valid(_) => todo!(),
-                        PacketRecvOutcome::Failure(_) => todo!(),
-                    }
-                }
-
-                // Do nothing
-                return PotentialStateTransition::Nothing(self);
-            },
-        }
+        todo!()
     }
 }
 
