@@ -64,7 +64,7 @@ The following response codes do not have any additional data and so do not appea
 
 use std::time::{Duration, Instant};
 use bytes::{BufMut, Bytes, BytesMut};
-use untrusted::{EndOfInput, Input, Reader};
+use untrusted::{EndOfInput, Reader};
 use bevy_ecs::prelude::Resource;
 use crate::{packet::{OutgoingPacket, PacketQueue}, utils::slice_to_array};
 use super::{reliability::ReliabilityData, statemachine::PotentialStateTransition, timing::{timeout_check, ConnectionTimings}};
@@ -172,19 +172,16 @@ fn build_first_pkt(
 
 fn recv_first_pkt(
     context: &HandshakeContext,
-    slice: &[u8],
+    reader: &mut Reader,
 ) -> Result<u16, HandshakeResponseCode> {
-    // Create reader to read through their data
-    let mut reader = Reader::new(Input::from(slice));
-
     // Check the unique transport identifier
-    let tp_id = u64::from_be_bytes(slice_to_array::<8>(&mut reader)?);
+    let tp_id = u64::from_be_bytes(slice_to_array::<8>(reader)?);
     if tp_id != context.transport_identifier {
         return Err(HandshakeResponseCode::RejectIncompatibleTransport)
     }
 
     // Check the transport major version
-    let tp_maj_ver = u32::from_be_bytes(slice_to_array::<4>(&mut reader)?);
+    let tp_maj_ver = u32::from_be_bytes(slice_to_array::<4>(reader)?);
     if tp_maj_ver != context.transport_version_major {
         return Err(HandshakeResponseCode::RejectIncompatibleVersion)
     }
@@ -193,13 +190,13 @@ fn recv_first_pkt(
     // At some point in the future, we can reject buggy versions because of it or something.
 
     // Check the application identifier
-    let app_id = u64::from_be_bytes(slice_to_array::<8>(&mut reader)?);
+    let app_id = u64::from_be_bytes(slice_to_array::<8>(reader)?);
     if app_id != context.application_identifier {
         return Err(HandshakeResponseCode::RejectIncompatibleApplication)
     }
 
     // Get their sequence identifier
-    let seq_id = u16::from_be_bytes(slice_to_array::<2>(&mut reader)?);
+    let seq_id = u16::from_be_bytes(slice_to_array::<2>(reader)?);
 
     // Return relevant data
     return Ok(seq_id)
@@ -235,6 +232,81 @@ fn build_second_pkt_ok(
     return buf.freeze();
 }
 
+fn recv_second_pkt(
+    context: &HandshakeContext,
+    reader: &mut Reader,
+) -> PacketRecvOutcome<[u16;3]> {
+    // TODO: When try_trait_v2 stabilises, use FromResidual to make this code more concise
+
+    // Get the response code as an integer
+    let response_code_int = u16::from_be_bytes(match slice_to_array::<2>(reader) {
+        Ok(int) => int,
+        Err(_) => { return PacketRecvOutcome::WeRejected(HandshakeResponseCode::RejectBadPacket); },
+    });
+
+    // Turn integer into a response code enum variant
+    // If it fails, we just say their packet was invalid
+    let response_code = match HandshakeResponseCode::try_from(response_code_int) {
+        Ok(code) => code,
+        Err(_) => { return PacketRecvOutcome::WeRejected(HandshakeResponseCode::RejectBadPacket); },
+    };
+
+    // Check the response code
+    if response_code != HandshakeResponseCode::Accept {
+        return PacketRecvOutcome::TheyRejected(response_code);
+    }
+
+    // Get the transport identifier
+    let tp_id = u64::from_be_bytes(match slice_to_array::<8>(reader) {
+        Ok(ident) => ident,
+        Err(_) => { return PacketRecvOutcome::WeRejected(HandshakeResponseCode::RejectBadPacket); },
+    });
+
+    // Check the transport identifier
+    if tp_id != context.transport_identifier {
+        return PacketRecvOutcome::WeRejected(HandshakeResponseCode::RejectIncompatibleTransport)
+    }
+
+    // Get the major transport version
+    let tp_maj_ver = u32::from_be_bytes(match slice_to_array::<4>(reader) {
+        Ok(ident) => ident,
+        Err(_) => { return PacketRecvOutcome::WeRejected(HandshakeResponseCode::RejectBadPacket); },
+    });
+
+    // Check the major transport version
+    if tp_maj_ver != context.transport_version_major {
+        return PacketRecvOutcome::WeRejected(HandshakeResponseCode::RejectIncompatibleVersion)
+    }
+
+    // We don't check the minor version here either
+    // See recv_first_pkt for an explanation why
+
+    // Get the application identifier
+    let app_id = u64::from_be_bytes(match slice_to_array::<8>(reader) {
+        Ok(ident) => ident,
+        Err(_) => { return PacketRecvOutcome::WeRejected(HandshakeResponseCode::RejectBadPacket); },
+    });
+
+    // Check the application identifier
+    if app_id != context.application_identifier {
+        return PacketRecvOutcome::WeRejected(HandshakeResponseCode::RejectIncompatibleApplication)
+    }
+
+    // Get reliability values from the packet
+    let mut return_value = [0u16; 3];
+    for i in 0..3 {
+        let val = u16::from_be_bytes(match slice_to_array::<2>(reader) {
+            Ok(ident) => ident,
+            Err(_) => { return PacketRecvOutcome::WeRejected(HandshakeResponseCode::RejectBadPacket); },
+        });
+
+        return_value[i] = val;
+    }
+
+    // We're done, return our values
+    return PacketRecvOutcome::Continue(return_value)
+}
+
 fn build_third_pkt_ok(
     context: &HandshakeContext,
     reliability: &ReliabilityData,
@@ -263,7 +335,8 @@ struct HandshakeResponse  {
     pub payload: Option<Bytes>,
 }
 
-#[repr(u16)]
+#[derive(Clone, Copy, PartialEq, Eq)]
+#[repr(u16)] // frees us from having to implement From<HandshakeResponseCode> for u16
 enum HandshakeResponseCode {
     Accept = 0,
     RejectNoReason = 1,
@@ -289,4 +362,10 @@ impl From<EndOfInput> for HandshakeResponseCode {
     fn from(value: EndOfInput) -> Self {
         Self::RejectBadPacket
     }
+}
+
+enum PacketRecvOutcome<T> {
+    Continue(T),
+    WeRejected(HandshakeResponseCode),
+    TheyRejected(HandshakeResponseCode),
 }
