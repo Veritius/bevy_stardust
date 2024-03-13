@@ -2,6 +2,7 @@
 
 #![warn(missing_docs)]
 
+mod appdata;
 mod connection;
 mod endpoint;
 mod manager;

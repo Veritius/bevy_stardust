@@ -66,26 +66,18 @@ use std::time::{Duration, Instant};
 use bytes::{BufMut, Bytes, BytesMut};
 use untrusted::{EndOfInput, Input, Reader};
 use bevy_ecs::prelude::Resource;
-use crate::{packet::{OutgoingPacket, PacketQueue}, utils::slice_to_array};
-use super::{reliability::{ReliabilityData, ReliablePacketHeader}, statemachine::PotentialStateTransition, timing::{timeout_check, ConnectionTimings}};
+use crate::{appdata::{ApplicationContext, TRANSPORT_IDENTIFIER, TRANSPORT_VERSION_MAJOR, TRANSPORT_VERSION_MINOR}, packet::{OutgoingPacket, PacketQueue}, utils::slice_to_array};
+use super::{reliability::{ReliabilityData, ReliablePacketHeader}, timing::timeout_check};
 
 const HANDSHAKE_RESEND_DURATION: Duration = Duration::from_secs(5);
 
 /// Handshake state machine for connections.
 #[derive(Debug)]
 pub(super) struct ConnectionHandshake {
-    context: HandshakeContext,
+    context: ApplicationContext,
     side: HandshakeSide,
     reliability: ReliabilityData,
     last_sent: Option<Instant>,
-}
-
-#[derive(Debug, Resource, Clone)]
-pub(super) struct HandshakeContext {
-    pub transport_identifier: u64,
-    pub transport_version_minor: u32,
-    pub transport_version_major: u32,
-    pub application_identifier: u64,
 }
 
 #[derive(Debug)]
@@ -96,7 +88,7 @@ enum HandshakeSide {
 
 impl ConnectionHandshake {
     pub fn new_incoming(
-        context: HandshakeContext,
+        context: ApplicationContext,
         reader: &mut Reader,
     ) -> Result<Self, HandshakeFailure> {
         // Parse the first packet
@@ -121,7 +113,7 @@ impl ConnectionHandshake {
     }
 
     pub fn new_outgoing(
-        context: HandshakeContext,
+        context: ApplicationContext,
     ) -> Self {
         Self {
             context,
@@ -150,7 +142,7 @@ impl ConnectionHandshake {
                             self.reliability.local_sequence = self.reliability.local_sequence.wrapping_add(1);
 
                             // Send response packet (third)
-                            let payload = build_third_pkt_ok(&self.context, &self.reliability);
+                            let payload = build_third_pkt_ok(&self.reliability);
                             packets.push_outgoing(OutgoingPacket {
                                 payload,
                                 messages: 0,
@@ -230,16 +222,16 @@ impl ConnectionHandshake {
 }
 
 fn build_first_pkt(
-    context: &HandshakeContext,
+    context: &ApplicationContext,
     reliability: &ReliabilityData,
 ) -> Bytes {
     // Create buffer for storing bytes
     let mut buf = BytesMut::with_capacity(26);
 
     // Info about our app
-    buf.put_u64(context.transport_identifier);
-    buf.put_u32(context.transport_version_major);
-    buf.put_u32(context.transport_version_minor);
+    buf.put_u64(TRANSPORT_IDENTIFIER);
+    buf.put_u32(TRANSPORT_VERSION_MAJOR);
+    buf.put_u32(TRANSPORT_VERSION_MINOR);
     buf.put_u64(context.application_identifier);
 
     // Info about reliability
@@ -250,7 +242,7 @@ fn build_first_pkt(
 }
 
 fn recv_first_pkt(
-    context: &HandshakeContext,
+    context: &ApplicationContext,
     reader: &mut Reader,
 ) -> Result<u16, HandshakeFailure> {
     // Get the transport identifier
@@ -260,7 +252,7 @@ fn recv_first_pkt(
     });
 
     // Check the transport identifier
-    if tp_id != context.transport_identifier {
+    if tp_id != TRANSPORT_IDENTIFIER {
         return HandshakeFailure::us(HandshakeResponseCode::RejectIncompatibleTransport).into();
     }
 
@@ -274,7 +266,7 @@ fn recv_first_pkt(
     });
 
     // Check the major transport version
-    if tp_maj_ver != context.transport_version_major {
+    if tp_maj_ver != TRANSPORT_VERSION_MAJOR {
         return HandshakeFailure::us(HandshakeResponseCode::RejectIncompatibleVersion).into();
     }
 
@@ -300,7 +292,7 @@ fn recv_first_pkt(
 }
 
 fn build_second_pkt_ok(
-    context: &HandshakeContext,
+    context: &ApplicationContext,
     reliability: &ReliabilityData,
 ) -> Bytes {
     // Create buffer for storing bytes
@@ -310,9 +302,9 @@ fn build_second_pkt_ok(
     buf.put_u16(HandshakeResponseCode::Accept as u16);
 
     // Info about our app
-    buf.put_u64(context.transport_identifier);
-    buf.put_u32(context.transport_version_major);
-    buf.put_u32(context.transport_version_minor);
+    buf.put_u64(TRANSPORT_IDENTIFIER);
+    buf.put_u32(TRANSPORT_VERSION_MAJOR);
+    buf.put_u32(TRANSPORT_VERSION_MINOR);
     buf.put_u64(context.application_identifier);
 
     // Info about reliability
@@ -330,7 +322,7 @@ fn build_second_pkt_ok(
 }
 
 fn recv_second_pkt(
-    context: &HandshakeContext,
+    context: &ApplicationContext,
     reader: &mut Reader,
 ) -> PacketRecvOutcome<ReliablePacketHeader> {
     // TODO: When try_trait_v2 stabilises, use FromResidual to make this code more concise
@@ -354,7 +346,7 @@ fn recv_second_pkt(
     });
 
     // Check the transport identifier
-    if tp_id != context.transport_identifier {
+    if tp_id != TRANSPORT_IDENTIFIER {
         return HandshakeFailure::us(HandshakeResponseCode::RejectIncompatibleTransport).into()
     }
 
@@ -365,7 +357,7 @@ fn recv_second_pkt(
     });
 
     // Check the major transport version
-    if tp_maj_ver != context.transport_version_major {
+    if tp_maj_ver != TRANSPORT_VERSION_MAJOR {
         return HandshakeFailure::us(HandshakeResponseCode::RejectIncompatibleVersion).into();
     }
 
@@ -403,7 +395,6 @@ fn recv_second_pkt(
 }
 
 fn build_third_pkt_ok(
-    context: &HandshakeContext,
     reliability: &ReliabilityData,
 ) -> Bytes {
     // Create buffer for storing bytes
@@ -539,12 +530,6 @@ impl HandshakeFailure {
             side: HandshakeFailureSide::Us,
             code,
         }
-    }
-}
-
-impl<Repeat, Transition> From<HandshakeFailure> for PotentialStateTransition<Repeat, Transition, HandshakeFailure> {
-    fn from(value: HandshakeFailure) -> Self {
-        Self::Failure(value)
     }
 }
 

@@ -9,7 +9,7 @@ mod ordering;
 
 pub(crate) use receiving::connection_packet_processing_system;
 
-use std::{net::SocketAddr, time::Instant};
+use std::net::SocketAddr;
 use bevy_ecs::prelude::*;
 use bytes::Bytes;
 use tracing::warn;

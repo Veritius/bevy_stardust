@@ -29,3 +29,6 @@ reflect = [
     "bevy_ecs/bevy_reflect",
     "bevy_app/bevy_reflect"
 ]
+
+[dev-dependencies]
+bevy_log = "0.13"

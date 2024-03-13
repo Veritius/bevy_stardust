@@ -2,6 +2,7 @@ use std::time::Duration;
 use bevy_app::prelude::*;
 use bevy_ecs::prelude::*;
 use bevy_stardust::scheduling::*;
+use crate::appdata::ApplicationContext;
 
 /// The UDP transport plugin.
 pub struct UdpTransportPlugin {
@@ -12,13 +13,19 @@ pub struct UdpTransportPlugin {
 
     /// The length of a period of inactivity needed to send a 'keep-alive' packet, which maintains the connection.
     pub keep_alive_timeout: Duration,
+
+    /// A **stable** and **unique** identifying number for your application.
+    /// This should be stable across compilations, and really you should just hardcode it.
+    pub unique_app_identifier: u64,
 }
 
-impl Default for UdpTransportPlugin {
-    fn default() -> Self {
+impl UdpTransportPlugin {
+    /// Optimised for balanced performance.
+    pub fn balanced(app_id: u64) -> Self {
         Self {
             reliable_channel_count: 8,
             keep_alive_timeout: Duration::from_secs(4),
+            unique_app_identifier: app_id,
         }
     }
 }
@@ -41,5 +48,10 @@ impl Plugin for UdpTransportPlugin {
             crate::connection::statistics::reset_connection_statistics_system,
             crate::endpoint::reset_endpoint_statistics_system,
         ));
+
+        // Add application context resource
+        app.insert_resource(ApplicationContext {
+            application_identifier: self.unique_app_identifier,
+        });
     }
 }
