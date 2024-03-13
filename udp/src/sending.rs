@@ -36,6 +36,9 @@ pub(crate) fn io_sending_system(
             while let Some(packet) = connection.packet_queue.pop_outgoing() {
                 match socket.send_to(&packet.payload, connection.remote_address()) {
                     Ok(_) => {
+                        // Set last_sent in timings
+                        connection.timings.set_last_sent_now();
+
                         // Add to statistics counters
                         endpoint_statistics.track_send_packet(packet.payload.len());
                         connection.statistics.track_send_packet(packet.messages as usize);

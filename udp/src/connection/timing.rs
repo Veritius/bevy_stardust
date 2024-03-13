@@ -19,4 +19,12 @@ impl ConnectionTimings {
             last_recv,
         }
     }
+
+    pub fn set_last_sent_now(&mut self) {
+        self.last_sent = Some(Instant::now());
+    }
+
+    pub fn set_last_recv_now(&mut self) {
+        self.last_recv = Some(Instant::now());
+    }
 }

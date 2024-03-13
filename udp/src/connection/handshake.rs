@@ -53,9 +53,12 @@ This establishes the acknowledgement state of the Listener. At this point, both 
 
 */
 
+use std::time::{Duration, Instant};
 use bytes::{BufMut, Bytes, BytesMut};
-use crate::packet::PacketQueue;
+use crate::packet::{OutgoingPacket, PacketQueue};
 use super::{reliability::ReliabilityData, statemachine::PotentialStateTransition, timing::ConnectionTimings};
+
+const HANDSHAKE_RESEND_DURATION: Duration = Duration::from_secs(5);
 
 /// Handshake state machine for connections.
 #[derive(Debug)]
@@ -77,8 +80,6 @@ pub(super) struct HandshakeContext {
 enum HandshakeState {
     RelSynSent,
     RelSynRecv,
-    Finished,
-    Failure,
 }
 
 impl ConnectionHandshake {
@@ -103,21 +104,34 @@ impl ConnectionHandshake {
     }
 
     pub fn poll(
-        &mut self,
+        self,
         timings: &mut ConnectionTimings,
         packets: &mut PacketQueue,
     ) -> PotentialStateTransition<Self, ()> {
         match self.state {
             HandshakeState::RelSynSent => {
+                // Check if we've received a response yet
                 if let Some(packet) = packets.pop_incoming() {
                     todo!()
                 }
 
-                todo!()
+                // Check if we need to resend the packet
+                let needs_send = timings.last_sent.is_none() ||
+                    timings.last_sent.unwrap().saturating_duration_since(Instant::now()) > HANDSHAKE_RESEND_DURATION;
+
+                // Send the packet if we need to
+                if needs_send {
+                    let bytes = build_first_pkt(&self.context, &self.reliability);
+                    packets.push_outgoing(OutgoingPacket {
+                        payload: bytes,
+                        messages: 0,
+                    });
+                }
+
+                // Do nothing
+                return PotentialStateTransition::Nothing(self);
             },
             HandshakeState::RelSynRecv => todo!(),
-            HandshakeState::Finished => todo!(),
-            HandshakeState::Failure => todo!(),
         }
     }
 }
@@ -157,7 +171,7 @@ fn build_second_pkt_ok(
 
     // Response code
     buf.put_u16(HandshakeResponseCode::Continue as u16);
-    
+
     // Info about reliability
     buf.put_u16(reliability.local_sequence);
     buf.put_u16(reliability.remote_sequence);

@@ -21,6 +21,9 @@ pub(crate) fn io_receiving_system(
                             // SAFETY: This is fine because of ConnectionOwnershipToken's guarantees
                             let mut connection = unsafe { connections.get_unchecked(token.inner()).unwrap() };
 
+                            // Set last_recv in timings
+                            connection.timings.set_last_recv_now();
+
                             // We append it to the queue for later processing
                             connection.packet_queue.push_incoming(IncomingPacket {
                                 payload: Bytes::copy_from_slice(&scratch[..bytes]),

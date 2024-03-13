@@ -21,8 +21,14 @@ pub struct Endpoint {
     pub(crate) statistics: EndpointStatistics,
     pub(crate) state: EndpointState,
 
+    pub(crate) has_ever_had_peer: bool,
+
     /// Whether or not to accept new incoming connections on this endpoint.
     pub listening: bool,
+
+    /// Close the endpoint when it has no active connections.
+    /// This only occurs if the endpoint has a connection in the past.
+    pub close_on_empty: bool,
 }
 
 /// Functions for controlling the connection.
@@ -36,8 +42,19 @@ impl Endpoint {
             connections: HashMap::with_capacity(8),
             statistics: EndpointStatistics::default(),
             state: EndpointState::Active,
+            has_ever_had_peer: false,
             listening: false,
+            close_on_empty: false,
         })
+    }
+
+    pub(crate) fn add_peer(
+        &mut self,
+        address: SocketAddr,
+        token: ConnectionOwnershipToken
+    ) {
+        self.connections.insert(address, token);
+        self.has_ever_had_peer = true;
     }
 
     /// Marks the endpoint for closure.

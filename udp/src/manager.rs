@@ -68,7 +68,7 @@ impl UdpManager<'_, '_> {
 
         // SAFETY: Commands generates a unique ID concurrently, so this is fine.
         let token = unsafe { ConnectionOwnershipToken::new(id) };
-        endpoint_ref.connections.insert(address, token);
+        endpoint_ref.add_peer(address, token);
 
         Ok(id)
     }
@@ -83,6 +83,7 @@ impl UdpManager<'_, '_> {
         // Create endpoint, but don't actually spawn an entity
         let endpoint_id = self.entities.reserve_entity();
         let mut endpoint = self.open_endpoint_inner(address)?;
+        endpoint.close_on_empty = true;
 
         // Create connection and spawn an entity for it
         let connection_id = Self::open_connection_inner(
