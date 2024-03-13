@@ -5,10 +5,11 @@ use crate::sequences::*;
 
 const BITMASK: u128 = 1 << 127;
 
+#[derive(Debug)]
 pub(crate) struct ReliabilityData {
-    local_sequence: u16,
-    remote_sequence: u16,
-    sequence_memory: u128,
+    pub local_sequence: u16,
+    pub remote_sequence: u16,
+    pub sequence_memory: u128,
 }
 
 impl ReliabilityData {

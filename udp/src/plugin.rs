@@ -28,7 +28,7 @@ impl Plugin for UdpTransportPlugin {
         // Packet receiving systems
         app.add_systems(PreUpdate, (
             crate::receiving::io_receiving_system,
-            crate::receiving::packet_parsing_system,
+            crate::connection::connection_packet_processing_system,
         ).chain().in_set(NetworkRead::Receive).before(NetworkRead::Read));
 
         // Packet transmitting systems

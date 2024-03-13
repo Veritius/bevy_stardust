@@ -3,6 +3,9 @@ pub mod statistics;
 mod statemachine;
 mod handshake;
 mod timing;
+mod receiving;
+
+pub(crate) use receiving::connection_packet_processing_system;
 
 use std::{net::SocketAddr, time::Instant};
 use bevy_ecs::prelude::*;
@@ -25,19 +28,17 @@ use timing::ConnectionTimings;
 #[cfg_attr(feature="reflect", derive(bevy_reflect::Reflect), reflect(from_reflect = false))]
 pub struct Connection {
     #[cfg_attr(feature="reflect", reflect(ignore))]
-    pub(crate) remote_address: SocketAddr,
-
+    remote_address: SocketAddr,
     #[cfg_attr(feature="reflect", reflect(ignore))]
-    pub(crate) state_machine: ConnectionStateMachine,
-
-    pub(crate) owning_endpoint: Entity,
-
-    pub(crate) direction: ConnectionDirection,
-    pub(crate) timings: ConnectionTimings,
-    pub(crate) statistics: ConnectionStatistics,
+    state_machine: ConnectionStateMachine,
 
     #[cfg_attr(feature="reflect", reflect(ignore))]
     pub(crate) packet_queue: PacketQueue,
+
+    pub(crate) owning_endpoint: Entity,
+    pub(crate) direction: ConnectionDirection,
+    pub(crate) timings: ConnectionTimings,
+    pub(crate) statistics: ConnectionStatistics,
 }
 
 /// Functions for controlling the connection.

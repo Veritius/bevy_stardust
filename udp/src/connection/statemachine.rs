@@ -1,8 +1,13 @@
 use crate::ConnectionState;
 use super::handshake::ConnectionHandshake;
 
-/// Inner state machine controlling data exchange.
-pub(crate) struct ConnectionStateMachine(StateMachineInner);
+#[derive(Debug)]
+pub(super) enum ConnectionStateMachine {
+    Handshaking(ConnectionHandshake),
+    Established,
+    Closing,
+    Closed,
+}
 
 impl ConnectionStateMachine {
     pub fn new_incoming() -> Self {
@@ -14,19 +19,11 @@ impl ConnectionStateMachine {
     }
 
     pub fn as_simple_repr(&self) -> ConnectionState {
-        match self.0 {
-            StateMachineInner::Handshaking(_) => ConnectionState::Handshaking,
-            StateMachineInner::Established => ConnectionState::Connected,
-            StateMachineInner::Closing => ConnectionState::Closing,
-            StateMachineInner::Closed => ConnectionState::Closed,
+        match self {
+            Self::Handshaking(_) => ConnectionState::Handshaking,
+            Self::Established => ConnectionState::Connected,
+            Self::Closing => ConnectionState::Closing,
+            Self::Closed => ConnectionState::Closed,
         }
     }
-}
-
-#[derive(Debug)]
-enum StateMachineInner {
-    Handshaking(ConnectionHandshake),
-    Established,
-    Closing,
-    Closed,
 }

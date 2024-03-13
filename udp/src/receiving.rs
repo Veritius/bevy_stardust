@@ -49,28 +49,3 @@ pub(crate) fn io_receiving_system(
         }
     });
 }
-
-// Processes packets into individual messages
-pub(crate) fn packet_parsing_system(
-    mut connections: Query<&mut Connection>,
-) {
-    use untrusted::*;
-
-    // Parses things in parallel
-    connections.par_iter_mut().for_each(|mut connection| {
-        // Iterate all packets this peer has received
-        while let Some(packet) = connection.packet_queue.pop_incoming() {
-            let mut reader = Reader::new(Input::from(&packet.payload));
-
-            // Wrap in a closure so we can use the ? operator, which simplifies code significantly
-            let _: Result<(), EndOfInput> = (|| {
-                // Read the header of the packet
-                let header = reader.read_bytes(2)?;
-
-                todo!();
-
-                Ok(())
-            })();
-        }
-    });
-}
