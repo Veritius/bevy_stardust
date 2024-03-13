@@ -90,19 +90,33 @@ pub(super) struct HandshakeContext {
 
 #[derive(Debug)]
 enum HandshakeState {
-    RelSynSent,
-    RelSynRecv,
+    ClWaitAck,
+    SvWaitAck,
 }
 
 impl ConnectionHandshake {
     pub fn new_incoming(
         context: HandshakeContext,
-    ) -> Self {
-        Self {
-            context,
-            state: HandshakeState::RelSynRecv,
-            reliability: ReliabilityData::new(),
-            last_sent: None,
+        reader: &mut Reader,
+    ) -> Result<Self, HandshakeFailure> {
+        // Parse the first packet
+        match recv_first_pkt(&context, reader) {
+            Ok(seq) => {
+                // Set up reliability
+                let mut reliability = ReliabilityData::new();
+                reliability.remote_sequence = seq;
+                reliability.local_sequence = fastrand::u16(..);
+
+                // Return new handshake
+                return Ok(Self {
+                    context,
+                    state: HandshakeState::SvWaitAck,
+                    reliability,
+                    last_sent: None,
+                });
+            },
+
+            Err(err) => { Err(err) },
         }
     }
 
@@ -111,7 +125,7 @@ impl ConnectionHandshake {
     ) -> Self {
         Self {
             context,
-            state: HandshakeState::RelSynSent,
+            state: HandshakeState::ClWaitAck,
             reliability: ReliabilityData::new(),
             last_sent: None,
         }
@@ -122,13 +136,16 @@ impl ConnectionHandshake {
         packets: &mut PacketQueue,
     ) -> PotentialStateTransition<Self, (), HandshakeFailure> {
         match self.state {
-            HandshakeState::RelSynSent => {
+            HandshakeState::ClWaitAck => {
                 // Check if we've received a response yet
                 if let Some(packet) = packets.pop_incoming() {
                     let mut reader = Reader::new(Input::from(&packet.payload));
 
                     // Parse packet to see if it's valid
-                    todo!()
+                    match recv_second_pkt(&self.context, &mut reader) {
+                        PacketRecvOutcome::Valid(_) => todo!(),
+                        PacketRecvOutcome::Failure(_) => todo!(),
+                    }
                 }
 
                 // Check if we need to resend the packet
@@ -149,7 +166,7 @@ impl ConnectionHandshake {
                 return PotentialStateTransition::Nothing(self);
             },
 
-            HandshakeState::RelSynRecv => {
+            HandshakeState::SvWaitAck => {
                 // Check if we've received a response yet
                 if let Some(packet) = packets.pop_incoming() {
                     let mut reader = Reader::new(Input::from(&packet.payload));
@@ -191,30 +208,48 @@ fn build_first_pkt(
 fn recv_first_pkt(
     context: &HandshakeContext,
     reader: &mut Reader,
-) -> Result<u16, HandshakeResponseCode> {
-    // Check the unique transport identifier
-    let tp_id = u64::from_be_bytes(slice_to_array::<8>(reader)?);
-    if tp_id != context.transport_identifier {
-        return Err(HandshakeResponseCode::RejectIncompatibleTransport)
-    }
+) -> Result<u16, HandshakeFailure> {
+    // Get the transport identifier
+    let tp_id = u64::from_be_bytes(match slice_to_array::<8>(reader) {
+        Ok(ident) => ident,
+        Err(_) => { return HandshakeFailure::us(HandshakeResponseCode::RejectBadPacket).into(); },
+    });
 
-    // Check the transport major version
-    let tp_maj_ver = u32::from_be_bytes(slice_to_array::<4>(reader)?);
-    if tp_maj_ver != context.transport_version_major {
-        return Err(HandshakeResponseCode::RejectIncompatibleVersion)
+    // Check the transport identifier
+    if tp_id != context.transport_identifier {
+        return HandshakeFailure::us(HandshakeResponseCode::RejectIncompatibleTransport).into();
     }
 
     // We don't check the minor version as of now.
     // At some point in the future, we can reject buggy versions because of it or something.
 
+    // Get the major transport version
+    let tp_maj_ver = u32::from_be_bytes(match slice_to_array::<4>(reader) {
+        Ok(ident) => ident,
+        Err(_) => { return HandshakeFailure::us(HandshakeResponseCode::RejectBadPacket).into(); },
+    });
+
+    // Check the major transport version
+    if tp_maj_ver != context.transport_version_major {
+        return HandshakeFailure::us(HandshakeResponseCode::RejectIncompatibleVersion).into();
+    }
+
+    // Get the application identifier
+    let app_id = u64::from_be_bytes(match slice_to_array::<8>(reader) {
+        Ok(ident) => ident,
+        Err(_) => { return HandshakeFailure::us(HandshakeResponseCode::RejectBadPacket).into(); },
+    });
+
     // Check the application identifier
-    let app_id = u64::from_be_bytes(slice_to_array::<8>(reader)?);
     if app_id != context.application_identifier {
-        return Err(HandshakeResponseCode::RejectIncompatibleApplication)
+        return HandshakeFailure::us(HandshakeResponseCode::RejectIncompatibleApplication).into();
     }
 
     // Get their sequence identifier
-    let seq_id = u16::from_be_bytes(slice_to_array::<2>(reader)?);
+    let seq_id = u16::from_be_bytes(match slice_to_array::<2>(reader) {
+        Ok(val) => val,
+        Err(_) => { return HandshakeFailure::us(HandshakeResponseCode::RejectBadPacket).into(); },
+    });
 
     // Return relevant data
     return Ok(seq_id)
@@ -472,6 +507,12 @@ impl<Repeat, Transition> From<HandshakeFailure> for PotentialStateTransition<Rep
 impl<T> From<HandshakeFailure> for PacketRecvOutcome<T> {
     fn from(value: HandshakeFailure) -> Self {
         Self::Failure(value)
+    }
+}
+
+impl<T> From<HandshakeFailure> for Result<T, HandshakeFailure> {
+    fn from(value: HandshakeFailure) -> Self {
+        Self::Err(value)
     }
 }
 
