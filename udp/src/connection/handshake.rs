@@ -75,7 +75,7 @@ const HANDSHAKE_RESEND_DURATION: Duration = Duration::from_secs(5);
 #[derive(Debug)]
 pub(super) struct ConnectionHandshake {
     context: HandshakeContext,
-    state: HandshakeState,
+    side: HandshakeSide,
     reliability: ReliabilityData,
     last_sent: Option<Instant>,
 }
@@ -89,9 +89,9 @@ pub(super) struct HandshakeContext {
 }
 
 #[derive(Debug)]
-enum HandshakeState {
-    ClWaitAck,
-    SvWaitAck,
+enum HandshakeSide {
+    Client,
+    Server,
 }
 
 impl ConnectionHandshake {
@@ -110,7 +110,7 @@ impl ConnectionHandshake {
                 // Return new handshake
                 return Ok(Self {
                     context,
-                    state: HandshakeState::SvWaitAck,
+                    side: HandshakeSide::Server,
                     reliability,
                     last_sent: None,
                 });
@@ -125,7 +125,7 @@ impl ConnectionHandshake {
     ) -> Self {
         Self {
             context,
-            state: HandshakeState::ClWaitAck,
+            side: HandshakeSide::Client,
             reliability: ReliabilityData::new(),
             last_sent: None,
         }
@@ -134,17 +134,37 @@ impl ConnectionHandshake {
     pub fn poll(
         mut self,
         packets: &mut PacketQueue,
-    ) -> PotentialStateTransition<Self, (), HandshakeFailure> {
-        match self.state {
-            HandshakeState::ClWaitAck => {
+    ) -> HandshakePollOutcome {
+        match self.side {
+            HandshakeSide::Client => {
                 // Check if we've received a response yet
                 if let Some(packet) = packets.pop_incoming() {
                     let mut reader = Reader::new(Input::from(&packet.payload));
 
                     // Parse packet to see if it's valid
                     match recv_second_pkt(&self.context, &mut reader) {
-                        PacketRecvOutcome::Valid(_) => todo!(),
-                        PacketRecvOutcome::Failure(_) => todo!(),
+                        // Valid packet
+                        PacketRecvOutcome::Valid(header) => {
+                            // Update reliability state
+                            self.reliability.remote_sequence = header.sequence;
+                            self.reliability.local_sequence = self.reliability.local_sequence.wrapping_add(1);
+
+                            // Send response packet (third)
+                            let payload = build_third_pkt_ok(&self.context, &self.reliability);
+                            packets.push_outgoing(OutgoingPacket {
+                                payload,
+                                messages: 0,
+                            });
+
+                            // Transition into finished state
+                            return HandshakePollOutcome::Success(self.reliability);
+                        },
+
+                        // Invalid packet
+                        PacketRecvOutcome::Failure(reason) => {
+                            // Return the failure reason
+                            return HandshakePollOutcome::Failure(reason);
+                        },
                     }
                 }
 
@@ -163,24 +183,34 @@ impl ConnectionHandshake {
                 }
 
                 // Do nothing
-                return PotentialStateTransition::Nothing(self);
+                return HandshakePollOutcome::Waiting(self);
             },
 
-            HandshakeState::SvWaitAck => {
+            HandshakeSide::Server => {
                 // Check if we've received a response yet
                 if let Some(packet) = packets.pop_incoming() {
                     let mut reader = Reader::new(Input::from(&packet.payload));
 
                     // Parse packet to see if it's valid
                     match recv_third_pkt(&mut reader) {
-                        PacketRecvOutcome::Valid(_) => todo!(),
-                        PacketRecvOutcome::Failure(_) => todo!(),
+                        PacketRecvOutcome::Valid(header) => {
+                            // Update reliability state
+                            self.reliability.remote_sequence = header.sequence;
+
+                            // Transition into finished state
+                            return HandshakePollOutcome::Success(self.reliability);
+                        },
+
+                        PacketRecvOutcome::Failure(reason) => {
+                            // Return the failure reason
+                            return HandshakePollOutcome::Failure(reason);
+                        },
                     }
                 }
 
                 // Check if we need to send a response packet
                 let now = Instant::now();
-                if timeout_check(self.last_sent, now, HANDSHAKE_RESEND_DURATION) {
+                if self.last_sent.is_none() {
                     // Generate packet and queue it for sending
                     let bytes = build_second_pkt_ok(&self.context, &self.reliability);
                     packets.push_outgoing(OutgoingPacket {
@@ -193,7 +223,7 @@ impl ConnectionHandshake {
                 }
 
                 // Do nothing
-                return PotentialStateTransition::Nothing(self);
+                return HandshakePollOutcome::Waiting(self);
             },
         }
     }
@@ -534,4 +564,10 @@ impl<T> From<HandshakeFailure> for Result<T, HandshakeFailure> {
 pub(super) enum HandshakeFailureSide {
     Us,
     Them,
+}
+
+pub(super) enum HandshakePollOutcome {
+    Waiting(ConnectionHandshake),
+    Success(ReliabilityData),
+    Failure(HandshakeFailure),
 }
