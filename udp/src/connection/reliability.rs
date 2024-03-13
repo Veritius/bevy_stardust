@@ -14,9 +14,11 @@ pub(crate) struct ReliabilityData {
 
 impl ReliabilityData {
     pub fn new() -> Self {
+        let mut rng = fastrand::Rng::new();
+
         Self {
-            local_sequence: 0,
-            remote_sequence: 0,
+            local_sequence: rng.u16(..),
+            remote_sequence: rng.u16(..),
             sequence_memory: 0,
         }
     }

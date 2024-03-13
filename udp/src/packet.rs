@@ -44,10 +44,12 @@ impl PacketQueue {
     }
 }
 
+#[derive(Clone)]
 pub(crate) struct IncomingPacket {
     pub payload: Bytes,
 }
 
+#[derive(Clone)]
 pub(crate) struct OutgoingPacket {
     pub payload: Bytes,
     pub messages: u32,

@@ -5,11 +5,9 @@
 mod connection;
 mod endpoint;
 mod manager;
-mod ordering;
 mod packet;
 mod plugin;
 mod receiving;
-mod reliability;
 mod sending;
 mod sequences;
 

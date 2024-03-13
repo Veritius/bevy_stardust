@@ -4,6 +4,8 @@ mod statemachine;
 mod handshake;
 mod timing;
 mod receiving;
+mod reliability;
+mod ordering;
 
 pub(crate) use receiving::connection_packet_processing_system;
 
@@ -57,16 +59,7 @@ impl Connection {
                 ConnectionDirection::Outgoing => ConnectionStateMachine::new_outgoing(),
                 ConnectionDirection::Incoming => ConnectionStateMachine::new_incoming(),
             },
-            timings: ConnectionTimings::new(
-                match direction {
-                    ConnectionDirection::Outgoing => None,
-                    ConnectionDirection::Incoming => Some(Instant::now()),
-                },
-                match direction {
-                    ConnectionDirection::Outgoing => Some(Instant::now()),
-                    ConnectionDirection::Incoming => None,
-                },
-            ),
+            timings: ConnectionTimings::new(None, None, None),
             packet_queue: PacketQueue::new(16, 16),
         }
     }

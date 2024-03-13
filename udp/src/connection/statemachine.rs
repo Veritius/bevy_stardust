@@ -27,3 +27,9 @@ impl ConnectionStateMachine {
         }
     }
 }
+
+pub(super) enum PotentialStateTransition<R, T> {
+    Nothing(R),
+    Transition(T),
+    Failure,
+}

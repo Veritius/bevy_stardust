@@ -17,6 +17,7 @@ bevy_reflect = { version = "0.13", optional = true }
 bevy_stardust = { version = "0.3", path = "../stardust", default-features = false }
 bytes = "1.5.0"
 untrusted = "0.9"
+fastrand = "2"
 tracing = "0.1"
 anyhow = "1"
 
