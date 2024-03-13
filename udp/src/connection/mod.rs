@@ -8,15 +8,18 @@ mod reliability;
 mod ordering;
 
 pub(crate) use receiving::connection_packet_processing_system;
+use untrusted::Reader;
 
 use std::net::SocketAddr;
 use bevy_ecs::prelude::*;
 use bytes::Bytes;
 use tracing::warn;
-use crate::packet::PacketQueue;
+use anyhow::{bail, Result};
+use crate::{appdata::ApplicationContext, packet::PacketQueue};
 use statemachine::ConnectionStateMachine;
 use statistics::ConnectionStatistics;
 use timing::ConnectionTimings;
+use self::{handshake::ConnectionHandshake, reliability::ReliabilityData};
 
 /// A running UDP connection.
 /// 
@@ -35,6 +38,11 @@ pub struct Connection {
     state_machine: ConnectionStateMachine,
 
     #[cfg_attr(feature="reflect", reflect(ignore))]
+    pub(crate) mgmt_reliable: ReliabilityData,
+    // #[cfg_attr(feature="reflect", reflect(ignore))]
+    // pub(crate) reliable_rivers: HashMap<(), ()>,
+
+    #[cfg_attr(feature="reflect", reflect(ignore))]
     pub(crate) packet_queue: PacketQueue,
 
     pub(crate) owning_endpoint: Entity,
@@ -45,22 +53,61 @@ pub struct Connection {
 
 /// Functions for controlling the connection.
 impl Connection {
-    pub(crate) fn new(
+    pub(crate) fn new_outgoing(
+        owning_endpoint: Entity,
+        remote_address: SocketAddr,
+        appdata: ApplicationContext,
+    ) -> Self {
+        Self::new(
+            owning_endpoint,
+            remote_address,
+            ConnectionDirection::Outgoing,
+            ConnectionStateMachine::Handshaking(ConnectionHandshake::new_outgoing(appdata))
+        )
+    }
+
+    pub(crate) fn new_incoming(
+        owning_endpoint: Entity,
+        remote_address: SocketAddr,
+        appdata: ApplicationContext,
+        reader: &mut Reader,
+    ) -> Result<Self> {
+        let handshake = ConnectionHandshake::new_incoming(
+            appdata,
+            reader,
+        );
+
+        if handshake.is_err() {
+            bail!("Packet was invalid");
+        }
+
+        Ok(Self::new(
+            owning_endpoint,
+            remote_address,
+            ConnectionDirection::Incoming,
+            ConnectionStateMachine::Handshaking(handshake.unwrap())
+        ))
+    }
+
+    fn new(
         owning_endpoint: Entity,
         remote_address: SocketAddr,
         direction: ConnectionDirection,
+        state_machine: ConnectionStateMachine,
     ) -> Self {
         Self {
-            owning_endpoint,
             remote_address,
-            statistics: ConnectionStatistics::default(),
-            direction,
-            state_machine: match direction {
-                ConnectionDirection::Outgoing => ConnectionStateMachine::new_outgoing(),
-                ConnectionDirection::Incoming => ConnectionStateMachine::new_incoming(),
-            },
-            timings: ConnectionTimings::new(None, None, None),
+            state_machine,
+
+            mgmt_reliable: ReliabilityData::new(),
+            // reliable_rivers: HashMap::new(),
+
             packet_queue: PacketQueue::new(16, 16),
+
+            owning_endpoint,
+            direction,
+            statistics: ConnectionStatistics::default(),
+            timings: ConnectionTimings::new(None, None, None),
         }
     }
 

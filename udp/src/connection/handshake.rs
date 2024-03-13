@@ -451,7 +451,7 @@ struct HandshakeResponse  {
     pub payload: Option<Bytes>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u16)] // frees us from having to implement From<HandshakeResponseCode> for u16
 pub(super) enum HandshakeResponseCode {
     Accept = 0,
@@ -511,6 +511,7 @@ enum PacketRecvOutcome<T> {
     Failure(HandshakeFailure),
 }
 
+#[derive(Debug)]
 pub(super) struct HandshakeFailure {
     pub side: HandshakeFailureSide,
     pub code: HandshakeResponseCode,
@@ -544,7 +545,7 @@ impl<T> From<HandshakeFailure> for Result<T, HandshakeFailure> {
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum HandshakeFailureSide {
     Us,
     Them,

@@ -1,12 +1,13 @@
 use std::net::{SocketAddr, ToSocketAddrs};
 use anyhow::Result;
 use bevy_ecs::{entity::Entities, prelude::*, system::SystemParam};
-use crate::{connection::Connection, endpoint::{ConnectionOwnershipToken, Endpoint}, ConnectionDirection};
+use crate::{appdata::ApplicationContext, connection::Connection, endpoint::{ConnectionOwnershipToken, Endpoint}};
 
 /// A SystemParam that lets you create [`Endpoints`](Endpoint) and open outgoing [`Connections`](Connection).
 #[derive(SystemParam)]
 pub struct UdpManager<'w, 's> {
     entities: &'w Entities,
+    appdata: Res<'w, ApplicationContext>,
     commands: Commands<'w, 's>,
     endpoints: Query<'w, 's, &'static mut Endpoint>,
 }
@@ -44,6 +45,7 @@ impl UdpManager<'_, '_> {
 
         Self::open_connection_inner(
             &mut self.commands,
+            self.appdata.clone(),
             address,
             endpoint,
             &mut endpoint_ref
@@ -52,6 +54,7 @@ impl UdpManager<'_, '_> {
 
     fn open_connection_inner(
         commands: &mut Commands,
+        appdata: ApplicationContext,
         address: impl ToSocketAddrs,
         endpoint_id: Entity,
         endpoint_ref: &mut Endpoint,
@@ -60,10 +63,10 @@ impl UdpManager<'_, '_> {
         let address = resolve_address(address)?;
 
         // Spawn connection entity
-        let id = commands.spawn(Connection::new(
+        let id = commands.spawn(Connection::new_outgoing(
             endpoint_id,
             address,
-            ConnectionDirection::Outgoing,
+            appdata,
         )).id();
 
         // SAFETY: Commands generates a unique ID concurrently, so this is fine.
@@ -88,6 +91,7 @@ impl UdpManager<'_, '_> {
         // Create connection and spawn an entity for it
         let connection_id = Self::open_connection_inner(
             &mut self.commands,
+            self.appdata.clone(),
             remote,
             endpoint_id,
             &mut endpoint

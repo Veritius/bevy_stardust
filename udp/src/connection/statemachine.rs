@@ -10,14 +10,6 @@ pub(super) enum ConnectionStateMachine {
 }
 
 impl ConnectionStateMachine {
-    pub fn new_incoming() -> Self {
-        todo!()
-    }
-
-    pub fn new_outgoing() -> Self {
-        todo!()
-    }
-
     pub fn as_simple_repr(&self) -> ConnectionState {
         match self {
             Self::Handshaking(_) => ConnectionState::Handshaking,
