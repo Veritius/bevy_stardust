@@ -194,14 +194,20 @@ pub(crate) fn handshake_polling_system(
                 });
 
                 // Log success
-                tracing::info!("Handshake with {} succeeded", connection.remote_address);
+                match connection.direction {
+                    ConnectionDirection::Outgoing => tracing::info!("Successfully connected to {entity:?} ({})", connection.remote_address),
+                    ConnectionDirection::Incoming => tracing::info!("Remote peer {entity:?} ({}) connected", connection.remote_address),
+                }
             },
             HandshakeState::Failed(reason) => {
                 // Change state to Closed so it's despawned
                 connection.state = ConnectionState::Closed;
 
                 // Log failure
-                tracing::info!("Handshake with {} failed: {reason}", connection.remote_address);
+                match connection.direction {
+                    ConnectionDirection::Outgoing => tracing::info!("Handshake with {entity:?} ({}) failed: {reason}", connection.remote_address),
+                    ConnectionDirection::Incoming => tracing::info!("Remote peer {entity:?} ({}) failed: {reason}", connection.remote_address),
+                }
             },
             _ => {}, // Do nothing
         }
