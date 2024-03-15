@@ -15,7 +15,7 @@ pub(super) enum HandshakeParsingResponse<T> {
 }
 
 impl<T> From<EndOfInput> for HandshakeParsingResponse<T> {
-    fn from(value: EndOfInput) -> Self {
+    fn from(_: EndOfInput) -> Self {
         HandshakeParsingResponse::WeRejected(HandshakeResponseCode::MalformedPacket)
     }
 }
