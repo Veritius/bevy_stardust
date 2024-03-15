@@ -51,8 +51,10 @@ You can use any transport layer you want, and it just works. Use UDP, TCP, QUIC,
 You can use any replication or extra features you want. If you prefer a specific crate for replication, it's really easy to integrate it into Stardust, as long as it has some kind of API for taking in and outputting bytes. It'll just work.
 
 ### Planned features
-- Replication and state synchronisation plugins
-- UDP and WebTransport plugins
+The following features are planned to be created as additional crates.
+
+- Replication plugin
+- UDP, QUIC, and WebTransport plugins
 - Real time voice plugin
 
 ## Usage
