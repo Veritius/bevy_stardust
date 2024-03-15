@@ -148,6 +148,9 @@ pub(crate) fn potential_new_peers_system(
                 .unwrap()
                 .insert((bx.1, bx.2));
         });
+
+        // Log the new connection
+        tracing::debug!("Received join request from new connection {ent_id:?} on address {address}");
     }
 }
 
