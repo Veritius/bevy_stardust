@@ -139,7 +139,7 @@ pub enum ConnectionState {
 
 #[derive(Event)]
 pub(crate) struct PotentialNewPeer {
-    pub ep_origin: Entity,
+    pub endpoint: Entity,
     pub address: SocketAddr,
     pub payload: Bytes,
 }

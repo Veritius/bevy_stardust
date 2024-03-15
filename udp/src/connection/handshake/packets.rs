@@ -1,4 +1,4 @@
-use bytes::BufMut;
+use bytes::{BufMut, Bytes};
 use untrusted::*;
 use crate::appdata::NetworkVersionData;
 use super::codes::HandshakeResponseCode;
@@ -25,6 +25,14 @@ impl<T> From<EndOfInput> for HandshakeParsingResponse<T> {
 #[derive(Debug)]
 pub(super) struct HandshakePacketHeader {
     pub sequence: u16,
+}
+
+/// Utility for sending a close signal to a connection.
+#[derive(Debug)]
+pub(super) struct ClosingPacket {
+    pub header: HandshakePacketHeader,
+    pub reason: HandshakeResponseCode,
+    pub additional: Option<Bytes>,
 }
 
 /// Client sends its sequence id to establish reliability

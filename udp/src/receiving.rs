@@ -40,7 +40,7 @@ pub(crate) fn io_receiving_system(
                         // We don't know this peer
                         None => {
                             new_peers.lock().unwrap().send(PotentialNewPeer {
-                                ep_origin: endpoint_id,
+                                endpoint: endpoint_id,
                                 address: origin,
                                 payload,
                             });

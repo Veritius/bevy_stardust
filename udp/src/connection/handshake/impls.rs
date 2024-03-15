@@ -30,6 +30,16 @@ impl HandshakePacketHeader {
     }
 }
 
+impl ClosingPacket {
+    pub fn write_bytes(&self, buffer: &mut impl BufMut) {
+        self.header.write_bytes(buffer);
+        buffer.put_u16(self.reason as u16);
+        if let Some(additional) = &self.additional {
+            buffer.put(&**additional)
+        }
+    }
+}
+
 impl HandshakePacket for ClientHelloPacket {
     fn from_reader(reader: &mut Reader) -> HandshakeParsingResponse<Self> {
         let header = try_read!(HandshakePacketHeader::from_bytes(reader));
