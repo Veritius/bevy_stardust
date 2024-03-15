@@ -19,7 +19,16 @@ pub(crate) fn handshake_polling_system(
 
     // Iterate connections in parallel
     connections.par_iter_mut().for_each(|(entity, mut connection, mut handshake)| {
-        todo!();
+        match handshake.state {
+            // Sending ClientHelloPackets to the remote peer and waiting for a ServerHelloPacket
+            HandshakeState::ClientHello => todo!(),
+
+            // Sending ServerHelloPackets to the remote peer and waiting for a ClientFinalisePacket
+            HandshakeState::ServerHello => todo!(),
+
+            // Do nothing, other systems handle this
+            HandshakeState::Finished | HandshakeState::Failed(_) => {}
+        }
     });
 }
 
