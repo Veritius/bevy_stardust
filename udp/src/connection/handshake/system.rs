@@ -99,6 +99,18 @@ pub(crate) fn handshake_polling_system(
                     // Mark as finalised
                     handshake.state = HandshakeState::Finished;
                 }
+                
+                // Check if we need to send a packet
+                if timeout_check(connection.timings.last_sent, RESEND_TIMEOUT) {
+                    let mut buf = BytesMut::with_capacity(36);
+                    let header = handshake.reliability.header();
+                    HandshakePacketHeader { sequence: header.sequence }.write_bytes(&mut buf);
+                    ClientHelloPacket {
+                        transport: TRANSPORT_VERSION_DATA.clone(),
+                        application: appdata.0.into_version(),
+                    }.write_bytes(&mut buf);
+                    connection.packet_queue.push_outgoing(OutgoingPacket::from(buf.freeze()));
+                }
             }
 
             // Sending ServerHelloPackets to the remote peer and waiting for a ClientFinalisePacket
@@ -142,10 +154,31 @@ pub(crate) fn handshake_polling_system(
                     // Mark as finalised
                     handshake.state = HandshakeState::Finished;
                 }
+
+                // Check if we need to send a packet
+                if timeout_check(connection.timings.last_sent, RESEND_TIMEOUT) {
+                    let mut buf = BytesMut::with_capacity(38);
+                    let header = handshake.reliability.header();
+                    HandshakePacketHeader { sequence: header.sequence }.write_bytes(&mut buf);
+                    ServerHelloPacket {
+                        transport: TRANSPORT_VERSION_DATA.clone(),
+                        application: appdata.0.into_version(),
+                        reliability_ack: header.ack,
+                        reliability_bits: rel_bitfield_128_to_16(header.ack_bitfield),
+                    }.write_bytes(&mut buf);
+                    connection.packet_queue.push_outgoing(OutgoingPacket::from(buf.freeze()));
+                }
             },
 
             // Do nothing, other systems handle this
             HandshakeState::Finished | HandshakeState::Failed(_) => {}
+        }
+
+        // Time out the connection if it takes too long
+        if !handshake.state.is_end() {
+            if Instant::now().saturating_duration_since(handshake.started) > HANDSHAKE_TIMEOUT {
+                handshake.state = HandshakeFailureReason::TimedOut.into();
+            }
         }
 
         // Apply modifications based on state
@@ -173,6 +206,15 @@ pub(crate) fn handshake_polling_system(
             _ => {}, // Do nothing
         }
     }});
+}
+
+fn timeout_check(
+    last_sent: Option<Instant>,
+    timeout: Duration,
+) -> bool {
+    if last_sent.is_none() { return true }
+    if Instant::now().saturating_duration_since(last_sent.unwrap()) > timeout { return true }
+    return false
 }
 
 fn send_close_packet(
