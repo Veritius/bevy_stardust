@@ -44,7 +44,6 @@ pub(super) struct ClosingPacket {
 /// - \[xxx] Application version data
 #[derive(Debug)]
 pub(super) struct ClientHelloPacket {
-    pub header: HandshakePacketHeader,
     pub transport: NetworkVersionData,
     pub application: NetworkVersionData,
 }
@@ -61,7 +60,6 @@ pub(super) struct ClientHelloPacket {
 /// - \[u16] Reliability bitfield
 #[derive(Debug)]
 pub(super) struct ServerHelloPacket {
-    pub header: HandshakePacketHeader,
     pub transport: NetworkVersionData,
     pub application: NetworkVersionData,
     pub reliability_ack: u16,
@@ -77,7 +75,6 @@ pub(super) struct ServerHelloPacket {
 /// - \[u16] Reliability bitfield
 #[derive(Debug)]
 pub(super) struct ClientFinalisePacket {
-    pub header: HandshakePacketHeader,
     pub reliability_ack: u16,
     pub reliability_bits: u16,
 }

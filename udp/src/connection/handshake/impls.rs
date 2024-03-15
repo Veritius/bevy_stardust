@@ -47,14 +47,12 @@ impl HandshakePacket for ClientHelloPacket {
         let application = NetworkVersionData::from_bytes(try_read!(slice_to_array::<16>(reader)));
 
         HandshakeParsingResponse::Continue(Self {
-            header,
             transport,
             application,
         })
     }
 
     fn write_bytes(&self, buffer: &mut impl BufMut) {
-        self.header.write_bytes(buffer);
         buffer.put(&self.transport.to_bytes()[..]);
         buffer.put(&self.application.to_bytes()[..]);
     }
@@ -77,7 +75,6 @@ impl HandshakePacket for ServerHelloPacket {
         let reliability_bits = try_read!(u16::from_byte_slice(reader));
 
         HandshakeParsingResponse::Continue(Self {
-            header,
             transport,
             application,
             reliability_ack,
@@ -86,8 +83,6 @@ impl HandshakePacket for ServerHelloPacket {
     }
 
     fn write_bytes(&self, buffer: &mut impl BufMut) {
-        self.header.write_bytes(buffer);
-
         // Write response code
         buffer.put_u16(HandshakeResponseCode::Continue as u16);
 
@@ -113,15 +108,12 @@ impl HandshakePacket for ClientFinalisePacket {
         let reliability_bits = try_read!(u16::from_byte_slice(reader));
 
         return HandshakeParsingResponse::Continue(Self {
-            header,
             reliability_ack,
             reliability_bits,
         })
     }
 
     fn write_bytes(&self, buffer: &mut impl BufMut) {
-        self.header.write_bytes(buffer);
-
         // Write response code
         buffer.put_u16(HandshakeResponseCode::Continue as u16);
 

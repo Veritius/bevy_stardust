@@ -32,7 +32,7 @@ pub struct Connection {
     #[cfg_attr(feature="reflect", reflect(ignore))]
     remote_address: SocketAddr,
     #[cfg_attr(feature="reflect", reflect(ignore))]
-    connection_state: ConnectionState,
+    state: ConnectionState,
 
     #[cfg_attr(feature="reflect", reflect(ignore))]
     pub(crate) packet_queue: PacketQueue,
@@ -52,7 +52,7 @@ impl Connection {
     ) -> Self {
         Self {
             remote_address,
-            connection_state: ConnectionState::Handshaking,
+            state: ConnectionState::Handshaking,
 
             packet_queue: PacketQueue::new(16, 16),
 
@@ -88,7 +88,7 @@ impl Connection {
 
     /// Returns the [`ConnectionState`] of the connection.
     pub fn state(&self) -> ConnectionState {
-        self.connection_state
+        self.state
     }
 
     /// Returns statistics related to the Connection. See [`ConnectionStatistics`] for more.

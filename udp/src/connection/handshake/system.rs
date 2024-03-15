@@ -1,8 +1,9 @@
 use std::{collections::HashMap, net::SocketAddr, time::{Duration, Instant}};
 use bevy_ecs::{entity::Entities, prelude::*};
+use bevy_stardust::connections::peer::NetworkPeer;
 use bytes::{Bytes, BytesMut};
 use untrusted::*;
-use crate::{appdata::{AppNetVersionWrapper, NetworkVersionData, BANNED_MINOR_VERSIONS, TRANSPORT_VERSION_DATA}, connection::{handshake::{packets::{ClientHelloPacket, ClosingPacket, HandshakePacket, HandshakePacketHeader, HandshakeParsingResponse}, HandshakeState}, reliability::{ReliabilityData, ReliablePacketHeader}, Connection, PotentialNewPeer}, endpoint::ConnectionOwnershipToken, packet::{IncomingPacket, OutgoingPacket, PacketQueue}, ConnectionDirection, ConnectionState, Endpoint};
+use crate::{appdata::{AppNetVersionWrapper, NetworkVersionData, BANNED_MINOR_VERSIONS, TRANSPORT_VERSION_DATA}, connection::{established::Established, handshake::{packets::{ClientHelloPacket, ClosingPacket, HandshakePacket, HandshakePacketHeader, HandshakeParsingResponse}, HandshakeState}, reliability::{ReliabilityData, ReliablePacketHeader}, Connection, PotentialNewPeer}, endpoint::ConnectionOwnershipToken, packet::{IncomingPacket, OutgoingPacket, PacketQueue}, ConnectionDirection, ConnectionState, Endpoint};
 use super::{codes::HandshakeResponseCode, packets::{ClientFinalisePacket, ServerHelloPacket}, HandshakeFailureReason};
 use super::Handshaking;
 
@@ -16,12 +17,21 @@ pub(crate) fn handshake_polling_system(
 ) {
     // Iterate connections in parallel
     connections.par_iter_mut().for_each(|(entity, mut connection, mut handshake)| {
-        'outer: { match handshake.state {
+        'outer: { match &handshake.state {
             // Sending ClientHelloPackets to the remote peer and waiting for a ServerHelloPacket
             HandshakeState::ClientHello => {
                 // Read any incoming packets
                 while let Some(packet) = connection.packet_queue.pop_incoming() {
                     let mut reader = Reader::new(Input::from(&packet.payload));
+
+                    // Try to read the header before anything else
+                    let header = match HandshakePacketHeader::from_bytes(&mut reader) {
+                        Ok(val) => val,
+                        Err(_) => { continue; }, // Couldn't parse header, ignore this packet.
+                    };
+
+                    // Check if this is an old packet, ignore if so
+                    if header.sequence <= handshake.reliability.remote_sequence { continue; }
 
                     // Try to parse the packet as a ServerHelloPacket, the next packet in the sequence
                     let packet = match ServerHelloPacket::from_reader(&mut reader) {
@@ -49,9 +59,8 @@ pub(crate) fn handshake_polling_system(
                     };
 
                     // Update reliability
-                    handshake.reliability.remote_sequence = packet.header.sequence;
                     let _ = handshake.reliability.ack(ReliablePacketHeader {
-                        sequence: packet.header.sequence,
+                        sequence: header.sequence,
                         ack: packet.reliability_ack,
                         ack_bitfield: rel_bitfield_16_to_128(packet.reliability_bits),
                     }, 2);
@@ -80,8 +89,8 @@ pub(crate) fn handshake_polling_system(
                     // Respond with a ClientFinalisePacket
                     let r_header = handshake.reliability.header();
                     let mut buf = BytesMut::with_capacity(6);
+                    HandshakePacketHeader { sequence: r_header.sequence }.write_bytes(&mut buf);
                     ClientFinalisePacket {
-                        header: HandshakePacketHeader { sequence: r_header.sequence },
                         reliability_ack: r_header.ack,
                         reliability_bits: rel_bitfield_128_to_16(handshake.reliability.sequence_memory),
                     }.write_bytes(&mut buf);
@@ -93,10 +102,75 @@ pub(crate) fn handshake_polling_system(
             }
 
             // Sending ServerHelloPackets to the remote peer and waiting for a ClientFinalisePacket
-            HandshakeState::ServerHello => todo!(),
+            HandshakeState::ServerHello => {
+                // Read any incoming packets
+                while let Some(packet) = connection.packet_queue.pop_incoming() {
+                    let mut reader = Reader::new(Input::from(&packet.payload));
+
+                    // Try to read the header before anything else
+                    let header = match HandshakePacketHeader::from_bytes(&mut reader) {
+                        Ok(val) => val,
+                        Err(_) => { continue; }, // Couldn't parse header, ignore this packet.
+                    };
+
+                    // Try to parse the packet as a ClientFinalisePacket, the next packet in the sequence
+                    let packet = match ClientFinalisePacket::from_reader(&mut reader) {
+                        HandshakeParsingResponse::Continue(val) => val,
+                        HandshakeParsingResponse::WeRejected(code) => {
+                            // Set handshake state to failed
+                            handshake.state = HandshakeFailureReason::WeRejected(code).into();
+
+                            // We're done here
+                            break 'outer;
+                        },
+                        HandshakeParsingResponse::TheyRejected(code) => {
+                            // Set handshake state to failed
+                            handshake.state = HandshakeFailureReason::WeRejected(code).into();
+
+                            // We're done here
+                            break 'outer;
+                        }
+                    };
+
+                    // Update reliability
+                    let _ = handshake.reliability.ack(ReliablePacketHeader {
+                        sequence: header.sequence,
+                        ack: packet.reliability_ack,
+                        ack_bitfield: rel_bitfield_16_to_128(packet.reliability_bits),
+                    }, 2);
+
+                    // Mark as finalised
+                    handshake.state = HandshakeState::Finished;
+                }
+            },
 
             // Do nothing, other systems handle this
             HandshakeState::Finished | HandshakeState::Failed(_) => {}
+        }
+
+        // Apply modifications based on state
+        // We do this again after reading packets because state can change
+        match &handshake.state {
+            HandshakeState::Finished => {
+                // Defer some mutations
+                commands.command_scope(|mut commands| {
+                    commands.entity(entity)
+                        .remove::<Handshaking>()
+                        .insert(Established::new())
+                        .insert(NetworkPeer::new());
+                });
+
+                // Log success
+                tracing::info!("Handshake with {} succeeded", connection.remote_address);
+            },
+            HandshakeState::Failed(reason) => {
+                // Change state to Closed so it's despawned
+                connection.state = ConnectionState::Closed;
+
+                // Log failure
+                tracing::info!("Handshake with {} failed: {reason}", connection.remote_address);
+            },
+            _ => {}, // Do nothing
         }
     }});
 }
@@ -153,6 +227,12 @@ pub(crate) fn potential_new_peers_system(
         let mut endpoint = match endpoints.get_mut(event.endpoint) {
             Ok(val) => val,
             Err(_) => { continue; },
+        };
+
+        // Try to read the header before anything else
+        let header = match HandshakePacketHeader::from_bytes(&mut reader) {
+            Ok(val) => val,
+            Err(_) => { continue 'outer; }, // Couldn't parse header, ignore this packet.
         };
 
         // Try to parse the UDP packet as a ClientHelloPacket struct
@@ -213,7 +293,7 @@ pub(crate) fn potential_new_peers_system(
 
         // We have to construct the reliability state from scratch
         let mut reliability = ReliabilityData::new();
-        reliability.remote_sequence = packet.header.sequence;
+        reliability.remote_sequence = header.sequence;
         reliability.sequence_memory |= 1u128 << 127;
 
         let handshake = Handshaking {
