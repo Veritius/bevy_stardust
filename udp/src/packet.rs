@@ -54,3 +54,12 @@ pub(crate) struct OutgoingPacket {
     pub payload: Bytes,
     pub messages: u32,
 }
+
+impl From<Bytes> for OutgoingPacket {
+    fn from(value: Bytes) -> Self {
+        Self {
+            payload: value,
+            messages: 0,
+        }
+    }
+}

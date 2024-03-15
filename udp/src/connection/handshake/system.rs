@@ -3,7 +3,7 @@ use bevy_ecs::{entity::Entities, prelude::*};
 use bytes::{Bytes, BytesMut};
 use untrusted::*;
 use crate::{appdata::{AppNetVersionWrapper, NetworkVersionData, BANNED_MINOR_VERSIONS, TRANSPORT_VERSION_DATA}, connection::{handshake::{packets::{ClientHelloPacket, ClosingPacket, HandshakePacket, HandshakePacketHeader, HandshakeParsingResponse}, HandshakeState}, reliability::{ReliabilityData, ReliablePacketHeader}, Connection, PotentialNewPeer}, endpoint::ConnectionOwnershipToken, packet::{IncomingPacket, OutgoingPacket, PacketQueue}, ConnectionDirection, ConnectionState, Endpoint};
-use super::{codes::HandshakeResponseCode, packets::ServerHelloPacket, HandshakeFailureReason};
+use super::{codes::HandshakeResponseCode, packets::{ClientFinalisePacket, ServerHelloPacket}, HandshakeFailureReason};
 use super::Handshaking;
 
 const HANDSHAKE_TIMEOUT: Duration = Duration::from_secs(15);
@@ -20,7 +20,7 @@ pub(crate) fn handshake_polling_system(
             // Sending ClientHelloPackets to the remote peer and waiting for a ServerHelloPacket
             HandshakeState::ClientHello => {
                 // Read any incoming packets
-                'read: while let Some(packet) = connection.packet_queue.pop_incoming() {
+                while let Some(packet) = connection.packet_queue.pop_incoming() {
                     let mut reader = Reader::new(Input::from(&packet.payload));
 
                     // Try to parse the packet as a ServerHelloPacket, the next packet in the sequence
@@ -78,7 +78,17 @@ pub(crate) fn handshake_polling_system(
                     }
 
                     // Respond with a ClientFinalisePacket
-                    todo!()
+                    let r_header = handshake.reliability.header();
+                    let mut buf = BytesMut::with_capacity(6);
+                    ClientFinalisePacket {
+                        header: HandshakePacketHeader { sequence: r_header.sequence },
+                        reliability_ack: r_header.ack,
+                        reliability_bits: rel_bitfield_128_to_16(handshake.reliability.sequence_memory),
+                    }.write_bytes(&mut buf);
+                    connection.packet_queue.push_outgoing(OutgoingPacket::from(buf.freeze()));
+
+                    // Mark as finalised
+                    handshake.state = HandshakeState::Finished;
                 }
             }
 
@@ -113,6 +123,11 @@ fn rel_bitfield_16_to_128(bitfield: u16) -> u128 {
     let mut b = [0u8; 16];
     b[0] = a[0]; b[1] = a[1];
     u128::from_be_bytes(b)
+}
+
+fn rel_bitfield_128_to_16(bitfield: u128) -> u16 {
+    let a = bitfield.to_be_bytes();
+    u16::from_be_bytes([a[0], a[1]])
 }
 
 pub(crate) fn potential_new_peers_system(
