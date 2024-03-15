@@ -80,8 +80,8 @@ impl std::fmt::Display for HandshakeFailureReason {
         use HandshakeFailureReason::*;
         match self {
             TimedOut => f.write_str("timed out"),
-            WeRejected(error_code) => f.write_fmt(format_args!("rejected by remote peer: {error_code}")),
-            TheyRejected(error_code) => f.write_fmt(format_args!("we rejected remote peer: {error_code}")),
+            WeRejected(error_code) => f.write_fmt(format_args!("we rejected by remote peer: {error_code}")),
+            TheyRejected(error_code) => f.write_fmt(format_args!("rejected by remote peer: {error_code}")),
         }
     }
 }
