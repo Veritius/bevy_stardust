@@ -71,7 +71,6 @@ impl From<HandshakeFailureReason> for HandshakeState {
 #[derive(Debug)]
 enum HandshakeFailureReason {
     TimedOut,
-    BadResponse,
     WeRejected(HandshakeResponseCode),
     TheyRejected(HandshakeResponseCode),
 }
@@ -81,7 +80,6 @@ impl std::fmt::Display for HandshakeFailureReason {
         use HandshakeFailureReason::*;
         match self {
             TimedOut => f.write_str("timed out"),
-            BadResponse => f.write_str("remote peer invalid response packet"),
             WeRejected(error_code) => f.write_fmt(format_args!("rejected by remote peer: {error_code}")),
             TheyRejected(error_code) => f.write_fmt(format_args!("we rejected remote peer: {error_code}")),
         }

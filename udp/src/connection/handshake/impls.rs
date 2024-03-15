@@ -13,7 +13,7 @@ macro_rules! try_read {
     ($st:expr) => {
         match $st {
             Ok(val) => val,
-            Err(_) => { return HandshakeParsingResponse::WeClosed(HandshakeResponseCode::MalformedPacket) }
+            Err(_) => { return HandshakeParsingResponse::WeRejected(HandshakeResponseCode::MalformedPacket) }
         }
     };
 }
@@ -67,7 +67,7 @@ impl HandshakePacket for ServerHelloPacket {
         // Check the response code
         let response = try_read!(u16::from_byte_slice(reader)).into();
         if response != HandshakeResponseCode::Continue {
-            return HandshakeParsingResponse::TheyClosed(response)
+            return HandshakeParsingResponse::TheyRejected(response)
         }
 
         let transport = NetworkVersionData::from_bytes(try_read!(slice_to_array::<16>(reader)));
@@ -106,7 +106,7 @@ impl HandshakePacket for ClientFinalisePacket {
         // Check the response code
         let response = try_read!(u16::from_byte_slice(reader)).into();
         if response != HandshakeResponseCode::Continue {
-            return HandshakeParsingResponse::TheyClosed(response)
+            return HandshakeParsingResponse::TheyRejected(response)
         }
 
         let reliability_ack = try_read!(u16::from_byte_slice(reader));

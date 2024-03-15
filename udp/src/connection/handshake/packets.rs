@@ -10,13 +10,13 @@ pub(super) trait HandshakePacket: Sized {
 
 pub(super) enum HandshakeParsingResponse<T> {
     Continue(T),
-    WeClosed(HandshakeResponseCode),
-    TheyClosed(HandshakeResponseCode),
+    WeRejected(HandshakeResponseCode),
+    TheyRejected(HandshakeResponseCode),
 }
 
 impl<T> From<EndOfInput> for HandshakeParsingResponse<T> {
     fn from(value: EndOfInput) -> Self {
-        HandshakeParsingResponse::WeClosed(HandshakeResponseCode::MalformedPacket)
+        HandshakeParsingResponse::WeRejected(HandshakeResponseCode::MalformedPacket)
     }
 }
 

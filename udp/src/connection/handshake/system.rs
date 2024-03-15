@@ -1,8 +1,9 @@
 use std::{collections::HashMap, net::SocketAddr, time::{Duration, Instant}};
 use bevy_ecs::{entity::Entities, prelude::*};
 use bytes::{Bytes, BytesMut};
-use crate::{appdata::{AppNetVersionWrapper, NetworkVersionData, BANNED_MINOR_VERSIONS, TRANSPORT_VERSION_DATA}, connection::{handshake::{packets::{ClientHelloPacket, ClosingPacket, HandshakePacket, HandshakePacketHeader, HandshakeParsingResponse}, HandshakeState}, reliability::ReliabilityData, Connection, PotentialNewPeer}, endpoint::ConnectionOwnershipToken, packet::IncomingPacket, ConnectionDirection, Endpoint};
-use super::codes::HandshakeResponseCode;
+use untrusted::*;
+use crate::{appdata::{AppNetVersionWrapper, NetworkVersionData, BANNED_MINOR_VERSIONS, TRANSPORT_VERSION_DATA}, connection::{handshake::{packets::{ClientHelloPacket, ClosingPacket, HandshakePacket, HandshakePacketHeader, HandshakeParsingResponse}, HandshakeState}, reliability::{ReliabilityData, ReliablePacketHeader}, Connection, PotentialNewPeer}, endpoint::ConnectionOwnershipToken, packet::{IncomingPacket, OutgoingPacket, PacketQueue}, ConnectionDirection, ConnectionState, Endpoint};
+use super::{codes::HandshakeResponseCode, packets::ServerHelloPacket, HandshakeFailureReason};
 use super::Handshaking;
 
 const HANDSHAKE_TIMEOUT: Duration = Duration::from_secs(15);
@@ -13,15 +14,73 @@ pub(crate) fn handshake_polling_system(
     commands: ParallelCommands,
     mut connections: Query<(Entity, &mut Connection, &mut Handshaking)>,
 ) {
-    // IDK the performance of Instant::now(), but since it's a syscall,
-    // err on the side of caution and do it once at the start of the system.
-    let system_start_time = Instant::now();
-
     // Iterate connections in parallel
     connections.par_iter_mut().for_each(|(entity, mut connection, mut handshake)| {
-        match handshake.state {
+        'outer: { match handshake.state {
             // Sending ClientHelloPackets to the remote peer and waiting for a ServerHelloPacket
-            HandshakeState::ClientHello => todo!(),
+            HandshakeState::ClientHello => {
+                // Read any incoming packets
+                'read: while let Some(packet) = connection.packet_queue.pop_incoming() {
+                    let mut reader = Reader::new(Input::from(&packet.payload));
+
+                    // Try to parse the packet as a ServerHelloPacket, the next packet in the sequence
+                    let packet = match ServerHelloPacket::from_reader(&mut reader) {
+                        HandshakeParsingResponse::Continue(val) => val,
+                        HandshakeParsingResponse::WeRejected(code) => {
+                            // Set handshake state to failed
+                            handshake.state = HandshakeFailureReason::WeRejected(code).into();
+
+                            // Check if we ought to send a response packet
+                            if !code.should_respond_on_rejection() { break; }
+
+                            // Send a packet informing them of our denial
+                            send_close_packet(&mut connection.packet_queue, &mut handshake.reliability, code);
+
+                            // We're done
+                            break 'outer;
+                        },
+                        HandshakeParsingResponse::TheyRejected(code) => {
+                            // Set handshake state to failed
+                            handshake.state = HandshakeFailureReason::TheyRejected(code).into();
+
+                            // We're done
+                            break 'outer;
+                        },
+                    };
+
+                    // Update reliability
+                    handshake.reliability.remote_sequence = packet.header.sequence;
+                    let _ = handshake.reliability.ack(ReliablePacketHeader {
+                        sequence: packet.header.sequence,
+                        ack: packet.reliability_ack,
+                        ack_bitfield: rel_bitfield_16_to_128(packet.reliability_bits),
+                    }, 2);
+
+                    // Check transport and application versions
+                    for (us, them, banlist, is_app) in [
+                        (&TRANSPORT_VERSION_DATA, &packet.transport, BANNED_MINOR_VERSIONS, false),
+                        (&appdata.0.into_version(), &packet.application, appdata.0.banlist, true),
+                    ] {
+                        // Check the transport version
+                        match check_identity_match(us, them, banlist, is_app) {
+                            Ok(_) => {},
+                            Err(code) => {
+                                // Set handshake state to failed
+                                handshake.state = HandshakeFailureReason::WeRejected(code).into();
+
+                                // Send a packet informing them of our denial
+                                send_close_packet(&mut connection.packet_queue, &mut handshake.reliability, code);
+
+                                // We're done
+                                break 'outer;
+                            }
+                        }
+                    }
+
+                    // Respond with a ClientFinalisePacket
+                    todo!()
+                }
+            }
 
             // Sending ServerHelloPackets to the remote peer and waiting for a ClientFinalisePacket
             HandshakeState::ServerHello => todo!(),
@@ -29,7 +88,31 @@ pub(crate) fn handshake_polling_system(
             // Do nothing, other systems handle this
             HandshakeState::Finished | HandshakeState::Failed(_) => {}
         }
+    }});
+}
+
+fn send_close_packet(
+    packet_queue: &mut PacketQueue,
+    reliability: &mut ReliabilityData,
+    reason: HandshakeResponseCode,
+) {
+    // Send a packet informing them of our denial
+    let r_header = reliability.header();
+    packet_queue.push_outgoing(OutgoingPacket {
+        payload: closing_packet(&ClosingPacket {
+            header: HandshakePacketHeader { sequence: r_header.sequence },
+            reason,
+            additional: None,
+        }),
+        messages: 0,
     });
+}
+
+fn rel_bitfield_16_to_128(bitfield: u16) -> u128 {
+    let a = bitfield.to_be_bytes();
+    let mut b = [0u8; 16];
+    b[0] = a[0]; b[1] = a[1];
+    u128::from_be_bytes(b)
 }
 
 pub(crate) fn potential_new_peers_system(
@@ -60,7 +143,7 @@ pub(crate) fn potential_new_peers_system(
         // Try to parse the UDP packet as a ClientHelloPacket struct
         let packet = match ClientHelloPacket::from_reader(&mut reader) {
             HandshakeParsingResponse::Continue(val) => val,
-            HandshakeParsingResponse::WeClosed(code) => {
+            HandshakeParsingResponse::WeRejected(code) => {
                 // Log the disconnect
                 tracing::debug!("Received and rejected connection attempt from {}: {code}",
                     event.address);
@@ -79,7 +162,7 @@ pub(crate) fn potential_new_peers_system(
                 // We're done
                 continue;
             },
-            HandshakeParsingResponse::TheyClosed(_) => { continue; }, // Do nothing.
+            HandshakeParsingResponse::TheyRejected(_) => { continue; }, // Do nothing.
         };
 
         // Check transport and application versions
