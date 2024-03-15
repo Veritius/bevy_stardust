@@ -14,6 +14,12 @@ pub(super) enum HandshakeParsingResponse<T> {
     TheyClosed(HandshakeResponseCode),
 }
 
+impl<T> From<EndOfInput> for HandshakeParsingResponse<T> {
+    fn from(value: EndOfInput) -> Self {
+        HandshakeParsingResponse::WeClosed(HandshakeResponseCode::MalformedPacket)
+    }
+}
+
 /// On-wire format:
 /// - \[u16] Sequence identifier
 #[derive(Debug)]

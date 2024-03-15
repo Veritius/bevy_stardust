@@ -1,9 +1,22 @@
 // A big space for impl blocks.
 
+// TODO: When try_trait_v2 stabilises, this code can be massively simplified using the try operator (?)
+
 use bytes::BufMut;
 use untrusted::*;
-use crate::utils::IntegerFromByteSlice;
+use crate::{appdata::NetworkVersionData, connection::handshake::codes::HandshakeResponseCode, utils::{slice_to_array, IntegerFromByteSlice}};
 use super::packets::*;
+
+// Breaks with HandshakeParsingResponse::WeClosed(HandshakeResponseCode::MalformedPacket) if an Err is encountered
+// This is easier than repeating a thousand match statements. Remove this when try_trait_v2 stabilises.
+macro_rules! try_read {
+    ($st:expr) => {
+        match $st {
+            Ok(val) => val,
+            Err(_) => { return HandshakeParsingResponse::WeClosed(HandshakeResponseCode::MalformedPacket) }
+        }
+    };
+}
 
 impl HandshakePacketHeader {
     pub fn from_bytes(reader: &mut Reader) -> Result<Self, EndOfInput> {
@@ -19,30 +32,90 @@ impl HandshakePacketHeader {
 
 impl HandshakePacket for ClientHelloPacket {
     fn from_reader(reader: &mut Reader) -> HandshakeParsingResponse<Self> {
-        todo!()
+        let header = try_read!(HandshakePacketHeader::from_bytes(reader));
+        let transport = NetworkVersionData::from_bytes(try_read!(slice_to_array::<16>(reader)));
+        let application = NetworkVersionData::from_bytes(try_read!(slice_to_array::<16>(reader)));
+
+        HandshakeParsingResponse::Continue(Self {
+            header,
+            transport,
+            application,
+        })
     }
 
     fn write_bytes(&self, buffer: &mut impl BufMut) {
         self.header.write_bytes(buffer);
+        buffer.put(&self.transport.to_bytes()[..]);
+        buffer.put(&self.application.to_bytes()[..]);
     }
 }
 
 impl HandshakePacket for ServerHelloPacket {
     fn from_reader(reader: &mut Reader) -> HandshakeParsingResponse<Self> {
-        todo!()
+        let header = try_read!(HandshakePacketHeader::from_bytes(reader));
+
+        // Check the response code
+        let response = try_read!(u16::from_byte_slice(reader)).into();
+        if response != HandshakeResponseCode::Continue {
+            return HandshakeParsingResponse::TheyClosed(response)
+        }
+
+        let transport = NetworkVersionData::from_bytes(try_read!(slice_to_array::<16>(reader)));
+        let application = NetworkVersionData::from_bytes(try_read!(slice_to_array::<16>(reader)));
+
+        let reliability_ack = try_read!(u16::from_byte_slice(reader));
+        let reliability_bits = try_read!(u16::from_byte_slice(reader));
+
+        HandshakeParsingResponse::Continue(Self {
+            header,
+            transport,
+            application,
+            reliability_ack,
+            reliability_bits,
+        })
     }
 
     fn write_bytes(&self, buffer: &mut impl BufMut) {
-        todo!()
+        self.header.write_bytes(buffer);
+
+        // Write response code
+        buffer.put_u16(HandshakeResponseCode::Continue as u16);
+
+        buffer.put(&self.transport.to_bytes()[..]);
+        buffer.put(&self.application.to_bytes()[..]);
+
+        buffer.put_u16(self.reliability_ack);
+        buffer.put_u16(self.reliability_bits);
     }
 }
 
 impl HandshakePacket for ClientFinalisePacket {
     fn from_reader(reader: &mut Reader) -> HandshakeParsingResponse<Self> {
-        todo!()
+        let header = try_read!(HandshakePacketHeader::from_bytes(reader));
+
+        // Check the response code
+        let response = try_read!(u16::from_byte_slice(reader)).into();
+        if response != HandshakeResponseCode::Continue {
+            return HandshakeParsingResponse::TheyClosed(response)
+        }
+
+        let reliability_ack = try_read!(u16::from_byte_slice(reader));
+        let reliability_bits = try_read!(u16::from_byte_slice(reader));
+
+        return HandshakeParsingResponse::Continue(Self {
+            header,
+            reliability_ack,
+            reliability_bits,
+        })
     }
 
     fn write_bytes(&self, buffer: &mut impl BufMut) {
-        todo!()
+        self.header.write_bytes(buffer);
+
+        // Write response code
+        buffer.put_u16(HandshakeResponseCode::Continue as u16);
+
+        buffer.put_u16(self.reliability_ack);
+        buffer.put_u16(self.reliability_bits);
     }
 }
