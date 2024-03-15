@@ -23,6 +23,8 @@ pub(super) enum HandshakeResponseCode {
     IncompatibleApplicationIdentifier = 7,
     IncompatibleApplicationMajorVersion = 8,
     IncompatibleApplicationMinorVersion = 9,
+
+    ServerNotListening = 10,
 }
 
 impl HandshakeResponseCode {
@@ -53,6 +55,8 @@ impl From<u16> for HandshakeResponseCode {
             8 => IncompatibleApplicationMajorVersion,
             9 => IncompatibleApplicationMinorVersion,
 
+            10 => ServerNotListening,
+
             _ => Unknown,
         }
     }
@@ -77,6 +81,8 @@ impl std::fmt::Display for HandshakeResponseCode {
             IncompatibleApplicationIdentifier => "using different application",
             IncompatibleApplicationMajorVersion => "incompatible application major version",
             IncompatibleApplicationMinorVersion => "incompatible application minor version",
+
+            ServerNotListening => "server not accepting connections",
         })
     }
 }

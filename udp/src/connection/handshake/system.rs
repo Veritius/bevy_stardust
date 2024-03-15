@@ -330,6 +330,20 @@ pub(crate) fn potential_new_peers_system(
             }
         }
 
+        // Check if the endpoint is listening
+        // We do this now because version checks are more important disconnect reasons
+        if !endpoint.listening {
+            // Inform them of their rejection
+            endpoint.outgoing_pkts.push((event.address, closing_packet(&ClosingPacket {
+                header: HandshakePacketHeader { sequence: fastrand::u16(..) },
+                reason: HandshakeResponseCode::ServerNotListening,
+                additional: None,
+            })));
+
+            // We're done
+            continue 'outer;
+        }
+
         // By this point the peer has passed all checks for their initial ClientHello packet
         // We now just have to create the relevant components and add them to the pending map
 
