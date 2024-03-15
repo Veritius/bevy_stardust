@@ -137,7 +137,7 @@ pub(crate) fn handshake_polling_system(
                         },
                         HandshakeParsingResponse::TheyRejected(code) => {
                             // Set handshake state to failed
-                            handshake.state = HandshakeFailureReason::WeRejected(code).into();
+                            handshake.state = HandshakeFailureReason::TheyRejected(code).into();
 
                             // We're done here
                             break 'outer;
