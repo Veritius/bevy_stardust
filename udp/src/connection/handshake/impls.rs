@@ -42,7 +42,6 @@ impl ClosingPacket {
 
 impl HandshakePacket for ClientHelloPacket {
     fn from_reader(reader: &mut Reader) -> HandshakeParsingResponse<Self> {
-        let header = try_read!(HandshakePacketHeader::from_bytes(reader));
         let transport = NetworkVersionData::from_bytes(try_read!(slice_to_array::<16>(reader)));
         let application = NetworkVersionData::from_bytes(try_read!(slice_to_array::<16>(reader)));
 
