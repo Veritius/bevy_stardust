@@ -1,10 +1,17 @@
 use bytes::BufMut;
 use untrusted::*;
 use crate::appdata::NetworkVersionData;
+use super::codes::HandshakeResponseCode;
 
-pub(super) trait HandshakePacket {
-    fn from_reader(reader: &mut Reader);
-    fn write_bytes(buffer: &mut impl BufMut);
+pub(super) trait HandshakePacket: Sized {
+    fn from_reader(reader: &mut Reader) -> HandshakeParsingResponse<Self>;
+    fn write_bytes(&self, buffer: &mut impl BufMut);
+}
+
+pub(super) enum HandshakeParsingResponse<T> {
+    Continue(T),
+    WeClosed(HandshakeResponseCode),
+    TheyClosed(HandshakeResponseCode),
 }
 
 /// On-wire format:

@@ -1,40 +1,13 @@
-pub(super) fn response_code_from_int(value: u16) -> HandshakeCode {
-    if value == 0 { return HandshakeCode::Ok; }
-    HandshakeCode::Err(HandshakeErrorCode::from(value))
-}
-
-#[derive(Debug)]
-pub(super) enum HandshakeCode {
-    Ok,
-    Err(HandshakeErrorCode),
-}
-
-impl From<HandshakeOkCode> for HandshakeCode {
-    fn from(_: HandshakeOkCode) -> Self {
-        Self::Ok
-    }
-}
-
-impl From<HandshakeErrorCode> for HandshakeCode {
-    fn from(value: HandshakeErrorCode) -> Self {
-        Self::Err(value)
-    }
-}
-
-#[derive(Debug)]
-pub(super) struct HandshakeOkCode;
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u16)]
-pub(super) enum HandshakeErrorCode {
-    // Do not add anything equal to zero!
-    // Zero is used for the 'all okay' value.
-
+pub(super) enum HandshakeResponseCode {
     // The following values should not be changed.
     // They are used for good error responses in older versions.
 
+    Continue = 0,
+
     // This code is returned when we can't recognise the code they send.
-    // You should not send this to a remote peer as an actual error code.
+    // This should not be sent to a peer, that'd be weird.
     Unknown = u16::MAX,
 
     Unspecified = 1,
@@ -52,11 +25,13 @@ pub(super) enum HandshakeErrorCode {
     IncompatibleApplicationMinorVersion = 9,
 }
 
-impl From<u16> for HandshakeErrorCode {
+impl From<u16> for HandshakeResponseCode {
     fn from(value: u16) -> Self {
-        use HandshakeErrorCode::*;
+        use HandshakeResponseCode::*;
 
         match value {
+            0 => Continue,
+
             1 => Unspecified,
             2 => MalformedPacket,
             3 => InvalidResponseCode,
@@ -74,11 +49,12 @@ impl From<u16> for HandshakeErrorCode {
     }
 }
 
-impl std::fmt::Display for HandshakeErrorCode {
+impl std::fmt::Display for HandshakeResponseCode {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        use HandshakeErrorCode::*;
+        use HandshakeResponseCode::*;
 
         f.write_str(match self {
+            Continue => "no error",
             Unknown => "unknown error code",
 
             MalformedPacket => "malformed packet",
@@ -96,4 +72,4 @@ impl std::fmt::Display for HandshakeErrorCode {
     }
 }
 
-impl std::error::Error for HandshakeErrorCode {}
+impl std::error::Error for HandshakeResponseCode {}

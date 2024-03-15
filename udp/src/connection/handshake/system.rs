@@ -1,12 +1,8 @@
 use std::time::{Instant, Duration};
 use bevy_ecs::prelude::*;
-use bevy_stardust::connections::peer::NetworkPeer;
-use bytes::{BufMut, Bytes, BytesMut};
-use untrusted::*;
-use crate::{appdata::{AppNetVersionWrapper, NetworkVersionData, BANNED_MINOR_VERSIONS, TRANSPORT_VERSION_DATA}, connection::{established::Established, reliability::{ReliabilityData, ReliablePacketHeader}, PotentialNewPeer}, endpoint::ConnectionOwnershipToken, packet::OutgoingPacket, Connection, ConnectionDirection, ConnectionState, Endpoint};
-use crate::utils::IntegerFromByteSlice;
-use super::{codes::HandshakeErrorCode, packets::{ClientFinalisePacket, ClientHelloPacket}};
-use super::{codes::{response_code_from_int, HandshakeCode}, packets::ServerHelloPacket, HandshakeFailureReason, HandshakeState, Handshaking};
+use crate::{appdata::{AppNetVersionWrapper, NetworkVersionData}, connection::{Connection, PotentialNewPeer}, Endpoint};
+use super::codes::HandshakeResponseCode;
+use super::Handshaking;
 
 const HANDSHAKE_TIMEOUT: Duration = Duration::from_secs(15);
 const RESEND_TIMEOUT: Duration = Duration::from_secs(5);
@@ -43,28 +39,28 @@ fn check_identity_match(
     them: &NetworkVersionData,
     banlist: &[u32],
     is_app: bool,
-) -> Result<(), HandshakeErrorCode> {
+) -> Result<(), HandshakeResponseCode> {
     // Check the identity value
     if us.ident != them.ident {
         return Err(match is_app {
-            true => HandshakeErrorCode::IncompatibleApplicationIdentifier,
-            false => HandshakeErrorCode::IncompatibleTransportIdentifier,
+            true => HandshakeResponseCode::IncompatibleApplicationIdentifier,
+            false => HandshakeResponseCode::IncompatibleTransportIdentifier,
         });
     }
 
     // Check the major version
     if us.major != them.major {
         return Err(match is_app {
-            true => HandshakeErrorCode::IncompatibleApplicationMajorVersion,
-            false => HandshakeErrorCode::IncompatibleTransportMajorVersion,
+            true => HandshakeResponseCode::IncompatibleApplicationMajorVersion,
+            false => HandshakeResponseCode::IncompatibleTransportMajorVersion,
         });
     }
 
     // Check the minor version
     if banlist.contains(&them.minor) {
         return Err(match is_app {
-            true => HandshakeErrorCode::IncompatibleApplicationMinorVersion,
-            false => HandshakeErrorCode::IncompatibleTransportMinorVersion,
+            true => HandshakeResponseCode::IncompatibleApplicationMinorVersion,
+            false => HandshakeResponseCode::IncompatibleTransportMinorVersion,
         });
     }
 

@@ -9,7 +9,7 @@ use std::{net::SocketAddr, time::Instant};
 use bevy_ecs::prelude::*;
 use crate::{Connection, ConnectionDirection};
 use super::reliability::ReliabilityData;
-use codes::HandshakeErrorCode;
+use codes::HandshakeResponseCode;
 
 #[derive(Bundle)]
 pub(crate) struct OutgoingHandshake {
@@ -72,8 +72,8 @@ impl From<HandshakeFailureReason> for HandshakeState {
 enum HandshakeFailureReason {
     TimedOut,
     BadResponse,
-    WeRejected(HandshakeErrorCode),
-    TheyRejected(HandshakeErrorCode),
+    WeRejected(HandshakeResponseCode),
+    TheyRejected(HandshakeResponseCode),
 }
 
 impl std::fmt::Display for HandshakeFailureReason {
