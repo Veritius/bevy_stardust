@@ -43,10 +43,10 @@ impl ReliabilityData {
         if sequence_greater_than(header.sequence, self.remote_sequence) {
             // Newer packet, shift the memory bitfield
             self.remote_sequence = header.sequence;
-            self.sequence_memory >>= seq_diff;
+            self.sequence_memory = self.sequence_memory.overflowing_shr(seq_diff.into()).0;
         } else {
             // Older packet, mark id as acknowledged
-            self.sequence_memory |= BITMASK >> seq_diff;
+            self.sequence_memory |= BITMASK.overflowing_shr(seq_diff.into()).0;
         }
 
         // Iterator object for acknowledgements
