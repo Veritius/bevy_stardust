@@ -30,7 +30,10 @@ pub(crate) fn io_sending_system(
 
         for (_, token) in connection_map {
             // SAFETY: This is safe because ConnectionOwnershipToken ensures that only one endpoint 'owns' a connection.
-            let mut connection = unsafe { connections.get_unchecked(token.inner()).unwrap() };
+            let mut connection = unsafe { match connections.get_unchecked(token.inner()) {
+                Ok(val) => val,
+                Err(_) => { continue; },
+            } };
 
             // Send all packets queued in this peer
             while let Some(packet) = connection.packet_queue.pop_outgoing() {

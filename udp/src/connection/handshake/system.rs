@@ -1,7 +1,7 @@
 use std::{collections::HashMap, net::SocketAddr, time::{Duration, Instant}};
-use bevy_ecs::prelude::*;
+use bevy_ecs::{entity::Entities, prelude::*};
 use bytes::{Bytes, BytesMut};
-use crate::{appdata::{AppNetVersionWrapper, NetworkVersionData, BANNED_MINOR_VERSIONS, TRANSPORT_VERSION_DATA}, connection::{handshake::packets::{ClientHelloPacket, ClosingPacket, HandshakePacket, HandshakePacketHeader, HandshakeParsingResponse}, Connection, PotentialNewPeer}, packet::IncomingPacket, Endpoint};
+use crate::{appdata::{AppNetVersionWrapper, NetworkVersionData, BANNED_MINOR_VERSIONS, TRANSPORT_VERSION_DATA}, connection::{handshake::{packets::{ClientHelloPacket, ClosingPacket, HandshakePacket, HandshakePacketHeader, HandshakeParsingResponse}, HandshakeState}, reliability::ReliabilityData, Connection, PotentialNewPeer}, endpoint::ConnectionOwnershipToken, packet::IncomingPacket, ConnectionDirection, Endpoint};
 use super::codes::HandshakeResponseCode;
 use super::Handshaking;
 
@@ -26,17 +26,18 @@ pub(crate) fn handshake_polling_system(
 pub(crate) fn potential_new_peers_system(
     mut events: EventReader<PotentialNewPeer>,
     appdata: Res<AppNetVersionWrapper>,
+    entities: &Entities,
     mut commands: Commands,
     mut endpoints: Query<&mut Endpoint>,
 ) {
     use untrusted::*;
-    let mut pending: HashMap<SocketAddr, Box<(Connection, Handshaking)>> = HashMap::new();
 
+    let mut pending: HashMap<SocketAddr, Box<(Entity, Connection, Handshaking)>> = HashMap::new();
     let mut ev_iter = events.read();
     'outer: while let Some(event) = ev_iter.next() {
         // There is the potential of bunched-up packet arrivals, so we push them to the queue just in case.
         if let Some(item) = pending.get_mut(&event.address) {
-            item.0.packet_queue.push_incoming(IncomingPacket { payload: event.payload.clone() });
+            item.1.packet_queue.push_incoming(IncomingPacket { payload: event.payload.clone() });
             continue;
         }
 
@@ -56,6 +57,7 @@ pub(crate) fn potential_new_peers_system(
                     event.address);
 
                 // Check if the failure code ought to be sent to them
+                // This somewhat avoids sending a packet to a peer that won't understand it
                 if !code.should_respond_on_rejection() { continue }
 
                 // Push response packet to queue
@@ -93,7 +95,59 @@ pub(crate) fn potential_new_peers_system(
             }
         }
 
-        todo!()
+        // By this point the peer has passed all checks for their initial ClientHello packet
+        // We now just have to create the relevant components and add them to the pending map
+
+        let connection = Connection::new(
+            event.endpoint,
+            event.address,
+            ConnectionDirection::Incoming,
+        );
+
+        // We have to construct the reliability state from scratch
+        let mut reliability = ReliabilityData::new();
+        reliability.remote_sequence = packet.header.sequence;
+        reliability.sequence_memory |= 1u128 << 127;
+
+        let handshake = Handshaking {
+            started: Instant::now(),
+            state: HandshakeState::ServerHello,
+            reliability,
+        };
+
+        // Finally, add it to the map
+        pending.insert(event.address, Box::new((event.endpoint, connection, handshake)));
+    }
+
+    // Add the new peers as entities
+    let mut drain = pending.drain();
+    while let Some((address, comp_box)) = drain.next() {
+        // Get and reserve entity ids for the endpoint and connection respectively
+        let ept_id = comp_box.0.clone();
+        let ent_id = entities.reserve_entity();
+
+        // Add to the endpoint connection map
+        // For a small point in time, this makes it so that the endpoint map owns
+        // an entity that doesn't actually exist in the world. This should be fine.
+        match endpoints.get_mut(ept_id) {
+            Ok(mut val) => {
+                // SAFETY: The hashmap only stores one connection per address, so this is fine.
+                val.add_peer(address, unsafe { ConnectionOwnershipToken::new(ent_id) })
+            },
+            Err(_) => { continue; },
+        }
+
+        // Defers the movement out of comp_box so we only do one memcpy instead of two
+        commands.add(move |world: &mut World| {
+            // I'm not sure if these semantics are necessary
+            let bx = comp_box;
+            let bx = *bx;
+
+            world
+                .get_or_spawn(ent_id)
+                .unwrap()
+                .insert((bx.1, bx.2));
+        });
     }
 }
 
