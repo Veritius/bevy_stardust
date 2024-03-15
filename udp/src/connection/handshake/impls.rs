@@ -59,8 +59,6 @@ impl HandshakePacket for ClientHelloPacket {
 
 impl HandshakePacket for ServerHelloPacket {
     fn from_reader(reader: &mut Reader) -> HandshakeParsingResponse<Self> {
-        let header = try_read!(HandshakePacketHeader::from_bytes(reader));
-
         // Check the response code
         let response = try_read!(u16::from_byte_slice(reader)).into();
         if response != HandshakeResponseCode::Continue {
@@ -95,8 +93,6 @@ impl HandshakePacket for ServerHelloPacket {
 
 impl HandshakePacket for ClientFinalisePacket {
     fn from_reader(reader: &mut Reader) -> HandshakeParsingResponse<Self> {
-        let header = try_read!(HandshakePacketHeader::from_bytes(reader));
-
         // Check the response code
         let response = try_read!(u16::from_byte_slice(reader)).into();
         if response != HandshakeResponseCode::Continue {
