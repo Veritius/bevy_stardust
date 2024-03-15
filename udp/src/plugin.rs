@@ -18,14 +18,28 @@ pub struct UdpTransportPlugin {
     pub keep_alive_timeout: Duration,
 }
 
+/// Different default configurations to optimise the plugin for various things.
+// NOTE: Yes, all of these just call balanced. When there are new features this will change.
 impl UdpTransportPlugin {
-    /// Optimised for balanced performance.
+    /// Optimise configuration for balanced performance.
     pub fn balanced(application_version: ApplicationNetworkVersion) -> Self {
         Self {
             application_version,
             reliable_channel_count: 8,
             keep_alive_timeout: Duration::from_secs(4),
         }
+    }
+
+    /// Optimise configuration for responsiveness. Useful for PvP shooters.
+    #[inline]
+    pub fn responsive(application_version: ApplicationNetworkVersion) -> Self {
+        Self::balanced(application_version)
+    }
+
+    /// Optimise configuration for efficiency. Useful for strategy games.
+    #[inline]
+    pub fn efficient(application_version: ApplicationNetworkVersion) -> Self {
+        Self::balanced(application_version)
     }
 }
 
