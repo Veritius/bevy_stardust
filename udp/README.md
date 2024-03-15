@@ -3,6 +3,8 @@ A lightweight, highly customisable, native-UDP transport layer for [bevy_stardus
 
 The wire format of packets, especially that of the handshake, is liable to change dramatically between versions. The only guarantee of stability is that an older version will receive a correct error message when they're rejected during the handshake.
 
+**Warning:** The wire protocol this crate uses is not currently stable. Using a different version of the crate may result in older clients becoming incompatible and receiving garbled error messages.
+
 ## Features
 - Lightweight, simple, and friendly to use
 - Minimal dependencies using feature flags

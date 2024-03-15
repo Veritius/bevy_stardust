@@ -1,25 +1,22 @@
 pub mod statistics;
 
-mod statemachine;
-mod handshake;
 mod timing;
-mod receiving;
 mod reliability;
 mod ordering;
+mod handshake;
+mod established;
+mod closing;
 
-pub(crate) use receiving::connection_packet_processing_system;
-use untrusted::Reader;
+pub(crate) use handshake::{handshake_polling_system, potential_new_peers_system, OutgoingHandshake};
+pub(crate) use closing::close_connections_system;
 
 use std::net::SocketAddr;
 use bevy_ecs::prelude::*;
 use bytes::Bytes;
 use tracing::warn;
-use anyhow::{bail, Result};
-use crate::{appdata::ApplicationContext, packet::PacketQueue};
-use statemachine::ConnectionStateMachine;
+use crate::packet::PacketQueue;
 use statistics::ConnectionStatistics;
 use timing::ConnectionTimings;
-use self::{handshake::ConnectionHandshake, reliability::ReliabilityData};
 
 /// A running UDP connection.
 /// 
@@ -35,12 +32,7 @@ pub struct Connection {
     #[cfg_attr(feature="reflect", reflect(ignore))]
     remote_address: SocketAddr,
     #[cfg_attr(feature="reflect", reflect(ignore))]
-    state_machine: ConnectionStateMachine,
-
-    #[cfg_attr(feature="reflect", reflect(ignore))]
-    pub(crate) mgmt_reliable: ReliabilityData,
-    // #[cfg_attr(feature="reflect", reflect(ignore))]
-    // pub(crate) reliable_rivers: HashMap<(), ()>,
+    connection_state: ConnectionState,
 
     #[cfg_attr(feature="reflect", reflect(ignore))]
     pub(crate) packet_queue: PacketQueue,
@@ -53,54 +45,14 @@ pub struct Connection {
 
 /// Functions for controlling the connection.
 impl Connection {
-    pub(crate) fn new_outgoing(
-        owning_endpoint: Entity,
-        remote_address: SocketAddr,
-        appdata: ApplicationContext,
-    ) -> Self {
-        Self::new(
-            owning_endpoint,
-            remote_address,
-            ConnectionDirection::Outgoing,
-            ConnectionStateMachine::Handshaking(ConnectionHandshake::new_outgoing(appdata))
-        )
-    }
-
-    pub(crate) fn new_incoming(
-        owning_endpoint: Entity,
-        remote_address: SocketAddr,
-        appdata: ApplicationContext,
-        reader: &mut Reader,
-    ) -> Result<Self> {
-        let handshake = ConnectionHandshake::new_incoming(
-            appdata,
-            reader,
-        );
-
-        if handshake.is_err() {
-            bail!("Packet was invalid");
-        }
-
-        Ok(Self::new(
-            owning_endpoint,
-            remote_address,
-            ConnectionDirection::Incoming,
-            ConnectionStateMachine::Handshaking(handshake.unwrap())
-        ))
-    }
-
     fn new(
         owning_endpoint: Entity,
         remote_address: SocketAddr,
         direction: ConnectionDirection,
-        state_machine: ConnectionStateMachine,
     ) -> Self {
         Self {
             remote_address,
-            state_machine,
-
-            mgmt_reliable: ReliabilityData::new(),
-            // reliable_rivers: HashMap::new(),
+            connection_state: ConnectionState::Handshaking,
 
             packet_queue: PacketQueue::new(16, 16),
 
@@ -136,9 +88,7 @@ impl Connection {
 
     /// Returns the [`ConnectionState`] of the connection.
     pub fn state(&self) -> ConnectionState {
-        self.state_machine
-            .as_simple_repr()
-            .recv_hack(self.timings.last_recv.is_none())
+        self.connection_state
     }
 
     /// Returns statistics related to the Connection. See [`ConnectionStatistics`] for more.
@@ -174,11 +124,7 @@ pub enum ConnectionDirection {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature="reflect", derive(bevy_reflect::Reflect), reflect(from_reflect = false))]
 pub enum ConnectionState {
-    /// The connection attempt has not yet received a response.
-    /// This variant only occurs if the direction is [`Outgoing`](ConnectionDirection::Outgoing).
-    Pending,
-
-    /// The connection has received a response and is mid-handshake.
+    /// The connection is in the process of being established.
     Handshaking,
 
     /// The connection is fully active and ready to communicate.
@@ -191,14 +137,9 @@ pub enum ConnectionState {
     Closed,
 }
 
-impl ConnectionState {
-    fn recv_hack(self, has_recv: bool) -> Self {
-        match self {
-            ConnectionState::Handshaking => match has_recv {
-                true => ConnectionState::Handshaking,
-                false => ConnectionState::Pending,
-            },
-            _ => self,
-        }
-    }
+#[derive(Event)]
+pub(crate) struct PotentialNewPeer {
+    pub ep_origin: Entity,
+    pub address: SocketAddr,
+    pub payload: Bytes,
 }

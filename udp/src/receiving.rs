@@ -1,20 +1,29 @@
-use std::io::ErrorKind;
+use std::{io::ErrorKind, sync::Mutex};
 use bevy_ecs::prelude::*;
 use bytes::Bytes;
-use crate::{packet::IncomingPacket, Connection, Endpoint};
+use crate::{appdata::AppNetVersionWrapper, connection::PotentialNewPeer, packet::IncomingPacket, Connection, Endpoint};
 
 // Receives packets from UDP sockets
 pub(crate) fn io_receiving_system(
-    endpoints: Query<&mut Endpoint>,
+    commands: ParallelCommands,
+    appdata: Res<AppNetVersionWrapper>,
+    mut endpoints: Query<(Entity, &mut Endpoint)>,
     connections: Query<&mut Connection>,
+    mut new_peers: EventWriter<PotentialNewPeer>,
 ) {
+    // Wrap the new peers eventwriter in a mutex
+    // The risk of contention here probably isn't too bad
+    let new_peers = Mutex::new(&mut new_peers);
+
     // Iterate all endpoints
-    endpoints.par_iter().for_each(|endpoint| {
+    endpoints.par_iter_mut().for_each(|(endpoint_id, mut endpoint)| {
         loop {
             let mut scratch = [0u8; 1478];
-            match endpoint.socket.recv_from(&mut scratch) {
+            match endpoint.udp_socket.recv_from(&mut scratch) {
                 // Received a UDP packet
                 Ok((bytes, origin)) => {
+                    let payload = Bytes::copy_from_slice(&scratch[..bytes]);
+
                     match endpoint.connections.get(&origin) {
                         // We know this peer
                         Some(token) => {
@@ -25,14 +34,16 @@ pub(crate) fn io_receiving_system(
                             connection.timings.set_last_recv_now();
 
                             // We append it to the queue for later processing
-                            connection.packet_queue.push_incoming(IncomingPacket {
-                                payload: Bytes::copy_from_slice(&scratch[..bytes]),
-                            });
+                            connection.packet_queue.push_incoming(IncomingPacket { payload });
                         },
 
                         // We don't know this peer
                         None => {
-                            todo!()
+                            new_peers.lock().unwrap().send(PotentialNewPeer {
+                                ep_origin: endpoint_id,
+                                address: origin,
+                                payload,
+                            });
                         },
                     }
                 },

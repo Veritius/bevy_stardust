@@ -1,13 +1,13 @@
 use std::net::{SocketAddr, ToSocketAddrs};
 use anyhow::Result;
 use bevy_ecs::{entity::Entities, prelude::*, system::SystemParam};
-use crate::{appdata::ApplicationContext, connection::Connection, endpoint::{ConnectionOwnershipToken, Endpoint}};
+use crate::{appdata::AppNetVersionWrapper, connection::{Connection, OutgoingHandshake}, endpoint::{ConnectionOwnershipToken, Endpoint}};
 
 /// A SystemParam that lets you create [`Endpoints`](Endpoint) and open outgoing [`Connections`](Connection).
 #[derive(SystemParam)]
 pub struct UdpManager<'w, 's> {
     entities: &'w Entities,
-    appdata: Res<'w, ApplicationContext>,
+    appdata: Res<'w, AppNetVersionWrapper>,
     commands: Commands<'w, 's>,
     endpoints: Query<'w, 's, &'static mut Endpoint>,
 }
@@ -19,19 +19,37 @@ impl UdpManager<'_, '_> {
         address: impl ToSocketAddrs,
         listener: bool,
     ) -> Result<Entity> {
-        let mut endpoint = self.open_endpoint_inner(address)?;
+        // Resolve address
+        let address = resolve_address(address)?;
+
+        // Reserve endpoint id
+        let endpoint_id = self.entities.reserve_entity();
+
+        // Create endpoint
+        let mut endpoint = self.open_endpoint_inner(endpoint_id, address)?;
         endpoint.listening = listener;
 
-        Ok(self.commands.spawn(endpoint).id())
+        // Spawn endpoint entity
+        self.commands
+            .get_or_spawn(endpoint_id)
+            .insert(endpoint);
+
+        Ok(endpoint_id)
     }
 
     fn open_endpoint_inner(
         &mut self,
+        entity_id: Entity,
         address: impl ToSocketAddrs,
     ) -> Result<Endpoint> {
         // Resolve address and create endpoint
-        let address = resolve_address(address)?;
-        let endpoint = Endpoint::bind(address)?;
+        let endpoint = Endpoint::bind(resolve_address(address)?)?;
+        let address = endpoint.address();
+
+        // Log endpoint creation
+        tracing::info!("Opened Endpoint {entity_id:?} bound to address {address:?}");
+
+        // Return endpoint
         Ok(endpoint)
     }
 
@@ -54,7 +72,7 @@ impl UdpManager<'_, '_> {
 
     fn open_connection_inner(
         commands: &mut Commands,
-        appdata: ApplicationContext,
+        appdata: AppNetVersionWrapper,
         address: impl ToSocketAddrs,
         endpoint_id: Entity,
         endpoint_ref: &mut Endpoint,
@@ -63,15 +81,14 @@ impl UdpManager<'_, '_> {
         let address = resolve_address(address)?;
 
         // Spawn connection entity
-        let id = commands.spawn(Connection::new_outgoing(
-            endpoint_id,
-            address,
-            appdata,
-        )).id();
+        let id = commands.spawn(OutgoingHandshake::new(endpoint_id, address)).id();
 
         // SAFETY: Commands generates a unique ID concurrently, so this is fine.
         let token = unsafe { ConnectionOwnershipToken::new(id) };
         endpoint_ref.add_peer(address, token);
+
+        // Log connection creation
+        tracing::info!("Opened outgoing Connection {id:?} to address {address:?} on endpoint {endpoint_id:?}");
 
         Ok(id)
     }
@@ -85,7 +102,7 @@ impl UdpManager<'_, '_> {
     ) -> Result<(Entity, Entity)> {
         // Create endpoint, but don't actually spawn an entity
         let endpoint_id = self.entities.reserve_entity();
-        let mut endpoint = self.open_endpoint_inner(address)?;
+        let mut endpoint = self.open_endpoint_inner(endpoint_id, address)?;
         endpoint.close_on_empty = true;
 
         // Create connection and spawn an entity for it

@@ -13,7 +13,7 @@ keywords=["bevy", "gamedev", "networking"]
 # Required dependencies
 bevy_ecs = { version = "0.13", default-features = false }
 bevy_app = { version = "0.13", default-features = false }
-bevy_reflect = { version = "0.13", optional = true }
+bevy_reflect = { version = "0.13", default-features = false, optional = true }
 bevy_stardust = { version = "0.3", path = "../stardust", default-features = false }
 bytes = "1.5.0"
 untrusted = "0.9"

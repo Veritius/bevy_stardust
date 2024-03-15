@@ -17,7 +17,7 @@ pub(crate) fn io_sending_system(
             &HashMap<SocketAddr, ConnectionOwnershipToken>,
             &mut EndpointStatistics,
         ) {(
-            &endpoint.socket,
+            &endpoint.udp_socket,
             &endpoint.connections,
             &mut endpoint.statistics,
         )}

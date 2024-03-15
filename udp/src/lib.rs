@@ -14,6 +14,7 @@ mod sequences;
 mod utils;
 
 pub use plugin::UdpTransportPlugin;
+pub use appdata::ApplicationNetworkVersion;
 pub use manager::UdpManager;
-pub use endpoint::{Endpoint, EndpointState, EndpointStatistics};
+pub use endpoint::{Endpoint, EndpointState, statistics::EndpointStatistics};
 pub use connection::{Connection, ConnectionDirection, ConnectionState, statistics::ConnectionStatistics};
