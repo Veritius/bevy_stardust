@@ -78,7 +78,7 @@ pub struct ApplicationNetworkVersion {
 }
 
 impl ApplicationNetworkVersion {
-    pub(crate) fn into_version(&self) -> NetworkVersionData {
+    pub(crate) fn as_nvd(&self) -> NetworkVersionData {
         NetworkVersionData {
             ident: self.ident,
             major: self.major,
@@ -86,6 +86,3 @@ impl ApplicationNetworkVersion {
         }
     }
 }
-
-#[derive(Debug, Resource, Clone)]
-pub(crate) struct AppNetVersionWrapper(pub ApplicationNetworkVersion);

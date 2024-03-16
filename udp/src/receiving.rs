@@ -1,12 +1,11 @@
 use std::{io::ErrorKind, sync::Mutex};
 use bevy_ecs::prelude::*;
 use bytes::Bytes;
-use crate::{appdata::AppNetVersionWrapper, connection::PotentialNewPeer, packet::IncomingPacket, Connection, Endpoint};
+use crate::{connection::PotentialNewPeer, packet::IncomingPacket, Connection, Endpoint};
 
 // Receives packets from UDP sockets
 pub(crate) fn io_receiving_system(
     commands: ParallelCommands,
-    appdata: Res<AppNetVersionWrapper>,
     mut endpoints: Query<(Entity, &mut Endpoint)>,
     connections: Query<&mut Connection>,
     mut new_peers: EventWriter<PotentialNewPeer>,

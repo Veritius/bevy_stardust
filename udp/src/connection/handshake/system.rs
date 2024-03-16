@@ -3,15 +3,14 @@ use bevy_ecs::{entity::Entities, prelude::*};
 use bevy_stardust::connections::peer::NetworkPeer;
 use bytes::{Bytes, BytesMut};
 use untrusted::*;
-use crate::{appdata::{AppNetVersionWrapper, NetworkVersionData, BANNED_MINOR_VERSIONS, TRANSPORT_VERSION_DATA}, connection::{established::Established, handshake::{packets::{ClientHelloPacket, ClosingPacket, HandshakePacket, HandshakePacketHeader, HandshakeParsingResponse}, HandshakeState}, reliability::{ReliabilityState, ReliablePacketHeader}, Connection, PotentialNewPeer}, endpoint::ConnectionOwnershipToken, packet::{IncomingPacket, OutgoingPacket, PacketQueue}, ConnectionDirection, ConnectionState, Endpoint};
+use crate::{appdata::{NetworkVersionData, BANNED_MINOR_VERSIONS, TRANSPORT_VERSION_DATA}, connection::{established::Established, handshake::{packets::{ClientHelloPacket, ClosingPacket, HandshakePacket, HandshakePacketHeader, HandshakeParsingResponse}, HandshakeState}, reliability::{ReliabilityState, ReliablePacketHeader}, Connection, PotentialNewPeer}, endpoint::ConnectionOwnershipToken, packet::{IncomingPacket, OutgoingPacket, PacketQueue}, plugin::PluginConfiguration, ConnectionDirection, ConnectionState, Endpoint};
 use super::{codes::HandshakeResponseCode, packets::{ClientFinalisePacket, ServerHelloPacket}, HandshakeFailureReason};
 use super::Handshaking;
 
-const HANDSHAKE_TIMEOUT: Duration = Duration::from_secs(15);
-const RESEND_TIMEOUT: Duration = Duration::from_secs(5);
+const RESEND_TIMEOUT: Duration = Duration::from_secs(1);
 
 pub(crate) fn handshake_polling_system(
-    appdata: Res<AppNetVersionWrapper>,
+    config: Res<PluginConfiguration>,
     commands: ParallelCommands,
     mut connections: Query<(Entity, &mut Connection, &mut Handshaking)>,
 ) {
@@ -68,7 +67,7 @@ pub(crate) fn handshake_polling_system(
                     // Check transport and application versions
                     for (us, them, banlist, is_app) in [
                         (&TRANSPORT_VERSION_DATA, &packet.transport, BANNED_MINOR_VERSIONS, false),
-                        (&appdata.0.into_version(), &packet.application, appdata.0.banlist, true),
+                        (&config.application_version.as_nvd(), &packet.application, config.application_version.banlist, true),
                     ] {
                         // Check the transport version
                         match check_identity_match(us, them, banlist, is_app) {
@@ -108,7 +107,7 @@ pub(crate) fn handshake_polling_system(
                     HandshakePacketHeader { sequence: header.sequence }.write_bytes(&mut buf);
                     ClientHelloPacket {
                         transport: TRANSPORT_VERSION_DATA.clone(),
-                        application: appdata.0.into_version(),
+                        application: config.application_version.as_nvd(),
                     }.write_bytes(&mut buf);
                     connection.packet_queue.push_outgoing(OutgoingPacket::from(buf.freeze()));
                 }
@@ -166,7 +165,7 @@ pub(crate) fn handshake_polling_system(
                     HandshakePacketHeader { sequence: header.sequence }.write_bytes(&mut buf);
                     ServerHelloPacket {
                         transport: TRANSPORT_VERSION_DATA.clone(),
-                        application: appdata.0.into_version(),
+                        application: config.application_version.as_nvd(),
                         reliability_ack: header.ack,
                         reliability_bits: rel_bitfield_128_to_16(header.ack_bitfield),
                     }.write_bytes(&mut buf);
@@ -180,7 +179,7 @@ pub(crate) fn handshake_polling_system(
 
         // Time out the connection if it takes too long
         if !handshake.state.is_end() {
-            if Instant::now().saturating_duration_since(handshake.started) > HANDSHAKE_TIMEOUT {
+            if Instant::now().saturating_duration_since(handshake.started) > config.attempt_timeout {
                 handshake.state = HandshakeFailureReason::TimedOut.into();
             }
         }
@@ -259,7 +258,7 @@ fn rel_bitfield_128_to_16(bitfield: u128) -> u16 {
 
 pub(crate) fn potential_new_peers_system(
     mut events: EventReader<PotentialNewPeer>,
-    appdata: Res<AppNetVersionWrapper>,
+    config: Res<PluginConfiguration>,
     entities: &Entities,
     mut commands: Commands,
     mut endpoints: Query<&mut Endpoint>,
@@ -316,7 +315,7 @@ pub(crate) fn potential_new_peers_system(
         // Check transport and application versions
         for (us, them, banlist, is_app) in [
             (&TRANSPORT_VERSION_DATA, &packet.transport, BANNED_MINOR_VERSIONS, false),
-            (&appdata.0.into_version(), &packet.application, appdata.0.banlist, true),
+            (&config.application_version.as_nvd(), &packet.application, config.application_version.banlist, true),
         ] {
             // Check the transport version
             match check_identity_match(us, them, banlist, is_app) {

@@ -1,13 +1,12 @@
 use std::net::{SocketAddr, ToSocketAddrs};
 use anyhow::Result;
 use bevy_ecs::{entity::Entities, prelude::*, system::SystemParam};
-use crate::{appdata::AppNetVersionWrapper, connection::{Connection, OutgoingHandshake}, endpoint::{ConnectionOwnershipToken, Endpoint}};
+use crate::{connection::OutgoingHandshake, endpoint::{ConnectionOwnershipToken, Endpoint}};
 
 /// A SystemParam that lets you create [`Endpoints`](Endpoint) and open outgoing [`Connections`](Connection).
 #[derive(SystemParam)]
 pub struct UdpManager<'w, 's> {
     entities: &'w Entities,
-    appdata: Res<'w, AppNetVersionWrapper>,
     commands: Commands<'w, 's>,
     endpoints: Query<'w, 's, &'static mut Endpoint>,
 }
@@ -63,7 +62,6 @@ impl UdpManager<'_, '_> {
 
         Self::open_connection_inner(
             &mut self.commands,
-            self.appdata.clone(),
             address,
             endpoint,
             &mut endpoint_ref
@@ -72,7 +70,6 @@ impl UdpManager<'_, '_> {
 
     fn open_connection_inner(
         commands: &mut Commands,
-        appdata: AppNetVersionWrapper,
         address: impl ToSocketAddrs,
         endpoint_id: Entity,
         endpoint_ref: &mut Endpoint,
@@ -108,7 +105,6 @@ impl UdpManager<'_, '_> {
         // Create connection and spawn an entity for it
         let connection_id = Self::open_connection_inner(
             &mut self.commands,
-            self.appdata.clone(),
             remote,
             endpoint_id,
             &mut endpoint
