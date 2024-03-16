@@ -1,11 +1,17 @@
 mod river;
 mod packing;
 mod frame;
+mod systems;
+
+pub(crate) use systems::{
+    established_breaking_system,
+    established_packing_system,
+};
 
 use bevy_ecs::prelude::*;
 
 #[derive(Component)]
-pub(super) struct Established {
+pub(crate) struct Established {
 
 }
 

@@ -8,6 +8,7 @@ mod established;
 mod closing;
 
 pub(crate) use handshake::{handshake_polling_system, potential_new_peers_system, OutgoingHandshake};
+pub(crate) use established::{established_breaking_system, established_packing_system};
 pub(crate) use closing::close_connections_system;
 
 use std::net::SocketAddr;

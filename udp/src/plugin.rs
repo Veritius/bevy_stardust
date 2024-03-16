@@ -67,6 +67,8 @@ impl Plugin for UdpTransportPlugin {
         use crate::connection::{
             potential_new_peers_system,
             handshake_polling_system,
+            established_breaking_system,
+            established_packing_system,
             close_connections_system,
         };
         use crate::sending::io_sending_system;
@@ -78,11 +80,14 @@ impl Plugin for UdpTransportPlugin {
         }
 
         // Packet receiving system
-        app.add_systems(PreUpdate, io_receiving_system
+        app.add_systems(PreUpdate, (
+            io_receiving_system,
+            established_breaking_system,
+        ).chain()
             .in_set(NetworkRead::Receive)
             .before(NetworkRead::Read));
 
-        // State-specific packet reader systems
+        // These systems can run at any time
         app.add_systems(Update, (
             potential_new_peers_system,
             handshake_polling_system,
@@ -91,8 +96,9 @@ impl Plugin for UdpTransportPlugin {
         // Packet transmitting systems
         app.add_systems(PostUpdate, (
             io_sending_system,
+            established_packing_system,
             close_connections_system,
-        )
+        ).chain()
             .in_set(NetworkWrite::Send)
             .before(NetworkWrite::Clear));
 
