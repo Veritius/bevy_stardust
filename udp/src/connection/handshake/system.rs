@@ -292,7 +292,7 @@ pub(crate) fn potential_new_peers_system(
             HandshakeParsingResponse::Continue(val) => val,
             HandshakeParsingResponse::WeRejected(code) => {
                 // Log the disconnect
-                tracing::debug!("Received and rejected connection attempt from {}: {code}",
+                tracing::info!("Received and rejected connection attempt from {}: {code}",
                     event.address);
 
                 // Check if the failure code ought to be sent to them
@@ -403,7 +403,7 @@ pub(crate) fn potential_new_peers_system(
         });
 
         // Log the new connection
-        tracing::debug!("Received join request from new connection {ent_id:?} on address {address}");
+        tracing::info!("Received join request from new connection {ent_id:?} on address {address}");
     }
 }
 
