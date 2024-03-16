@@ -292,8 +292,11 @@ pub(crate) fn potential_new_peers_system(
             HandshakeParsingResponse::Continue(val) => val,
             HandshakeParsingResponse::WeRejected(code) => {
                 // Log the disconnect
-                tracing::info!("Received and rejected connection attempt from {}: {code}",
-                    event.address);
+                let args = format!("Received and rejected connection attempt from {}: {code}", event.address);
+                match code {
+                    HandshakeResponseCode::Unspecified | HandshakeResponseCode::MalformedPacket => { tracing::debug!(args); },
+                    _ => { tracing::info!(args); },
+                };
 
                 // Check if the failure code ought to be sent to them
                 // This somewhat avoids sending a packet to a peer that won't understand it
