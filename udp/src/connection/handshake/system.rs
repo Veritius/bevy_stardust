@@ -87,6 +87,7 @@ pub(crate) fn handshake_polling_system(
                     }
 
                     // Respond with a ClientFinalisePacket
+                    handshake.reliability.increment_local();
                     let r_header = handshake.reliability.header();
                     let mut buf = BytesMut::with_capacity(6);
                     HandshakePacketHeader { sequence: r_header.sequence }.write_bytes(&mut buf);
@@ -124,6 +125,9 @@ pub(crate) fn handshake_polling_system(
                         Ok(val) => val,
                         Err(_) => { continue; }, // Couldn't parse header, ignore this packet.
                     };
+
+                    // Check if this is an old packet, ignore if so
+                    if header.sequence <= handshake.reliability.remote_sequence { continue; }
 
                     // Try to parse the packet as a ClientFinalisePacket, the next packet in the sequence
                     let packet = match ClientFinalisePacket::from_reader(&mut reader) {
@@ -229,6 +233,7 @@ fn send_close_packet(
     reason: HandshakeResponseCode,
 ) {
     // Send a packet informing them of our denial
+    reliability.increment_local();
     let r_header = reliability.header();
     packet_queue.push_outgoing(OutgoingPacket {
         payload: closing_packet(&ClosingPacket {

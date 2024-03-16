@@ -23,17 +23,16 @@ impl ReliabilityState {
 
     /// Creates a ReliablePacketHeader for your outgoing data.
     pub fn header(&mut self) -> ReliablePacketHeader {
-        // Generate header
-        let header = ReliablePacketHeader {
+        ReliablePacketHeader {
             sequence: self.local_sequence,
             ack: self.remote_sequence,
             ack_bitfield: self.sequence_memory
-        };
+        }
+    }
 
-        // Move up local sequence counter
+    /// Increments the local sequence by 1
+    pub fn increment_local(&mut self) {
         self.local_sequence = self.local_sequence.wrapping_add(1);
-
-        header
     }
 
     /// Acknowledge packets identified in a reliable header. Returns an iterator over the sequences of packets that have been acknowledged by the remote peer.
