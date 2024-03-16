@@ -32,6 +32,7 @@ impl PackingManager {
         if self.bins.is_empty() {
             let mut bin = Vec::with_capacity(self.bin_size);
             bin.extend_from_slice(bytes);
+            self.bins.push(bin);
             return;
         }
 
@@ -39,12 +40,13 @@ impl PackingManager {
         let index = Algorithm::pack(bytes.len(), &mut self.bins
             .iter()
             .enumerate()
-            .map(|(index, v)| { (index, v.capacity() - v.len()) }));
+            .map(|(index, v)| (index, v.capacity() - v.len())));
 
         // Create a new bin if value is max
         if index == usize::MAX {
             let mut bin = Vec::with_capacity(self.bin_size);
             bin.extend_from_slice(bytes);
+            self.bins.push(bin);
             return;
         }
 
@@ -60,7 +62,7 @@ impl PackingManager {
             .iter_mut()
             .enumerate()
             .filter(|(_,v)| filter(v.len()))
-            .max_by(|(_,a),(_,b)| a.len().cmp(&b.len()));
+            .max_by(|(_,a), (_,b)| a.len().cmp(&b.len()));
 
         // If an acceptable bin was found, return it
         // Otherwise, return none
