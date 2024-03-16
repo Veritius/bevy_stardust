@@ -123,19 +123,21 @@ pub(super) struct BestFit;
 
 impl PackingAlgorithm for BestFit {
     fn pack(item: usize, bins: &mut impl Iterator<Item = (usize, usize)>) -> usize {
-        // Store the index and remaining capacity of our selected bin
-        // The default value will result in creating a new bin (usize::MAX)
-        let mut bin_idx = usize::MAX;
-        let mut last_spc = 0;
+        bins
+        .filter(|(_, rem)| *rem >= item)
+        .min_by(|(_, rem_a), (_, rem_b)| rem_a.cmp(rem_b))
+        .map(|(index, _)| index)
+        .unwrap_or(usize::MAX)
+    }
+}
 
-        // Iterate all bins
-        while let Some((index, space)) = bins.next() {
-            if item > space { continue; }       // Check if the bin has enough space
-            if last_spc > space { continue; }   // Check if the bin is smaller or not
-            bin_idx = index; last_spc = space;  // Make this bin our new candidate
-        }
+pub(super) struct FirstFit;
 
-        // Return the candidate
-        return bin_idx
+impl PackingAlgorithm for FirstFit {
+    fn pack(item: usize, bins: &mut impl Iterator<Item = (usize, usize)>) -> usize {
+        bins
+        .find(|(_, rem)| *rem >= item)
+        .map(|(index, _)| index)
+        .unwrap_or(usize::MAX)
     }
 }
