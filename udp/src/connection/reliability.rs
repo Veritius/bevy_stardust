@@ -142,12 +142,30 @@ impl ReliablePackets {
         }
     }
 
-    // pub fn drain_old(&mut self, filter: impl Fn(Instant) -> bool) -> impl Iterator<Item = SentPacket> {
-    //     todo!()
-    // }
+    pub fn drain_old<'a, Filter: Fn(Instant) -> bool + 'a>(&'a mut self, filter: Filter) -> impl Iterator<Item = SentPacket> + 'a {
+        // TODO: When btree_extract_if is stabilised, use that instead.
+        struct FilterTaker<'a, Filter>(&'a mut ReliablePackets, Filter);
+        impl<'a, Filter: Fn(Instant) -> bool> Iterator for FilterTaker<'a, Filter> {
+            type Item = SentPacket;
+        
+            fn next(&mut self) -> Option<Self::Item> {
+                // Try to find a key
+                let key = self.0.unacked.iter()
+                    .filter(|(_, v)| { (self.1)(v.time) })
+                    .map(|(k, _)| *k)
+                    .next()?;
+                
+                // Take the packet from the map and return it
+                return self.0.unacked.remove(&key);
+            }
+        }
+
+        // Return the iterator
+        return FilterTaker(self, filter);
+    }
 }
 
-struct SentPacket {
+pub(crate) struct SentPacket {
     payload: Bytes,
     time: Instant,
 }
