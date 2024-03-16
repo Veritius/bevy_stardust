@@ -23,14 +23,6 @@ pub(crate) struct NetworkVersionData {
 }
 
 impl NetworkVersionData {
-    pub(crate) fn placeholder() -> Self {
-        Self {
-            ident: 0x0,
-            major: 0x0,
-            minor: 0x0,
-        }
-    }
-
     pub(crate) fn from_bytes(bytes: [u8; 16]) -> NetworkVersionData {
         // Create reader object
         let mut reader = Reader::new(Input::from(&bytes));

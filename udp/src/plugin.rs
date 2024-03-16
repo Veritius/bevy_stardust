@@ -14,26 +14,44 @@ pub struct UdpTransportPlugin {
     /// Higher values reduce head-of-line blocking, but increase memory usage slightly.
     pub reliable_channel_count: u16,
 
+    /// The length of the bitfield used to acknowledge packets.
+    /// 
+    /// Higher values improve packet loss detection.
+    pub reliable_bitfield_length: u16,
+
+    /// How long until a connection attempt will be abandoned due to no response.
+    pub attempt_timeout: Duration,
+
+    /// How long until a connection times out.
+    pub connection_timeout: Duration,
+
     /// The length of a period of inactivity needed to send a 'keep-alive' packet, which maintains the connection.
     pub keep_alive_timeout: Duration,
 }
 
 /// Different default configurations to optimise the plugin for various things.
-// NOTE: Yes, all of these just call balanced. When there are new features this will change.
 impl UdpTransportPlugin {
     /// Optimise configuration for balanced performance.
     pub fn balanced(application_version: ApplicationNetworkVersion) -> Self {
         Self {
             application_version,
             reliable_channel_count: 8,
-            keep_alive_timeout: Duration::from_secs(4),
+            reliable_bitfield_length: 6,
+            attempt_timeout: Duration::from_secs(10),
+            connection_timeout: Duration::from_secs(20),
+            keep_alive_timeout: Duration::from_secs(3),
         }
     }
 
     /// Optimise configuration for responsiveness. Useful for PvP shooters.
-    #[inline]
     pub fn responsive(application_version: ApplicationNetworkVersion) -> Self {
-        Self::balanced(application_version)
+        // Use the balanced configuration as a baseline
+        let mut config = Self::balanced(application_version);
+
+        // Shooters don't send as many reliable packets.
+        config.reliable_bitfield_length = 4;
+
+        return config
     }
 
     /// Optimise configuration for efficiency. Useful for strategy games.
@@ -52,6 +70,12 @@ impl Plugin for UdpTransportPlugin {
             close_connections_system,
         };
         use crate::sending::io_sending_system;
+
+        // Send some warnings for potentially bad configuration
+        if self.connection_timeout >= self.keep_alive_timeout {
+            tracing::warn!("Connection timeout was greater than the keep-alive timeout: {}ms >= {}ms",
+                self.connection_timeout.as_millis(), self.keep_alive_timeout.as_millis());
+        }
 
         // Packet receiving system
         app.add_systems(PreUpdate, io_receiving_system
