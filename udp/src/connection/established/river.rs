@@ -1,4 +1,5 @@
-#[derive(Debug)]
-pub(super) struct River {
+use crate::connection::reliability::ReliablePackets;
 
+pub(super) struct River {
+    reliability: ReliablePackets,
 }

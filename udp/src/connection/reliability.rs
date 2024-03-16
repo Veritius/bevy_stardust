@@ -6,13 +6,13 @@ use crate::sequences::*;
 const BITMASK: u128 = 1 << 127;
 
 #[derive(Debug)]
-pub(crate) struct ReliabilityData {
+pub(crate) struct ReliabilityState {
     pub local_sequence: u16,
     pub remote_sequence: u16,
     pub sequence_memory: u128,
 }
 
-impl ReliabilityData {
+impl ReliabilityState {
     pub fn new() -> Self {
         Self {
             local_sequence: fastrand::u16(..),
@@ -97,16 +97,6 @@ pub struct ReliablePacketHeader {
     pub ack_bitfield: u128,
 }
 
-pub(crate) struct ReliablePackets {
-    unacked_packets: BTreeMap<u16, SentPacket>,
-    data: ReliabilityData,
-}
-
-struct SentPacket {
-    payload: Bytes,
-    time: Instant,
-}
-
 /// Gets the header of a reliable packet from a byte reader.
 pub fn get_header(reader: &mut Reader<'_>, bitfield_bytes: usize) -> Result<ReliablePacketHeader, EndOfInput> {
     let sequence = u16::from_be_bytes([
@@ -127,4 +117,37 @@ pub fn get_header(reader: &mut Reader<'_>, bitfield_bytes: usize) -> Result<Reli
     Ok(ReliablePacketHeader { sequence, ack, ack_bitfield })
 }
 
-// TODO: Tests
+pub(crate) struct ReliablePackets {
+    unacked: BTreeMap<u16, SentPacket>,
+    state: ReliabilityState,
+}
+
+impl ReliablePackets {
+    pub fn send(&mut self, payload: Bytes) -> ReliablePacketHeader {
+        let header = self.state.header();
+        self.unacked.insert(header.sequence, SentPacket {
+            payload,
+            time: Instant::now()
+        });
+        return header;
+    }
+
+    pub fn ack(&mut self, header: ReliablePacketHeader, bitfield_bytes: u8) {
+        // Update reliability state
+        let iter = self.state.ack(header, bitfield_bytes);
+
+        // Remove all acked packets from storage
+        for seq in iter {
+            self.unacked.remove(&seq);
+        }
+    }
+
+    // pub fn drain_old(&mut self, filter: impl Fn(Instant) -> bool) -> impl Iterator<Item = SentPacket> {
+    //     todo!()
+    // }
+}
+
+struct SentPacket {
+    payload: Bytes,
+    time: Instant,
+}

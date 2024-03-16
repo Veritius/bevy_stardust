@@ -3,7 +3,7 @@ use bevy_ecs::{entity::Entities, prelude::*};
 use bevy_stardust::connections::peer::NetworkPeer;
 use bytes::{Bytes, BytesMut};
 use untrusted::*;
-use crate::{appdata::{AppNetVersionWrapper, NetworkVersionData, BANNED_MINOR_VERSIONS, TRANSPORT_VERSION_DATA}, connection::{established::Established, handshake::{packets::{ClientHelloPacket, ClosingPacket, HandshakePacket, HandshakePacketHeader, HandshakeParsingResponse}, HandshakeState}, reliability::{ReliabilityData, ReliablePacketHeader}, Connection, PotentialNewPeer}, endpoint::ConnectionOwnershipToken, packet::{IncomingPacket, OutgoingPacket, PacketQueue}, ConnectionDirection, ConnectionState, Endpoint};
+use crate::{appdata::{AppNetVersionWrapper, NetworkVersionData, BANNED_MINOR_VERSIONS, TRANSPORT_VERSION_DATA}, connection::{established::Established, handshake::{packets::{ClientHelloPacket, ClosingPacket, HandshakePacket, HandshakePacketHeader, HandshakeParsingResponse}, HandshakeState}, reliability::{ReliabilityState, ReliablePacketHeader}, Connection, PotentialNewPeer}, endpoint::ConnectionOwnershipToken, packet::{IncomingPacket, OutgoingPacket, PacketQueue}, ConnectionDirection, ConnectionState, Endpoint};
 use super::{codes::HandshakeResponseCode, packets::{ClientFinalisePacket, ServerHelloPacket}, HandshakeFailureReason};
 use super::Handshaking;
 
@@ -225,7 +225,7 @@ fn timeout_check(
 
 fn send_close_packet(
     packet_queue: &mut PacketQueue,
-    reliability: &mut ReliabilityData,
+    reliability: &mut ReliabilityState,
     reason: HandshakeResponseCode,
 ) {
     // Send a packet informing them of our denial
@@ -354,7 +354,7 @@ pub(crate) fn potential_new_peers_system(
         );
 
         // We have to construct the reliability state from scratch
-        let mut reliability = ReliabilityData::new();
+        let mut reliability = ReliabilityState::new();
         reliability.remote_sequence = header.sequence;
         reliability.sequence_memory |= 1u128 << 127;
 
