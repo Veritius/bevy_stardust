@@ -143,7 +143,6 @@ impl ChannelRegistryInner {
             type_path,
             channel_id,
 
-            entity_id: entity,
             config,
         });
 
