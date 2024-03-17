@@ -16,7 +16,7 @@ pub enum Direction {
 /// - [Outgoing], corresponding to [Direction::Outgoing]
 /// - [Incoming], corresponding to [Direction::Incoming]
 #[cfg(not(feature="reflect"))]
-pub trait DirectionType: Debug + Any + sealed::Sealed {
+pub trait DirectionType: Debug + Send + Sync + Any + sealed::Sealed {
     /// Returns the corresponding [`Direction`].
     fn as_enum() -> Direction;
 }
@@ -27,7 +27,7 @@ pub trait DirectionType: Debug + Any + sealed::Sealed {
 /// - [Outgoing], corresponding to [Direction::Outgoing]
 /// - [Incoming], corresponding to [Direction::Incoming]
 #[cfg(feature="reflect")]
-pub trait DirectionType: Debug + Any + bevy_reflect::Reflect + sealed::Sealed {
+pub trait DirectionType: Debug + Send + Sync + Any + bevy_reflect::Reflect + sealed::Sealed {
     /// Returns the corresponding [`Direction`].
     fn as_enum() -> Direction;
 }

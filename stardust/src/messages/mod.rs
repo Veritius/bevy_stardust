@@ -3,7 +3,9 @@
 mod queue;
 mod direction;
 
-pub use queue::Messages;
+pub(crate) mod systems;
+
+pub use queue::NetworkMessages;
 pub use direction::*;
 
 pub use bytes::{Buf, BufMut, Bytes, BytesMut};

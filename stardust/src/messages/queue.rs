@@ -6,14 +6,17 @@ use super::direction::DirectionType;
 
 static EMPTY_SLICE: &[Bytes] = &[];
 
-/// A queue-like structure for storing messages.
+/// A queue-like structure for storing messages, separated by channels.
+/// 
+/// The items in this queue **do not** persist across frames.
+/// They are cleared in [`NetworkWrite::Clear`].
 #[derive(Component)]
-pub struct Messages<D: DirectionType> {
+pub struct NetworkMessages<D: DirectionType> {
     pub(crate) queue_map: HashMap<ChannelId, Vec<Bytes>>,
     phantom: PhantomData<D>
 }
 
-impl<D: DirectionType> Messages<D> {
+impl<D: DirectionType> NetworkMessages<D> {
     /// Creates a new `Messages` store. Doesn't allocate until [`push`](Self::push) is used.
     pub fn new() -> Self {
         Self {
