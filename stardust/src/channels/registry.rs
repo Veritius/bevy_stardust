@@ -1,7 +1,7 @@
 //! The channel registry.
 
 use std::{any::TypeId, collections::BTreeMap, ops::{Deref, DerefMut}, sync::Arc};
-use bevy_ecs::prelude::*;
+use bevy_ecs::{component::ComponentId, prelude::*, system::SystemParam};
 use crate::prelude::ChannelConfiguration;
 use super::{id::{Channel, ChannelId}, ToChannelId};
 
@@ -41,47 +41,47 @@ impl Deref for FinishedChannelRegistry {
 /// Access to the configuration of registered channels.
 pub struct ChannelRegistry<'a>(&'a ChannelRegistryInner);
 
-// unsafe impl<'a> SystemParam for ChannelRegistry<'a> {
-//     type State = (ComponentId, ComponentId);
-//     type Item<'w, 's> = ChannelRegistry<'w>;
+unsafe impl<'a> SystemParam for ChannelRegistry<'a> {
+    type State = (ComponentId, ComponentId);
+    type Item<'w, 's> = ChannelRegistry<'w>;
 
-//     fn init_state(world: &mut World, system_meta: &mut bevy_ecs::system::SystemMeta) -> Self::State {
-//         // SAFETY: Since we can't register accesses, we do it through Res<T> which can
-//         (
-//             <Res<FinishedChannelRegistry> as SystemParam>::init_state(world, system_meta),
-//             <Res<SetupChannelRegistry> as SystemParam>::init_state(world, system_meta),
-//         )
-//     }
+    fn init_state(world: &mut World, system_meta: &mut bevy_ecs::system::SystemMeta) -> Self::State {
+        // SAFETY: Since we can't register accesses, we do it through Res<T> which can
+        (
+            <Res<FinishedChannelRegistry> as SystemParam>::init_state(world, system_meta),
+            <Res<SetupChannelRegistry> as SystemParam>::init_state(world, system_meta),
+        )
+    }
 
-//     unsafe fn get_param<'w, 's>(
-//         state: &'s mut Self::State,
-//         _system_meta: &bevy_ecs::system::SystemMeta,
-//         world: bevy_ecs::world::unsafe_world_cell::UnsafeWorldCell<'w>,
-//         _change_tick: bevy_ecs::component::Tick,
-//     ) -> Self::Item<'w, 's> {
-//         if world.world().contains_resource::<FinishedChannelRegistry>() {
-//             return Self(
-//                 world
-//                 .get_resource_by_id(state.0)
-//                 .unwrap()
-//                 .deref::<FinishedChannelRegistry>()
-//                 .0.as_ref()
-//             );
-//         }
+    unsafe fn get_param<'w, 's>(
+        state: &'s mut Self::State,
+        _system_meta: &bevy_ecs::system::SystemMeta,
+        world: bevy_ecs::world::unsafe_world_cell::UnsafeWorldCell<'w>,
+        _change_tick: bevy_ecs::component::Tick,
+    ) -> Self::Item<'w, 's> {
+        if world.world().contains_resource::<FinishedChannelRegistry>() {
+            return ChannelRegistry(
+                world
+                .get_resource_by_id(state.0)
+                .unwrap()
+                .deref::<FinishedChannelRegistry>()
+                .0.as_ref()
+            );
+        }
 
-//         if world.world().contains_resource::<SetupChannelRegistry>() {
-//             return Self(
-//                 world
-//                 .get_resource_by_id(state.1)
-//                 .unwrap()
-//                 .deref::<SetupChannelRegistry>()
-//                 .0.as_ref()
-//             );
-//         }
+        if world.world().contains_resource::<SetupChannelRegistry>() {
+            return ChannelRegistry(
+                world
+                .get_resource_by_id(state.1)
+                .unwrap()
+                .deref::<SetupChannelRegistry>()
+                .0.as_ref()
+            );
+        }
 
-//         panic!("Neither SetupChannelRegistry or FinishedChannelRegistry were present when attempting to create ChannelRegistry")
-//     }
-// }
+        panic!("Neither SetupChannelRegistry or FinishedChannelRegistry were present when attempting to create ChannelRegistry")
+    }
+}
 
 impl ChannelRegistry<'_> {
     /// Gets the id fom the `ToChannelId` implementation.
