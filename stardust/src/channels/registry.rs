@@ -25,9 +25,13 @@ impl DerefMut for SetupChannelRegistry {
     }
 }
 
-/// Immutable access to the channel registry, only available after app setup
+/// Immutable access to the channel registry, only available after app setup.
+/// 
+/// In almost all cases, you should just use the [`ChannelRegistry`] systemparam.
+/// However, this type can be cloned and will point to the same inner value.
+/// This makes it useful for asynchronous programming, like in futures.
 #[derive(Resource, Clone)]
-pub(crate) struct FinishedChannelRegistry(pub(crate) Arc<ChannelRegistryInner>);
+pub struct FinishedChannelRegistry(pub(crate) Arc<ChannelRegistryInner>);
 
 impl Deref for FinishedChannelRegistry {
     type Target = ChannelRegistryInner;
@@ -38,7 +42,9 @@ impl Deref for FinishedChannelRegistry {
     }
 }
 
-/// Access to the configuration of registered channels.
+/// Access to the configuration of registered channels, at any point.
+/// 
+/// If you're writing async code, you might want to look at [`FinishedChannelRegistry`].
 pub struct ChannelRegistry<'a>(&'a ChannelRegistryInner);
 
 unsafe impl<'a> SystemParam for ChannelRegistry<'a> {
@@ -59,24 +65,12 @@ unsafe impl<'a> SystemParam for ChannelRegistry<'a> {
         world: bevy_ecs::world::unsafe_world_cell::UnsafeWorldCell<'w>,
         _change_tick: bevy_ecs::component::Tick,
     ) -> Self::Item<'w, 's> {
-        if world.world().contains_resource::<FinishedChannelRegistry>() {
-            return ChannelRegistry(
-                world
-                .get_resource_by_id(state.0)
-                .unwrap()
-                .deref::<FinishedChannelRegistry>()
-                .0.as_ref()
-            );
+        if let Some(ptr) = world.get_resource_by_id(state.0) {
+            return ChannelRegistry(ptr.deref::<FinishedChannelRegistry>().0.as_ref());
         }
 
-        if world.world().contains_resource::<SetupChannelRegistry>() {
-            return ChannelRegistry(
-                world
-                .get_resource_by_id(state.1)
-                .unwrap()
-                .deref::<SetupChannelRegistry>()
-                .0.as_ref()
-            );
+        if let Some(ptr) = world.get_resource_by_id(state.1) {
+            return ChannelRegistry(ptr.deref::<SetupChannelRegistry>().0.as_ref());
         }
 
         panic!("Neither SetupChannelRegistry or FinishedChannelRegistry were present when attempting to create ChannelRegistry")
