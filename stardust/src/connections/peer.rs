@@ -51,7 +51,7 @@ impl NetworkPeer {
             uuid: None,
             quality: None,
             ping: 0,
-            security: PeerSecurity::Unprotected,
+            security: PeerSecurity::Unauthenticated,
             disconnect_requested: false,
         }
     }
@@ -69,9 +69,9 @@ impl NetworkPeer {
     }
 }
 
-/// How secure a connection is.
+/// How 'secure' a connection is.
 /// This is set by the transport layer that controls the connection.
-/// See variant documentation for more.
+/// See variant documentation for specific information.
 /// 
 /// This type implements `Ord`, with 'greater' orderings corresponding to better security.
 ///
@@ -80,12 +80,14 @@ impl NetworkPeer {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 #[cfg_attr(feature="reflect", derive(bevy_reflect::Reflect))]
 pub enum PeerSecurity {
-    /// Communication is neither encrypted or authenticated.
+    /// Communication is encrypted but not authenticated, or is fully plain text.
     /// 
     /// **For end users:**
-    /// - This kind of connection is completely untrustworthy and you should never send anything remotely private.
-    /// - Data can be viewed and manipulated by a man in the middle at any time in the transaction.
-    Unprotected,
+    /// This kind of connection should not be used for anything that must remain secret or private.
+    /// It is vulnerable to [man in the middle attacks] like reading and modifying in-flight information.
+    /// 
+    /// [man in the middle attacks]: https://en.wikipedia.org/wiki/Man-in-the-middle_attack
+    Unauthenticated,
 
     /// Communication is both encrypted and authenticated.
     ///
