@@ -12,10 +12,6 @@ impl Plugin for StardustPlugin {
     fn build(&self, app: &mut App) {
         crate::channels::channel_build(app);
 
-        // Add events
-        app.add_event::<PeerDisconnectedEvent>();
-        app.add_event::<PeerConnectedEvent>();
-
         // Add systems
         app.add_systems(Last, crate::connections::systems::despawn_closed_connections_system);
         app.add_systems(PostUpdate, (
