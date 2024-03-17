@@ -30,20 +30,26 @@ pub use config::*;
 pub use id::*;
 pub use registry::*;
 pub use extension::ChannelSetupAppExt;
-pub use incoming::{NetworkIncomingWriter, NetworkReader};
-pub use outgoing::{NetworkOutgoingReader, NetworkWriter};
 
-pub(super) fn channels(app: &mut bevy_app::App) {
-    use bevy_app::prelude::*;
-    use bevy_ecs::prelude::*;
-    use crate::scheduling::*;
+use std::sync::Arc;
+use bevy_app::prelude::*;
+use bevy_ecs::prelude::*;
+use crate::scheduling::*;
 
-    // Channel registry
-    app.insert_resource(registry::ChannelRegistry::new());
+pub(super) fn channel_build(app: &mut App) {
+    // Create setup channel registry
+    app.insert_resource(registry::SetupChannelRegistry(Box::new(ChannelRegistryInner::new())));
 
-    // Clearing systems
-    app.add_systems(PostUpdate, (incoming::clear_incoming, outgoing::clear_outgoing)
-        .after(NetworkWrite::Send).in_set(NetworkWrite::Clear));
+    // Add clearing systems
+    // app.add_systems(PostUpdate, ()
+    //     .after(NetworkWrite::Send).in_set(NetworkWrite::Clear));
+}
+
+pub(super) fn channel_finish(app: &mut App) {
+    // Remove SetupChannelRegistry and put the inner into an Arc inside ChannelRegistry
+    // This dramatically improves 
+    let registry = app.world.remove_resource::<SetupChannelRegistry>().unwrap();
+    app.insert_resource(FinishedChannelRegistry(Arc::from(registry.0)));
 }
 
 static CHANNEL_ENTITY_DELETED_MESSAGE: &'static str = "A channel entity was deleted or somehow stopped being accessible to a query. This should not happen!";

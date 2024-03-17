@@ -47,8 +47,9 @@
 //! }
 //! ```
 
-use std::marker::PhantomData;
+use std::{any::TypeId, marker::PhantomData, ops::Deref};
 use bevy_ecs::prelude::*;
+use super::ChannelRegistryInner;
 
 /// Marker trait for channels. See the [module level documentation](self) for more information.
 #[cfg(not(feature="reflect"))]
@@ -80,6 +81,7 @@ impl<C: Channel> Default for ChannelMarker<C> {
 /// Attempting to use a `ChannelId` in another `World` will probably panic, or give you unintended results.
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
 #[cfg_attr(feature="reflect", derive(bevy_reflect::Reflect))]
+#[repr(transparent)]
 pub struct ChannelId(u32);
 
 impl From<u32> for ChannelId {
@@ -110,4 +112,38 @@ impl From<ChannelId> for [u8;4] {
     fn from(value: ChannelId) -> Self {
         value.0.to_be_bytes()
     }
+}
+
+/// Types that can be used to access channel data in a channel registry.
+pub trait ToChannelId: sealed::Sealed {
+    fn to_channel_id(&self, registry: impl Deref<Target = ChannelRegistryInner>) -> Option<ChannelId>;
+}
+
+impl ToChannelId for ChannelId {
+    #[inline]
+    fn to_channel_id(&self, _: impl Deref<Target = ChannelRegistryInner>) -> Option<ChannelId> {
+        Some(self.clone())
+    }
+}
+
+impl ToChannelId for std::any::TypeId {
+    fn to_channel_id(&self, registry: impl Deref<Target = ChannelRegistryInner>) -> Option<ChannelId> {
+        registry.channel_type_ids.get(&self).cloned()
+    }
+}
+
+#[cfg(feature="reflect")]
+impl ToChannelId for &dyn bevy_reflect::Reflect {
+    fn to_channel_id(&self, registry: impl Deref<Target = ChannelRegistryInner>) -> Option<ChannelId> {
+        self.type_id().to_channel_id(registry)
+    }
+}
+
+mod sealed {
+    pub trait Sealed {}
+    impl Sealed for super::ChannelId {}
+    impl Sealed for std::any::TypeId {}
+
+    #[cfg(feature="reflect")]
+    impl Sealed for &dyn bevy_reflect::Reflect {}
 }

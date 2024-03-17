@@ -9,7 +9,7 @@ pub struct StardustPlugin;
 
 impl Plugin for StardustPlugin {
     fn build(&self, app: &mut App) {
-        crate::channels::channels(app);
+        crate::channels::channel_build(app);
 
         // Add events
         app.add_event::<PeerDisconnectedEvent>();

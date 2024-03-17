@@ -2,12 +2,7 @@
 
 use bevy_app::App;
 use crate::channels::config::ChannelConfiguration;
-use super::{
-    id::{Channel, ChannelMarker},
-    registry::ChannelRegistry,
-    incoming::IncomingMessages,
-    outgoing::OutgoingMessages
-};
+use super::{id::Channel, registry::FinishedChannelRegistry, SetupChannelRegistry};
 
 mod sealed {
     pub trait Sealed {}
@@ -33,15 +28,8 @@ impl ChannelSetupAppExt for App {
             self.net_hash_value(&config);
         }
 
-        // Spawn entity
-        let entity = self.world.spawn((
-            ChannelMarker::<C>::default(),
-            IncomingMessages::default(),
-            OutgoingMessages::default(),
-        )).id();
-
         // Add to registry
-        let mut registry = self.world.resource_mut::<ChannelRegistry>();
-        registry.register_channel::<C>(config, entity);
+        let mut registry = self.world.resource_mut::<SetupChannelRegistry>();
+        registry.0.register_channel::<C>(config);
     }
 }
