@@ -47,7 +47,7 @@
 //! }
 //! ```
 
-use std::{any::TypeId, marker::PhantomData, ops::Deref};
+use std::{marker::PhantomData, ops::Deref};
 use bevy_ecs::prelude::*;
 use super::ChannelRegistryInner;
 
@@ -116,6 +116,7 @@ impl From<ChannelId> for [u8;4] {
 
 /// Types that can be used to access channel data in a channel registry.
 pub trait ToChannelId: sealed::Sealed {
+    /// Convert the type to a `ChannelId`
     fn to_channel_id(&self, registry: impl Deref<Target = ChannelRegistryInner>) -> Option<ChannelId>;
 }
 

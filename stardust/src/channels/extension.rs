@@ -2,7 +2,7 @@
 
 use bevy_app::App;
 use crate::channels::config::ChannelConfiguration;
-use super::{id::Channel, registry::FinishedChannelRegistry, SetupChannelRegistry};
+use super::{id::Channel, SetupChannelRegistry};
 
 mod sealed {
     pub trait Sealed {}

@@ -22,4 +22,8 @@ impl Plugin for StardustPlugin {
             app.add_systems(PreStartup, finalise_hasher_system);    
         }
     }
+
+    fn finish(&self, app: &mut App) {
+        crate::channels::channel_finish(app);
+    }
 }

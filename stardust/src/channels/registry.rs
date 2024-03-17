@@ -1,7 +1,7 @@
 //! The channel registry.
 
 use std::{any::TypeId, collections::BTreeMap, ops::{Deref, DerefMut}, sync::Arc};
-use bevy_ecs::{component::ComponentId, prelude::*, system::SystemParam};
+use bevy_ecs::prelude::*;
 use crate::prelude::ChannelConfiguration;
 use super::{id::{Channel, ChannelId}, ToChannelId};
 
@@ -84,22 +84,32 @@ pub struct ChannelRegistry<'a>(&'a ChannelRegistryInner);
 // }
 
 impl ChannelRegistry<'_> {
+    /// Gets the id fom the `ToChannelId` implementation.
     #[inline]
     pub fn channel_id(&self, from: impl ToChannelId) -> Option<ChannelId> {
         self.0.channel_id(from)
     }
 
+    /// Gets the channel configuration for `id`.
     #[inline]
-    pub fn channel_config(&self, from: impl ToChannelId) -> Option<&ChannelData> {
-        self.0.channel_config(from)
+    pub fn channel_config(&self, id: impl ToChannelId) -> Option<&ChannelData> {
+        self.0.channel_config(id)
+    }
+}
+
+impl Deref for ChannelRegistry<'_> {
+    type Target = ChannelRegistryInner;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
 }
 
 /// Stores channel configuration data.
-pub(crate) struct ChannelRegistryInner {
-    pub channel_count: u32,
-    pub channel_type_ids: BTreeMap<TypeId, ChannelId>,
-    pub channel_data: Vec<ChannelData>,
+pub struct ChannelRegistryInner {
+    pub(super) channel_count: u32,
+    pub(super) channel_type_ids: BTreeMap<TypeId, ChannelId>,
+    pub(super) channel_data: Vec<ChannelData>,
 }
 
 impl ChannelRegistryInner {
@@ -158,6 +168,7 @@ impl ChannelRegistryInner {
         channel_id
     }
 
+    /// Gets the id from the `ToChannelId` implementation.
     #[inline]
     pub fn channel_id(&self, value: impl ToChannelId) -> Option<ChannelId> {
         value.to_channel_id(self)
