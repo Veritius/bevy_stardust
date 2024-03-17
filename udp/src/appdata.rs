@@ -1,4 +1,3 @@
-use bevy_ecs::prelude::*;
 use untrusted::{Input, Reader};
 use crate::utils::IntegerFromByteSlice;
 

@@ -11,6 +11,22 @@ pub(super) enum PacketFrameId {
     Acknowledgement = 4,
 }
 
+impl TryFrom<u8> for PacketFrameId {
+    type Error = ();
+
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        use PacketFrameId::*;
+        Ok(match value {
+            0 => Padding,
+            1 => Ping,
+            2 => Payload,
+            3 => Management,
+            4 => Acknowledgement,
+            _ => { return Err(()) }
+        })
+    }
+}
+
 pub(super) struct PacketFrame {
     pub id: PacketFrameId,
     pub pld: Bytes,
