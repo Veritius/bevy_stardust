@@ -130,7 +130,7 @@ impl ChannelRegistryInner {
             #[cfg(feature="reflect")]
             panic!("A channel was registered twice: {type_path}");
             #[cfg(not(feature="reflect"))]
-            panic!("A channel was registered twice: {type_id:?}");
+            panic!("A channel was registered twice: {}", std::any::type_name::<C>());
         }
 
         // Add to map
