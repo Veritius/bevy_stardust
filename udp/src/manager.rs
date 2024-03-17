@@ -124,6 +124,6 @@ fn resolve_address(address: impl ToSocketAddrs) -> Result<SocketAddr> {
     .to_socket_addrs()?
     .next()
     .ok_or_else(|| {
-        anyhow::anyhow!("No addresses provided by ToSocketAddrs implementor")
+        anyhow::anyhow!("Invalid address")
     })?)
 }
