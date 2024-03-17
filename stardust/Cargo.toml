@@ -20,9 +20,6 @@ gxhash = { version = "=3.0.0", optional = true } # 3.1 is broken, remove this bo
 
 [features]
 default = []
-uuids = [
-    "dep:uuid"
-]
 reflect = [
     "dep:bevy_reflect",
     "bevy_ecs/bevy_reflect",

@@ -22,11 +22,6 @@ pub struct NetworkPeer {
     /// The point in time this peer was added to the `World`.
     pub joined: Instant,
 
-    /// A unique UUID, if it has one.
-    /// This can be used to identify a peer across network sessions.
-    #[cfg(feature="uuids")]
-    pub uuid: Option<uuid::Uuid>,
-
     /// The quality of the connection, from `0.0` to `1.0`.
     /// This is subjective and defined by the transport layer.
     /// `None` means a value is not provided.
@@ -39,12 +34,10 @@ pub struct NetworkPeer {
 }
 
 impl NetworkPeer {
-    /// Creates the component in the `Connecting` state.
+    /// Creates the component in the `Handshaking` state.
     pub fn new() -> Self {
         Self {
             joined: Instant::now(),
-            #[cfg(feature="uuids")]
-            uuid: None,
             quality: None,
             ping: 0,
             disconnect_requested: false,
@@ -134,4 +127,38 @@ pub enum NetworkPeerSecurity {
     /// - [Transport Layer Security](https://en.wikipedia.org/wiki/Transport_Layer_Security)
     /// - [netcode.io](https://github.com/networkprotocol/netcode.io/blob/master/STANDARD.md)
     Authenticated,
+}
+
+/// A unique identifier for a [`NetworkPeer`], to store persistent data across multiple connections.
+/// This component should only be constructed by the app developer, but can be read by any plugins.
+/// 
+/// This value is intended only for use within memory and local databases, like savegames.
+/// If you need to share a unique player identifier, use UUIDs.
+/// 
+/// If you're working with another ID namespace, like UUIDs and Steam IDs, you should
+/// map the ids from that space into a unique value here through some kind of associative array.
+/// 
+/// The `Display` implementation will display the internal integer in hexadecimal.
+#[derive(Debug, Component, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[cfg_attr(feature="reflect", derive(bevy_reflect::Reflect))]
+pub struct NetworkPeerUid(pub u64);
+
+impl std::fmt::Display for NetworkPeerUid {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!("{:X}", self.0))
+    }
+}
+
+impl From<u64> for NetworkPeerUid {
+    #[inline]
+    fn from(value: u64) -> Self {
+        Self(value)
+    }
+}
+
+impl From<NetworkPeerUid> for u64 {
+    #[inline]
+    fn from(value: NetworkPeerUid) -> Self {
+        value.0
+    }
 }
