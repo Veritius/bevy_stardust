@@ -1,6 +1,8 @@
 use std::collections::VecDeque;
 use bytes::Bytes;
 
+pub(crate) const MTU_SIZE: usize = 1472;
+
 pub(crate) struct PacketQueue {
     incoming: VecDeque<IncomingPacket>,
     outgoing: VecDeque<OutgoingPacket>,

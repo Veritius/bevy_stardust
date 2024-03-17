@@ -10,7 +10,7 @@ impl PackingManager {
     pub fn new(capacity: usize) -> Self {
         Self {
             bin_size: capacity,
-            bins: vec![],
+            bins: Vec::with_capacity(0),
         }
     }
 

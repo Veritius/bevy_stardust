@@ -12,7 +12,7 @@ pub struct UdpTransportPlugin {
     /// The amount of reliable packet channels that are used.
     /// 
     /// Higher values reduce head-of-line blocking, but increase memory usage slightly.
-    pub reliable_channel_count: u16,
+    pub reliable_channel_count: u8,
 
     /// The length of the bitfield used to acknowledge packets.
     /// 
@@ -125,7 +125,7 @@ impl Plugin for UdpTransportPlugin {
 #[derive(Resource)]
 pub(crate) struct PluginConfiguration {
     pub application_version: ApplicationNetworkVersion,
-    pub reliable_channel_count: u16,
+    pub reliable_channel_count: u8,
     pub reliable_bitfield_length: u16,
     pub attempt_timeout: Duration,
     pub established_timeout: Duration,

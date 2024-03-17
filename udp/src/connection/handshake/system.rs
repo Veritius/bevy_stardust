@@ -3,7 +3,7 @@ use bevy_ecs::{entity::Entities, prelude::*};
 use bevy_stardust::connections::peer::NetworkPeer;
 use bytes::{Bytes, BytesMut};
 use untrusted::*;
-use crate::{appdata::{NetworkVersionData, BANNED_MINOR_VERSIONS, TRANSPORT_VERSION_DATA}, connection::{established::Established, handshake::{packets::{ClientHelloPacket, ClosingPacket, HandshakePacket, HandshakePacketHeader, HandshakeParsingResponse}, HandshakeState}, reliability::{ReliabilityState, ReliablePacketHeader}, Connection, PotentialNewPeer}, endpoint::ConnectionOwnershipToken, packet::{IncomingPacket, OutgoingPacket, PacketQueue}, plugin::PluginConfiguration, ConnectionDirection, ConnectionState, Endpoint};
+use crate::{appdata::{NetworkVersionData, BANNED_MINOR_VERSIONS, TRANSPORT_VERSION_DATA}, connection::{established::Established, handshake::{packets::{ClientHelloPacket, ClosingPacket, HandshakePacket, HandshakePacketHeader, HandshakeParsingResponse}, HandshakeState}, reliability::{ReliabilityState, ReliablePacketHeader}, Connection, PotentialNewPeer}, endpoint::ConnectionOwnershipToken, packet::{IncomingPacket, OutgoingPacket, PacketQueue, MTU_SIZE}, plugin::PluginConfiguration, ConnectionDirection, ConnectionState, Endpoint};
 use super::{codes::HandshakeResponseCode, packets::{ClientFinalisePacket, ServerHelloPacket}, HandshakeFailureReason};
 use super::Handshaking;
 
@@ -192,7 +192,11 @@ pub(crate) fn handshake_polling_system(
                 commands.command_scope(|mut commands| {
                     commands.entity(entity)
                         .remove::<Handshaking>()
-                        .insert(Established::new())
+                        .insert(Established::new(
+                            config.reliable_channel_count,
+                            MTU_SIZE,
+                            &handshake.reliability,
+                        ))
                         .insert(NetworkPeer::new());
                 });
 

@@ -5,7 +5,7 @@ use crate::sequences::*;
 
 const BITMASK: u128 = 1 << 127;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) struct ReliabilityState {
     pub local_sequence: u16,
     pub remote_sequence: u16,
@@ -117,11 +117,18 @@ pub fn get_header(reader: &mut Reader<'_>, bitfield_bytes: usize) -> Result<Reli
 }
 
 pub(crate) struct ReliablePackets {
+    pub state: ReliabilityState,
     unacked: BTreeMap<u16, SentPacket>,
-    state: ReliabilityState,
 }
 
 impl ReliablePackets {
+    pub fn new(state: ReliabilityState) -> Self {
+        Self {
+            unacked: BTreeMap::default(),
+            state,
+        }
+    }
+
     pub fn send(&mut self, payload: Bytes) -> ReliablePacketHeader {
         let header = self.state.header();
         self.unacked.insert(header.sequence, SentPacket {
