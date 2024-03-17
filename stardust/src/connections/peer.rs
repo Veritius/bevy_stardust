@@ -58,7 +58,7 @@ impl NetworkPeer {
     }
 
     /// Returns `true` if [`disconnect`] has been used.
-    /// This is intended for use by transport layers, and you should use [`NetworkPeerState`] instead.
+    /// This is intended for use by transport layers, and you should use [`NetworkPeerLifestage`] instead.
     pub fn disconnect_requested(&self) -> bool {
         self.disconnect_requested
     }
