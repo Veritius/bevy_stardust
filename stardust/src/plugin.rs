@@ -15,6 +15,9 @@ impl Plugin for StardustPlugin {
         app.add_event::<PeerDisconnectedEvent>();
         app.add_event::<PeerConnectedEvent>();
 
+        // Add systems
+        app.add_systems(Last, crate::connections::systems::despawn_closed_connections_system);
+
         // Hashing-related functionality
         #[cfg(feature="hashing")] {
             use crate::hashing::*;

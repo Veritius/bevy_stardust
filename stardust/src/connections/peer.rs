@@ -32,12 +32,8 @@ pub struct NetworkPeer {
     /// `None` means a value is not provided.
     pub quality: Option<f32>,
 
-    /// Round-trip time, in milliseconds.
+    /// Round-trip time estimate, in milliseconds.
     pub ping: u32,
-
-    /// How secure the connection to this peer is.
-    /// Set to [`Unprotected`](PeerSecurity::Unprotected) by default when using `NetworkPeer::new()`.
-    pub security: PeerSecurity,
 
     disconnect_requested: bool,
 }
@@ -51,7 +47,6 @@ impl NetworkPeer {
             uuid: None,
             quality: None,
             ping: 0,
-            security: PeerSecurity::Unauthenticated,
             disconnect_requested: false,
         }
     }
@@ -69,6 +64,31 @@ impl NetworkPeer {
     }
 }
 
+/// The lifestage of a connection.
+/// 
+/// This exists to model the average lifecycle of a connection, from an initial handshake to being disconnected.
+/// An `Ord` implementation is provided, with variants being 'greater' if they're later in the model lifecycle.
+#[derive(Debug, Component, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[cfg_attr(feature="reflect", derive(bevy_reflect::Reflect))]
+#[non_exhaustive]
+pub enum NetworkPeerLifestage {
+    /// Midway through a [handshake].
+    /// 
+    /// [handshake]: https://en.wikipedia.org/wiki/Handshake_(computing)
+    Handshaking,
+
+    /// Fully connected and communicating normally.
+    Established,
+
+    /// In the process of closing the connection.
+    /// 
+    /// This step may be skipped and peers will jump directly to the `Closed` stage from any other variant.
+    Closing,
+
+    /// The connection is closed, and the entity will soon be despawned automatically.
+    Closed,
+}
+
 /// How 'secure' a connection is.
 /// This is set by the transport layer that controls the connection.
 /// See variant documentation for specific information.
@@ -77,9 +97,9 @@ impl NetworkPeer {
 ///
 /// This value is set by the transport layer managing this peer.
 /// It's up to it to provide an appropriate value here.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Component, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 #[cfg_attr(feature="reflect", derive(bevy_reflect::Reflect))]
-pub enum PeerSecurity {
+pub enum NetworkPeerSecurity {
     /// Communication is encrypted but not authenticated, or is fully plain text.
     /// 
     /// **For end users:**
