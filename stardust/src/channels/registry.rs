@@ -99,9 +99,8 @@ impl Deref for ChannelRegistry<'_> {
     }
 }
 
-/// Stores channel configuration data.
+/// Stores channel configuration data. Accessible through the [`ChannelRegistry`] system parameter.
 pub struct ChannelRegistryInner {
-    pub(super) channel_count: u32,
     pub(super) channel_type_ids: BTreeMap<TypeId, ChannelId>,
     pub(super) channel_data: Vec<ChannelData>,
 }
@@ -109,7 +108,6 @@ pub struct ChannelRegistryInner {
 impl ChannelRegistryInner {
     pub(in crate) fn new() -> Self {
         Self {
-            channel_count: 0,
             channel_type_ids: BTreeMap::new(),
             channel_data: vec![],
         }    
@@ -120,7 +118,7 @@ impl ChannelRegistryInner {
         config: ChannelConfiguration,
     ) -> ChannelId {
         // Check we don't overrun the channel ID
-        if self.channel_count == u32::MAX {
+        if self.channel_data.len() >= (u32::MAX as usize) {
             panic!("Exceeded channel limit of {}", u32::MAX);
         }
         
@@ -136,7 +134,7 @@ impl ChannelRegistryInner {
         }
 
         // Add to map
-        let channel_id = ChannelId::try_from(self.channel_count).unwrap();
+        let channel_id = ChannelId::try_from(self.channel_count()).unwrap();
         self.channel_type_ids.insert(type_id, channel_id);
         
         #[cfg(feature="reflect")]
@@ -156,8 +154,6 @@ impl ChannelRegistryInner {
 
             config,
         });
-
-        self.channel_count += 1;
 
         channel_id
     }
@@ -180,12 +176,12 @@ impl ChannelRegistryInner {
 
     /// Returns how many channels currently exist.
     pub fn channel_count(&self) -> u32 {
-        self.channel_count
+        TryInto::<u32>::try_into(self.channel_data.len()).unwrap()
     }
 
     /// Returns an iterator of all existing channel ids.
     pub fn channel_ids(&self) -> impl Iterator<Item = ChannelId> {
-        (0..self.channel_count).into_iter()
+        (0..self.channel_count()).into_iter()
         .map(|f| ChannelId::try_from(f).unwrap())
     }
 }
@@ -193,7 +189,6 @@ impl ChannelRegistryInner {
 impl Default for ChannelRegistryInner {
     fn default() -> Self {
         Self {
-            channel_count: 0,
             channel_type_ids: BTreeMap::new(),
             channel_data: vec![],
         }
