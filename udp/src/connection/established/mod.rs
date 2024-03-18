@@ -7,7 +7,7 @@ use bevy_stardust::channels::ChannelId;
 use bytes::Bytes;
 use bevy_ecs::prelude::*;
 use self::packing::PackingManager;
-use super::reliability::ReliabilityState;
+use super::reliability::{ReliabilityState, ReliablePackets};
 pub(crate) use systems::{
     established_packet_reader_system,
     established_packet_builder_system,
@@ -18,7 +18,7 @@ pub(crate) use systems::{
 pub(crate) struct Established {
     queue: VecDeque<QueuedMessage>,
     packer: PackingManager,
-    reliability: ReliabilityState,
+    reliability: ReliablePackets,
 }
 
 impl Established {
@@ -29,7 +29,7 @@ impl Established {
         Self {
             queue: VecDeque::with_capacity(8),
             packer: PackingManager::new(packet_size),
-            reliability: reliability.clone(),
+            reliability: ReliablePackets::new(reliability.clone())
         }
     }
 }

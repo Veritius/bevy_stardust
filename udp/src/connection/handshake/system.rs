@@ -193,7 +193,7 @@ pub(crate) fn handshake_polling_system(
                     commands.entity(entity)
                         .remove::<Handshaking>()
                         .insert(Established::new(
-                            MTU_SIZE,
+                            config.available_payload_len,
                             &handshake.reliability,
                         ))
                         .insert(NetworkPeerLifestage::Established);

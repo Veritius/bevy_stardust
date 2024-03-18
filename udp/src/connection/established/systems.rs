@@ -28,10 +28,18 @@ pub(crate) fn established_packet_builder_system(
 ) {
     // Process all connections in parallel
     connections.par_iter_mut().for_each(|(mut meta, mut state, outgoing)| {
+        // Scratch space
+        let mut scratch = BytesMut::with_capacity(MTU_SIZE);
+
         // Include an alt message for every N main messages
         let msg_queue_len = outgoing.count();
         let alt_queue_len = state.queue.len();
         let msg_alt_nfrac = msg_queue_len / alt_queue_len;
+
+        // Iterator for individual messages and their channel ids
+        let mut messages = outgoing
+            .all_queues()
+            .flat_map(|(c,s)| s.iter().map(move |v| (c,v)));
 
         todo!()
     });
