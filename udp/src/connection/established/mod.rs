@@ -1,13 +1,10 @@
-mod packing;
 mod frame;
 mod systems;
 
 use std::collections::HashMap;
-
 use bevy_stardust::channels::ChannelId;
-use bytes::Bytes;
 use bevy_ecs::prelude::*;
-use self::{frame::PacketFrame, packing::PackingManager};
+use self::frame::PacketFrame;
 use super::{ordering::OrderedMessages, reliability::{ReliabilityState, ReliablePackets}};
 pub(crate) use systems::{
     established_packet_reader_system,
@@ -18,8 +15,6 @@ pub(crate) use systems::{
 #[derive(Component)]
 pub(crate) struct Established {
     frames: Vec<PacketFrame>,
-    reliable_packer: PackingManager,
-    unreliable_packer: PackingManager,
     reliability: ReliablePackets,
     ordering: HashMap<ChannelId, OrderedMessages>,
 }
@@ -31,8 +26,6 @@ impl Established {
     ) -> Self {
         Self {
             frames: Vec::with_capacity(8),
-            reliable_packer: PackingManager::new(packet_size),
-            unreliable_packer: PackingManager::new(packet_size),
             reliability: ReliablePackets::new(reliability.clone()),
             ordering: HashMap::default(),
         }
