@@ -6,70 +6,34 @@ Stardust is a flexible networking crate built for Bevy, with a focus on extensib
 [![Bevy version](https://img.shields.io/badge/bevy-0.13-blue?color=blue)](https://bevyengine.org/)
 [![Crates.io](https://img.shields.io/crates/v/bevy_stardust)](https://crates.io/crates/bevy_stardust)
 
-## Features and design
-Rather than being a monolith including everything you could possibly need, the core of Stardust is simply an API for sending and reading bytes, and managing connections.
+## Why Stardust?
+### ECS-integrated
+Stardust is, simply put, just another plugin. All state information is in the Bevy `World` as entities, components, and systems. Connections are just entities, and you can attach any data you want to them without complex associative arrays, and access them in simple queries.
 
-Just like Bevy, if you don't like something, swap it out. If you're unsatisfied with your current replication plugin, you can choose a different one without rewriting all your network-related game systems for a new API.
+Stardust gives first class support to plugins, ensuring all APIs can be used by plugins without issue, and providing powerful organisation tools and abstractions.
 
-Stardust is designed with this in mind, enabling the easy addition of Bevy plugins to the app that have full access to networking. Plugins and your very own game systems can be written once and apply to every situation effortlessly, without needing to know anything about how bytes are sent to and from connections.
+### Parallel
+Stardust is made specifically to run in parallel as well as possible. Since everything is in the ECS, the Bevy scheduler lets you run your networked game systems in parallel, with very little effort on your part.
 
-This also means you can use multiple protocols for connections. Use a native UDP transport plugin for PC players, a QUIC transport plugin for web players, some kind of proprietary transport plugin for consoles, and even something that communicates using [maritime signal flags](https://en.wikipedia.org/wiki/International_maritime_signal_flags) - all at once, on the same game server. Crossplay has never been easier or more flexible.
+The message queue APIs are made to be as parallel as possible, simply being components attached to connection entities. This means you can apply query filters to your heart's content, letting disjoint accesses perform network operations in parallel!
 
-Not that it needs to be a game server. The way Stardust is written, it has no concept of network topology, just connections. That means you can even use this plugin for P2P connections in a mesh topology, though make sure the plugins you use support that sort of thing.
+### Modular
+Rather than being a monolith, the core of Stardust is simple: provide an API for sending and reading bytes, and an API for managing connections.
 
-### Planned features
-- Replication and state synchronisation plugins
-- UDP and WebTransport plugins
+You can use any transport layer you want. Use UDP, TCP, QUIC, HTTP, some homebrew transport layer, I2C, AM radio, or even [maritime signal flags](https://en.wikipedia.org/wiki/International_maritime_signal_flags), all at the same time, with no extra effort. Crossplay has never been easier or more flexible.
+
+You can use any replication or extra features you want. If you prefer a specific crate for replication, it's really easy to integrate it into Stardust, as long as it has some kind of API for taking in and outputting bytes.
+
+## Planned features
+The following features are planned to be created as additional crates, as part of the overall project.
+
+- Replication plugin
+- UDP, QUIC, and WebTransport plugins
 - Real time voice plugin
 
 ## Usage
 | Bevy | Stardust |
 | ---- | -------- |
-| 0.13 | 0.3      |
+| 0.13 | 0.4      |
 | 0.12 | 0.2      |
 | 0.11 | 0.1      |
-
-***
-
-```rust
-use bevy::prelude::*;
-use bevy_stardust::prelude::*;
-
-// First, create a type to reference your channel
-// The TypePath trait is only necessary with the reflect feature flag
-#[derive(TypePath)]
-struct MyChannel;
-
-// Set up your app
-fn main() {
-    // Create the app and add the plugin
-    let mut app = App::new();
-    app.add_plugins((DefaultPlugins, StardustPlugin));
-
-    // Register the channel
-    app.add_channel::<MyChannel>(ChannelConfiguration {
-        reliable: ReliabilityGuarantee::Reliable,
-        ordered: OrderingGuarantee::Ordered,
-        fragmented: true,
-        string_size: 0..=5,
-    });
-
-    // Any and all systems can send and receive messages
-    app.add_systems(Update, my_system);
-}
-
-// Use game systems to read and write messages
-fn my_system(
-    mut writer: ChannelWriter<MyChannel>,
-    reader: ChannelReader<MyChannel>,
-) {
-    // Sending a message is simple
-    writer.send(Entity::PLACEHOLDER, "hello".into());
-
-    // And it's not much effort to get a string back
-    let read = reader.iter().next().unwrap().1;
-    assert_eq!(std::str::from_utf8(&read).unwrap(), "hello");
-}
-```
-
-Note that your messages will **not be sent** without a transport plugin.
