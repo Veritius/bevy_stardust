@@ -56,7 +56,7 @@ impl PackingManager {
 
     /// Pop the fullest bin, if any. After use, the bin is emptied.
     /// `filter` takes the current size of the bin, returning true if acceptable, used to filter out bins that are too small.
-    pub fn pop(&mut self, filter: impl Fn(usize) -> bool) -> Option<BinRef> {
+    pub fn pop(&mut self, filter: impl Fn(usize) -> bool) -> Option<Bin> {
         // Finds the maximum value
         let result = self.bins
             .iter_mut()
@@ -73,7 +73,7 @@ impl PackingManager {
             std::mem::swap(bin, &mut g_bin);
 
             // Create the binref object
-            let binref = BinRef {
+            let binref = Bin {
                 manager: self,
                 bin_idx: index,
                 bin: g_bin,
@@ -90,13 +90,13 @@ impl PackingManager {
 
 /// Dereferences to a byte slice, which is the contents of the bin.
 /// When this is dropped, the bin is returned to the manager and cleared.
-pub(super) struct BinRef<'a> {
+pub(super) struct Bin<'a> {
     manager: &'a mut PackingManager,
     bin_idx: usize,
     bin: Vec<u8>,
 }
 
-impl Deref for BinRef<'_> {
+impl Deref for Bin<'_> {
     type Target = [u8];
 
     fn deref(&self) -> &Self::Target {
@@ -104,7 +104,7 @@ impl Deref for BinRef<'_> {
     }
 }
 
-impl Drop for BinRef<'_> {
+impl Drop for Bin<'_> {
     fn drop(&mut self) {
         // Clear the bin
         self.bin.clear();

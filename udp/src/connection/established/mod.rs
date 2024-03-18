@@ -18,7 +18,8 @@ pub(crate) use systems::{
 #[derive(Component)]
 pub(crate) struct Established {
     frames: Vec<PacketFrame>,
-    packer: PackingManager,
+    reliable_packer: PackingManager,
+    unreliable_packer: PackingManager,
     reliability: ReliablePackets,
     ordering: HashMap<ChannelId, OrderedMessages>,
 }
@@ -30,14 +31,15 @@ impl Established {
     ) -> Self {
         Self {
             frames: Vec::with_capacity(8),
-            packer: PackingManager::new(packet_size),
+            reliable_packer: PackingManager::new(packet_size),
+            unreliable_packer: PackingManager::new(packet_size),
             reliability: ReliablePackets::new(reliability.clone()),
             ordering: HashMap::default(),
         }
     }
 
-    pub(super) fn ordering(&mut self, channel: ChannelId, reliable: bool) -> &mut OrderedMessages {
+    pub(super) fn ordering(&mut self, channel: ChannelId) -> &mut OrderedMessages {
         self.ordering.entry(channel)
-            .or_insert(OrderedMessages::new(reliable))
+            .or_insert(OrderedMessages::new())
     }
 }
