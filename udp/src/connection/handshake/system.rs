@@ -1,6 +1,6 @@
 use std::{collections::HashMap, net::SocketAddr, time::{Duration, Instant}};
 use bevy_ecs::{entity::Entities, prelude::*};
-use bevy_stardust::connections::NetworkPeer;
+use bevy_stardust::prelude::*;
 use bytes::{Bytes, BytesMut};
 use untrusted::*;
 use crate::{appdata::{NetworkVersionData, BANNED_MINOR_VERSIONS, TRANSPORT_VERSION_DATA}, connection::{established::Established, handshake::{packets::{ClientHelloPacket, ClosingPacket, HandshakePacket, HandshakePacketHeader, HandshakeParsingResponse}, HandshakeState}, reliability::{ReliabilityState, ReliablePacketHeader}, Connection, PotentialNewPeer}, endpoint::ConnectionOwnershipToken, packet::{IncomingPacket, OutgoingPacket, PacketQueue, MTU_SIZE}, plugin::PluginConfiguration, ConnectionDirection, ConnectionState, Endpoint};
@@ -197,7 +197,7 @@ pub(crate) fn handshake_polling_system(
                             MTU_SIZE,
                             &handshake.reliability,
                         ))
-                        .insert(NetworkPeer::new());
+                        .insert(NetworkPeerLifestage::Established);
                 });
 
                 // Log success
@@ -406,6 +406,8 @@ pub(crate) fn potential_new_peers_system(
             world
                 .get_or_spawn(ent_id)
                 .unwrap()
+                .insert(NetworkPeer::new())
+                .insert(NetworkPeerLifestage::Handshaking)
                 .insert((bx.1, bx.2));
         });
 
