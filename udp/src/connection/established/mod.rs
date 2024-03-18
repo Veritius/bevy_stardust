@@ -35,4 +35,9 @@ impl Established {
             ordering: HashMap::default(),
         }
     }
+
+    pub(super) fn ordering(&mut self, channel: ChannelId, reliable: bool) -> &mut OrderedMessages {
+        self.ordering.entry(channel)
+            .or_insert(OrderedMessages::new(reliable))
+    }
 }

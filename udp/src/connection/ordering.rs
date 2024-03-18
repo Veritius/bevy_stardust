@@ -5,18 +5,27 @@ use crate::sequences::sequence_greater_than;
 
 /// Ensures items are popped in order, regardless of insertion order.
 pub(crate) struct OrderedMessages {
-    highest: u16,
-    queue: BTreeSet<OrderedMessage>,
-    skipping: bool,
+    queue: Vec<OrderedMessage>,
 }
 
 impl OrderedMessages {
+    pub fn new(reliable: bool) -> Self {
+        Self {
+            queue: Vec::with_capacity(16),
+        }
+    }
+
     pub fn pop(&mut self) -> Option<OrderedMessage> {
         todo!()
     }
 
     pub fn put(&mut self, message: OrderedMessage) {
-        self.queue.insert(message);
+        match self.queue.binary_search(&message) {
+            Ok(_) => panic!(), // Shouldn't happen
+            Err(idx) => {
+                self.queue.insert(idx, message);
+            },
+        }
     }
 }
 
