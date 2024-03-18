@@ -1,14 +1,11 @@
 use bytes::Bytes;
 
-/// Frame types, with an `Ord` implementation comparing how important it is that the frame is sent.
+/// Management frame types, with an `Ord` implementation comparing how important it is that the frame is sent.
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
 #[repr(u8)]
 pub(super) enum PacketFrameId {
     Padding = 0,
     Ping = 1,
-    Payload = 2,
-    Management = 3,
-    Acknowledgement = 4,
 }
 
 impl TryFrom<u8> for PacketFrameId {
@@ -19,9 +16,6 @@ impl TryFrom<u8> for PacketFrameId {
         Ok(match value {
             0 => Padding,
             1 => Ping,
-            2 => Payload,
-            3 => Management,
-            4 => Acknowledgement,
             _ => { return Err(()) }
         })
     }
@@ -48,15 +42,3 @@ impl PartialEq for PacketFrame {
 }
 
 impl Eq for PacketFrame {}
-
-impl PartialOrd for PacketFrame {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        self.id.partial_cmp(&other.id)
-    }
-}
-
-impl Ord for PacketFrame {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        self.id.cmp(&other.id)
-    }
-}

@@ -33,7 +33,7 @@ pub(crate) fn established_packet_builder_system(
 
         // Include an alt message for every N main messages
         let msg_queue_len = outgoing.count();
-        let alt_queue_len = state.queue.len();
+        let alt_queue_len = state.frames.len();
         let msg_alt_nfrac = msg_queue_len / alt_queue_len;
 
         // Iterator for individual messages and their channel ids
@@ -41,9 +41,39 @@ pub(crate) fn established_packet_builder_system(
             .all_queues()
             .flat_map(|(c,s)| s.iter().map(move |v| (c,v)));
 
-        // Iterator for queued messages
-        let mut alt_queue = state.queue.iter();
+        // Iterator for queued alt-messages
+        let mut alt_queue = state.frames.drain(..);
 
-        todo!()
+        // Iterates over all messages
+        let mut msg_idx = 0;
+        let mut tf_count = 0;
+        while msg_idx < msg_queue_len {
+            if tf_count < msg_alt_nfrac {
+                // Get the message
+                let (channel, message) = msg_queue.next().unwrap();
+
+                // Put channel id, shifted by 1 to make space for reserved values
+                let channel_int = u32::from(channel).checked_add(1).unwrap();
+                scratch.put_u32(channel_int);
+
+                // Update trackers for next iteration
+                msg_idx += 1;
+                tf_count += 1;
+                continue
+            } else {
+                // Get the message
+                let message = alt_queue.next().unwrap();
+
+                // Reserved value for alt messages
+                scratch.put_u32(0);
+
+                // Alt frame type
+                scratch.put_u8(message.id as u8);
+
+                // Update trackers for next iteration
+                tf_count = 0;
+                continue
+            }
+        }
     });
 }

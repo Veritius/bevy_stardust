@@ -196,6 +196,8 @@ pub(crate) fn handshake_polling_system(
                             config.available_payload_len,
                             &handshake.reliability,
                         ))
+                        .insert(NetworkMessages::<Outgoing>::new())
+                        .insert(NetworkMessages::<Incoming>::new())
                         .insert(NetworkPeerLifestage::Established);
                 });
 

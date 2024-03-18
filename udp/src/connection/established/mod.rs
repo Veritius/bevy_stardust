@@ -2,12 +2,13 @@ mod packing;
 mod frame;
 mod systems;
 
-use std::collections::VecDeque;
+use std::collections::HashMap;
+
 use bevy_stardust::channels::ChannelId;
 use bytes::Bytes;
 use bevy_ecs::prelude::*;
-use self::packing::PackingManager;
-use super::reliability::{ReliabilityState, ReliablePackets};
+use self::{frame::PacketFrame, packing::PackingManager};
+use super::{ordering::OrderedMessages, reliability::{ReliabilityState, ReliablePackets}};
 pub(crate) use systems::{
     established_packet_reader_system,
     established_packet_builder_system,
@@ -16,9 +17,10 @@ pub(crate) use systems::{
 
 #[derive(Component)]
 pub(crate) struct Established {
-    queue: VecDeque<QueuedMessage>,
+    frames: Vec<PacketFrame>,
     packer: PackingManager,
     reliability: ReliablePackets,
+    ordering: HashMap<ChannelId, OrderedMessages>,
 }
 
 impl Established {
@@ -27,36 +29,10 @@ impl Established {
         reliability: &ReliabilityState,
     ) -> Self {
         Self {
-            queue: VecDeque::with_capacity(8),
+            frames: Vec::with_capacity(8),
             packer: PackingManager::new(packet_size),
-            reliability: ReliablePackets::new(reliability.clone())
+            reliability: ReliablePackets::new(reliability.clone()),
+            ordering: HashMap::default(),
         }
-    }
-}
-
-struct QueuedMessage {
-    priority: u32,
-    channel: ChannelId,
-    payload: Bytes,
-}
-
-impl PartialEq for QueuedMessage {
-    fn eq(&self, other: &Self) -> bool {
-        self.priority == other.priority
-    }
-}
-
-impl Eq for QueuedMessage {}
-
-impl PartialOrd for QueuedMessage {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        self.priority.partial_cmp(&other.priority)
-    }
-}
-
-impl Ord for QueuedMessage {
-    #[inline]
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        self.partial_cmp(other).unwrap()
     }
 }
