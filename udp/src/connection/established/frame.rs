@@ -1,5 +1,11 @@
 use bytes::Bytes;
 
+pub(crate) struct PacketHeader(pub u16);
+
+impl PacketHeader {
+    pub const RELIABLE_PACKET: u16 = 1;
+}
+
 /// Management frame types, with an `Ord` implementation comparing how important it is that the frame is sent.
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
 #[repr(u8)]

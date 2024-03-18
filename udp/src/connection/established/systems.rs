@@ -16,10 +16,14 @@ macro_rules! try_unwrap {
 }
 
 pub(crate) fn established_packet_reader_system(
-    mut connections: Query<(&mut Connection, &mut Established, &mut NetworkMessages<Incoming>)>,
+    mut connections: Query<(Entity, &mut Connection, &mut Established, &mut NetworkMessages<Incoming>)>,
 ) {
     // Process all connections in parallel
-    connections.par_iter_mut().for_each(|(mut meta, mut state, mut incoming)| {
+    connections.par_iter_mut().for_each(|(entity, mut meta, mut state, mut incoming)| {
+        // Tracing info for logging
+        let span = tracing::trace_span!("Reading packets", peer=?entity);
+        let _entered_span = span.enter();
+
         todo!()
     });
 }
@@ -49,10 +53,14 @@ pub(crate) fn established_packet_builder_system(
     registry: ChannelRegistry,
     config: Res<PluginConfiguration>,
     scratch: Local<PacketBuilderSystemScratch>,
-    mut connections: Query<(&mut Connection, &mut Established, &NetworkMessages<Outgoing>)>,
+    mut connections: Query<(Entity, &mut Connection, &mut Established, &NetworkMessages<Outgoing>)>,
 ) {
     // Process all connections in parallel
-    connections.par_iter_mut().for_each(|(mut meta, mut state, outgoing)| {
+    connections.par_iter_mut().for_each(|(entity, mut meta, mut state, outgoing)| {
+        // Tracing info for logging
+        let span = tracing::trace_span!("Building packets", peer=?entity);
+        let _entered_span = span.enter();
+
         // Fetch or create the thread local scratch space
         let scratch_cell = scratch.0.get_or(|| Cell::new(PacketBuilderSystemScratchInner {
             // These seem like reasonable defaults.
@@ -64,7 +72,7 @@ pub(crate) fn established_packet_builder_system(
         // Take out the inner scratch
         let mut scratch = scratch_cell.take();
 
-        // Iterate over all queues to collect messages
+        // Sort messages into queues
         let mut queues = outgoing.all_queues();
         while let Some((channel, payloads)) = queues.next() {
             // Get channel data
@@ -78,6 +86,22 @@ pub(crate) fn established_packet_builder_system(
                     false => scratch.reliable.push((channel, payload.clone())),
                 }
             }
+        }
+
+        // Record how many messages we have queued
+        if !span.is_disabled() {
+            span.record("reliable messages", scratch.reliable.len());
+            span.record("unreliable messages", scratch.unreliable.len());
+        }
+
+        // Iterate reliable packets
+        while let Some((channel, payload)) = scratch.reliable.pop() {
+            todo!()
+        }
+
+        // Iterate unreliable packets
+        while let Some((channel, payload)) = scratch.unreliable.pop() {
+            todo!()
         }
 
         // Return scratch
