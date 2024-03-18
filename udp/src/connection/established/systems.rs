@@ -37,9 +37,12 @@ pub(crate) fn established_packet_builder_system(
         let msg_alt_nfrac = msg_queue_len / alt_queue_len;
 
         // Iterator for individual messages and their channel ids
-        let mut messages = outgoing
+        let mut msg_queue = outgoing
             .all_queues()
             .flat_map(|(c,s)| s.iter().map(move |v| (c,v)));
+
+        // Iterator for queued messages
+        let mut alt_queue = state.queue.iter();
 
         todo!()
     });
