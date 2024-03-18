@@ -3,12 +3,10 @@ mod packing;
 mod frame;
 mod systems;
 
-use bevy_stardust::channels::id::ChannelId;
+use bevy_stardust::channels::ChannelId;
 use bytes::Bytes;
 pub(crate) use systems::{
     established_packet_reader_system,
-    established_post_read_queuing_system,
-    established_pre_build_queuing_system,
     established_packet_builder_system,
 };
 

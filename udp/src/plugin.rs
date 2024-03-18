@@ -2,7 +2,7 @@ use std::time::Duration;
 use bevy_app::prelude::*;
 use bevy_ecs::prelude::*;
 use bevy_stardust::scheduling::*;
-use crate::{appdata::ApplicationNetworkVersion, connection::{established_post_read_queuing_system, PotentialNewPeer}};
+use crate::{appdata::ApplicationNetworkVersion, connection::PotentialNewPeer};
 
 /// The UDP transport plugin.
 pub struct UdpTransportPlugin {
@@ -68,7 +68,6 @@ impl Plugin for UdpTransportPlugin {
             potential_new_peers_system,
             handshake_polling_system,
             established_packet_reader_system,
-            established_pre_build_queuing_system,
             established_packet_builder_system,
             close_connections_system,
         };
@@ -84,7 +83,6 @@ impl Plugin for UdpTransportPlugin {
         app.add_systems(PreUpdate, (
             io_receiving_system,
             established_packet_reader_system,
-            established_post_read_queuing_system,
         ).chain()
             .in_set(NetworkRead::Receive)
             .before(NetworkRead::Read));
@@ -97,7 +95,6 @@ impl Plugin for UdpTransportPlugin {
 
         // Packet transmitting systems
         app.add_systems(PostUpdate, (
-            established_pre_build_queuing_system,
             established_packet_builder_system,
             io_sending_system,
             close_connections_system,

@@ -1,4 +1,4 @@
-use std::{net::{SocketAddr, SocketAddrV4, Ipv4Addr}, time::Duration};
+use std::{any::Any, net::{Ipv4Addr, SocketAddr, SocketAddrV4}, time::Duration};
 use bevy_ecs::prelude::*;
 use bevy_app::{prelude::*, AppLabel, ScheduleRunnerPlugin, SubApp};
 use bevy_log::LogPlugin;
@@ -53,7 +53,6 @@ fn setup_app() -> App {
         ordered: OrderingGuarantee::Ordered,
         fragmented: false,
         priority: 0xFF,
-        string_size: 0..=100,
     });
 
     app.add_plugins(UdpTransportPlugin::balanced(ApplicationNetworkVersion {
@@ -74,18 +73,20 @@ fn setup_app() -> App {
 struct MyChannel;
 
 fn send_and_recv_system(
-    peers: Query<Entity, With<NetworkPeer>>,
-    mut writer: NetworkWriter<MyChannel>,
-    reader: NetworkReader<MyChannel>,
+    registry: ChannelRegistry,
+    mut peers: Query<(Entity, &NetworkMessages<Incoming>, &mut NetworkMessages<Outgoing>), With<NetworkPeer>>,
 ) {
-    // Read all messages
-    for (origin, message) in reader.iter() {
-        let message = std::str::from_utf8(&message).unwrap();
-        tracing::info!("Received a message from {origin:?}: {message}");
-    }
+    for (origin, incoming, mut outgoing) in peers.iter_mut() {
+        // Get the ID for our channel
+        let id = registry.channel_id(std::any::TypeId::of::<MyChannel>()).unwrap();
 
-    // Send a message to all peers
-    for peer in peers.iter() {
-        writer.send(peer, Bytes::from_static(b"Hello, world!"));
+        // Read all messages
+        for message in incoming.channel_queue(id) {
+            let message = std::str::from_utf8(&message).unwrap();
+            tracing::info!("Received a message from {origin:?}: {message}");
+        }
+
+        // Send a message to the peer
+        outgoing.push(id, Bytes::from_static(b"Hello, world!"));
     }
 }

@@ -8,7 +8,7 @@ mod established;
 mod closing;
 
 pub(crate) use handshake::{handshake_polling_system, potential_new_peers_system, OutgoingHandshake};
-pub(crate) use established::{established_packet_reader_system, established_post_read_queuing_system, established_pre_build_queuing_system, established_packet_builder_system};
+pub(crate) use established::{established_packet_reader_system, established_packet_builder_system};
 pub(crate) use closing::close_connections_system;
 
 use std::net::SocketAddr;

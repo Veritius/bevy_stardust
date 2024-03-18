@@ -34,33 +34,9 @@ pub(crate) fn established_packet_reader_system(
     });
 }
 
-pub(crate) fn established_post_read_queuing_system(
-    mut incoming: NetworkIncomingWriter,
-    mut connections: Query<(&mut Connection, &mut Established)>,
-) {
-    todo!()
-}
-
-pub(crate) fn established_pre_build_queuing_system(
-    outgoing: NetworkOutgoingReader,
-    registry: Res<ChannelRegistry>,
-    mut connections: Query<(&mut Connection, &mut Established)>,
-) {
-    let mut iter = outgoing.iter_all();
-    while let Some((channel, origin, payload)) = iter.next() {
-        if let Ok((_meta, mut state)) = connections.get_mut(origin) {
-            state.queue.insert(QueuedMessage {
-                priority: registry.get_from_id(channel).unwrap().priority,
-                channel,
-                payload: payload.clone(),
-            });
-        }
-    }
-}
-
 pub(crate) fn established_packet_builder_system(
+    registry: ChannelRegistry,
     config: Res<PluginConfiguration>,
-    registry: Res<ChannelRegistry>,
     mut connections: Query<(&mut Connection, &mut Established)>,
 ) {
     let step = registry.channel_count() / config.reliable_channel_count as u32;

@@ -1,6 +1,6 @@
 use std::{collections::HashMap, net::SocketAddr, time::{Duration, Instant}};
 use bevy_ecs::{entity::Entities, prelude::*};
-use bevy_stardust::connections::peer::NetworkPeer;
+use bevy_stardust::connections::NetworkPeer;
 use bytes::{Bytes, BytesMut};
 use untrusted::*;
 use crate::{appdata::{NetworkVersionData, BANNED_MINOR_VERSIONS, TRANSPORT_VERSION_DATA}, connection::{established::Established, handshake::{packets::{ClientHelloPacket, ClosingPacket, HandshakePacket, HandshakePacketHeader, HandshakeParsingResponse}, HandshakeState}, reliability::{ReliabilityState, ReliablePacketHeader}, Connection, PotentialNewPeer}, endpoint::ConnectionOwnershipToken, packet::{IncomingPacket, OutgoingPacket, PacketQueue, MTU_SIZE}, plugin::PluginConfiguration, ConnectionDirection, ConnectionState, Endpoint};
