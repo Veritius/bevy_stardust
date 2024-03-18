@@ -1,44 +1,35 @@
-mod river;
 mod packing;
 mod frame;
 mod systems;
 
+use std::collections::VecDeque;
 use bevy_stardust::channels::ChannelId;
 use bytes::Bytes;
+use bevy_ecs::prelude::*;
+use self::packing::PackingManager;
+use super::reliability::ReliabilityState;
 pub(crate) use systems::{
     established_packet_reader_system,
     established_packet_builder_system,
 };
 
-use std::collections::BTreeSet;
-use bevy_ecs::prelude::*;
-use self::river::River;
-use super::reliability::ReliabilityState;
 
 #[derive(Component)]
 pub(crate) struct Established {
-    queue: BTreeSet<QueuedMessage>,
-    master: River,
-    rivers: Vec<River>,
+    queue: VecDeque<QueuedMessage>,
+    packer: PackingManager,
+    reliability: ReliabilityState,
 }
 
 impl Established {
     pub(in super::super) fn new(
-        river_count: u8,
-        pk_size: usize,
-        rel_state: &ReliabilityState,
+        packet_size: usize,
+        reliability: &ReliabilityState,
     ) -> Self {
-        // Create river state storage thingies
-        let rivers = (0..=river_count)
-            .into_iter()
-            // Add 1 to id because id 0 is reserved by the master river
-            .map(|seq| River::new(seq.saturating_add(1), pk_size, rel_state.clone()))
-            .collect::<Vec<_>>();
-
         Self {
-            queue: BTreeSet::new(),
-            master: River::new(0, pk_size, rel_state.clone()),
-            rivers,
+            queue: VecDeque::with_capacity(8),
+            packer: PackingManager::new(packet_size),
+            reliability: reliability.clone(),
         }
     }
 }

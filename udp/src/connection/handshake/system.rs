@@ -193,7 +193,6 @@ pub(crate) fn handshake_polling_system(
                     commands.entity(entity)
                         .remove::<Handshaking>()
                         .insert(Established::new(
-                            config.reliable_channel_count,
                             MTU_SIZE,
                             &handshake.reliability,
                         ))

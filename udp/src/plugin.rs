@@ -113,7 +113,6 @@ impl Plugin for UdpTransportPlugin {
         // Add application context resource
         app.insert_resource(PluginConfiguration {
             application_version: self.application_version.clone(),
-            reliable_channel_count: self.reliable_channel_count,
             reliable_bitfield_length: self.reliable_bitfield_length,
             attempt_timeout: self.attempt_timeout,
             established_timeout: self.connection_timeout,
@@ -125,7 +124,6 @@ impl Plugin for UdpTransportPlugin {
 #[derive(Resource)]
 pub(crate) struct PluginConfiguration {
     pub application_version: ApplicationNetworkVersion,
-    pub reliable_channel_count: u8,
     pub reliable_bitfield_length: u16,
     pub attempt_timeout: Duration,
     pub established_timeout: Duration,
