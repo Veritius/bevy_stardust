@@ -33,7 +33,7 @@ pub(crate) struct PacketBuilderSystemScratch(ThreadLocal<Cell<PacketBuilderSyste
 struct PacketBuilderSystemScratchInner {
     pub msg_buffer: BytesMut,
     pub messages: Vec<Message>,
-    pub packets: Vec<Packet>,
+    pub bins: Vec<Bin>,
 }
 
 impl Default for PacketBuilderSystemScratchInner {
@@ -43,7 +43,7 @@ impl Default for PacketBuilderSystemScratchInner {
         Self {
             msg_buffer: BytesMut::new(),
             messages: Vec::new(),
-            packets: Vec::new(),
+            bins: Vec::new(),
         }
     }
 }
@@ -67,7 +67,7 @@ pub(crate) fn established_packet_builder_system(
         let scratch_cell = scratch.0.get_or(|| Cell::new(PacketBuilderSystemScratchInner {
             // These seem like reasonable defaults.
             msg_buffer: BytesMut::with_capacity(MTU_SIZE),
-            packets: Vec::with_capacity(16),
+            bins: Vec::with_capacity(16),
             messages: Vec::with_capacity(256),
         }));
 
@@ -124,9 +124,10 @@ pub(crate) fn established_packet_builder_system(
             // Put the message payload into the buffer
             scratch.msg_buffer.put(&*message.payload);
 
+            // Use the first-fit algorithm to find a bin
             let bin = {
-                // Try to find a bin that can fit our packet
-                let packet = scratch.packets.iter_mut()
+                // Check if a bin with sufficient remaining space exists
+                let bin = scratch.bins.iter_mut()
                 .find(|v| {
                     let capacity = v.buffer.capacity() - EMPTY_PREFIX_LENGTH;
                     let remaining = capacity - v.buffer.len();
@@ -134,7 +135,7 @@ pub(crate) fn established_packet_builder_system(
                 });
 
                 // Return it if we found something, create it if not
-                match packet {
+                match bin {
                     Some(v) => v,
                     None => {
                         // Construct header
@@ -145,24 +146,31 @@ pub(crate) fn established_packet_builder_system(
                         // Construct buffer
                         let mut buffer = Vec::with_capacity(PKT_LEN_WITH_PREFIX);
                         buffer.extend_from_slice(&[0u8; EMPTY_PREFIX_LENGTH]);
-                        scratch.packets.push(Packet { header, buffer });
-                        scratch.packets.last_mut().unwrap()
+                        scratch.bins.push(Bin { header, buffer });
+                        scratch.bins.last_mut().unwrap()
                     },
                 }
             };
 
+            // Extend the bin by the message buffer, and clear the message buffer
+            bin.buffer.extend_from_slice(&scratch.msg_buffer);
+            scratch.msg_buffer.clear();
+        }
+
+        // Add bins to the send queue after some tweaks
+        for bin in scratch.bins.iter_mut() {
             todo!()
         }
 
         // Clean up after ourselves and return scratch to the cell
         scratch.msg_buffer.clear();
         scratch.messages.clear();
-        scratch.packets.clear();
+        scratch.bins.clear();
         scratch_cell.set(scratch);
     });
 }
 
-struct Packet {
+struct Bin {
     header: PacketHeader,
     buffer: Vec<u8>,
 }
