@@ -195,7 +195,7 @@ pub(crate) fn established_packet_builder_system(
             // To avoid reallocation, fill the rest of the bin with zeros
             // This is because Bytes' impl From<Vec<u8>> will reallocate to fit the length
             // While this wastes a bit of memory, it's freed in the next system, so it's fine.
-            bin.buffer.extend((0..bin.buffer.len()).map(|_| 0));
+            bin.buffer.extend((0..(bin.buffer.capacity() - bin.buffer.len())).map(|_| 0));
             debug_assert_eq!(bin.buffer.len(), bin.buffer.capacity());
 
             // Turn into a Bytes object and slice it up a bit
