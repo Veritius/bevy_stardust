@@ -16,11 +16,18 @@ pub(crate) fn io_receiving_system(
 
     // Iterate all endpoints
     endpoints.par_iter_mut().for_each(|(endpoint_id, mut endpoint)| {
+        // Stuff for logging
+        let mut pkts_received: u32 = 0;
+        let mut bytes_received: u64 = 0;
+        let span = tracing::trace_span!("Receiving packets on endpoint", id=?endpoint_id);
+        let _entered_span = span.enter();
+
         loop {
             let mut scratch = [0u8; 1478];
             match endpoint.udp_socket.recv_from(&mut scratch) {
                 // Received a UDP packet
                 Ok((bytes, origin)) => {
+                    pkts_received += 1; bytes_received += bytes as u64;
                     let payload = Bytes::copy_from_slice(&scratch[..bytes]);
 
                     match endpoint.connections.get(&origin) {
@@ -59,6 +66,12 @@ pub(crate) fn io_receiving_system(
                     todo!();
                 }
             }
+        }
+
+        // Record relevant information
+        if !span.is_disabled() {
+            span.record("count", pkts_received);
+            span.record("bytes", bytes_received);
         }
     });
 }

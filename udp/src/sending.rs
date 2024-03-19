@@ -5,11 +5,17 @@ use crate::{endpoint::ConnectionOwnershipToken, Connection, Endpoint, EndpointSt
 
 // Sends packets to UDP sockets
 pub(crate) fn io_sending_system(
-    mut endpoints: Query<&mut Endpoint>,
+    mut endpoints: Query<(Entity, &mut Endpoint)>,
     connections: Query<&mut Connection>,
 ) {
     // Iterate all endpoints
-    endpoints.par_iter_mut().for_each(|mut endpoint| {
+    endpoints.par_iter_mut().for_each(|(endpoint_id, mut endpoint)| {
+        // Stuff for logging
+        let mut pkts_sent: u32 = 0;
+        let mut bytes_sent: u64 = 0;
+        let span = tracing::trace_span!("Sending packets on endpoint", id=?endpoint_id);
+        let _entered_span = span.enter();
+
         // Split borrow fn to help out the borrow checker
         #[inline]
         fn split_borrow(endpoint: &mut Endpoint) -> (
@@ -38,9 +44,13 @@ pub(crate) fn io_sending_system(
                 Ok(val) => val,
                 Err(_) => { continue; },
             } };
+        
+            // Check if there's anything to send
+            if connection.packet_queue.outgoing().len() == 0 { continue }
 
             // Send all packets queued in this peer
             while let Some(packet) = connection.packet_queue.pop_outgoing() {
+                pkts_sent += 1; bytes_sent += packet.payload.len() as u64;
                 match socket.send_to(&packet.payload, connection.remote_address()) {
                     Ok(_) => {
                         // Set last_sent in timings
@@ -58,6 +68,7 @@ pub(crate) fn io_sending_system(
 
         // Send all packets that have just been queued on the endpoint
         while let Some((address, payload)) = outgoing_pkts.pop() {
+            pkts_sent += 1; bytes_sent += payload.len() as u64;
             match socket.send_to(&payload, address) {
                 Ok(_) => {
                     // Add to statistics tracker
@@ -66,6 +77,12 @@ pub(crate) fn io_sending_system(
 
                 Err(_) => todo!(),
             }
+        }
+
+        // Record relevant information
+        if !span.is_disabled() {
+            span.record("count", pkts_sent);
+            span.record("bytes", bytes_sent);
         }
     });
 }
