@@ -19,14 +19,7 @@ use crate::packet::PacketQueue;
 use statistics::ConnectionStatistics;
 use timing::ConnectionTimings;
 
-/// A running UDP connection.
-/// 
-/// This component exists throughout the entire lifecycle of the connection.
-/// However, the `NetworkPeer` component will only be present in the `Established` state.
-/// This behavior may change in future.
-/// 
-/// To close a connection, you should use the `close` method.
-/// If you drop the connection without it fully closing, a warning will be logged.
+/// An existing UDP connection.
 #[derive(Component)]
 #[cfg_attr(feature="reflect", derive(bevy_reflect::Reflect), reflect(from_reflect = false))]
 pub struct Connection {
