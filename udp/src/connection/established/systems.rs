@@ -2,7 +2,7 @@ use std::{cell::Cell, cmp::Ordering, ops::{BitAnd, BitAndAssign, BitOr, BitOrAss
 use bevy_ecs::prelude::*;
 use bevy_stardust::prelude::*;
 use thread_local::ThreadLocal;
-use crate::{packet::MTU_SIZE, plugin::PluginConfiguration, Connection};
+use crate::{packet::{OutgoingPacket, MTU_SIZE}, plugin::PluginConfiguration, Connection};
 use super::{frame::PacketHeader, Established};
 
 macro_rules! try_unwrap {
@@ -146,7 +146,7 @@ pub(crate) fn established_packet_builder_system(
                         // Construct buffer
                         let mut buffer = Vec::with_capacity(PKT_LEN_WITH_PREFIX);
                         buffer.extend_from_slice(&[0u8; BLANK_PREFIX_LENGTH]);
-                        scratch.bins.push(Bin { header, buffer });
+                        scratch.bins.push(Bin { header, buffer, messages: 0 });
                         scratch.bins.last_mut().unwrap()
                     },
                 }
@@ -154,22 +154,66 @@ pub(crate) fn established_packet_builder_system(
 
             // Extend the bin by the message buffer, and clear the message buffer
             bin.buffer.extend_from_slice(&scratch.bytes);
+            bin.messages += 1;
             scratch.bytes.clear();
         }
 
         // Add bins to the send queue after some tweaks
-        for bin in scratch.bins.iter_mut() {
+        for mut bin in scratch.bins.drain(..) {
+            // Some variables about the bin
+            let is_reliable = bin.header.is_reliable();
+            let mut sequence = 0; // not relevant until later
+
             // Append the packet header
             scratch.bytes.put_u16(bin.header.into());
 
             // If the packet is reliable, append a packet header.
-            if bin.header.is_reliable() {
+            if is_reliable {
                 // Create header
                 let header = state.reliability.header();
                 state.reliability.increment_local();
+                sequence = header.sequence;
 
-                
+                // Write header integers
+                scratch.bytes.put_u16(header.sequence);
+                scratch.bytes.put_u16(header.ack);
+
+                // Write the bitfield
+                let bitfield_bytes = header.ack_bitfield.to_be_bytes();
+                scratch.bytes.put(&bitfield_bytes[..config.reliable_bitfield_length as usize]);
             }
+
+            // Check if the header scratch has overrun the available space
+            // If it has, the next operations will corrupt the packet payloads
+            assert!(scratch.bytes.len() <= BLANK_PREFIX_LENGTH);
+
+            // Write the buffer to the packet allocation
+            let len = scratch.bytes.len();
+            let rem = BLANK_PREFIX_LENGTH - scratch.bytes.len();
+            bin.buffer[rem..rem+len].copy_from_slice(&scratch.bytes);
+
+            // To avoid reallocation, fill the rest of the bin with zeros
+            // This is because Bytes' impl From<Vec<u8>> will reallocate to fit the length
+            // While this wastes a bit of memory, it's freed in the next system, so it's fine.
+            bin.buffer.extend((0..bin.buffer.len()).map(|_| 0));
+            debug_assert_eq!(bin.buffer.len(), bin.buffer.capacity());
+
+            // Turn into a Bytes object and slice it up a bit
+            // This is required because we have a fair bit of bytes in the buffer
+            // that would be useless at best (and harmful at most) to send
+            let full = Bytes::from(bin.buffer).slice(rem..);
+            let payload = full.slice(..len);
+
+            // Reliable packets need to be stored until acked
+            if is_reliable {
+                state.reliability.record(sequence, payload);
+            }
+
+            // Finally, put it in the buffer for sending
+            meta.packet_queue.push_outgoing(OutgoingPacket {
+                payload: full,
+                messages: bin.messages,
+            });
 
             // Clear the buffer for the next iteration
             scratch.bytes.clear();
@@ -185,6 +229,7 @@ pub(crate) fn established_packet_builder_system(
 
 struct Bin {
     header: PacketHeader,
+    messages: u32,
     buffer: Vec<u8>,
 }
 
