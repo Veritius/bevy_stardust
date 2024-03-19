@@ -32,8 +32,8 @@ pub(crate) struct PacketBuilderSystemScratch(ThreadLocal<Cell<PacketBuilderSyste
 
 struct PacketBuilderSystemScratchInner {
     pub msg_buffer: BytesMut,
-    pub byte_bins: Vec<BytesMut>,
     pub messages: Vec<Message>,
+    pub packets: Vec<BytesMut>,
 }
 
 impl Default for PacketBuilderSystemScratchInner {
@@ -42,8 +42,8 @@ impl Default for PacketBuilderSystemScratchInner {
     fn default() -> Self {
         Self {
             msg_buffer: BytesMut::new(),
-            byte_bins: Vec::new(),
             messages: Vec::new(),
+            packets: Vec::new(),
         }
     }
 }
@@ -64,7 +64,7 @@ pub(crate) fn established_packet_builder_system(
         let scratch_cell = scratch.0.get_or(|| Cell::new(PacketBuilderSystemScratchInner {
             // These seem like reasonable defaults.
             msg_buffer: BytesMut::with_capacity(MTU_SIZE),
-            byte_bins: Vec::with_capacity(16),
+            packets: Vec::with_capacity(16),
             messages: Vec::with_capacity(256),
         }));
 
@@ -126,8 +126,8 @@ pub(crate) fn established_packet_builder_system(
 
         // Clean up after ourselves and return scratch to the cell
         scratch.msg_buffer.clear();
-        scratch.byte_bins.clear();
         scratch.messages.clear();
+        scratch.packets.clear();
         scratch_cell.set(scratch);
     });
 }
