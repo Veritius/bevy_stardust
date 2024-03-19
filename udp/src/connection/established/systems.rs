@@ -3,7 +3,7 @@ use bevy_ecs::prelude::*;
 use bevy_stardust::prelude::*;
 use thread_local::ThreadLocal;
 use crate::{packet::MTU_SIZE, plugin::PluginConfiguration, Connection};
-use super::Established;
+use super::{frame::PacketHeader, Established};
 
 macro_rules! try_unwrap {
     ($id:tt, $st:expr) => {
@@ -33,7 +33,7 @@ pub(crate) struct PacketBuilderSystemScratch(ThreadLocal<Cell<PacketBuilderSyste
 struct PacketBuilderSystemScratchInner {
     pub msg_buffer: BytesMut,
     pub messages: Vec<Message>,
-    pub packets: Vec<BytesMut>,
+    pub packets: Vec<Packet>,
 }
 
 impl Default for PacketBuilderSystemScratchInner {
@@ -54,6 +54,9 @@ pub(crate) fn established_packet_builder_system(
     scratch: Local<PacketBuilderSystemScratch>,
     mut connections: Query<(Entity, &mut Connection, &mut Established, &NetworkMessages<Outgoing>)>,
 ) {
+    const EMPTY_PREFIX_LENGTH: usize = 32;
+    const PKT_LEN_WITH_PREFIX: usize = MTU_SIZE + EMPTY_PREFIX_LENGTH;
+
     // Process all connections in parallel
     connections.par_iter_mut().for_each(|(entity, mut meta, mut state, outgoing)| {
         // Tracing info for logging
@@ -121,6 +124,33 @@ pub(crate) fn established_packet_builder_system(
             // Put the message payload into the buffer
             scratch.msg_buffer.put(&*message.payload);
 
+            let bin = {
+                // Try to find a bin that can fit our packet
+                let packet = scratch.packets.iter_mut()
+                .find(|v| {
+                    let capacity = v.buffer.capacity() - EMPTY_PREFIX_LENGTH;
+                    let remaining = capacity - v.buffer.len();
+                    remaining >= scratch.msg_buffer.len()
+                });
+
+                // Return it if we found something, create it if not
+                match packet {
+                    Some(v) => v,
+                    None => {
+                        // Construct header
+                        let mut header = PacketHeader::new();
+                        let is_reliable = message.flags.is_reliable();
+                        if is_reliable { header |= PacketHeader::FLAG_RELIABLE; }
+
+                        // Construct buffer
+                        let mut buffer = Vec::with_capacity(PKT_LEN_WITH_PREFIX);
+                        buffer.extend_from_slice(&[0u8; EMPTY_PREFIX_LENGTH]);
+                        scratch.packets.push(Packet { header, buffer });
+                        scratch.packets.last_mut().unwrap()
+                    },
+                }
+            };
+
             todo!()
         }
 
@@ -130,6 +160,11 @@ pub(crate) fn established_packet_builder_system(
         scratch.packets.clear();
         scratch_cell.set(scratch);
     });
+}
+
+struct Packet {
+    header: PacketHeader,
+    buffer: Vec<u8>,
 }
 
 struct Message {
