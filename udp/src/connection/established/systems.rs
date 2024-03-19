@@ -107,7 +107,22 @@ pub(crate) fn established_packet_builder_system(
             return a.payload.len().cmp(&b.payload.len());
         });
 
-        todo!();
+        // Process all messages
+        for message in scratch.messages.iter() {
+            // Put the channel id into the buffer
+            scratch.msg_buffer.put_u32(u32::from(message.channel).wrapping_add(1));
+
+            // If present, put ordering data into buffer
+            if message.flags.is_ordered() {
+                let ordering_data = state.ordering(message.channel);
+                scratch.msg_buffer.put_u16(ordering_data.advance());
+            }
+
+            // Put the message payload into the buffer
+            scratch.msg_buffer.put(&*message.payload);
+
+            todo!()
+        }
 
         // Clean up after ourselves and return scratch to the cell
         scratch.msg_buffer.clear();

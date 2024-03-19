@@ -1,9 +1,34 @@
+use std::ops::{BitOr, BitOrAssign};
+
 use bytes::Bytes;
 
+#[derive(Clone, Copy)]
+#[repr(transparent)]
 pub(crate) struct PacketHeader(pub u16);
 
 impl PacketHeader {
-    pub const RELIABLE_PACKET: Self = Self(1);
+    pub const FLAG_RELIABLE: Self = Self(1);
+
+    #[inline]
+    pub const fn new() -> Self {
+        Self(0)
+    }
+}
+
+impl BitOr for PacketHeader {
+    type Output = Self;
+
+    #[inline]
+    fn bitor(self, rhs: Self) -> Self::Output {
+        Self(self.0 | rhs.0)
+    }
+}
+
+impl BitOrAssign for PacketHeader {
+    #[inline]
+    fn bitor_assign(&mut self, rhs: Self) {
+        *self = self.bitor(rhs);
+    }
 }
 
 impl From<u16> for PacketHeader {
