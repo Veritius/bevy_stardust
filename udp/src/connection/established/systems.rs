@@ -3,7 +3,7 @@ use std::cell::Cell;
 use bevy_ecs::prelude::*;
 use bevy_stardust::prelude::*;
 use thread_local::ThreadLocal;
-use crate::{packet::MTU_SIZE, plugin::PluginConfiguration, Connection};
+use crate::{connection::ordering::OrderedMessages, packet::MTU_SIZE, plugin::PluginConfiguration, Connection};
 use super::Established;
 
 macro_rules! try_unwrap {
@@ -32,7 +32,8 @@ pub(crate) fn established_packet_reader_system(
 pub(crate) struct PacketBuilderSystemScratch(ThreadLocal<Cell<PacketBuilderSystemScratchInner>>);
 
 struct PacketBuilderSystemScratchInner {
-    pub bytes: Vec<u8>,
+    pub msg_buffer: BytesMut,
+    pub pkt_buffer: BytesMut,
     pub reliable: Vec<(ChannelId, Bytes)>,
     pub unreliable: Vec<(ChannelId, Bytes)>,
 }
@@ -42,9 +43,10 @@ impl Default for PacketBuilderSystemScratchInner {
     // Exists because `Cell::take` replaces the inner value with the Default implementation.
     fn default() -> Self {
         Self {
-            bytes: Vec::with_capacity(0),
-            reliable: Vec::with_capacity(0),
-            unreliable: Vec::with_capacity(0),
+            msg_buffer: BytesMut::new(),
+            pkt_buffer: BytesMut::new(),
+            reliable: Vec::new(),
+            unreliable: Vec::new(),
         }
     }
 }
@@ -64,7 +66,8 @@ pub(crate) fn established_packet_builder_system(
         // Fetch or create the thread local scratch space
         let scratch_cell = scratch.0.get_or(|| Cell::new(PacketBuilderSystemScratchInner {
             // These seem like reasonable defaults.
-            bytes: Vec::with_capacity(MTU_SIZE),
+            msg_buffer: BytesMut::with_capacity(MTU_SIZE),
+            pkt_buffer: BytesMut::with_capacity(MTU_SIZE),
             reliable: Vec::with_capacity(32),
             unreliable: Vec::with_capacity(256),
         }));
@@ -88,23 +91,25 @@ pub(crate) fn established_packet_builder_system(
             }
         }
 
+        // Sort the messages in queues by their size
+        [&mut scratch.reliable, &mut scratch.unreliable].into_iter()
+            .for_each(|v| v.sort_unstable_by(|(_,a),(_,b)| {
+                a.len().cmp(&b.len())
+            }));
+
         // Record how many messages we have queued
         if !span.is_disabled() {
             span.record("reliable messages", scratch.reliable.len());
             span.record("unreliable messages", scratch.unreliable.len());
         }
 
-        // Iterate reliable packets
-        while let Some((channel, payload)) = scratch.reliable.pop() {
-            todo!()
-        }
+        todo!();
 
-        // Iterate unreliable packets
-        while let Some((channel, payload)) = scratch.unreliable.pop() {
-            todo!()
-        }
-
-        // Return scratch
+        // Return scratch to the cell
+        scratch.msg_buffer.clear();
+        scratch.pkt_buffer.clear();
+        scratch.reliable.clear();
+        scratch.unreliable.clear();
         scratch_cell.set(scratch);
     });
 }
