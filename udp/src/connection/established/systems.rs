@@ -3,7 +3,7 @@ use std::cell::Cell;
 use bevy_ecs::prelude::*;
 use bevy_stardust::prelude::*;
 use thread_local::ThreadLocal;
-use crate::{connection::ordering::OrderedMessages, packet::MTU_SIZE, plugin::PluginConfiguration, Connection};
+use crate::{packet::MTU_SIZE, plugin::PluginConfiguration, Connection};
 use super::Established;
 
 macro_rules! try_unwrap {
@@ -33,7 +33,7 @@ pub(crate) struct PacketBuilderSystemScratch(ThreadLocal<Cell<PacketBuilderSyste
 
 struct PacketBuilderSystemScratchInner {
     pub msg_buffer: BytesMut,
-    pub pkt_buffer: BytesMut,
+    pub byte_bins: Vec<BytesMut>,
     pub reliable: Vec<(ChannelId, Bytes)>,
     pub unreliable: Vec<(ChannelId, Bytes)>,
 }
@@ -44,7 +44,7 @@ impl Default for PacketBuilderSystemScratchInner {
     fn default() -> Self {
         Self {
             msg_buffer: BytesMut::new(),
-            pkt_buffer: BytesMut::new(),
+            byte_bins: Vec::new(),
             reliable: Vec::new(),
             unreliable: Vec::new(),
         }
@@ -67,7 +67,7 @@ pub(crate) fn established_packet_builder_system(
         let scratch_cell = scratch.0.get_or(|| Cell::new(PacketBuilderSystemScratchInner {
             // These seem like reasonable defaults.
             msg_buffer: BytesMut::with_capacity(MTU_SIZE),
-            pkt_buffer: BytesMut::with_capacity(MTU_SIZE),
+            byte_bins: Vec::with_capacity(16),
             reliable: Vec::with_capacity(32),
             unreliable: Vec::with_capacity(256),
         }));
@@ -105,9 +105,9 @@ pub(crate) fn established_packet_builder_system(
 
         todo!();
 
-        // Return scratch to the cell
+        // Clean up after ourselves and return scratch to the cell
         scratch.msg_buffer.clear();
-        scratch.pkt_buffer.clear();
+        scratch.byte_bins.clear();
         scratch.reliable.clear();
         scratch.unreliable.clear();
         scratch_cell.set(scratch);
