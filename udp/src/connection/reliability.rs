@@ -1,7 +1,7 @@
 use std::{collections::BTreeMap, time::Instant};
 use bytes::Bytes;
 use untrusted::{Reader, EndOfInput};
-use crate::sequences::*;
+use crate::{sequences::*, utils::FromByteReader};
 
 const BITMASK: u128 = 1 << 127;
 
@@ -22,7 +22,7 @@ impl ReliabilityState {
     }
 
     /// Creates a ReliablePacketHeader for your outgoing data.
-    pub fn header(&mut self) -> ReliablePacketHeader {
+    pub fn header(&self) -> ReliablePacketHeader {
         ReliablePacketHeader {
             sequence: self.local_sequence,
             ack: self.remote_sequence,
@@ -98,15 +98,8 @@ pub struct ReliablePacketHeader {
 
 /// Gets the header of a reliable packet from a byte reader.
 pub fn get_header(reader: &mut Reader<'_>, bitfield_bytes: usize) -> Result<ReliablePacketHeader, EndOfInput> {
-    let sequence = u16::from_be_bytes([
-       reader.read_byte()?,
-       reader.read_byte()?, 
-    ]);
-
-    let ack = u16::from_be_bytes([
-        reader.read_byte()?,
-        reader.read_byte()?,
-    ]);
+    let sequence = u16::from_byte_slice(reader)?;
+    let ack = u16::from_byte_slice(reader)?;
 
     let mut ack_bitfield_bytes = [0u8; 16];
     ack_bitfield_bytes[..bitfield_bytes].clone_from_slice(
@@ -118,7 +111,7 @@ pub fn get_header(reader: &mut Reader<'_>, bitfield_bytes: usize) -> Result<Reli
 
 pub(crate) struct ReliablePackets {
     pub state: ReliabilityState,
-    unacked: BTreeMap<u16, SentPacket>,
+    unacked: BTreeMap<u16, UnackedPacket>,
 }
 
 impl ReliablePackets {
@@ -129,13 +122,21 @@ impl ReliablePackets {
         }
     }
 
-    pub fn send(&mut self, payload: Bytes) -> ReliablePacketHeader {
-        let header = self.state.header();
-        self.unacked.insert(header.sequence, SentPacket {
+    #[inline]
+    pub fn header(&self) -> ReliablePacketHeader {
+        self.state.header()
+    }
+
+    #[inline]
+    pub fn increment_local(&mut self) {
+        self.state.increment_local()
+    }
+
+    pub fn record(&mut self, sequence: u16, payload: Bytes) {
+        self.unacked.insert(sequence, UnackedPacket {
             payload,
-            time: Instant::now()
+            time: Instant::now(),
         });
-        return header;
     }
 
     pub fn ack(&mut self, header: ReliablePacketHeader, bitfield_bytes: u8) {
@@ -148,11 +149,11 @@ impl ReliablePackets {
         }
     }
 
-    pub fn drain_old<'a, Filter: Fn(Instant) -> bool + 'a>(&'a mut self, filter: Filter) -> impl Iterator<Item = SentPacket> + 'a {
+    pub fn drain_old<'a, Filter: Fn(Instant) -> bool + 'a>(&'a mut self, filter: Filter) -> impl Iterator<Item = UnackedPacket> + 'a {
         // TODO: When btree_extract_if is stabilised, use that instead.
         struct FilterTaker<'a, Filter>(&'a mut ReliablePackets, Filter);
         impl<'a, Filter: Fn(Instant) -> bool> Iterator for FilterTaker<'a, Filter> {
-            type Item = SentPacket;
+            type Item = UnackedPacket;
         
             fn next(&mut self) -> Option<Self::Item> {
                 // Try to find a key
@@ -171,7 +172,7 @@ impl ReliablePackets {
     }
 }
 
-pub(crate) struct SentPacket {
+pub(crate) struct UnackedPacket {
     payload: Bytes,
     time: Instant,
 }

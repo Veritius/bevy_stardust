@@ -31,7 +31,7 @@ pub(crate) fn established_packet_reader_system(
 pub(crate) struct PacketBuilderSystemScratch(ThreadLocal<Cell<PacketBuilderSystemScratchInner>>);
 
 struct PacketBuilderSystemScratchInner {
-    pub msg_buffer: BytesMut,
+    pub bytes: BytesMut,
     pub messages: Vec<Message>,
     pub bins: Vec<Bin>,
 }
@@ -41,7 +41,7 @@ impl Default for PacketBuilderSystemScratchInner {
     // Exists because `Cell::take` replaces the inner value with the Default implementation.
     fn default() -> Self {
         Self {
-            msg_buffer: BytesMut::new(),
+            bytes: BytesMut::new(),
             messages: Vec::new(),
             bins: Vec::new(),
         }
@@ -54,8 +54,8 @@ pub(crate) fn established_packet_builder_system(
     scratch: Local<PacketBuilderSystemScratch>,
     mut connections: Query<(Entity, &mut Connection, &mut Established, &NetworkMessages<Outgoing>)>,
 ) {
-    const EMPTY_PREFIX_LENGTH: usize = 32;
-    const PKT_LEN_WITH_PREFIX: usize = MTU_SIZE + EMPTY_PREFIX_LENGTH;
+    const BLANK_PREFIX_LENGTH: usize = 32;
+    const PKT_LEN_WITH_PREFIX: usize = MTU_SIZE + BLANK_PREFIX_LENGTH;
 
     // Process all connections in parallel
     connections.par_iter_mut().for_each(|(entity, mut meta, mut state, outgoing)| {
@@ -66,7 +66,7 @@ pub(crate) fn established_packet_builder_system(
         // Fetch or create the thread local scratch space
         let scratch_cell = scratch.0.get_or(|| Cell::new(PacketBuilderSystemScratchInner {
             // These seem like reasonable defaults.
-            msg_buffer: BytesMut::with_capacity(MTU_SIZE),
+            bytes: BytesMut::with_capacity(MTU_SIZE),
             bins: Vec::with_capacity(16),
             messages: Vec::with_capacity(256),
         }));
@@ -113,25 +113,25 @@ pub(crate) fn established_packet_builder_system(
         // Process all messages
         for message in scratch.messages.iter() {
             // Put the channel id into the buffer
-            scratch.msg_buffer.put_u32(u32::from(message.channel).wrapping_add(1));
+            scratch.bytes.put_u32(u32::from(message.channel).wrapping_add(1));
 
             // If present, put ordering data into buffer
             if message.flags.is_ordered() {
                 let ordering_data = state.ordering(message.channel);
-                scratch.msg_buffer.put_u16(ordering_data.advance());
+                scratch.bytes.put_u16(ordering_data.advance());
             }
 
             // Put the message payload into the buffer
-            scratch.msg_buffer.put(&*message.payload);
+            scratch.bytes.put(&*message.payload);
 
             // Use the first-fit algorithm to find a bin
             let bin = {
                 // Check if a bin with sufficient remaining space exists
                 let bin = scratch.bins.iter_mut()
                 .find(|v| {
-                    let capacity = v.buffer.capacity() - EMPTY_PREFIX_LENGTH;
+                    let capacity = v.buffer.capacity() - BLANK_PREFIX_LENGTH;
                     let remaining = capacity - v.buffer.len();
-                    remaining >= scratch.msg_buffer.len()
+                    remaining >= scratch.bytes.len()
                 });
 
                 // Return it if we found something, create it if not
@@ -145,7 +145,7 @@ pub(crate) fn established_packet_builder_system(
 
                         // Construct buffer
                         let mut buffer = Vec::with_capacity(PKT_LEN_WITH_PREFIX);
-                        buffer.extend_from_slice(&[0u8; EMPTY_PREFIX_LENGTH]);
+                        buffer.extend_from_slice(&[0u8; BLANK_PREFIX_LENGTH]);
                         scratch.bins.push(Bin { header, buffer });
                         scratch.bins.last_mut().unwrap()
                     },
@@ -153,17 +153,30 @@ pub(crate) fn established_packet_builder_system(
             };
 
             // Extend the bin by the message buffer, and clear the message buffer
-            bin.buffer.extend_from_slice(&scratch.msg_buffer);
-            scratch.msg_buffer.clear();
+            bin.buffer.extend_from_slice(&scratch.bytes);
+            scratch.bytes.clear();
         }
 
         // Add bins to the send queue after some tweaks
         for bin in scratch.bins.iter_mut() {
-            todo!()
+            // Append the packet header
+            scratch.bytes.put_u16(bin.header.into());
+
+            // If the packet is reliable, append a packet header.
+            if bin.header.is_reliable() {
+                // Create header
+                let header = state.reliability.header();
+                state.reliability.increment_local();
+
+                
+            }
+
+            // Clear the buffer for the next iteration
+            scratch.bytes.clear();
         }
 
         // Clean up after ourselves and return scratch to the cell
-        scratch.msg_buffer.clear();
+        scratch.bytes.clear();
         scratch.messages.clear();
         scratch.bins.clear();
         scratch_cell.set(scratch);

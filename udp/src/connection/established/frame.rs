@@ -13,6 +13,11 @@ impl PacketHeader {
     pub const fn new() -> Self {
         Self(0)
     }
+
+    #[inline]
+    pub const fn is_reliable(&self) -> bool {
+        (self.0 & Self::FLAG_RELIABLE.0) > 0
+    }
 }
 
 impl BitOr for PacketHeader {

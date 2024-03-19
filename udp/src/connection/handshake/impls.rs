@@ -4,7 +4,7 @@
 
 use bytes::BufMut;
 use untrusted::*;
-use crate::{appdata::NetworkVersionData, connection::handshake::codes::HandshakeResponseCode, utils::{slice_to_array, IntegerFromByteSlice}};
+use crate::{appdata::NetworkVersionData, connection::handshake::codes::HandshakeResponseCode, utils::{slice_to_array, FromByteReader}};
 use super::packets::*;
 
 // Breaks with HandshakeParsingResponse::WeClosed(HandshakeResponseCode::MalformedPacket) if an Err is encountered

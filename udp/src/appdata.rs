@@ -1,5 +1,5 @@
 use untrusted::{Input, Reader};
-use crate::utils::IntegerFromByteSlice;
+use crate::utils::FromByteReader;
 
 // This defines compatibilities between different versions of the crate
 // It's different from the crate version since breaking changes in the crate
