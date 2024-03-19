@@ -1,4 +1,4 @@
-use std::{cell::Cell, cmp::Ordering, ops::{BitOr, BitOrAssign}};
+use std::{cell::Cell, cmp::Ordering, ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign}};
 use bevy_ecs::prelude::*;
 use bevy_stardust::prelude::*;
 use thread_local::ThreadLocal;
@@ -193,12 +193,12 @@ impl MessageFlags {
 
     #[inline]
     fn is_reliable(&self) -> bool {
-        (self.0 & !Self::RELIABLE.0) > 0
+        (*self & Self::RELIABLE).0 > 0
     }
 
     #[inline]
     fn is_ordered(&self) -> bool {
-        (self.0 & !Self::ORDERED.0) > 0
+        (*self & Self::ORDERED).0 > 0
     }
 }
 
@@ -215,5 +215,21 @@ impl BitOrAssign for MessageFlags {
     #[inline]
     fn bitor_assign(&mut self, rhs: Self) {
         *self = self.bitor(rhs)
+    }
+}
+
+impl BitAnd for MessageFlags {
+    type Output = Self;
+
+    #[inline]
+    fn bitand(self, rhs: Self) -> Self::Output {
+        Self(self.0 & rhs.0)
+    }
+}
+
+impl BitAndAssign for MessageFlags {
+    #[inline]
+    fn bitand_assign(&mut self, rhs: Self) {
+        *self = self.bitand(rhs);
     }
 }
