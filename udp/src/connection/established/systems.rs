@@ -1,5 +1,4 @@
-use std::cell::Cell;
-
+use std::{cell::Cell, cmp::Ordering, ops::{BitOr, BitOrAssign}};
 use bevy_ecs::prelude::*;
 use bevy_stardust::prelude::*;
 use thread_local::ThreadLocal;
@@ -34,8 +33,7 @@ pub(crate) struct PacketBuilderSystemScratch(ThreadLocal<Cell<PacketBuilderSyste
 struct PacketBuilderSystemScratchInner {
     pub msg_buffer: BytesMut,
     pub byte_bins: Vec<BytesMut>,
-    pub reliable: Vec<(ChannelId, Bytes)>,
-    pub unreliable: Vec<(ChannelId, Bytes)>,
+    pub messages: Vec<Message>,
 }
 
 impl Default for PacketBuilderSystemScratchInner {
@@ -45,8 +43,7 @@ impl Default for PacketBuilderSystemScratchInner {
         Self {
             msg_buffer: BytesMut::new(),
             byte_bins: Vec::new(),
-            reliable: Vec::new(),
-            unreliable: Vec::new(),
+            messages: Vec::new(),
         }
     }
 }
@@ -68,48 +65,97 @@ pub(crate) fn established_packet_builder_system(
             // These seem like reasonable defaults.
             msg_buffer: BytesMut::with_capacity(MTU_SIZE),
             byte_bins: Vec::with_capacity(16),
-            reliable: Vec::with_capacity(32),
-            unreliable: Vec::with_capacity(256),
+            messages: Vec::with_capacity(256),
         }));
 
         // Take out the inner scratch
         let mut scratch = scratch_cell.take();
 
-        // Sort messages into queues
+        // Push messages to scratch queue with extra data
         let mut queues = outgoing.all_queues();
         while let Some((channel, payloads)) = queues.next() {
             // Get channel data
             let channel_data = registry.channel_config(channel).unwrap();
             let is_reliable = channel_data.reliable == ReliabilityGuarantee::Reliable;
+            let is_ordered= channel_data.ordered != OrderingGuarantee::Unordered;
+
+            // Flags for channel type
+            let mut flags = MessageFlags::DEFAULT;
+            if is_reliable { flags |= MessageFlags::RELIABLE; }
+            if is_ordered { flags |= MessageFlags::ORDERED; }
 
             // Iterate over all payloads
             for payload in payloads {
-                match is_reliable {
-                    true => scratch.reliable.push((channel, payload.clone())),
-                    false => scratch.reliable.push((channel, payload.clone())),
-                }
+                scratch.messages.push(Message {
+                    channel,
+                    payload: payload.clone(),
+                    flags,
+                });
             }
         }
 
-        // Sort the messages in queues by their size
-        [&mut scratch.reliable, &mut scratch.unreliable].into_iter()
-            .for_each(|v| v.sort_unstable_by(|(_,a),(_,b)| {
-                a.len().cmp(&b.len())
-            }));
+        // Sort messages by reliable flag and size
+        scratch.messages.sort_unstable_by(|a, b| {
+            // Check the reliable flags
+            match (a.flags.is_reliable(), b.flags.is_reliable()) {
+                (true, false) => { return Ordering::Greater },
+                (false, true) => { return Ordering::Less },
+                _ => {}
+            }
 
-        // Record how many messages we have queued
-        if !span.is_disabled() {
-            span.record("reliable messages", scratch.reliable.len());
-            span.record("unreliable messages", scratch.unreliable.len());
-        }
+            // Return payload length
+            return a.payload.len().cmp(&b.payload.len());
+        });
 
         todo!();
 
         // Clean up after ourselves and return scratch to the cell
         scratch.msg_buffer.clear();
         scratch.byte_bins.clear();
-        scratch.reliable.clear();
-        scratch.unreliable.clear();
+        scratch.messages.clear();
         scratch_cell.set(scratch);
     });
+}
+
+struct Message {
+    channel: ChannelId,
+    payload: Bytes,
+    flags: MessageFlags,
+}
+
+#[derive(Clone, Copy)]
+#[repr(transparent)]
+struct MessageFlags(u32);
+
+impl MessageFlags {
+    const DEFAULT: Self = Self(0);
+
+    const RELIABLE: Self = Self(1 << 0);
+    const ORDERED: Self = Self(1 << 1);
+
+    #[inline]
+    fn is_reliable(&self) -> bool {
+        (self.0 & !Self::RELIABLE.0) > 0
+    }
+
+    #[inline]
+    fn is_ordered(&self) -> bool {
+        (self.0 & !Self::ORDERED.0) > 0
+    }
+}
+
+impl BitOr for MessageFlags {
+    type Output = Self;
+
+    #[inline]
+    fn bitor(self, rhs: Self) -> Self::Output {
+        Self(self.0 | rhs.0)
+    }
+}
+
+impl BitOrAssign for MessageFlags {
+    #[inline]
+    fn bitor_assign(&mut self, rhs: Self) {
+        *self = self.bitor(rhs)
+    }
 }
