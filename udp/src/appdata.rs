@@ -1,5 +1,4 @@
-use untrusted::{Input, Reader};
-use crate::utils::FromByteReader;
+use bytes::Buf;
 
 // This defines compatibilities between different versions of the crate
 // It's different from the crate version since breaking changes in the crate
@@ -22,17 +21,12 @@ pub(crate) struct NetworkVersionData {
 }
 
 impl NetworkVersionData {
-    pub(crate) fn from_bytes(bytes: [u8; 16]) -> NetworkVersionData {
-        // Create reader object
-        let mut reader = Reader::new(Input::from(&bytes));
-
-        // Convert values
-        let ident = u64::from_byte_slice(&mut reader).unwrap();
-        let major = u32::from_byte_slice(&mut reader).unwrap();
-        let minor = u32::from_byte_slice(&mut reader).unwrap();
-
-        // Return value
-        return Self { ident, major, minor };
+    pub(crate) fn from_bytes(buf: &mut impl Buf) -> NetworkVersionData {
+        Self {
+            ident: buf.get_u64(),
+            major: buf.get_u32(),
+            minor: buf.get_u32(),
+        }
     }
 
     pub(crate) fn to_bytes(&self) -> [u8; 16] {

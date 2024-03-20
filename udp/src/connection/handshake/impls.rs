@@ -2,26 +2,14 @@
 
 // TODO: When try_trait_v2 stabilises, this code can be massively simplified using the try operator (?)
 
-use bytes::BufMut;
-use untrusted::*;
-use crate::{appdata::NetworkVersionData, connection::handshake::codes::HandshakeResponseCode, utils::{slice_to_array, FromByteReader}};
+use bytes::{Buf, BufMut};
+use crate::{appdata::NetworkVersionData, connection::handshake::codes::HandshakeResponseCode, utils::array_from_slice};
 use super::packets::*;
 
-// Breaks with HandshakeParsingResponse::WeClosed(HandshakeResponseCode::MalformedPacket) if an Err is encountered
-// This is easier than repeating a thousand match statements. Remove this when try_trait_v2 stabilises.
-macro_rules! try_read {
-    ($st:expr) => {
-        match $st {
-            Ok(val) => val,
-            Err(_) => { return HandshakeParsingResponse::WeRejected(HandshakeResponseCode::MalformedPacket) }
-        }
-    };
-}
-
 impl HandshakePacketHeader {
-    pub fn from_bytes(reader: &mut Reader) -> Result<Self, EndOfInput> {
+    pub fn from_bytes(buf: &mut impl Buf) -> Result<Self, ()> {
         return Ok(Self {
-            sequence: u16::from_byte_slice(reader)?,
+            sequence: buf.get_u16(),
         })
     }
 
@@ -41,9 +29,9 @@ impl ClosingPacket {
 }
 
 impl HandshakePacket for ClientHelloPacket {
-    fn from_reader(reader: &mut Reader) -> HandshakeParsingResponse<Self> {
-        let transport = NetworkVersionData::from_bytes(try_read!(slice_to_array::<16>(reader)));
-        let application = NetworkVersionData::from_bytes(try_read!(slice_to_array::<16>(reader)));
+    fn from_slice<T: Buf>(buf: &mut T) -> HandshakeParsingResponse<Self> {
+        let transport = NetworkVersionData::from_bytes(buf);
+        let application = NetworkVersionData::from_bytes(buf);
 
         HandshakeParsingResponse::Continue(Self {
             transport,
@@ -58,18 +46,18 @@ impl HandshakePacket for ClientHelloPacket {
 }
 
 impl HandshakePacket for ServerHelloPacket {
-    fn from_reader(reader: &mut Reader) -> HandshakeParsingResponse<Self> {
+    fn from_slice<T: Buf>(buf: &mut T) -> HandshakeParsingResponse<Self> {
         // Check the response code
-        let response = try_read!(u16::from_byte_slice(reader)).into();
+        let response = HandshakeResponseCode::from(buf.get_u16());
         if response != HandshakeResponseCode::Continue {
             return HandshakeParsingResponse::TheyRejected(response)
         }
 
-        let transport = NetworkVersionData::from_bytes(try_read!(slice_to_array::<16>(reader)));
-        let application = NetworkVersionData::from_bytes(try_read!(slice_to_array::<16>(reader)));
+        let transport = NetworkVersionData::from_bytes(buf);
+        let application = NetworkVersionData::from_bytes(buf);
 
-        let reliability_ack = try_read!(u16::from_byte_slice(reader));
-        let reliability_bits = try_read!(u16::from_byte_slice(reader));
+        let reliability_ack = buf.get_u16();
+        let reliability_bits = buf.get_u16();
 
         HandshakeParsingResponse::Continue(Self {
             transport,
@@ -92,15 +80,15 @@ impl HandshakePacket for ServerHelloPacket {
 }
 
 impl HandshakePacket for ClientFinalisePacket {
-    fn from_reader(reader: &mut Reader) -> HandshakeParsingResponse<Self> {
+    fn from_slice<T: Buf>(buf: &mut T) -> HandshakeParsingResponse<Self> {
         // Check the response code
-        let response = try_read!(u16::from_byte_slice(reader)).into();
+        let response = HandshakeResponseCode::from(buf.get_u16());
         if response != HandshakeResponseCode::Continue {
             return HandshakeParsingResponse::TheyRejected(response)
         }
 
-        let reliability_ack = try_read!(u16::from_byte_slice(reader));
-        let reliability_bits = try_read!(u16::from_byte_slice(reader));
+        let reliability_ack = buf.get_u16();
+        let reliability_bits = buf.get_u16();
 
         return HandshakeParsingResponse::Continue(Self {
             reliability_ack,
