@@ -15,7 +15,7 @@ impl PacketHeader {
     }
 
     #[inline]
-    pub const fn is_reliable(&self) -> bool {
+    pub const fn flagged_reliable(&self) -> bool {
         (self.0 & Self::FLAG_RELIABLE.0) > 0
     }
 }

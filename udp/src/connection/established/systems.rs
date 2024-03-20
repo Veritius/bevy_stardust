@@ -2,28 +2,85 @@ use std::{cell::Cell, cmp::Ordering, ops::{BitAnd, BitAndAssign, BitOr, BitOrAss
 use bevy_ecs::prelude::*;
 use bevy_stardust::prelude::*;
 use thread_local::ThreadLocal;
-use crate::{packet::{OutgoingPacket, MTU_SIZE}, plugin::PluginConfiguration, Connection};
+use untrusted::*;
+use crate::{connection::established::ErrorSeverity, packet::{OutgoingPacket, MTU_SIZE}, plugin::PluginConfiguration, utils::FromByteReader, Connection};
 use super::{frame::PacketHeader, Established};
 
 macro_rules! try_unwrap {
     ($id:tt, $st:expr) => {
         match $st {
             Ok(val) => val,
-            Err(_) => { continue $id; }
+            Err(_) => { break $id; }
         }
     };
 }
 
 pub(crate) fn established_packet_reader_system(
+    registry: ChannelRegistry,
+    config: Res<PluginConfiguration>,
     mut connections: Query<(Entity, &mut Connection, &mut Established, &mut NetworkMessages<Incoming>)>,
 ) {
     // Process all connections in parallel
     connections.par_iter_mut().for_each(|(entity, mut meta, mut state, mut incoming)| {
+        // Check if there's anything to process
+        if meta.packet_queue.incoming().len() == 0 { return }
+
         // Tracing info for logging
         let span = tracing::trace_span!("Reading packets", peer=?entity);
         let _entered_span = span.enter();
 
-        todo!()
+        // Process all packets
+        'h: while let Some(packet) = meta.packet_queue.pop_incoming() {
+            let mut reader = Reader::new(Input::from(&packet.payload));
+
+            /*
+                Header parsing
+            */
+
+            'r: {
+                let header = PacketHeader::from(try_unwrap!('r, u16::from_byte_slice(&mut reader)));
+
+                if header.flagged_reliable() {
+                    todo!()
+                }
+
+                todo!()
+            }
+
+            /*
+                Frame separation
+            */
+
+            'r: loop {
+                if reader.at_end() { break 'r }
+
+                'j: {
+                    // Try to get the channel value integer
+                    let channel_int = try_unwrap!('j, u32::from_byte_slice(&mut reader));
+
+                    // Check channel int value
+                    // This is because 0 is a reserved value for system messages
+                    // If it's non zero then it's actually been altered, and we need
+                    // to undo that before passing it to the registry, to ensure good values.
+                    if channel_int == 0 {
+                        todo!()
+                    } else {
+                        // Correct the integer value of the channel
+                        let channel_int = channel_int - 1;
+
+                        // Get channel data from registry
+                        let channel = ChannelId::from(channel_int);
+                        if !registry.channel_exists(channel) { break 'j; }
+                        let channel_data = registry.channel_config(channel).unwrap();
+
+                        // If it has one, get the reliable header.
+                        if channel_data.reliable == ReliabilityGuarantee::Reliable {
+                            todo!()
+                        }
+                    }
+                }
+            }
+        }
     });
 }
 
@@ -59,9 +116,8 @@ pub(crate) fn established_packet_builder_system(
 
     // Process all connections in parallel
     connections.par_iter_mut().for_each(|(entity, mut meta, mut state, outgoing)| {
-        // Tracing info for logging
-        let span = tracing::trace_span!("Building packets", peer=?entity);
-        let _entered_span = span.enter();
+        // Check if there's anything to process
+        if outgoing.count() == 0 { return }
 
         // Fetch or create the thread local scratch space
         let scratch_cell = scratch.0.get_or(|| Cell::new(PacketBuilderSystemScratchInner {
@@ -70,6 +126,10 @@ pub(crate) fn established_packet_builder_system(
             bins: Vec::with_capacity(16),
             messages: Vec::with_capacity(256),
         }));
+
+        // Tracing info for logging
+        let span = tracing::trace_span!("Building packets", peer=?entity);
+        let _entered_span = span.enter();
 
         // Take out the inner scratch
         let mut scratch = scratch_cell.take();
@@ -161,7 +221,7 @@ pub(crate) fn established_packet_builder_system(
         // Add bins to the send queue after some tweaks
         for mut bin in scratch.bins.drain(..) {
             // Some variables about the bin
-            let is_reliable = bin.header.is_reliable();
+            let is_reliable = bin.header.flagged_reliable();
             let mut sequence = 0; // not relevant until later
 
             // Append the packet header

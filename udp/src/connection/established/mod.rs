@@ -17,6 +17,7 @@ pub(crate) struct Established {
     frames: Vec<PacketFrame>,
     reliability: ReliablePackets,
     ordering: HashMap<ChannelId, OrderedMessages>,
+    errors: u32,
 }
 
 impl Established {
@@ -28,11 +29,26 @@ impl Established {
             frames: Vec::with_capacity(8),
             reliability: ReliablePackets::new(reliability.clone()),
             ordering: HashMap::default(),
+            errors: 0,
         }
     }
 
-    pub(super) fn ordering(&mut self, channel: ChannelId) -> &mut OrderedMessages {
+    pub fn ordering(&mut self, channel: ChannelId) -> &mut OrderedMessages {
         self.ordering.entry(channel)
             .or_insert(OrderedMessages::new())
     }
+
+    fn flag_error(&mut self, severity: ErrorSeverity) {
+        self.errors += match severity {
+            ErrorSeverity::Minor => 1,
+            ErrorSeverity::Major => 3,
+            ErrorSeverity::Critical => 9,
+        }
+    }
+}
+
+enum ErrorSeverity {
+    Minor,
+    Major,
+    Critical,
 }
