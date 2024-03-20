@@ -1,5 +1,5 @@
 use std::{collections::BTreeMap, time::Instant};
-use bytes::{Buf, Bytes};
+use bytes::Bytes;
 use crate::sequences::*;
 
 const BITMASK: u128 = 1 << 127;
@@ -93,18 +93,6 @@ pub struct ReliablePacketHeader {
     pub sequence: u16,
     pub ack: u16,
     pub ack_bitfield: u128,
-}
-
-/// Gets the header of a reliable packet from a slice
-pub fn get_header(buf: &mut impl Buf, bitfield_bytes: usize) -> Result<ReliablePacketHeader, ()> {
-    let sequence = buf.get_u16();
-    let ack = buf.get_u16();
-
-    let mut ack_bitfield_bytes = [0u8; 16];
-    buf.copy_to_slice(&mut ack_bitfield_bytes);
-    let ack_bitfield = u128::from_ne_bytes(ack_bitfield_bytes);
-
-    Ok(ReliablePacketHeader { sequence, ack, ack_bitfield })
 }
 
 pub(crate) struct ReliablePackets {

@@ -1,9 +1,10 @@
-use bytes::{Buf, BufMut, Bytes};
+use bytes::{BufMut, Bytes};
+use unbytes::{EndOfInput, Reader};
 use crate::appdata::NetworkVersionData;
 use super::codes::HandshakeResponseCode;
 
 pub(super) trait HandshakePacket: Sized {
-    fn from_slice<T: Buf>(buf: &mut T) -> HandshakeParsingResponse<Self>;
+    fn from_bytes(reader: &mut Reader) -> HandshakeParsingResponse<Self>;
     fn write_bytes(&self, buffer: &mut impl BufMut);
 }
 
@@ -11,6 +12,12 @@ pub(super) enum HandshakeParsingResponse<T> {
     Continue(T),
     WeRejected(HandshakeResponseCode),
     TheyRejected(HandshakeResponseCode),
+}
+
+impl<T> From<EndOfInput> for HandshakeParsingResponse<T> {
+    fn from(value: EndOfInput) -> Self {
+        Self::WeRejected(HandshakeResponseCode::MalformedPacket)
+    }
 }
 
 /// On-wire format:

@@ -1,4 +1,4 @@
-use bytes::Buf;
+use unbytes::{EndOfInput, Reader};
 
 // This defines compatibilities between different versions of the crate
 // It's different from the crate version since breaking changes in the crate
@@ -21,12 +21,12 @@ pub(crate) struct NetworkVersionData {
 }
 
 impl NetworkVersionData {
-    pub(crate) fn from_bytes(buf: &mut impl Buf) -> NetworkVersionData {
-        Self {
-            ident: buf.get_u64(),
-            major: buf.get_u32(),
-            minor: buf.get_u32(),
-        }
+    pub(crate) fn from_bytes(reader: &mut Reader) -> Result<NetworkVersionData, EndOfInput> {
+        Ok(Self {
+            ident: u64::from_be_bytes(reader.read_array::<8>()?),
+            major: u32::from_be_bytes(reader.read_array::<4>()?),
+            minor: u32::from_be_bytes(reader.read_array::<4>()?),
+        })
     }
 
     pub(crate) fn to_bytes(&self) -> [u8; 16] {

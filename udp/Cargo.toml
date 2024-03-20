@@ -16,6 +16,7 @@ bevy_app = { version = "0.13", default-features = false }
 bevy_reflect = { version = "0.13", default-features = false, optional = true }
 bevy_stardust = { version = "0.4", path = "../stardust", default-features = false }
 bytes = "1.5.0"
+unbytes = "0.1" # matches bytes
 thread_local = "1.1.4" # matches bevy
 fastrand = "2"
 tracing = "0.1"

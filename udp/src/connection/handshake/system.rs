@@ -2,17 +2,12 @@ use std::{collections::HashMap, net::SocketAddr, time::{Duration, Instant}};
 use bevy_ecs::{entity::Entities, prelude::*};
 use bevy_stardust::prelude::*;
 use bytes::{Bytes, BytesMut};
+use unbytes::Reader;
 use crate::{appdata::{NetworkVersionData, BANNED_MINOR_VERSIONS, TRANSPORT_VERSION_DATA}, connection::{established::Established, handshake::{packets::{ClientHelloPacket, ClosingPacket, HandshakePacket, HandshakePacketHeader, HandshakeParsingResponse}, HandshakeState}, reliability::{ReliabilityState, ReliablePacketHeader}, Connection, PotentialNewPeer}, endpoint::ConnectionOwnershipToken, packet::{IncomingPacket, OutgoingPacket, PacketQueue, MTU_SIZE}, plugin::PluginConfiguration, ConnectionDirection, ConnectionState, Endpoint};
 use super::{codes::HandshakeResponseCode, packets::{ClientFinalisePacket, ServerHelloPacket}, HandshakeFailureReason};
 use super::Handshaking;
 
 const RESEND_TIMEOUT: Duration = Duration::from_secs(1);
-
-macro_rules! check_remaining {
-    ($buf:ident, $amount:expr, $operation:expr) => {
-        if $buf.remaining() < $amount { continue; }
-    };
-}
 
 pub(crate) fn handshake_polling_system(
     config: Res<PluginConfiguration>,
@@ -26,12 +21,10 @@ pub(crate) fn handshake_polling_system(
             HandshakeState::ClientHello => {
                 // Read any incoming packets
                 while let Some(packet) = connection.packet_queue.pop_incoming() {
-                    let mut buf = packet.payload.clone();
-
-                    check_remaining!(buf, 38, continue);
+                    let mut reader = Reader::new(packet.payload);
 
                     // Try to read the header before anything else
-                    let header = match HandshakePacketHeader::from_bytes(&mut buf) {
+                    let header = match HandshakePacketHeader::from_bytes(&mut reader) {
                         Ok(val) => val,
                         Err(_) => { continue; }, // Couldn't parse header, ignore this packet.
                     };
@@ -40,7 +33,7 @@ pub(crate) fn handshake_polling_system(
                     if header.sequence <= handshake.reliability.remote_sequence { continue; }
 
                     // Try to parse the packet as a ServerHelloPacket, the next packet in the sequence
-                    let packet = match ServerHelloPacket::from_slice(&mut buf) {
+                    let packet = match ServerHelloPacket::from_bytes(&mut reader) {
                         HandshakeParsingResponse::Continue(val) => val,
                         HandshakeParsingResponse::WeRejected(code) => {
                             // Set handshake state to failed
@@ -124,12 +117,10 @@ pub(crate) fn handshake_polling_system(
             HandshakeState::ServerHello => {
                 // Read any incoming packets
                 while let Some(packet) = connection.packet_queue.pop_incoming() {
-                    let mut buf = packet.payload.clone();
-
-                    check_remaining!(buf, 6, continue);
+                    let mut reader = Reader::new(packet.payload);
 
                     // Try to read the header before anything else
-                    let header = match HandshakePacketHeader::from_bytes(&mut buf) {
+                    let header = match HandshakePacketHeader::from_bytes(&mut reader) {
                         Ok(val) => val,
                         Err(_) => { continue; }, // Couldn't parse header, ignore this packet.
                     };
@@ -138,7 +129,7 @@ pub(crate) fn handshake_polling_system(
                     if header.sequence <= handshake.reliability.remote_sequence { continue; }
 
                     // Try to parse the packet as a ClientFinalisePacket, the next packet in the sequence
-                    let packet = match ClientFinalisePacket::from_slice(&mut buf) {
+                    let packet = match ClientFinalisePacket::from_bytes(&mut reader) {
                         HandshakeParsingResponse::Continue(val) => val,
                         HandshakeParsingResponse::WeRejected(code) => {
                             // Set handshake state to failed
@@ -287,22 +278,20 @@ pub(crate) fn potential_new_peers_system(
         }
 
         // Useful things we'll be using
-        let mut buf = event.payload.clone();
+        let mut reader = Reader::new(event.payload.clone());
         let mut endpoint = match endpoints.get_mut(event.endpoint) {
             Ok(val) => val,
             Err(_) => { continue; },
         };
 
-        check_remaining!(buf, 34, continue);
-
         // Try to read the header before anything else
-        let header = match HandshakePacketHeader::from_bytes(&mut buf) {
+        let header = match HandshakePacketHeader::from_bytes(&mut reader) {
             Ok(val) => val,
             Err(_) => { continue 'outer; }, // Couldn't parse header, ignore this packet.
         };
 
         // Try to parse the UDP packet as a ClientHelloPacket struct
-        let packet = match ClientHelloPacket::from_slice(&mut buf) {
+        let packet = match ClientHelloPacket::from_bytes(&mut reader) {
             HandshakeParsingResponse::Continue(val) => val,
             HandshakeParsingResponse::WeRejected(code) => {
                 // Log the disconnect

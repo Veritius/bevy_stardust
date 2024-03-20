@@ -2,15 +2,16 @@ use std::{cell::Cell, cmp::Ordering, ops::{BitAnd, BitAndAssign, BitOr, BitOrAss
 use bevy_ecs::prelude::*;
 use bevy_stardust::prelude::*;
 use thread_local::ThreadLocal;
+use unbytes::Reader;
 use crate::{connection::{ordering::OrderedMessage, reliability::ReliablePacketHeader}, packet::{OutgoingPacket, MTU_SIZE}, plugin::PluginConfiguration, Connection};
 use super::{frame::PacketHeader, Established};
 
-macro_rules! check_remaining {
-    ($buf:ident, $amount:expr, break $label:tt) => {
-        if $buf.remaining() <= $amount { break $label; }
-    };
-    ($buf:ident, $amount:expr, continue $label:tt) => {
-        if $buf.remaining() <= $amount { continue $label; }
+macro_rules! try_read {
+    ($op:expr, $fail:expr) => {
+        match $op {
+            Ok(v) => v,
+            Err(_) => { $fail; }
+        }
     };
 }
 
@@ -30,38 +31,33 @@ pub(crate) fn established_packet_reader_system(
 
         // Process all packets
         'h: while let Some(packet) = meta.packet_queue.pop_incoming() {
-            let mut buf = packet.payload.clone();
+            let mut reader = Reader::new(packet.payload);
 
             /*
                 Header parsing
             */
 
-            'r: {
-                check_remaining!(buf, 2, break 'r);
+            // Get the header bitfield
+            let header = u16::from_be_bytes(try_read!(reader.read_array::<2>(), continue 'h));
+            let header = PacketHeader::from(header);
 
-                // Get the header bitfield
-                let header = PacketHeader::from(buf.get_u16());
+            // Reliable packets have extra data
+            if header.flagged_reliable() {
+                // These two are easy enough
+                let sequence = u16::from_be_bytes(try_read!(reader.read_array::<2>(), continue 'h));
+                let ack = u16::from_be_bytes(try_read!(reader.read_array::<2>(), continue 'h));
 
-                // Reliable packets have extra data
-                if header.flagged_reliable() {
-                    check_remaining!(buf, (4 + config.reliable_bitfield_length).into(), continue 'h);
+                // Getting the bitfield is more involved
+                // since its length is not constant
+                let mut arr = [0u8; 16];
+                try_read!(reader.read_slice(16), continue 'h).copy_to_slice(&mut arr);
+                let ack_bitfield = u128::from_ne_bytes(arr);
 
-                    // These two are easy enough
-                    let sequence = buf.get_u16();
-                    let ack = buf.get_u16();
-
-                    // Getting the bitfield is more involved
-                    // since its length is not constant
-                    let mut arr = [0u8; 16];
-                    buf.copy_to_slice(&mut arr);
-                    let ack_bitfield = u128::from_ne_bytes(arr);
-
-                    // Finally, acknowledge the packet
-                    state.reliability.ack(
-                        ReliablePacketHeader { sequence, ack, ack_bitfield },
-                        config.reliable_bitfield_length as u8
-                    );
-                }
+                // Finally, acknowledge the packet
+                state.reliability.ack(
+                    ReliablePacketHeader { sequence, ack, ack_bitfield },
+                    config.reliable_bitfield_length as u8
+                );
             }
 
             /*
@@ -70,15 +66,13 @@ pub(crate) fn established_packet_reader_system(
 
             'r: loop {
                 // Check if we're done
-                if buf.has_remaining() { break 'r }
-
-                check_remaining!(buf, 6, continue 'r);
+                if reader.has_remaining(6) { break 'r }
 
                 // Try to get the channel value integer
-                let channel_int = buf.get_u32();
+                let channel_int = u32::from_be_bytes(try_read!(reader.read_array::<4>(), break 'r));
 
                 // Get the length of the packet
-                let length = buf.get_u16();
+                let length = u16::from_be_bytes(try_read!(reader.read_array::<2>(), break 'r));
 
                 // Check channel int value
                 // This is because 0 is a reserved value for system messages
@@ -99,20 +93,17 @@ pub(crate) fn established_packet_reader_system(
                     let ordering = match channel_data.ordered {
                         OrderingGuarantee::Unordered => None,
                         _ => {
-                            check_remaining!(buf, 2, continue 'r);
-                            Some(buf.get_u16())
+                            Some(u16::from_be_bytes(try_read!(reader.read_array::<2>(), break 'r)))
                         },
                     };
 
                     // Finally, get the payload.
-                    let length = length.into();
-                    check_remaining!(buf, length, continue 'r);
-                    let payload = buf.copy_to_bytes(length);
+                    let payload = try_read!(reader.read_bytes(length.into()), break 'r);
 
                     match ordering {
                         Some(sequence) => {
                             // Ordered messages are added to a queue
-                            let mut ordering = state.ordering(channel);
+                            let ordering = state.ordering(channel);
                             ordering.put(OrderedMessage {
                                 sequence,
                                 payload,

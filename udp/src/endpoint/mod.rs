@@ -5,7 +5,6 @@ use anyhow::Result;
 use bevy_ecs::prelude::*;
 use bytes::Bytes;
 use tracing::warn;
-
 use statistics::EndpointStatistics;
 
 /// An endpoint, which is used for I/O.
