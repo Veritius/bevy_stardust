@@ -5,6 +5,15 @@ use thread_local::ThreadLocal;
 use crate::{connection::reliability::ReliablePacketHeader, packet::{OutgoingPacket, MTU_SIZE}, plugin::PluginConfiguration, Connection};
 use super::{frame::PacketHeader, Established};
 
+macro_rules! check_remaining {
+    ($buf:ident, $amount:expr, break $label:tt) => {
+        if $buf.remaining() <= $amount { break $label; }
+    };
+    ($buf:ident, $amount:expr, continue $label:tt) => {
+        if $buf.remaining() <= $amount { continue $label; }
+    };
+}
+
 pub(crate) fn established_packet_reader_system(
     registry: ChannelRegistry,
     config: Res<PluginConfiguration>,
@@ -28,18 +37,21 @@ pub(crate) fn established_packet_reader_system(
             */
 
             'r: {
+                check_remaining!(buf, 2, break 'r);
+
                 // Get the header bitfield
                 let header = PacketHeader::from(buf.get_u16());
 
                 // Reliable packets have extra data
                 if header.flagged_reliable() {
+                    check_remaining!(buf, (4 + config.reliable_bitfield_length).into(), continue 'h);
+
                     // These two are easy enough
                     let sequence = buf.get_u16();
                     let ack = buf.get_u16();
 
                     // Getting the bitfield is more involved
                     // since its length is not constant
-                    let rbl = config.reliable_bitfield_length as usize;
                     let mut arr = [0u8; 16];
                     buf.copy_to_slice(&mut arr);
                     let ack_bitfield = u128::from_ne_bytes(arr);
@@ -56,43 +68,46 @@ pub(crate) fn established_packet_reader_system(
                 Frame separation
             */
 
-
-
             'r: loop {
                 // Check if we're done
                 if buf.has_remaining() { break 'r }
 
-                'j: {
-                    // Try to get the channel value integer
-                    let channel_int = buf.get_u32();
+                check_remaining!(buf, 6, continue 'r);
 
-                    // Get the length of the packet
-                    let length = buf.get_u16();
+                // Try to get the channel value integer
+                let channel_int = buf.get_u32();
 
-                    // Check channel int value
-                    // This is because 0 is a reserved value for system messages
-                    // If it's non zero then it's actually been altered, and we need
-                    // to undo that before passing it to the registry, to ensure good values.
-                    if channel_int == 0 {
-                        todo!()
-                    } else {
-                        // Correct the integer value of the channel
-                        let channel_int = channel_int - 1;
+                // Get the length of the packet
+                let length = buf.get_u16();
 
-                        // Get channel data from registry
-                        let channel = ChannelId::from(channel_int);
-                        if !registry.channel_exists(channel) { break 'j; }
-                        let channel_data = registry.channel_config(channel).unwrap();
+                // Check channel int value
+                // This is because 0 is a reserved value for system messages
+                // If it's non zero then it's actually been altered, and we need
+                // to undo that before passing it to the registry, to ensure good values.
+                if channel_int == 0 {
+                    todo!()
+                } else {
+                    // Correct the integer value of the channel
+                    let channel_int = channel_int - 1;
 
-                        // If it has one, get the reliable header.
-                        let ordering = match channel_data.ordered {
-                            OrderingGuarantee::Unordered => None,
-                            _ => Some(buf.get_u16()),
-                        };
+                    // Get channel data from registry
+                    let channel = ChannelId::from(channel_int);
+                    if !registry.channel_exists(channel) { continue 'r; }
+                    let channel_data = registry.channel_config(channel).unwrap();
 
-                        // Finally, get the payload.
-                        let payload = buf.copy_to_bytes(length.into());
-                    }
+                    // If it has one, get the reliable header.
+                    let ordering = match channel_data.ordered {
+                        OrderingGuarantee::Unordered => None,
+                        _ => {
+                            check_remaining!(buf, 2, continue 'r);
+                            Some(buf.get_u16())
+                        },
+                    };
+
+                    // Finally, get the payload.
+                    let length = length.into();
+                    check_remaining!(buf, length, continue 'r);
+                    let payload = buf.copy_to_bytes(length);
                 }
             }
         }
