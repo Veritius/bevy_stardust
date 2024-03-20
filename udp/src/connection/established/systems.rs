@@ -2,7 +2,7 @@ use std::{cell::Cell, cmp::Ordering, ops::{BitAnd, BitAndAssign, BitOr, BitOrAss
 use bevy_ecs::prelude::*;
 use bevy_stardust::prelude::*;
 use thread_local::ThreadLocal;
-use crate::{connection::reliability::ReliablePacketHeader, packet::{OutgoingPacket, MTU_SIZE}, plugin::PluginConfiguration, Connection};
+use crate::{connection::{ordering::OrderedMessage, reliability::ReliablePacketHeader}, packet::{OutgoingPacket, MTU_SIZE}, plugin::PluginConfiguration, Connection};
 use super::{frame::PacketHeader, Established};
 
 macro_rules! check_remaining {
@@ -108,6 +108,22 @@ pub(crate) fn established_packet_reader_system(
                     let length = length.into();
                     check_remaining!(buf, length, continue 'r);
                     let payload = buf.copy_to_bytes(length);
+
+                    match ordering {
+                        Some(sequence) => {
+                            // Ordered messages are added to a queue
+                            let mut ordering = state.ordering(channel);
+                            ordering.put(OrderedMessage {
+                                sequence,
+                                payload,
+                            });
+                            // ordering.pop()
+                        },
+                        None => {
+                            // Unordered messages are pushed immediately
+                            incoming.push(channel, payload);
+                        },
+                    }
                 }
             }
         }
