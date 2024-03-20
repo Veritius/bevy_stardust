@@ -8,6 +8,12 @@ use super::Handshaking;
 
 const RESEND_TIMEOUT: Duration = Duration::from_secs(1);
 
+macro_rules! check_remaining {
+    ($buf:ident, $amount:expr, $operation:expr) => {
+        if $buf.remaining() < $amount { continue; }
+    };
+}
+
 pub(crate) fn handshake_polling_system(
     config: Res<PluginConfiguration>,
     commands: ParallelCommands,
@@ -21,6 +27,8 @@ pub(crate) fn handshake_polling_system(
                 // Read any incoming packets
                 while let Some(packet) = connection.packet_queue.pop_incoming() {
                     let mut buf = packet.payload.clone();
+
+                    check_remaining!(buf, 38, continue);
 
                     // Try to read the header before anything else
                     let header = match HandshakePacketHeader::from_bytes(&mut buf) {
@@ -117,6 +125,8 @@ pub(crate) fn handshake_polling_system(
                 // Read any incoming packets
                 while let Some(packet) = connection.packet_queue.pop_incoming() {
                     let mut buf = packet.payload.clone();
+
+                    check_remaining!(buf, 6, continue);
 
                     // Try to read the header before anything else
                     let header = match HandshakePacketHeader::from_bytes(&mut buf) {
@@ -282,6 +292,8 @@ pub(crate) fn potential_new_peers_system(
             Ok(val) => val,
             Err(_) => { continue; },
         };
+
+        check_remaining!(buf, 34, continue);
 
         // Try to read the header before anything else
         let header = match HandshakePacketHeader::from_bytes(&mut buf) {

@@ -3,7 +3,7 @@
 // TODO: When try_trait_v2 stabilises, this code can be massively simplified using the try operator (?)
 
 use bytes::{Buf, BufMut};
-use crate::{appdata::NetworkVersionData, connection::handshake::codes::HandshakeResponseCode, utils::array_from_slice};
+use crate::{appdata::NetworkVersionData, connection::handshake::codes::HandshakeResponseCode};
 use super::packets::*;
 
 impl HandshakePacketHeader {
