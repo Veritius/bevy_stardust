@@ -43,6 +43,28 @@ impl NetworkVersionData {
     }
 }
 
+#[test]
+fn to_from_bytes_test() {
+    use bytes::Bytes;
+    use unbytes::*;
+
+    let original = NetworkVersionData {
+        ident: 48512967252744321,
+        major: 2481257245,
+        minor: 2528142859,
+    };
+
+    let bytes = original.to_bytes();
+    let bytes = Bytes::copy_from_slice(&bytes[..]);
+
+    let mut reader = Reader::new(bytes);
+    let parsed = NetworkVersionData::from_bytes(&mut reader).unwrap();
+
+    assert_eq!(original.ident, parsed.ident);
+    assert_eq!(original.major, parsed.major);
+    assert_eq!(original.minor, parsed.minor);
+}
+
 /// Network version information, distinct from your crate version.
 /// 
 /// Values must stay stable across compilations, platforms, and architectures.
