@@ -11,7 +11,6 @@ mod plugin;
 mod receiving;
 mod sending;
 mod sequences;
-mod utils;
 
 pub use plugin::UdpTransportPlugin;
 pub use appdata::ApplicationNetworkVersion;
