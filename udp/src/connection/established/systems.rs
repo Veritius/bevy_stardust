@@ -3,7 +3,7 @@ use bevy_ecs::prelude::*;
 use bevy_stardust::prelude::*;
 use thread_local::ThreadLocal;
 use untrusted::*;
-use crate::{connection::established::ErrorSeverity, packet::{OutgoingPacket, MTU_SIZE}, plugin::PluginConfiguration, utils::FromByteReader, Connection};
+use crate::{connection::reliability::ReliablePacketHeader, packet::{OutgoingPacket, MTU_SIZE}, plugin::PluginConfiguration, utils::FromByteReader, Connection};
 use super::{frame::PacketHeader, Established};
 
 macro_rules! try_unwrap {
@@ -38,25 +38,47 @@ pub(crate) fn established_packet_reader_system(
             */
 
             'r: {
+                // Get the header bitfield
                 let header = PacketHeader::from(try_unwrap!('r, u16::from_byte_slice(&mut reader)));
 
+                // Reliable packets have extra data
                 if header.flagged_reliable() {
-                    todo!()
-                }
+                    // These two are easy enough
+                    let sequence = try_unwrap!('r, u16::from_byte_slice(&mut reader));
+                    let ack = try_unwrap!('r, u16::from_byte_slice(&mut reader));
 
-                todo!()
+                    // Getting the bitfield is more involved
+                    // since its length is not constant
+                    let rbl = config.reliable_bitfield_length as usize;
+                    let slc = try_unwrap!('r, reader.read_bytes(rbl));
+                    let mut arr = [0u8; 16];
+                    arr[..rbl].clone_from_slice(slc.as_slice_less_safe());
+                    let ack_bitfield = u128::from_ne_bytes(arr);
+
+                    // Finally, acknowledge the packet
+                    state.reliability.ack(
+                        ReliablePacketHeader { sequence, ack, ack_bitfield },
+                        config.reliable_bitfield_length as u8
+                    );
+                }
             }
 
             /*
                 Frame separation
             */
 
+            
+
             'r: loop {
+                // Check if we're done
                 if reader.at_end() { break 'r }
 
                 'j: {
                     // Try to get the channel value integer
                     let channel_int = try_unwrap!('j, u32::from_byte_slice(&mut reader));
+
+                    // Get the length of the packet
+                    let length = try_unwrap!('j, u16::from_byte_slice(&mut reader)) as usize;
 
                     // Check channel int value
                     // This is because 0 is a reserved value for system messages
@@ -74,9 +96,13 @@ pub(crate) fn established_packet_reader_system(
                         let channel_data = registry.channel_config(channel).unwrap();
 
                         // If it has one, get the reliable header.
-                        if channel_data.reliable == ReliabilityGuarantee::Reliable {
-                            todo!()
-                        }
+                        let ordering = match channel_data.ordered {
+                            OrderingGuarantee::Unordered => None,
+                            _ => Some(try_unwrap!('j, u16::from_byte_slice(&mut reader))),
+                        };
+
+                        // Finally, get the payload.
+                        let payload = try_unwrap!('j, reader.read_bytes(length));
                     }
                 }
             }
@@ -174,6 +200,9 @@ pub(crate) fn established_packet_builder_system(
         for message in scratch.messages.iter() {
             // Put the channel id into the buffer
             scratch.bytes.put_u32(u32::from(message.channel).wrapping_add(1));
+
+            // Append the payload length
+            scratch.bytes.put_u16(u16::try_from(message.payload.len()).unwrap());
 
             // If present, put ordering data into buffer
             if message.flags.is_ordered() {
