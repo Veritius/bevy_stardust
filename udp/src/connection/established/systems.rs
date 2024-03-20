@@ -188,30 +188,31 @@ pub(crate) fn established_packet_builder_system(
             assert!(scratch.bytes.len() <= BLANK_PREFIX_LENGTH);
 
             // Write the buffer to the packet allocation
-            let len = scratch.bytes.len();
-            let rem = BLANK_PREFIX_LENGTH - scratch.bytes.len();
-            bin.buffer[rem..rem+len].copy_from_slice(&scratch.bytes);
+            let length = scratch.bytes.len();
+            let offset = BLANK_PREFIX_LENGTH - length;
+            bin.buffer[offset..BLANK_PREFIX_LENGTH].copy_from_slice(&scratch.bytes);
 
             // To avoid reallocation, fill the rest of the bin with zeros
             // This is because Bytes' impl From<Vec<u8>> will reallocate to fit the length
             // While this wastes a bit of memory, it's freed in the next system, so it's fine.
-            bin.buffer.extend((0..(bin.buffer.capacity() - bin.buffer.len())).map(|_| 0));
+            let total_len = bin.buffer.len();
+            bin.buffer.extend((0..(bin.buffer.capacity() - total_len)).map(|_| 0));
             debug_assert_eq!(bin.buffer.len(), bin.buffer.capacity());
 
             // Turn into a Bytes object and slice it up a bit
             // This is required because we have a fair bit of bytes in the buffer
             // that would be useless at best (and harmful at most) to send
-            let full = Bytes::from(bin.buffer).slice(rem..);
-            let payload = full.slice(..len);
+            let full = Bytes::from(bin.buffer).slice(offset..total_len);
+            let payload = full.slice(..length);
 
             // Reliable packets need to be stored until acked
             if is_reliable {
-                state.reliability.record(sequence, payload);
+                state.reliability.record(sequence, payload.clone());
             }
 
             // Finally, put it in the buffer for sending
             meta.packet_queue.push_outgoing(OutgoingPacket {
-                payload: full,
+                payload,
                 messages: bin.messages,
             });
 
