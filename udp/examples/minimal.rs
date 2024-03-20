@@ -30,7 +30,7 @@ fn main() {
 
     let mut manager = App::new();
 
-    manager.add_plugins(ScheduleRunnerPlugin::run_loop(Duration::from_secs(1)));
+    manager.add_plugins(ScheduleRunnerPlugin::run_loop(Duration::from_millis(100)));
     manager.add_plugins(LogPlugin {
         filter: "".to_string(),
         level: tracing::Level::TRACE,
