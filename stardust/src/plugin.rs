@@ -19,6 +19,9 @@ impl Plugin for StardustPlugin {
             crate::messages::systems::clear_message_queue_system::<Incoming>,
         ).in_set(NetworkWrite::Clear));
 
+        // Setup orderings
+        crate::scheduling::configure_scheduling(app);
+
         // Hashing-related functionality
         #[cfg(feature="hashing")] {
             use crate::hashing::*;
