@@ -116,7 +116,7 @@ impl Plugin for UdpTransportPlugin {
         app.insert_resource(PluginConfiguration {
             application_version: self.application_version.clone(),
             available_payload_len: MTU_SIZE - (4+((self.reliable_bitfield_length as usize)*8)),
-            reliable_bitfield_length: self.reliable_bitfield_length,
+            reliable_bitfield_length: self.reliable_bitfield_length as usize,
             attempt_timeout: self.attempt_timeout,
             established_timeout: self.connection_timeout,
             keep_alive_timeout: self.keep_alive_timeout,
@@ -128,7 +128,7 @@ impl Plugin for UdpTransportPlugin {
 pub(crate) struct PluginConfiguration {
     pub application_version: ApplicationNetworkVersion,
     pub available_payload_len: usize,
-    pub reliable_bitfield_length: u16,
+    pub reliable_bitfield_length: usize,
     pub attempt_timeout: Duration,
     pub established_timeout: Duration,
     pub keep_alive_timeout: Duration,

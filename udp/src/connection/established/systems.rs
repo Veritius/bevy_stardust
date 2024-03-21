@@ -50,7 +50,8 @@ pub(crate) fn established_packet_reader_system(
                 // Getting the bitfield is more involved
                 // since its length is not constant
                 let mut arr = [0u8; 16];
-                try_read!(reader.read_slice(16), continue 'h).copy_to_slice(&mut arr);
+                let mut slice = try_read!(reader.read_slice(config.reliable_bitfield_length), continue 'h);
+                slice.copy_to_slice(&mut arr[..config.reliable_bitfield_length]);
                 let ack_bitfield = u128::from_ne_bytes(arr);
 
                 // Finally, acknowledge the packet
