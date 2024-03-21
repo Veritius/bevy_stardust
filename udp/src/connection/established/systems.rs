@@ -67,7 +67,7 @@ pub(crate) fn established_packet_reader_system(
 
             'r: loop {
                 // Check if we're done
-                if reader.has_remaining(6) { break 'r }
+                if !reader.has_remaining(6) { break 'r }
 
                 // Try to get the channel value integer
                 let channel_int = u32::from_be_bytes(try_read!(reader.read_array::<4>(), break 'r));
