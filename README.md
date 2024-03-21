@@ -109,10 +109,10 @@ fn send_words_system(
 
 fn read_words_system(
     registry: ChannelRegistry,
-    mut query: Query<(Entity, &NetworkMessages<Incoming>), With<NetworkPeer>>
+    query: Query<(Entity, &NetworkMessages<Incoming>), With<NetworkPeer>>
 ) {
     let channel = registry.channel_id(TypeId::of::<MyChannel>());
-    for (entity, incoming) in query.iter_mut() {
+    for (entity, incoming) in query.iter() {
         let messages = incoming.channel_queue(channel);
         for message in messages.iter() {
             let string = std::str::from_utf8(&*message).unwrap();
