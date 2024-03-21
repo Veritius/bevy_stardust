@@ -63,7 +63,8 @@ fn main() {
     app.add_plugins((DefaultPlugins, StardustPlugins));
 
     // Each channel needs to be added (or 'registered') to the app.
-    // Once you do this, it becomes visible in the ChannelRegistry, more on that later.
+    // Once you do this, it becomes visible in the ChannelRegistry.
+    // The ChannelRegistry is effectively a giant table of every registered channel.
     app.add_channel::<MyChannel>(ChannelConfiguration {
         // 'Reliable' messages will be detected if lost.
         reliable: ReliabilityGuarantee::Reliable,
@@ -100,13 +101,23 @@ fn send_words_system(
     registry: ChannelRegistry,
     mut query: Query<(Entity, &mut NetworkMessages<Outgoing>), With<NetworkPeer>>
 ) {
+    // The ChannelId must be retrieved from the registry.
+    // These are more friendly to store since they're just numbers.
+    // You can cache them if you want, as long as they aren't used in different Worlds.
     let channel = registry.channel_id(TypeId::of::<MyChannel>());
+
+    // You can also iterate in parallel, if you have a lot of things.
     for (entity, mut outgoing) in query.iter_mut() {
+        // Bytes objects are cheaply clonable, reference counted storages.
+        // You can send them to as many peers as you want once created.
         outgoing.push(channel, Bytes::from_static("Hello, world!"));
         println!("Sent a message to {entity:?}");
     }
 }
 
+// Reading messages also just requires component accesses.
+// The reading queue is a different component from the sending queue.
+// This means you can read and send bytes in parallel, or in different systems.
 fn read_words_system(
     registry: ChannelRegistry,
     query: Query<(Entity, &NetworkMessages<Incoming>), With<NetworkPeer>>
@@ -115,6 +126,8 @@ fn read_words_system(
     for (entity, incoming) in query.iter() {
         let messages = incoming.channel_queue(channel);
         for message in messages.iter() {
+            // Stardust only outputs bytes, so you need to convert to the desired type.
+            // Also, in real products, don't unwrap, write checks. Never trust user data.
             let string = std::str::from_utf8(&*message).unwrap();
             println!("Received a message from {entity:?}: {string:?}");
         }
