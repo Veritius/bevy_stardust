@@ -303,8 +303,8 @@ pub(crate) fn established_packet_builder_system(
             // Turn into a Bytes object and slice it up a bit
             // This is required because we have a fair bit of bytes in the buffer
             // that would be useless at best (and harmful at most) to send
-            let full = Bytes::from(bin.buffer).slice(offset..total_len);
-            let payload = full.slice(..length);
+            let packet = Bytes::from(bin.buffer).slice(offset..total_len);
+            let payload = packet.slice(..length);
 
             // Reliable packets need to be stored until acked
             if is_reliable {
@@ -313,7 +313,7 @@ pub(crate) fn established_packet_builder_system(
 
             // Finally, put it in the buffer for sending
             meta.packet_queue.push_outgoing(OutgoingPacket {
-                payload,
+                payload: packet,
                 messages: bin.messages,
             });
 
