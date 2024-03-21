@@ -85,9 +85,7 @@ impl Plugin for UdpTransportPlugin {
         app.add_systems(PreUpdate, (
             io_receiving_system,
             established_packet_reader_system,
-        ).chain()
-            .in_set(NetworkRead::Receive)
-            .before(NetworkRead::Read));
+        ).chain().in_set(NetworkRead::Receive));
 
         // These systems can run at any time
         app.add_systems(Update, (
@@ -100,9 +98,7 @@ impl Plugin for UdpTransportPlugin {
             established_packet_builder_system,
             io_sending_system,
             close_connections_system,
-        ).chain()
-            .in_set(NetworkWrite::Send)
-            .before(NetworkWrite::Clear));
+        ).chain().in_set(NetworkWrite::Send));
 
         // Reset tick statistics at the end of the tick
         app.add_systems(Last, (
