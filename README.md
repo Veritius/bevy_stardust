@@ -100,6 +100,8 @@ fn main() {
 }
 
 // Messages use the Bytes type.
+// This is cheaply clonable and you can send the same message to multiple peers.
+// For this example, we create one from the bytes of a static str.
 const MESSAGE: Bytes = Bytes::from_static("Hello, world!".as_bytes());
 
 // Queueing messages just requires component access.
