@@ -48,7 +48,8 @@ The following features are planned to be created as additional crates, as part o
 // This example assumes that you don't have the reflect feature flag. If you do, make sure your channel types implement TypePath. Additionally, spawning NetworkPeer entities is handled by transport layer plugins. For the purpose of this example, we'll assume they magically appeared somehow.
 
 use std::any::TypeId;
-use bevy::prelude::*;
+use bevy_ecs::prelude::*;
+use bevy_app::{prelude::*, ScheduleRunnerPlugin, MainSchedulePlugin};
 use bevy_stardust::prelude::*;
 
 // Channels are accessed with types in the type system.
@@ -60,7 +61,10 @@ fn main() {
     let mut app = App::new();
 
     // At the very least, Stardust needs the MainSchedulePlugin to work.
-    app.add_plugins((DefaultPlugins, StardustPlugins));
+    app.add_plugins((
+        ScheduleRunnerPlugin::default(),
+        StardustPlugin,
+    ));
 
     // Each channel needs to be added (or 'registered') to the app.
     // Once you do this, it becomes visible in the ChannelRegistry.
@@ -85,15 +89,15 @@ fn main() {
     // This is just a rule of thumb, though, some might not need to be.
     // Make sure to check the relevant documentation.
 
-    // We'll add an imaginary transport plugin just as an example.
-    app.add_plugin(MagicTransportPlugin);
-
     // Your systems can be added at any point, but we'll do them here.
     // Also see the scheduling types in the scheduling module for advanced usage.
     // Most of the time, you just need to put things in the update schedule.
     // Also, note that since these systems have disjoint accesses, they run in parallel.
     app.add_systems(Update, (send_words_system, read_words_system));
 }
+
+// Messages use the Bytes type.
+const MESSAGE: Bytes = Bytes::from_static("Hello, world!".as_bytes());
 
 // Queueing messages just requires component access.
 // This means you can use query filters to achieve better parallelism.
@@ -104,13 +108,13 @@ fn send_words_system(
     // The ChannelId must be retrieved from the registry.
     // These are more friendly to store since they're just numbers.
     // You can cache them if you want, as long as they aren't used in different Worlds.
-    let channel = registry.channel_id(TypeId::of::<MyChannel>());
+    let channel = registry.channel_id(TypeId::of::<MyChannel>()).unwrap();
 
     // You can also iterate in parallel, if you have a lot of things.
     for (entity, mut outgoing) in query.iter_mut() {
         // Bytes objects are cheaply clonable, reference counted storages.
         // You can send them to as many peers as you want once created.
-        outgoing.push(channel, Bytes::from_static("Hello, world!"));
+        outgoing.push(channel, MESSAGE);
         println!("Sent a message to {entity:?}");
     }
 }
@@ -122,7 +126,7 @@ fn read_words_system(
     registry: ChannelRegistry,
     query: Query<(Entity, &NetworkMessages<Incoming>), With<NetworkPeer>>
 ) {
-    let channel = registry.channel_id(TypeId::of::<MyChannel>());
+    let channel = registry.channel_id(TypeId::of::<MyChannel>()).unwrap();
     for (entity, incoming) in query.iter() {
         let messages = incoming.channel_queue(channel);
         for message in messages.iter() {
