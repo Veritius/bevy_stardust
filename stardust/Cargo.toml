@@ -3,7 +3,6 @@ name="bevy_stardust"
 version="0.4.2"
 edition="2021"
 authors=["Veritius <veritiusgaming@gmail.com>"]
-readme="../README.md"
 license="MIT OR Apache-2.0"
 description="A networking crate for the Bevy game engine."
 repository="https://github.com/veritius/bevy_stardust/"
