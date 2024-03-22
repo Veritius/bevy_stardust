@@ -77,8 +77,8 @@ impl Plugin for UdpTransportPlugin {
 
         // Send some warnings for potentially bad configuration
         if self.connection_timeout >= self.keep_alive_timeout {
-            tracing::warn!("Connection timeout was greater than the keep-alive timeout: {}ms >= {}ms",
-                self.connection_timeout.as_millis(), self.keep_alive_timeout.as_millis());
+            tracing::warn!("Keep-alive timeout was greater than the connection timeout: {}ms >= {}ms",
+                self.keep_alive_timeout.as_millis(), self.connection_timeout.as_millis());
         }
 
         // Packet receiving system
