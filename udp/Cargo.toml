@@ -33,3 +33,11 @@ reflect = [
 
 [dev-dependencies]
 bevy_log = "0.13"
+
+[[example]]
+name = "minimal-server"
+path = "examples/minimal/server.rs"
+
+[[example]]
+name = "minimal-client"
+path = "examples/minimal/client.rs"

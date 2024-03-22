@@ -1,50 +1,28 @@
+#![allow(unused)]
+
 use std::{net::{Ipv4Addr, SocketAddr, SocketAddrV4}, time::Duration};
+use bevy_app::{prelude::*, ScheduleRunnerPlugin};
 use bevy_ecs::prelude::*;
-use bevy_app::{prelude::*, AppLabel, ScheduleRunnerPlugin, SubApp};
 use bevy_log::LogPlugin;
-use bevy_reflect::TypePath;
+use bevy_reflect::prelude::*;
 use bevy_stardust::prelude::*;
 use bevy_stardust_udp::*;
 
-const LISTENER_ADDRESS: &str = "127.0.0.1:12345";
-const UNSPECIFIED_SOCKET_ADDR: SocketAddr = SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::LOCALHOST, 0));
+pub const LISTENER_ADDRESS: &str = "127.0.0.1:12345";
+pub const UNSPECIFIED_SOCKET_ADDR: SocketAddr = SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::LOCALHOST, 0));
 
-fn main() {
-    let mut initiator = setup_app();
+#[derive(Reflect)]
+pub struct MyChannel;
 
-    initiator.add_systems(Startup, |mut manager: UdpManager| {
-        manager.open_endpoint_and_connect(UNSPECIFIED_SOCKET_ADDR, LISTENER_ADDRESS).unwrap();
-    });
+pub fn setup_app() -> App {
+    let mut app = App::new();
 
-    let mut listener = setup_app();
-
-    listener.add_systems(Startup, |mut manager: UdpManager| {
-        manager.open_endpoint(LISTENER_ADDRESS, true).unwrap();
-    });
-
-    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, AppLabel)]
-    enum AppLabel {
-        Initiator,
-        Listener,
-    }
-
-    let mut manager = App::new();
-
-    manager.add_plugins(ScheduleRunnerPlugin::run_loop(Duration::from_millis(100)));
-    manager.add_plugins(LogPlugin {
+    app.add_plugins(ScheduleRunnerPlugin::run_loop(Duration::from_millis(100)));
+    app.add_plugins(LogPlugin {
         filter: "".to_string(),
         level: tracing::Level::TRACE,
         update_subscriber: None,
     });
-
-    manager.insert_sub_app(AppLabel::Listener, SubApp::new(listener, |_,_| {}));
-    manager.insert_sub_app(AppLabel::Initiator, SubApp::new(initiator, |_,_| {}));
-
-    manager.run();
-}
-
-fn setup_app() -> App {
-    let mut app = App::new();
 
     app.add_plugins(StardustPlugin);
 
@@ -68,9 +46,6 @@ fn setup_app() -> App {
 
     return app;
 }
-
-#[derive(TypePath)]
-struct MyChannel;
 
 fn send_and_recv_system(
     registry: ChannelRegistry,
