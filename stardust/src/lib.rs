@@ -1,6 +1,4 @@
-//! # bevy_stardust
-//! A networking crate for the Bevy game engine.
-
+#![doc = include_str!("../../README.md")]
 #![warn(missing_docs)]
 
 pub mod channels;

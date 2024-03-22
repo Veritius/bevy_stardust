@@ -13,8 +13,8 @@ pub enum Direction {
 /// The direction a message is going, as a trait for use in the type system.
 /// 
 /// Implemented by:
-/// - [Outgoing], corresponding to [Direction::Outgoing]
-/// - [Incoming], corresponding to [Direction::Incoming]
+/// - [`Outgoing`], corresponding to [`Direction::Outgoing`]
+/// - [`Incoming`], corresponding to [`Direction::Incoming`]
 #[cfg(not(feature="reflect"))]
 pub trait DirectionType: Debug + Send + Sync + Any + sealed::Sealed {
     /// Returns the corresponding [`Direction`].
@@ -24,8 +24,8 @@ pub trait DirectionType: Debug + Send + Sync + Any + sealed::Sealed {
 /// The direction a message is going, as a trait for use in the type system.
 /// 
 /// Implemented by:
-/// - [Outgoing], corresponding to [Direction::Outgoing]
-/// - [Incoming], corresponding to [Direction::Incoming]
+/// - [`Outgoing`], corresponding to [`Direction::Outgoing`]
+/// - [`Incoming`], corresponding to [`Direction::Incoming`]
 #[cfg(feature="reflect")]
 pub trait DirectionType: Debug + Send + Sync + Any + bevy_reflect::Reflect + sealed::Sealed {
     /// Returns the corresponding [`Direction`].

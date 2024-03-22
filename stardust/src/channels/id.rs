@@ -33,16 +33,7 @@
 //!         reliable: ReliabilityGuarantee::Unreliable,
 //!         ordered: OrderingGuarantee::Unordered,
 //!         fragmented: false,
-//!         string_size: ..=16,
-//!     });
-//! 
-//!     app.add_systems(PostUpdate, |mut events: EventReader<MovementEvent>, mut writer: NetworkWriter<MovementEvent>| {
-//!         let target = Entity::PLACEHOLDER;
-//!         for event in events.read() {
-//!             // Serialisation logic goes here.
-//!             let bytes = Bytes::from("Hello, world!");
-//!             writer.send(target, bytes);
-//!         }
+//!         priority: 0,
 //!     });
 //! }
 //! ```
