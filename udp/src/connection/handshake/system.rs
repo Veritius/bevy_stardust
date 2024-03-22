@@ -406,6 +406,8 @@ pub(crate) fn potential_new_peers_system(
                 .get_or_spawn(ent_id)
                 .unwrap()
                 .insert(NetworkPeer::new())
+                .insert(NetworkMessages::<Incoming>::new())
+                .insert(NetworkMessages::<Outgoing>::new())
                 .insert(NetworkPeerLifestage::Handshaking)
                 .insert((bx.1, bx.2));
         });
