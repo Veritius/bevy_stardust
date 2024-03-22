@@ -46,7 +46,7 @@ impl UdpManager<'_, '_> {
         let address = endpoint.address();
 
         // Log endpoint creation
-        tracing::info!("Opened Endpoint {entity_id:?} bound to address {address:?}");
+        tracing::debug!("Opened Endpoint {entity_id:?} bound to address {address:?}");
 
         // Return endpoint
         Ok(endpoint)
@@ -85,7 +85,7 @@ impl UdpManager<'_, '_> {
         endpoint_ref.add_peer(address, token);
 
         // Log connection creation
-        tracing::info!("Trying to connect to address {address:?} using id {id:?} on endpoint {endpoint_id:?}");
+        tracing::debug!("Trying to connect to address {address:?} using id {id:?} on endpoint {endpoint_id:?}");
 
         Ok(id)
     }

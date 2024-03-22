@@ -203,8 +203,8 @@ pub(crate) fn handshake_polling_system(
 
                 // Log success
                 match connection.direction {
-                    ConnectionDirection::Outgoing => tracing::info!("Successfully connected to {entity:?} ({})", connection.remote_address),
-                    ConnectionDirection::Incoming => tracing::info!("Remote peer {entity:?} ({}) connected", connection.remote_address),
+                    ConnectionDirection::Outgoing => tracing::debug!("Successfully connected to {entity:?} ({})", connection.remote_address),
+                    ConnectionDirection::Incoming => tracing::debug!("Remote peer {entity:?} ({}) connected", connection.remote_address),
                 }
             },
             HandshakeState::Failed(reason) => {
@@ -213,8 +213,8 @@ pub(crate) fn handshake_polling_system(
 
                 // Log failure
                 match connection.direction {
-                    ConnectionDirection::Outgoing => tracing::info!("Handshake with {entity:?} ({}) failed: {reason}", connection.remote_address),
-                    ConnectionDirection::Incoming => tracing::info!("Remote peer {entity:?} ({}) failed: {reason}", connection.remote_address),
+                    ConnectionDirection::Outgoing => tracing::debug!("Handshake with {entity:?} ({}) failed: {reason}", connection.remote_address),
+                    ConnectionDirection::Incoming => tracing::debug!("Remote peer {entity:?} ({}) failed: {reason}", connection.remote_address),
                 }
             },
             _ => {}, // Do nothing
@@ -298,7 +298,7 @@ pub(crate) fn potential_new_peers_system(
                 let args = format!("Received and rejected connection attempt from {}: {code}", event.address);
                 match code {
                     HandshakeResponseCode::Unspecified | HandshakeResponseCode::MalformedPacket => { tracing::debug!(args); },
-                    _ => { tracing::info!(args); },
+                    _ => { tracing::debug!(args); },
                 };
 
                 // Check if the failure code ought to be sent to them
@@ -411,7 +411,7 @@ pub(crate) fn potential_new_peers_system(
         });
 
         // Log the new connection
-        tracing::info!("Received join request from new connection {ent_id:?} on address {address}");
+        tracing::debug!("Received join request from new connection {ent_id:?} on address {address}");
     }
 }
 
