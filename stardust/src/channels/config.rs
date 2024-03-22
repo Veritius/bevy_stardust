@@ -36,9 +36,10 @@ impl StableHash for &ChannelConfiguration {
 /// The reliability guarantee of a channel.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ReliabilityGuarantee {
-    /// If a message is lost, it's lost. There will be no attempt to get it back.
+    /// Messages are not guaranteed to arrive.
     Unreliable,
-    /// If a message is lost, it will be resent. This incurs some overhead.
+
+    /// Lost messages will be detected and resent.
     Reliable,
 }
 
@@ -55,11 +56,16 @@ impl StableHash for ReliabilityGuarantee {
 /// The ordering guarantee of a channel.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum OrderingGuarantee {
-    /// Messages will be read in the order they are received.
+    /// Messages will be available in the order they are received.
+    /// This is not necessarily the order they were sent. If that matters, use a different variant.
     Unordered,
-    /// Messages that are out of order will be discarded.
+
+    /// Messages that are older than the most recent value will be discarded.
+    /// Therefore, messages will be available in order, but out of order messages are lost.
     Sequenced,
-    /// Messages will be reordered to be in the order they were sent.
+
+    /// Messages will be available in the exact order they were sent.
+    /// If [reliability](ReliabilityGuarantee::Reliable) is used, this can 'block' messages temporarily due to data loss.
     Ordered,
 }
 
