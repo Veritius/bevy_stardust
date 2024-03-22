@@ -45,7 +45,10 @@ The following features are planned to be created as additional crates, as part o
 
 **A simple example project:**
 ```rust
-// This example assumes that you don't have the reflect feature flag. If you do, make sure your channel types implement TypePath. Additionally, spawning NetworkPeer entities is handled by transport layer plugins. For the purpose of this example, we'll assume they magically appeared somehow.
+// This example assumes that you don't have the reflect feature flag.
+// If you do, make sure your channel types implement TypePath.
+// Additionally, spawning NetworkPeer entities is handled by transport layer plugins.
+// For the purpose of this example, we'll assume they magically appeared somehow.
 
 use std::any::TypeId;
 use bevy_ecs::prelude::*;
