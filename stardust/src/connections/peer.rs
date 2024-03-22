@@ -3,19 +3,20 @@
 use std::time::Instant;
 use bevy_ecs::prelude::*;
 
-/// Another peer that this peer is aware of, representing someone else over the Internet.
+/// An active connection to a remote peer.
 /// 
-/// - If you're writing server-side code, you can think of this as a client.
-/// - If you're writing client-side code, you can think of this as the server.
-/// - If you're writing peer-to-peer code, you can think of this as another peer in the mesh.
+/// The term 'peer' is used interchangeably for any kind of connection to another instance of the application.
+/// If you're writing a star-topology system, you can treat these as servers and clients.
+/// If you're writing a mesh-topology system, you can treat these as another peer in the mesh.
 /// 
-/// `NetworkPeer`s don't have any associated transport layer information by themselves.
-/// However, they are always treated as an entity that stores information related to the network.
-/// You shouldn't create, mutate, or delete this component unless you know what you're doing.
-/// Managing these entities should be (and usually is) done by the transport layer.
+/// The `NetworkPeer` component is intended to be queried freely, but not created by the developer.
+/// Instead, it should be managed by transport layer plugins.
 /// 
-/// Entities with `NetworkPeer` have their entity IDs used in the writing and reading APIs.
-/// They are used as the 'target' of messages, and the transport layer will handle the actual sending and receiving.
+/// Entities with this component may also have the following components:
+/// - [`NetworkMessages`](crate::messages::NetworkMessages), relating to messages
+/// - [`NetworkPeerUid`], relating to persistent data
+/// - [`NetworkPeerLifestage`], relating to connection state
+/// - [`SecurityLevel`](super::security::SecurityLevel), relating to encryption
 #[derive(Debug, Component)]
 #[cfg_attr(feature="reflect", derive(bevy_reflect::Reflect))]
 pub struct NetworkPeer {
@@ -66,6 +67,7 @@ impl NetworkPeer {
 #[non_exhaustive]
 pub enum NetworkPeerLifestage {
     /// Midway through a [handshake].
+    /// Messages sent to peers in this stage will likely be ignored.
     /// 
     /// [handshake]: https://en.wikipedia.org/wiki/Handshake_(computing)
     Handshaking,
@@ -85,20 +87,21 @@ pub enum NetworkPeerLifestage {
 /// A unique identifier for a [`NetworkPeer`], to store persistent data across multiple connections.
 /// This component should only be constructed by the app developer, but can be read by any plugins.
 /// 
-/// This value is intended only for use within memory and local databases, like savegames.
-/// If you need to share a unique player identifier, use UUIDs.
-/// 
 /// If you're working with another ID namespace, like UUIDs and Steam IDs, you should
 /// map the ids from that space into a unique value here through some kind of associative array.
-/// 
-/// The `Display` implementation will display the internal integer in hexadecimal.
-#[derive(Debug, Component, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Component, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[cfg_attr(feature="reflect", derive(bevy_reflect::Reflect))]
 pub struct NetworkPeerUid(pub u64);
 
-impl std::fmt::Display for NetworkPeerUid {
+impl std::fmt::Debug for NetworkPeerUid {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_fmt(format_args!("{:X}", self.0))
+    }
+}
+
+impl std::fmt::Display for NetworkPeerUid {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        <Self as std::fmt::Debug>::fmt(self, f)
     }
 }
 
