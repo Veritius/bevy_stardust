@@ -76,7 +76,7 @@ impl Plugin for UdpTransportPlugin {
         use crate::sending::io_sending_system;
 
         // Send some warnings for potentially bad configuration
-        if self.connection_timeout >= self.keep_alive_timeout {
+        if self.keep_alive_timeout >= self.connection_timeout {
             tracing::warn!("Keep-alive timeout was greater than the connection timeout: {}ms >= {}ms",
                 self.keep_alive_timeout.as_millis(), self.connection_timeout.as_millis());
         }
