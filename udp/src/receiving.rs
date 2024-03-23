@@ -37,7 +37,7 @@ pub(crate) fn io_receiving_system(
 
                             // Set last_recv in timings and update statistics
                             connection.timings.set_last_recv_now();
-                            endpoint.statistics.track_recv_packet(bytes);
+                            endpoint.statistics.record_packet_recv(bytes);
 
                             // We append it to the queue for later processing
                             connection.packet_queue.push_incoming(IncomingPacket { payload });

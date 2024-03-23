@@ -57,8 +57,8 @@ pub(crate) fn io_sending_system(
                         connection.timings.set_last_sent_now();
 
                         // Add to statistics counters
-                        endpoint_statistics.track_send_packet(packet.payload.len());
-                        connection.statistics.track_send_packet(packet.messages as usize);
+                        endpoint_statistics.record_packet_send(packet.payload.len());
+                        connection.statistics.record_packet_send(packet.messages as usize);
                     },
 
                     Err(_) => todo!(),
@@ -72,7 +72,7 @@ pub(crate) fn io_sending_system(
             match socket.send_to(&payload, address) {
                 Ok(_) => {
                     // Add to statistics tracker
-                    endpoint_statistics.track_send_packet(payload.len());
+                    endpoint_statistics.record_packet_send(payload.len());
                 },
 
                 Err(_) => todo!(),

@@ -34,14 +34,14 @@ pub struct ConnectionStatistics {
 }
 
 impl ConnectionStatistics {
-    pub(crate) fn track_send_packet(&mut self, messages: usize) {
+    pub(crate) fn record_packet_send(&mut self, messages: usize) {
         self.total_packets_sent += 1;
         self.total_messages_sent += messages as u64;
         self.tick_packets_sent += 1;
         self.tick_messages_sent += messages as u32;
     }
 
-    pub(crate) fn track_recv_packet(&mut self, messages: usize) {
+    pub(crate) fn record_packet_recv(&mut self, messages: usize) {
         self.total_packets_received += 1;
         self.total_messages_received += messages as u64;
         self.tick_packets_received += 1;

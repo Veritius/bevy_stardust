@@ -34,14 +34,14 @@ pub struct EndpointStatistics {
 }
 
 impl EndpointStatistics {
-    pub(crate) fn track_send_packet(&mut self, bytes: usize) {
+    pub(crate) fn record_packet_send(&mut self, bytes: usize) {
         self.total_packets_sent += 1;
         self.total_bytes_sent += bytes as u64;
         self.tick_packets_sent += 1;
         self.tick_bytes_sent += bytes as u32;
     }
 
-    pub(crate) fn track_recv_packet(&mut self, bytes: usize) {
+    pub(crate) fn record_packet_recv(&mut self, bytes: usize) {
         self.total_packets_received += 1;
         self.total_bytes_received += bytes as u64;
         self.tick_packets_received += 1;
