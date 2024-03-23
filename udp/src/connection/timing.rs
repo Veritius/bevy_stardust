@@ -1,4 +1,4 @@
-use std::time::{Duration, Instant};
+use std::time::Instant;
 
 #[cfg_attr(feature="reflect", derive(bevy_reflect::Reflect), reflect(from_reflect = false))]
 pub(crate) struct ConnectionTimings {
@@ -27,13 +27,4 @@ impl ConnectionTimings {
     pub fn set_last_recv_now(&mut self) {
         self.last_recv = Some(Instant::now());
     }
-}
-
-pub(super) fn timeout_check(
-    then: Option<Instant>,
-    now: Instant,
-    duration: Duration
-) -> bool {
-    if then.is_none() { return true }
-    now.saturating_duration_since(then.unwrap()) > duration
 }

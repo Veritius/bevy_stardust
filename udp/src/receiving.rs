@@ -5,7 +5,6 @@ use crate::{connection::PotentialNewPeer, packet::IncomingPacket, Connection, En
 
 // Receives packets from UDP sockets
 pub(crate) fn io_receiving_system(
-    commands: ParallelCommands,
     mut endpoints: Query<(Entity, &mut Endpoint)>,
     connections: Query<&mut Connection>,
     mut new_peers: EventWriter<PotentialNewPeer>,
@@ -36,8 +35,9 @@ pub(crate) fn io_receiving_system(
                             // SAFETY: This is fine because of ConnectionOwnershipToken's guarantees
                             let mut connection = unsafe { connections.get_unchecked(token.inner()).unwrap() };
 
-                            // Set last_recv in timings
+                            // Set last_recv in timings and update statistics
                             connection.timings.set_last_recv_now();
+                            endpoint.statistics.track_recv_packet(bytes);
 
                             // We append it to the queue for later processing
                             connection.packet_queue.push_incoming(IncomingPacket { payload });

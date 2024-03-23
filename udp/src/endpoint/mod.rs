@@ -73,7 +73,7 @@ impl Endpoint {
         let key = self.connections
             .iter()
             .find(|(_,v)| v.inner() == peer)
-            .map(|(k,v)| k.clone());
+            .map(|(k,_)| k.clone());
 
         // Remove item by key
         if let Some(key) = key {
