@@ -115,7 +115,10 @@ pub(crate) fn established_packet_reader_system(
                             });
 
                             // Store in the queue structure
-                            ordering.recv(OrderedMessage { sequence, payload });
+                            ordering.recv(OrderedMessage {
+                                sequence: sequence.into(),
+                                payload
+                            });
 
                             // ...
                             // ordering.pop()
@@ -235,7 +238,8 @@ pub(crate) fn established_packet_builder_system(
                         OrderingGuarantee::Ordered => OrderedMessages::new(OrderedMessagesMode::Ordered),
                     }
                 });
-                scratch.bytes.put_u16(ordering_data.advance());
+
+                scratch.bytes.put_u16(ordering_data.advance().into());
             }
 
             // Put the message payload into the buffer

@@ -1,21 +1,23 @@
 use std::cmp::Ordering;
 use bytes::Bytes;
 
+use crate::sequences::SequenceId;
+
 /// Ensures items are popped in order, regardless of insertion order.
 pub(crate) struct OrderedMessages {
     mode: OrderedMessagesMode,
-    send_index: u16,
+    send_index: SequenceId,
     recv_queue: Vec<OrderedMessage>,
-    recv_index: u16,
+    recv_index: SequenceId,
 }
 
 impl OrderedMessages {
     pub fn new(mode: OrderedMessagesMode) -> Self {
         Self {
             mode,
-            send_index: 0,
+            send_index: 0.into(),
             recv_queue: Vec::with_capacity(16),
-            recv_index: 0,
+            recv_index: 0.into(),
         }
     }
 
@@ -23,16 +25,16 @@ impl OrderedMessages {
         todo!()
     }
 
-    pub fn advance(&mut self) -> u16 {
+    pub fn advance(&mut self) -> SequenceId {
         let ind = self.send_index;
-        self.send_index = self.send_index.wrapping_add(1);
+        self.send_index += 1;
         return ind;
     }
 }
 
 /// A message with `Eq` and `Ord` implementations based on `sequence`.
 pub(crate) struct OrderedMessage {
-    pub sequence: u16,
+    pub sequence: SequenceId,
     pub payload: Bytes,
 }
 
@@ -46,13 +48,13 @@ impl Eq for OrderedMessage {}
 
 impl PartialOrd for OrderedMessage {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        self.sequence.partial_cmp(&other.sequence)
+        Some(self.cmp(other))
     }
 }
 
 impl Ord for OrderedMessage {
     fn cmp(&self, other: &Self) -> Ordering {
-        self.partial_cmp(other).unwrap()
+        self.sequence.cmp(&other.sequence)
     }
 }
 
