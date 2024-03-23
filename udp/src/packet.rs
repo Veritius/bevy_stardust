@@ -9,26 +9,32 @@ pub(crate) struct PacketQueue {
 }
 
 impl PacketQueue {
+    #[inline]
     pub fn push_incoming(&mut self, item: IncomingPacket) {
         self.incoming.push_back(item);
     }
 
+    #[inline]
     pub fn push_outgoing(&mut self, item: OutgoingPacket) {
         self.outgoing.push_back(item);
     }
 
+    #[inline]
     pub fn pop_incoming(&mut self) -> Option<IncomingPacket> {
         self.incoming.pop_front()
     }
 
+    #[inline]
     pub fn pop_outgoing(&mut self) -> Option<OutgoingPacket> {
         self.outgoing.pop_front()
     }
 
+    #[inline]
     pub fn incoming(&self) -> &VecDeque<IncomingPacket> {
         &self.incoming
     }
 
+    #[inline]
     pub fn outgoing(&self) -> &VecDeque<OutgoingPacket> {
         &self.outgoing
     }
