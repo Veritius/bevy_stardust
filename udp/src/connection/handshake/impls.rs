@@ -19,12 +19,12 @@ macro_rules! try_read {
 impl HandshakePacketHeader {
     pub fn from_bytes(reader: &mut Reader) -> Result<Self, EndOfInput> {
         return Ok(Self {
-            sequence: u16::from_be_bytes(reader.read_array::<2>()?),
+            sequence: u16::from_be_bytes(reader.read_array::<2>()?).into(),
         })
     }
 
     pub fn write_bytes(&self, buffer: &mut impl BufMut) {
-        buffer.put_u16(self.sequence);
+        buffer.put_u16(self.sequence.into());
     }
 }
 
@@ -64,7 +64,7 @@ impl HandshakePacket for ServerHelloPacket {
         let transport = try_read!(NetworkVersionData::from_bytes(reader));
         let application = try_read!(NetworkVersionData::from_bytes(reader));
 
-        let reliability_ack = u16::from_be_bytes(try_read!(reader.read_array::<2>()));
+        let reliability_ack = u16::from_be_bytes(try_read!(reader.read_array::<2>())).into();
         let reliability_bits = u16::from_be_bytes(try_read!(reader.read_array::<2>()));
 
         HandshakeParsingResponse::Continue(Self {
@@ -82,7 +82,7 @@ impl HandshakePacket for ServerHelloPacket {
         buffer.put(&self.transport.to_bytes()[..]);
         buffer.put(&self.application.to_bytes()[..]);
 
-        buffer.put_u16(self.reliability_ack);
+        buffer.put_u16(self.reliability_ack.into());
         buffer.put_u16(self.reliability_bits);
     }
 }
@@ -97,7 +97,7 @@ impl HandshakePacket for ClientFinalisePacket {
         }
 
         return HandshakeParsingResponse::Continue(Self {
-            reliability_ack: u16::from_be_bytes(try_read!(reader.read_array::<2>())),
+            reliability_ack: u16::from_be_bytes(try_read!(reader.read_array::<2>())).into(),
             reliability_bits: u16::from_be_bytes(try_read!(reader.read_array::<2>())),
         })
     }
@@ -106,7 +106,7 @@ impl HandshakePacket for ClientFinalisePacket {
         // Write response code
         buffer.put_u16(HandshakeResponseCode::Continue as u16);
 
-        buffer.put_u16(self.reliability_ack);
+        buffer.put_u16(self.reliability_ack.into());
         buffer.put_u16(self.reliability_bits);
     }
 }

@@ -1,6 +1,6 @@
 use bytes::{BufMut, Bytes};
 use unbytes::{EndOfInput, Reader};
-use crate::appdata::NetworkVersionData;
+use crate::{appdata::NetworkVersionData, sequences::SequenceId};
 use super::codes::HandshakeResponseCode;
 
 pub(super) trait HandshakePacket: Sized {
@@ -24,7 +24,7 @@ impl<T> From<EndOfInput> for HandshakeParsingResponse<T> {
 /// - \[u16] Sequence identifier
 #[derive(Debug)]
 pub(super) struct HandshakePacketHeader {
-    pub sequence: u16,
+    pub sequence: SequenceId,
 }
 
 /// Utility for sending a close signal to a connection.
@@ -62,7 +62,7 @@ pub(super) struct ClientHelloPacket {
 pub(super) struct ServerHelloPacket {
     pub transport: NetworkVersionData,
     pub application: NetworkVersionData,
-    pub reliability_ack: u16,
+    pub reliability_ack: SequenceId,
     pub reliability_bits: u16,
 }
 
@@ -75,6 +75,6 @@ pub(super) struct ServerHelloPacket {
 /// - \[u16] Reliability bitfield
 #[derive(Debug)]
 pub(super) struct ClientFinalisePacket {
-    pub reliability_ack: u16,
+    pub reliability_ack: SequenceId,
     pub reliability_bits: u16,
 }

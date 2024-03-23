@@ -307,7 +307,7 @@ pub(crate) fn potential_new_peers_system(
 
                 // Push response packet to queue
                 endpoint.outgoing_pkts.push((event.address, closing_packet(&ClosingPacket {
-                    header: HandshakePacketHeader { sequence: fastrand::u16(..) },
+                    header: HandshakePacketHeader { sequence: fastrand::u16(..).into() },
                     reason: code,
                     additional: None,
                 })));
@@ -329,7 +329,7 @@ pub(crate) fn potential_new_peers_system(
                 Err(code) => {
                     // Push response packet to queue
                     endpoint.outgoing_pkts.push((event.address, closing_packet(&ClosingPacket {
-                        header: HandshakePacketHeader { sequence: fastrand::u16(..) },
+                        header: HandshakePacketHeader { sequence: fastrand::u16(..).into() },
                         reason: code,
                         additional: None,
                     })));
@@ -345,7 +345,7 @@ pub(crate) fn potential_new_peers_system(
         if !endpoint.listening {
             // Inform them of their rejection
             endpoint.outgoing_pkts.push((event.address, closing_packet(&ClosingPacket {
-                header: HandshakePacketHeader { sequence: fastrand::u16(..) },
+                header: HandshakePacketHeader { sequence: fastrand::u16(..).into() },
                 reason: HandshakeResponseCode::ServerNotListening,
                 additional: None,
             })));

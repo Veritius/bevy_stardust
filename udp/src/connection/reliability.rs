@@ -1,4 +1,4 @@
-use std::{collections::BTreeMap, time::Instant};
+use std::{cmp::Ordering, collections::BTreeMap, time::Instant};
 use bytes::Bytes;
 use crate::sequences::*;
 
@@ -6,16 +6,16 @@ const BITMASK: u128 = 1 << 127;
 
 #[derive(Debug, Clone)]
 pub(crate) struct ReliabilityState {
-    pub local_sequence: u16,
-    pub remote_sequence: u16,
+    pub local_sequence: SequenceId,
+    pub remote_sequence: SequenceId,
     pub sequence_memory: u128,
 }
 
 impl ReliabilityState {
     pub fn new() -> Self {
         Self {
-            local_sequence: fastrand::u16(..),
-            remote_sequence: 0,
+            local_sequence: SequenceId::random(),
+            remote_sequence: 0.into(),
             sequence_memory: 0,
         }
     }
@@ -31,33 +31,36 @@ impl ReliabilityState {
 
     /// Increments the local sequence by 1
     pub fn increment_local(&mut self) {
-        self.local_sequence = self.local_sequence.wrapping_add(1);
+        self.local_sequence += 1;
     }
 
     /// Acknowledge packets identified in a reliable header. Returns an iterator over the sequences of packets that have been acknowledged by the remote peer.
-    pub fn ack(&mut self, header: ReliablePacketHeader, bitfield_bytes: u8) -> impl Iterator<Item = u16> + Clone {
+    pub fn ack(&mut self, header: ReliablePacketHeader, bitfield_bytes: u8) -> impl Iterator<Item = SequenceId> + Clone {
         // Update bitfield and remote sequence
-        let seq_diff = wrapping_diff(header.sequence, self.remote_sequence);
-        if sequence_greater_than(header.sequence, self.remote_sequence) {
-            // Newer packet, shift the memory bitfield
-            self.remote_sequence = header.sequence;
-            self.sequence_memory = self.sequence_memory.overflowing_shr(seq_diff.into()).0;
-        } else {
-            // Older packet, mark id as acknowledged
-            self.sequence_memory |= BITMASK.overflowing_shr(seq_diff.into()).0;
+        let diff = header.sequence.diff(&self.remote_sequence);
+        match header.sequence.cmp(&self.remote_sequence) {
+            Ordering::Greater => {
+                // Newer packet, shift the memory bitfield
+                self.remote_sequence = header.sequence;
+                self.sequence_memory = self.sequence_memory.overflowing_shr(diff.into()).0;
+            },
+            _ => {
+                // Older packet, mark id as acknowledged
+                self.sequence_memory |= BITMASK.overflowing_shr(diff.into()).0;
+            }
         }
 
         // Iterator object for acknowledgements
         #[derive(Clone)]
         struct AcknowledgementIterator {
-            origin: u16,
+            origin: SequenceId,
             cursor: u8,
             limit: u8,
             bitfield: u128,
         }
 
         impl Iterator for AcknowledgementIterator {
-            type Item = u16;
+            type Item = SequenceId;
         
             fn next(&mut self) -> Option<Self::Item> {
                 // Get the ack value
@@ -68,11 +71,11 @@ impl ReliabilityState {
                     // Get the ack value
                     let mask = BITMASK >> self.cursor;
                     if self.bitfield & mask == 0 { self.cursor += 1; continue }
-                    let ack = self.origin.wrapping_sub(self.origin);
+                    let ack = self.origin - self.cursor as u16;
 
                     // Success, advance cursor and return
                     self.cursor += 1;
-                    return Some(ack)
+                    return Some(ack.into())
                 }
             }
         }
@@ -90,8 +93,8 @@ impl ReliabilityState {
 /// Required information for a reliable packet.
 #[derive(Debug, Clone, Copy)]
 pub struct ReliablePacketHeader {
-    pub sequence: u16,
-    pub ack: u16,
+    pub sequence: SequenceId,
+    pub ack: SequenceId,
     pub ack_bitfield: u128,
 }
 
@@ -131,7 +134,7 @@ impl ReliablePackets {
 
         // Remove all acked packets from storage
         for seq in iter {
-            self.unacked.remove(&seq);
+            self.unacked.remove(&seq.into());
         }
     }
 

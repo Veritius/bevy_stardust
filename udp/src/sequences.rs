@@ -19,6 +19,11 @@ impl SequenceId {
             return a.wrapping_sub(b);
         }
     }
+
+    #[inline]
+    pub fn random() -> Self {
+        Self(fastrand::u16(..))
+    }
 }
 
 impl PartialOrd for SequenceId {
