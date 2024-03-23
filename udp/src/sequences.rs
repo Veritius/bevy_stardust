@@ -1,6 +1,6 @@
-use std::{cmp::Ordering, ops::{Add, AddAssign, Sub, SubAssign}};
+use std::{cmp::Ordering, fmt::{Debug, Display}, ops::{Add, AddAssign, Sub, SubAssign}};
 
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+#[derive(Default, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct SequenceId(pub u16);
 
 impl SequenceId {
@@ -126,6 +126,20 @@ impl From<SequenceId> for u16 {
     #[inline]
     fn from(value: SequenceId) -> Self {
         value.0
+    }
+}
+
+impl Debug for SequenceId {
+    #[inline]
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        Debug::fmt(&self.0, f)
+    }
+}
+
+impl Display for SequenceId {
+    #[inline]
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        Display::fmt(&self.0, f)
     }
 }
 

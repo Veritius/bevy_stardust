@@ -65,7 +65,10 @@ pub(crate) fn handshake_polling_system(
                     };
 
                     // Check if this is an old packet, ignore if so
-                    if header.sequence <= handshake.reliability.remote_sequence { continue; }
+                    if header.sequence.0 <= handshake.reliability.remote_sequence.0 {
+                        tracing::trace!("Ignored outdated packet: seq_id {}, remote {}", header.sequence, handshake.reliability.remote_sequence);
+                        continue;
+                    }
 
                     // Try to parse the packet as a ServerHelloPacket, the next packet in the sequence
                     let packet = match ServerHelloPacket::from_bytes(&mut reader) {
@@ -133,8 +136,9 @@ pub(crate) fn handshake_polling_system(
 
                     // Mark as finalised
                     handshake.state = HandshakeState::Finished;
+                    break;
                 }
-                
+
                 // Check if we need to send a packet
                 if timeout_check(connection.timings.last_sent, RESEND_TIMEOUT) {
                     let mut buf = BytesMut::with_capacity(36);
@@ -161,7 +165,10 @@ pub(crate) fn handshake_polling_system(
                     };
 
                     // Check if this is an old packet, ignore if so
-                    if header.sequence <= handshake.reliability.remote_sequence { continue; }
+                    if header.sequence.0 <= handshake.reliability.remote_sequence.0 {
+                        tracing::trace!("Ignored outdated packet: seq_id {}, remote {}", header.sequence, handshake.reliability.remote_sequence);
+                        continue;
+                    }
 
                     // Try to parse the packet as a ClientFinalisePacket, the next packet in the sequence
                     let packet = match ClientFinalisePacket::from_bytes(&mut reader) {
@@ -191,6 +198,7 @@ pub(crate) fn handshake_polling_system(
 
                     // Mark as finalised
                     handshake.state = HandshakeState::Finished;
+                    break;
                 }
 
                 // Check if we need to send a packet
