@@ -1,10 +1,10 @@
-use std::ops::{Add, AddAssign, Sub, SubAssign};
+use std::{cmp::Ordering, ops::{Add, AddAssign, Sub, SubAssign}};
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct SequenceId(pub u16);
 
 impl SequenceId {
-    pub const MIDPOINT: u16 = u16::MAX / 2;
+    pub const MIDPOINT: u16 = 32768;
 
     pub fn diff(&self, other: &Self) -> u16 {
         let a = self.0;
@@ -22,14 +22,27 @@ impl SequenceId {
 }
 
 impl PartialOrd for SequenceId {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+    #[inline]
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
 impl Ord for SequenceId {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        todo!()
+    // An adaptation of Glenn Fiedler's wrapping sequence identifier algorithm
+    // https://www.gafferongames.com/post/reliability_ordering_and_congestion_avoidance_over_udp/
+    fn cmp(&self, other: &Self) -> Ordering {
+        match self.diff(other).cmp(&Self::MIDPOINT) {
+            Ordering::Equal => Ordering::Equal,
+            Ordering::Less => self.0.cmp(&other.0),
+            Ordering::Greater => {
+                match self.0.cmp(&other.0) {
+                    Ordering::Less => Ordering::Greater,
+                    Ordering::Greater => Ordering::Less,
+                    Ordering::Equal => unreachable!(),
+                }
+            },
+        }
     }
 }
 
@@ -113,6 +126,7 @@ impl From<SequenceId> for u16 {
 
 // Glenn Fiedler's wrap-around sequence identifier algorithm
 // https://www.gafferongames.com/post/reliability_ordering_and_congestion_avoidance_over_udp/
+#[deprecated]
 pub fn sequence_greater_than(s1: u16, s2: u16) -> bool {
     ((s1 > s2) && (s1 - s2 <= 32768)) || ((s1 < s2) && (s2 - s1 > 32768))
 }
@@ -131,10 +145,20 @@ pub fn wrapping_diff(a: u16, b: u16) -> u16 {
 }
 
 #[test]
-fn test_wrapping_diff() {
-    assert_eq!(wrapping_diff(0, 1), 1);
-    assert_eq!(wrapping_diff(1, 3), 2);
-    assert_eq!(wrapping_diff(15, 35), 20);
-    assert_eq!(wrapping_diff(u16::MAX, u16::MIN), 1);
-    assert_eq!(wrapping_diff(u16::MAX-1, u16::MIN+1), 3);
+fn sequence_id_ordering_test() {
+    const MIDPOINT: SequenceId = SequenceId(SequenceId::MIDPOINT);
+
+    #[inline]
+    fn seq(v: u16) -> SequenceId {
+        SequenceId::from(v)
+    }
+
+    assert_eq!(seq(4).cmp(&seq(4)), Ordering::Equal);
+    assert_eq!(seq(15).cmp(&seq(9)), Ordering::Less);
+    assert_eq!(seq(9).cmp(&seq(15)), Ordering::Greater);
+    assert_eq!(seq(65534).cmp(&seq(66)), Ordering::Less);
+    assert_eq!(seq(66).cmp(&seq(65534)), Ordering::Greater);
+    assert_eq!(MIDPOINT.sub(1).cmp(&MIDPOINT), Ordering::Greater);
+    assert_eq!(MIDPOINT.add(1).cmp(&MIDPOINT), Ordering::Less);
+    assert_eq!(MIDPOINT.cmp(&MIDPOINT), Ordering::Equal);
 }
