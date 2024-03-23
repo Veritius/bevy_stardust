@@ -28,7 +28,7 @@ pub fn setup_app() -> App {
 
     app.add_channel::<MyChannel>(ChannelConfiguration {
         reliable: ReliabilityGuarantee::Reliable,
-        ordered: OrderingGuarantee::Unordered,
+        ordered: OrderingGuarantee::Ordered,
         fragmented: false,
         priority: 0xFF,
     });
@@ -47,21 +47,33 @@ pub fn setup_app() -> App {
     return app;
 }
 
+static GREEK_ALPHABET: &[&str] = &[
+    "alpha", "beta", "gamma", "delta", "epsilon", "zeta", "eta", "theta", "iota", "kappa",
+    "lambda", "mu", "nu", "xi", "omicron", "pi", "sigma", "tau", "upsilon", "phi", "chi", "omega"
+];
+
 fn send_and_recv_system(
     registry: ChannelRegistry,
     mut peers: Query<(Entity, &NetworkMessages<Incoming>, &mut NetworkMessages<Outgoing>), With<NetworkPeer>>,
 ) {
-    for (origin, incoming, mut outgoing) in peers.iter_mut() {
+    for (peer, incoming, mut outgoing) in peers.iter_mut() {
         // Get the ID for our channel
         let id = registry.channel_id(std::any::TypeId::of::<MyChannel>()).unwrap();
 
         // Read all messages
         for message in incoming.channel_queue(id) {
             let message = std::str::from_utf8(&message).unwrap();
-            tracing::info!("Received a message from {origin:?}: {message}");
+            tracing::info!("Received a message from {peer:?}: {message}");
         }
 
-        // Send a message to the peer
-        outgoing.push(id, Bytes::from_static(b"Hello, world!"));
+        // Compose a message of random Greek words
+        let length = fastrand::usize(1..10);
+        let mut picks = Vec::with_capacity(length);
+        for _ in 0..length { picks.push(*(fastrand::choice(GREEK_ALPHABET.iter()).unwrap())); }
+        let string = picks.join(" ");
+
+        // Send it to the peer
+        tracing::info!("Sent a message to {peer:?}: {string}");
+        outgoing.push(id, Bytes::from(string));
     }
 }
