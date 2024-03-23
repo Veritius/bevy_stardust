@@ -3,6 +3,7 @@ mod impls;
 mod packets;
 mod system;
 
+use bevy_stardust::connections::NetworkPeer;
 pub(crate) use system::{handshake_polling_system, potential_new_peers_system};
 
 use std::{net::SocketAddr, time::Instant};
@@ -15,6 +16,7 @@ use codes::HandshakeResponseCode;
 pub(crate) struct OutgoingHandshake {
     pub connection: Connection,
     handshake: Handshaking,
+    peercomp: NetworkPeer,
 }
 
 impl OutgoingHandshake {
@@ -33,6 +35,7 @@ impl OutgoingHandshake {
                 state: HandshakeState::ClientHello,
                 reliability: ReliabilityState::new(),
             },
+            peercomp: NetworkPeer::new(),
         }
     }
 }

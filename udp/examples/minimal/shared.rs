@@ -28,7 +28,7 @@ pub fn setup_app() -> App {
 
     app.add_channel::<MyChannel>(ChannelConfiguration {
         reliable: ReliabilityGuarantee::Reliable,
-        ordered: OrderingGuarantee::Ordered,
+        ordered: OrderingGuarantee::Unordered,
         fragmented: false,
         priority: 0xFF,
     });
