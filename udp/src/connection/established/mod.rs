@@ -33,9 +33,10 @@ impl Established {
         }
     }
 
-    pub fn ordering(&mut self, channel: ChannelId) -> &mut OrderedMessages {
+    // TODO: Replace this
+    pub fn ordering_entry(&mut self, channel: ChannelId, mkfn: impl Fn() -> OrderedMessages) -> &mut OrderedMessages {
         self.ordering.entry(channel)
-            .or_insert(OrderedMessages::new())
+            .or_insert(mkfn())
     }
 
     fn flag_error(&mut self, severity: ErrorSeverity) {

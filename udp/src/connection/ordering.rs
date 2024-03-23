@@ -1,33 +1,26 @@
 use std::cmp::Ordering;
 use bytes::Bytes;
 
-use crate::sequences::sequence_greater_than;
-
 /// Ensures items are popped in order, regardless of insertion order.
 pub(crate) struct OrderedMessages {
+    mode: OrderedMessagesMode,
     send_index: u16,
     recv_queue: Vec<OrderedMessage>,
+    recv_index: u16,
 }
 
 impl OrderedMessages {
-    pub fn new() -> Self {
+    pub fn new(mode: OrderedMessagesMode) -> Self {
         Self {
-            recv_queue: Vec::with_capacity(16),
+            mode,
             send_index: 0,
+            recv_queue: Vec::with_capacity(16),
+            recv_index: 0,
         }
     }
 
-    pub fn pop(&mut self) -> Option<OrderedMessage> {
+    pub fn recv(&mut self, message: OrderedMessage) -> Option<OrderedMessage> {
         todo!()
-    }
-
-    pub fn put(&mut self, message: OrderedMessage) {
-        match self.recv_queue.binary_search(&message) {
-            Ok(_) => panic!(), // Shouldn't happen
-            Err(idx) => {
-                self.recv_queue.insert(idx, message);
-            },
-        }
     }
 
     pub fn advance(&mut self) -> u16 {
@@ -61,4 +54,9 @@ impl Ord for OrderedMessage {
     fn cmp(&self, other: &Self) -> Ordering {
         self.partial_cmp(other).unwrap()
     }
+}
+
+pub(crate) enum OrderedMessagesMode {
+    Ordered,
+    Sequenced,
 }

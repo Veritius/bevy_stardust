@@ -3,7 +3,7 @@ use bevy_ecs::prelude::*;
 use bevy_stardust::prelude::*;
 use thread_local::ThreadLocal;
 use unbytes::Reader;
-use crate::{connection::{ordering::OrderedMessage, reliability::ReliablePacketHeader}, packet::{OutgoingPacket, MTU_SIZE}, plugin::PluginConfiguration, Connection};
+use crate::{connection::{ordering::{OrderedMessage, OrderedMessages, OrderedMessagesMode}, reliability::ReliablePacketHeader}, packet::{OutgoingPacket, MTU_SIZE}, plugin::PluginConfiguration, Connection};
 use super::{frame::PacketHeader, Established};
 
 macro_rules! try_read {
@@ -104,11 +104,20 @@ pub(crate) fn established_packet_reader_system(
                     match ordering {
                         Some(sequence) => {
                             // Ordered messages are added to a queue
-                            let ordering = state.ordering(channel);
-                            ordering.put(OrderedMessage {
-                                sequence,
-                                payload,
+
+                            // Fetch the queue structure
+                            let ordering = state.ordering_entry(channel, || {
+                                match channel_data.ordered {
+                                    OrderingGuarantee::Unordered => panic!(),
+                                    OrderingGuarantee::Sequenced => OrderedMessages::new(OrderedMessagesMode::Sequenced),
+                                    OrderingGuarantee::Ordered => OrderedMessages::new(OrderedMessagesMode::Sequenced),
+                                }
                             });
+
+                            // Store in the queue structure
+                            ordering.recv(OrderedMessage { sequence, payload });
+
+                            // ...
                             // ordering.pop()
                         },
                         None => {
@@ -218,7 +227,14 @@ pub(crate) fn established_packet_builder_system(
 
             // If present, put ordering data into buffer
             if message.flags.is_ordered() {
-                let ordering_data = state.ordering(message.channel);
+                let ordering_data = state.ordering_entry(message.channel, || {
+                    let channel_data = registry.channel_config(message.channel).unwrap();
+                    match channel_data.ordered {
+                        OrderingGuarantee::Unordered => panic!(),
+                        OrderingGuarantee::Sequenced => OrderedMessages::new(OrderedMessagesMode::Sequenced),
+                        OrderingGuarantee::Ordered => OrderedMessages::new(OrderedMessagesMode::Ordered),
+                    }
+                });
                 scratch.bytes.put_u16(ordering_data.advance());
             }
 
