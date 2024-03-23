@@ -1,6 +1,5 @@
 use std::cmp::Ordering;
 use bytes::Bytes;
-
 use crate::sequences::SequenceId;
 
 /// Ensures items are popped in order, regardless of insertion order.
@@ -16,13 +15,31 @@ impl OrderedMessages {
         Self {
             mode,
             send_index: 0.into(),
-            recv_queue: Vec::with_capacity(16),
+            recv_queue: match mode {
+                OrderedMessagesMode::Ordered => Vec::with_capacity(16),
+                OrderedMessagesMode::Sequenced => Vec::new(), // never used
+            },
             recv_index: 0.into(),
         }
     }
 
     pub fn recv(&mut self, message: OrderedMessage) -> Option<OrderedMessage> {
-        todo!()
+        match self.mode {
+            // Sequenced messages are really simple.
+            // If it's newer than the last one, return it.
+            // Otherwise, don't do anything.
+            OrderedMessagesMode::Sequenced => {
+                if self.recv_index >= message.sequence {
+                    self.recv_index = message.sequence + 1;
+                    return Some(message);
+                }
+                return None;
+            },
+
+            OrderedMessagesMode::Ordered => {
+                todo!()
+            },
+        }
     }
 
     pub fn advance(&mut self) -> SequenceId {
@@ -58,6 +75,7 @@ impl Ord for OrderedMessage {
     }
 }
 
+#[derive(Clone, Copy)]
 pub(crate) enum OrderedMessagesMode {
     Ordered,
     Sequenced,
