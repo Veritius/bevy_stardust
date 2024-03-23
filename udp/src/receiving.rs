@@ -26,7 +26,11 @@ pub(crate) fn io_receiving_system(
             match endpoint.udp_socket.recv_from(&mut scratch) {
                 // Received a UDP packet
                 Ok((bytes, origin)) => {
+                    // Track the packet recv
                     pkts_received += 1; bytes_received += bytes as u64;
+                    endpoint.statistics.record_packet_recv(bytes);
+
+                    // Store the message in the heap
                     let payload = Bytes::copy_from_slice(&scratch[..bytes]);
 
                     match endpoint.connections.get(&origin) {
@@ -37,7 +41,6 @@ pub(crate) fn io_receiving_system(
 
                             // Set last_recv in timings and update statistics
                             connection.timings.set_last_recv_now();
-                            endpoint.statistics.record_packet_recv(bytes);
 
                             // We append it to the queue for later processing
                             connection.packet_queue.push_incoming(IncomingPacket { payload });
