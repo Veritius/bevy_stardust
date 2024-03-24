@@ -1,8 +1,8 @@
-use std::cell::Cell;
+use std::{cell::Cell, cmp::Ordering};
 use bevy_ecs::system::Resource;
 use bytes::BytesMut;
 use thread_local::ThreadLocal;
-use crate::{packet::MTU_SIZE, plugin::PluginConfiguration};
+use crate::{connection::established::frame::FrameFlags, packet::MTU_SIZE, plugin::PluginConfiguration};
 use super::frame::Frame;
 
 const BYTE_SCRATCH_SIZE: usize = MTU_SIZE;
@@ -60,9 +60,24 @@ impl<'a> PackingManager<'a> {
 
     pub fn run(&mut self) {
         // Record some data for debugging
-        let trace_span = tracing::trace_span!("Packing packets");
+        let trace_span = tracing::trace_span!("Packing frames");
         let _entered = trace_span.enter();
         trace_span.record("frames", self.scratch.frames.len());
+
+        // Sort the data to read reliable frames first
+        let trace_span = tracing::trace_span!("Sorting frames");
+        trace_span.in_scope(|| {
+            self.scratch.frames.sort_unstable_by(|a, b| {
+                match (
+                    (a.flags & FrameFlags::RELIABLE).0 > 0,
+                    (b.flags & FrameFlags::RELIABLE).0 > 0,
+                ) {
+                    (true, false) => Ordering::Greater,
+                    (false, true) => Ordering::Less,
+                    _ => Ordering::Equal,
+                }
+            });
+        });
 
         todo!()
     }
