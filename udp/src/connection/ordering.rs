@@ -55,7 +55,10 @@ impl OrderedMessages {
                     },
                     Ordering::Greater => {
                         match self.recv_queue.binary_search(&message) {
-                            Ok(_) => unreachable!(), // should be covered by the Equal case
+                            Ok(_) => {
+                                // WTF?
+                                return None;
+                            }
                             Err(idx) => {
                                 self.recv_queue.insert(idx, message);
                                 return None;
