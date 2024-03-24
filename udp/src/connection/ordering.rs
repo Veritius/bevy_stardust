@@ -1,4 +1,4 @@
-use std::cmp::Ordering;
+use std::{cmp::Ordering, fmt::Debug};
 use bytes::Bytes;
 use crate::sequences::SequenceId;
 
@@ -101,7 +101,7 @@ impl OrderedMessages {
                     type Item = OrderedMessage;
                     
                     fn next(&mut self) -> Option<Self::Item> {
-                        match self.queue.binary_search(&OrderedMessage::search(*self.index)) {
+                        match self.queue.binary_search(&OrderedMessage::blank(*self.index)) {
                             Ok(idx) => {
                                 *self.index += 1;
                                 Some(self.queue.remove(idx))
@@ -150,7 +150,7 @@ pub(crate) struct OrderedMessage {
 }
 
 impl OrderedMessage {
-    pub fn search(sequence: SequenceId) -> Self {
+    pub fn blank(sequence: SequenceId) -> Self {
         Self {
             sequence,
             payload: Bytes::from_static(&[]),
@@ -175,5 +175,41 @@ impl PartialOrd for OrderedMessage {
 impl Ord for OrderedMessage {
     fn cmp(&self, other: &Self) -> Ordering {
         self.sequence.cmp(&other.sequence)
+    }
+}
+
+impl Debug for OrderedMessage {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("OrderedMessage")
+        .field("sequence", &self.sequence)
+        .finish()
+    }
+}
+
+mod tests {
+    #![allow(unused_imports)]
+
+    use super::*;
+
+    #[test]
+    fn sequenced_messages_test() {
+        let mut state = OrderedMessages::sequenced();
+        assert_eq!(state.recv(OrderedMessage::blank(0.into())), Some(OrderedMessage::blank(0.into())));
+        assert_eq!(state.recv(OrderedMessage::blank(1.into())), Some(OrderedMessage::blank(1.into())));
+        assert_eq!(state.recv(OrderedMessage::blank(3.into())), Some(OrderedMessage::blank(3.into())));
+        assert_eq!(state.recv(OrderedMessage::blank(2.into())), None);
+    }
+
+    #[test]
+    fn ordered_messages_test() {
+        let mut state = OrderedMessages::ordered();
+        assert_eq!(state.recv(OrderedMessage::blank(0.into())), Some(OrderedMessage::blank(0.into())));
+        assert_eq!(state.recv(OrderedMessage::blank(1.into())), Some(OrderedMessage::blank(1.into())));
+        assert_eq!(state.recv(OrderedMessage::blank(3.into())), None);
+        assert_eq!(state.recv(OrderedMessage::blank(4.into())), None);
+        assert_eq!(state.recv(OrderedMessage::blank(2.into())), Some(OrderedMessage::blank(2.into())));
+
+        let re = state.drain_available().unwrap().collect::<Vec<_>>();
+        assert_eq!(re, vec![OrderedMessage::blank(3.into()), OrderedMessage::blank(4.into())]);
     }
 }
