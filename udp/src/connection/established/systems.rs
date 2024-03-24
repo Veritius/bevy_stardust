@@ -56,8 +56,7 @@ pub(crate) fn established_packet_reader_system(
 
                 // Finally, acknowledge the packet
                 state.reliability.ack(
-                    ReliablePacketHeader {
-                        sequence, ack, ack_bitfield },
+                    ReliablePacketHeader { sequence, ack, ack_bitfield },
                     config.reliable_bitfield_length as u8
                 );
             }
