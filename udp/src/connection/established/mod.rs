@@ -2,7 +2,7 @@ mod frame;
 mod systems;
 
 use std::collections::HashMap;
-use bevy_stardust::channels::ChannelId;
+use bevy_stardust::prelude::*;
 use bevy_ecs::prelude::*;
 use self::frame::PacketFrame;
 use super::{ordering::OrderedMessages, reliability::{ReliabilityState, ReliablePackets}};
@@ -33,10 +33,13 @@ impl Established {
         }
     }
 
-    // TODO: Replace this
-    pub fn ordering_entry(&mut self, channel: ChannelId, mkfn: impl Fn() -> OrderedMessages) -> &mut OrderedMessages {
+    pub fn ordering_entry<'a>(&mut self, channel: ChannelId, cdata: impl Fn() -> &'a ChannelData + 'a) -> &mut OrderedMessages {
         self.ordering.entry(channel)
-            .or_insert(mkfn())
+            .or_insert(match cdata().ordered {
+                OrderingGuarantee::Unordered => panic!(),
+                OrderingGuarantee::Sequenced => OrderedMessages::sequenced(),
+                OrderingGuarantee::Ordered => OrderedMessages::ordered(),
+            })
     }
 
     fn flag_error(&mut self, severity: ErrorSeverity) {

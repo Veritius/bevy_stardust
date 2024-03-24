@@ -107,13 +107,7 @@ pub(crate) fn established_packet_reader_system(
                             // Ordered messages are added to a queue
 
                             // Fetch the queue structure
-                            let ordering = state.ordering_entry(channel, || {
-                                match channel_data.ordered {
-                                    OrderingGuarantee::Unordered => panic!(),
-                                    OrderingGuarantee::Sequenced => OrderedMessages::sequenced(),
-                                    OrderingGuarantee::Ordered => OrderedMessages::ordered(),
-                                }
-                            });
+                            let ordering = state.ordering_entry(channel, || channel_data);
 
                             // Store in the queue structure
                             let message = ordering.recv(OrderedMessage {
@@ -236,12 +230,7 @@ pub(crate) fn established_packet_builder_system(
             // If present, put ordering data into buffer
             if message.flags.is_ordered() {
                 let ordering_data = state.ordering_entry(message.channel, || {
-                    let channel_data = registry.channel_config(message.channel).unwrap();
-                    match channel_data.ordered {
-                        OrderingGuarantee::Unordered => panic!(),
-                        OrderingGuarantee::Sequenced => OrderedMessages::sequenced(),
-                        OrderingGuarantee::Ordered => OrderedMessages::ordered(),
-                    }
+                    registry.channel_config(message.channel).unwrap()
                 });
 
                 scratch.bytes.put_u16(ordering_data.advance().into());
