@@ -1,17 +1,29 @@
 use std::{cmp::Ordering, fmt::{Debug, Display}, ops::{Add, AddAssign, Sub, SubAssign}};
 
-#[derive(Default, Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub(crate) struct SequenceId(pub u16);
 
 impl SequenceId {
-    pub const MIDPOINT: u16 = 32768;
+    pub const MIN: Self = Self(u16::MIN);
+    pub const MID: u16 = 32768;
+    pub const MAX: Self = Self(u16::MAX);
+
+    #[inline]
+    pub fn new(val: u16) -> Self {
+        Self::from(val)
+    }
+
+    #[inline]
+    pub fn random() -> Self {
+        Self(fastrand::u16(..))
+    }
 
     pub fn diff(&self, other: &Self) -> u16 {
         let a = self.0;
         let b = other.0;
 
         let diff = a.abs_diff(b);
-        if diff > Self::MIDPOINT { return diff }
+        if diff > Self::MID { return diff }
 
         if a > b {
             return b.wrapping_sub(a);
@@ -19,10 +31,12 @@ impl SequenceId {
             return a.wrapping_sub(b);
         }
     }
+}
 
+impl Default for SequenceId {
     #[inline]
-    pub fn random() -> Self {
-        Self(fastrand::u16(..))
+    fn default() -> Self {
+        Self::MIN
     }
 }
 
@@ -37,7 +51,7 @@ impl Ord for SequenceId {
     // An adaptation of Glenn Fiedler's wrapping sequence identifier algorithm
     // https://www.gafferongames.com/post/reliability_ordering_and_congestion_avoidance_over_udp/
     fn cmp(&self, other: &Self) -> Ordering {
-        match self.diff(other).cmp(&Self::MIDPOINT) {
+        match self.diff(other).cmp(&Self::MID) {
             Ordering::Equal => Ordering::Equal,
             Ordering::Less => self.0.cmp(&other.0),
             Ordering::Greater => {
@@ -145,7 +159,7 @@ impl Display for SequenceId {
 
 #[test]
 fn sequence_id_ordering_test() {
-    const MIDPOINT: SequenceId = SequenceId(SequenceId::MIDPOINT);
+    const MIDPOINT: SequenceId = SequenceId(SequenceId::MID);
 
     #[inline]
     fn seq(v: u16) -> SequenceId {

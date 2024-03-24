@@ -3,7 +3,7 @@ use bevy_ecs::prelude::*;
 use bevy_stardust::prelude::*;
 use thread_local::ThreadLocal;
 use unbytes::Reader;
-use crate::{connection::{ordering::{OrderedMessage, OrderedMessages, OrderedMessagesMode}, reliability::ReliablePacketHeader}, packet::{OutgoingPacket, MTU_SIZE}, plugin::PluginConfiguration, Connection};
+use crate::{connection::{ordering::{OrderedMessage, OrderedMessages}, reliability::ReliablePacketHeader}, packet::{OutgoingPacket, MTU_SIZE}, plugin::PluginConfiguration, Connection};
 use super::{frame::PacketHeader, Established};
 
 macro_rules! try_read {
@@ -110,8 +110,8 @@ pub(crate) fn established_packet_reader_system(
                             let ordering = state.ordering_entry(channel, || {
                                 match channel_data.ordered {
                                     OrderingGuarantee::Unordered => panic!(),
-                                    OrderingGuarantee::Sequenced => OrderedMessages::new(OrderedMessagesMode::Sequenced),
-                                    OrderingGuarantee::Ordered => OrderedMessages::new(OrderedMessagesMode::Sequenced),
+                                    OrderingGuarantee::Sequenced => OrderedMessages::sequenced(),
+                                    OrderingGuarantee::Ordered => OrderedMessages::ordered(),
                                 }
                             });
 
@@ -235,8 +235,8 @@ pub(crate) fn established_packet_builder_system(
                     let channel_data = registry.channel_config(message.channel).unwrap();
                     match channel_data.ordered {
                         OrderingGuarantee::Unordered => panic!(),
-                        OrderingGuarantee::Sequenced => OrderedMessages::new(OrderedMessagesMode::Sequenced),
-                        OrderingGuarantee::Ordered => OrderedMessages::new(OrderedMessagesMode::Ordered),
+                        OrderingGuarantee::Sequenced => OrderedMessages::sequenced(),
+                        OrderingGuarantee::Ordered => OrderedMessages::ordered(),
                     }
                 });
 

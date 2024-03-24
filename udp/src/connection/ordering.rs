@@ -3,49 +3,105 @@ use bytes::Bytes;
 use crate::sequences::SequenceId;
 
 /// Ensures items are popped in order, regardless of insertion order.
-pub(crate) struct OrderedMessages {
-    mode: OrderedMessagesMode,
-    send_index: SequenceId,
-    recv_queue: Vec<OrderedMessage>,
-    recv_index: SequenceId,
+pub(crate) enum OrderedMessages {
+    Sequenced {
+        send_index: SequenceId,
+        recv_index: SequenceId,
+    },
+    Ordered {
+        send_index: SequenceId,
+        recv_queue: Vec<OrderedMessage>,
+        oldest: SequenceId,
+        newest: SequenceId,
+    },
 }
 
 impl OrderedMessages {
-    pub fn new(mode: OrderedMessagesMode) -> Self {
-        Self {
-            mode,
-            send_index: 0.into(),
-            recv_queue: match mode {
-                OrderedMessagesMode::Ordered => Vec::with_capacity(16),
-                OrderedMessagesMode::Sequenced => Vec::new(), // never used
-            },
-            recv_index: 0.into(),
+    pub fn sequenced() -> Self {
+        Self::Sequenced {
+            send_index: SequenceId::default(),
+            recv_index: SequenceId::default(),
+        }
+    }
+
+    pub fn ordered() -> Self {
+        Self::Ordered {
+            send_index: SequenceId::default(),
+            recv_queue: Vec::with_capacity(16),
+            oldest: SequenceId::default(),
+            newest: SequenceId::default(),
         }
     }
 
     pub fn recv(&mut self, message: OrderedMessage) -> Option<OrderedMessage> {
-        match self.mode {
+        match self {
             // Sequenced messages are really simple.
             // If it's newer than the last one, return it.
             // Otherwise, don't do anything.
-            OrderedMessagesMode::Sequenced => {
-                if self.recv_index >= message.sequence {
-                    self.recv_index = message.sequence + 1;
+            Self::Sequenced {
+                send_index,
+                recv_index
+            } => {
+                if *send_index >= message.sequence {
+                    *recv_index = message.sequence + 1;
                     return Some(message);
                 }
                 return None;
             },
 
-            OrderedMessagesMode::Ordered => {
+            Self::Ordered {
+                send_index,
+                recv_queue,
+                oldest,
+                newest,
+            } => {
                 todo!()
+            }
+        }
+    }
+
+    pub fn drain_available(&mut self) -> Option<() /* impl Iterator<Item = OrderedMessage> */> {
+        match self {
+            OrderedMessages::Sequenced {
+                send_index: _,
+                recv_index: _,
+            } => {
+                return None;
             },
+
+            OrderedMessages::Ordered {
+                send_index: _,
+                recv_queue: _,
+                oldest: _,
+                newest: _,
+            } => {
+                todo!()
+            }
         }
     }
 
     pub fn advance(&mut self) -> SequenceId {
-        let ind = self.send_index;
-        self.send_index += 1;
-        return ind;
+        match self {
+            OrderedMessages::Sequenced {
+                send_index,
+                recv_index: _,
+            } => {
+                let ind = *send_index;
+                *send_index += 1;
+                return ind;
+            },
+
+            OrderedMessages::Ordered {
+                send_index,
+                recv_queue: _,
+                oldest: _,
+                newest: _,
+            } => {
+                let ind = *send_index;
+                *send_index += 1;
+                return ind;
+            },
+        }
     }
 }
 
@@ -73,10 +129,4 @@ impl Ord for OrderedMessage {
     fn cmp(&self, other: &Self) -> Ordering {
         self.sequence.cmp(&other.sequence)
     }
-}
-
-#[derive(Clone, Copy)]
-pub(crate) enum OrderedMessagesMode {
-    Ordered,
-    Sequenced,
 }
