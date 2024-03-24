@@ -335,7 +335,7 @@ pub(crate) fn established_packet_builder_system(
             // This is required because we have a fair bit of bytes in the buffer
             // that would be useless at best (and harmful at most) to send
             let packet = Bytes::from(bin.buffer).slice(offset..total_len);
-            let payload = packet.slice(..length);
+            let payload = packet.slice(length..);
 
             // Reliable packets need to be stored until acked
             if is_reliable {
