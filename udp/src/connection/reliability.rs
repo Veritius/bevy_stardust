@@ -173,6 +173,7 @@ impl ReliablePackets {
     }
 }
 
+#[derive(Debug)]
 pub(crate) struct UnackedPacket {
     pub payload: Bytes,
     time: Instant,
@@ -239,4 +240,20 @@ fn conversation_test() {
     bob.ack(alice_header, 8);
     assert_eq!(bob.header().ack, 3.into());
     assert_eq!(bob.header().bits, 0b0000_0110);
+
+    // Bob sends a message to Alice
+    bob.record(2.into(), empty());
+    let bob_header = bob.header();
+    assert_eq!(bob.header().seq, 2.into());
+    bob.advance();
+
+    // Alice receives Bob's message
+    alice.ack(bob_header, 8);
+    assert_eq!(alice.header().ack, 2.into());
+    assert_eq!(alice.header().bits, 0b0000_0011);
+
+    // Alice should have one packet that needs retransmission
+    let mut lost_iter = alice.drain_old(|_| true);
+    assert!(lost_iter.next().is_some());
+    assert!(lost_iter.next().is_none());
 }
