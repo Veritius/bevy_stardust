@@ -71,9 +71,9 @@ impl ReliabilityState {
                     if self.cursor == self.limit { return None }
 
                     // Get the ack value
-                    let mask = BITMASK >> self.cursor;
+                    let mask = BITMASK.overflowing_shl(self.cursor.into()).0;
                     if self.bitfield & mask == 0 { self.cursor += 1; continue }
-                    let ack = self.origin - self.cursor as u16;
+                    let ack = self.origin + self.cursor as u16;
 
                     // Success, advance cursor and return
                     self.cursor += 1;
@@ -181,9 +181,11 @@ pub(crate) struct UnackedPacket {
 
 #[test]
 fn conversation_test() {
+    static EMPTY: &[u8] = &[];
+
     // An empty Bytes object to test with.
+    #[inline]
     fn empty() -> Bytes {
-        static EMPTY: &[u8] = &[];
         Bytes::from_static(EMPTY)
     }
 
