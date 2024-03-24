@@ -116,13 +116,17 @@ pub(crate) fn established_packet_reader_system(
                             });
 
                             // Store in the queue structure
-                            ordering.recv(OrderedMessage {
+                            let message = ordering.recv(OrderedMessage {
                                 sequence: sequence.into(),
                                 payload
                             });
 
-                            // ...
-                            // ordering.pop()
+                            // Check if it was returned immediately
+                            if let Some(message) = message {
+                                incoming.push(channel, message.payload);
+                            }
+
+                            // TODO: Check if any other values were freed up
                         },
                         None => {
                             // Unordered messages are pushed immediately
