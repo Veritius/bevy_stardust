@@ -143,6 +143,13 @@ impl From<SequenceId> for u16 {
     }
 }
 
+impl From<SequenceId> for usize {
+    #[inline]
+    fn from(value: SequenceId) -> Self {
+        value.0 as usize
+    }
+}
+
 impl Debug for SequenceId {
     #[inline]
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

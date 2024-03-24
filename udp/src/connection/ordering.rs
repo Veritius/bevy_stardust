@@ -11,8 +11,7 @@ pub(crate) enum OrderedMessages {
     Ordered {
         send_index: SequenceId,
         recv_queue: Vec<OrderedMessage>,
-        oldest: SequenceId,
-        newest: SequenceId,
+        recv_index: SequenceId,
     },
 }
 
@@ -28,8 +27,7 @@ impl OrderedMessages {
         Self::Ordered {
             send_index: SequenceId::default(),
             recv_queue: Vec::with_capacity(16),
-            oldest: SequenceId::default(),
-            newest: SequenceId::default(),
+            recv_index: SequenceId::default(),
         }
     }
 
@@ -49,18 +47,36 @@ impl OrderedMessages {
                 return None;
             },
 
+            // Based on Laminar's ordering algorithm, adapted to use an ordered vec instead of a hashmap.
+            // https://github.com/TimonPost/laminar/blob/e8ffb26a915bb6ac3c8d959031d63f8a776e763c/src/infrastructure/arranging/ordering.rs#L230-L242
             Self::Ordered {
-                send_index,
+                send_index: _,
                 recv_queue,
-                oldest,
-                newest,
+                recv_index,
             } => {
-                todo!()
+                match (*recv_index).cmp(&message.sequence) {
+                    Ordering::Less => {
+                        return None;
+                    },
+                    Ordering::Equal => {
+                        *recv_index += 1;
+                        return Some(message);
+                    },
+                    Ordering::Greater => {
+                        match recv_queue.binary_search(&message) {
+                            Ok(_) => unreachable!(), // should be covered by the Equal case
+                            Err(idx) => {
+                                recv_queue.insert(idx, message);
+                                return None;
+                            },
+                        }
+                    },
+                }
             }
         }
     }
 
-    pub fn drain_available(&mut self) -> Option<() /* impl Iterator<Item = OrderedMessage> */> {
+    pub fn drain_available(&mut self) -> Option<impl Iterator<Item = OrderedMessage> + '_> {
         match self {
             OrderedMessages::Sequenced {
                 send_index: _,
@@ -69,13 +85,36 @@ impl OrderedMessages {
                 return None;
             },
 
+            // Based on Laminar's ordering algorithm, adapted to use an ordered vec instead of a hashmap.
+            // https://github.com/TimonPost/laminar/blob/e8ffb26a915bb6ac3c8d959031d63f8a776e763c/src/infrastructure/arranging/ordering.rs#L266-L274
             OrderedMessages::Ordered {
                 send_index: _,
-                recv_queue: _,
-                oldest: _,
-                newest: _,
+                recv_queue,
+                recv_index,
             } => {
-                todo!()
+                struct OrderedMessageDrain<'a> {
+                    index: &'a mut SequenceId,
+                    queue: &'a mut Vec<OrderedMessage>,
+                }
+
+                impl Iterator for OrderedMessageDrain<'_> {
+                    type Item = OrderedMessage;
+                    
+                    fn next(&mut self) -> Option<Self::Item> {
+                        match self.queue.binary_search(&OrderedMessage::search(*self.index)) {
+                            Ok(idx) => {
+                                *self.index += 1;
+                                Some(self.queue.remove(idx))
+                            },
+                            Err(_) => None,
+                        }
+                    }
+                }
+
+                return Some(OrderedMessageDrain {
+                    index: recv_index,
+                    queue: recv_queue,
+                });
             }
         }
     }
@@ -94,8 +133,7 @@ impl OrderedMessages {
             OrderedMessages::Ordered {
                 send_index,
                 recv_queue: _,
-                oldest: _,
-                newest: _,
+                recv_index: _,
             } => {
                 let ind = *send_index;
                 *send_index += 1;
@@ -109,6 +147,15 @@ impl OrderedMessages {
 pub(crate) struct OrderedMessage {
     pub sequence: SequenceId,
     pub payload: Bytes,
+}
+
+impl OrderedMessage {
+    pub fn search(sequence: SequenceId) -> Self {
+        Self {
+            sequence,
+            payload: Bytes::from_static(&[]),
+        }
+    }
 }
 
 impl PartialEq for OrderedMessage {
