@@ -238,5 +238,5 @@ fn conversation_test() {
     // Bob receives Alice's second message
     bob.ack(alice_header, 8);
     assert_eq!(bob.header().ack, 3.into());
-    // assert_eq!(bob.header().bits, 0b0000_0101);
+    assert_eq!(bob.header().bits, 0b0000_0110);
 }
