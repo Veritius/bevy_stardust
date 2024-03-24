@@ -182,7 +182,9 @@ fn sequence_id_ordering_test() {
     assert_eq!(seq(15).cmp(&seq(9)), Ordering::Less);
     assert_eq!(seq(9).cmp(&seq(15)), Ordering::Greater);
     assert_eq!(seq(65534).cmp(&seq(66)), Ordering::Less);
+    assert_eq!(seq(u16::MAX).cmp(&seq(u16::MIN)), Ordering::Less);
     assert_eq!(seq(66).cmp(&seq(65534)), Ordering::Greater);
+    assert_eq!(seq(u16::MIN).cmp(&seq(u16::MAX)), Ordering::Greater);
     assert_eq!(MIDPOINT.sub(1).cmp(&MIDPOINT), Ordering::Greater);
     assert_eq!(MIDPOINT.add(1).cmp(&MIDPOINT), Ordering::Less);
     assert_eq!(MIDPOINT.cmp(&MIDPOINT), Ordering::Equal);
