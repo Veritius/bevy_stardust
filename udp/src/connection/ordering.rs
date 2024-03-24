@@ -3,28 +3,26 @@ use bytes::Bytes;
 use crate::sequences::SequenceId;
 
 /// Ensures items are popped in order, regardless of insertion order.
-pub(crate) enum OrderedMessages {
-    Sequenced {
-        send_index: SequenceId,
-        recv_index: SequenceId,
-    },
-    Ordered {
-        send_index: SequenceId,
-        recv_queue: Vec<OrderedMessage>,
-        recv_index: SequenceId,
-    },
+pub(crate) struct OrderedMessages {
+    mode: OrderingMode,
+    send_index: SequenceId,
+    recv_queue: Vec<OrderedMessage>,
+    recv_index: SequenceId,
 }
 
 impl OrderedMessages {
     pub fn sequenced() -> Self {
-        Self::Sequenced {
+        Self {
+            mode: OrderingMode::Sequenced,
             send_index: SequenceId::default(),
+            recv_queue: Vec::with_capacity(0), // never used
             recv_index: SequenceId::default(),
         }
     }
 
     pub fn ordered() -> Self {
-        Self::Ordered {
+        Self {
+            mode: OrderingMode::Ordered,
             send_index: SequenceId::default(),
             recv_queue: Vec::with_capacity(16),
             recv_index: SequenceId::default(),
@@ -32,16 +30,13 @@ impl OrderedMessages {
     }
 
     pub fn recv(&mut self, message: OrderedMessage) -> Option<OrderedMessage> {
-        match self {
+        match self.mode {
             // Sequenced messages are really simple.
             // If it's newer than the last one, return it.
             // Otherwise, don't do anything.
-            Self::Sequenced {
-                send_index: _,
-                recv_index
-            } => {
-                if *recv_index >= message.sequence {
-                    *recv_index = message.sequence + 1;
+            OrderingMode::Sequenced => {
+                if self.recv_index >= message.sequence {
+                    self.recv_index = message.sequence + 1;
                     return Some(message);
                 }
                 return None;
@@ -49,24 +44,20 @@ impl OrderedMessages {
 
             // Based on Laminar's ordering algorithm, adapted to use an ordered vec instead of a hashmap.
             // https://github.com/TimonPost/laminar/blob/e8ffb26a915bb6ac3c8d959031d63f8a776e763c/src/infrastructure/arranging/ordering.rs#L230-L242
-            Self::Ordered {
-                send_index: _,
-                recv_queue,
-                recv_index,
-            } => {
-                match (*recv_index).cmp(&message.sequence) {
+            OrderingMode::Ordered => {
+                match self.recv_index.cmp(&message.sequence) {
                     Ordering::Less => {
                         return None;
                     },
                     Ordering::Equal => {
-                        *recv_index += 1;
+                        self.recv_index += 1;
                         return Some(message);
                     },
                     Ordering::Greater => {
-                        match recv_queue.binary_search(&message) {
+                        match self.recv_queue.binary_search(&message) {
                             Ok(_) => unreachable!(), // should be covered by the Equal case
                             Err(idx) => {
-                                recv_queue.insert(idx, message);
+                                self.recv_queue.insert(idx, message);
                                 return None;
                             },
                         }
@@ -77,21 +68,13 @@ impl OrderedMessages {
     }
 
     pub fn drain_available(&mut self) -> Option<impl Iterator<Item = OrderedMessage> + '_> {
-        match self {
-            OrderedMessages::Sequenced {
-                send_index: _,
-                recv_index: _,
-            } => {
-                return None;
-            },
+        match self.mode {
+            // Sequenced ordering never stores anything in the queue.
+            OrderingMode::Sequenced => { return None; }
 
             // Based on Laminar's ordering algorithm, adapted to use an ordered vec instead of a hashmap.
             // https://github.com/TimonPost/laminar/blob/e8ffb26a915bb6ac3c8d959031d63f8a776e763c/src/infrastructure/arranging/ordering.rs#L266-L274
-            OrderedMessages::Ordered {
-                send_index: _,
-                recv_queue,
-                recv_index,
-            } => {
+            OrderingMode::Ordered => {
                 struct OrderedMessageDrain<'a> {
                     index: &'a mut SequenceId,
                     queue: &'a mut Vec<OrderedMessage>,
@@ -112,34 +95,17 @@ impl OrderedMessages {
                 }
 
                 return Some(OrderedMessageDrain {
-                    index: recv_index,
-                    queue: recv_queue,
+                    index: &mut self.recv_index,
+                    queue: &mut self.recv_queue,
                 });
             }
         }
     }
 
     pub fn advance(&mut self) -> SequenceId {
-        match self {
-            OrderedMessages::Sequenced {
-                send_index,
-                recv_index: _,
-            } => {
-                let ind = *send_index;
-                *send_index += 1;
-                return ind;
-            },
-
-            OrderedMessages::Ordered {
-                send_index,
-                recv_queue: _,
-                recv_index: _,
-            } => {
-                let ind = *send_index;
-                *send_index += 1;
-                return ind;
-            },
-        }
+        let ind = self.send_index;
+        self.send_index += 1;
+        return ind;
     }
 }
 
@@ -184,6 +150,11 @@ impl Debug for OrderedMessage {
         .field("sequence", &self.sequence)
         .finish()
     }
+}
+
+enum OrderingMode {
+    Sequenced,
+    Ordered,
 }
 
 mod tests {
