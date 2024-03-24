@@ -162,6 +162,6 @@ impl ReliablePackets {
 }
 
 pub(crate) struct UnackedPacket {
-    payload: Bytes,
+    pub payload: Bytes,
     time: Instant,
 }

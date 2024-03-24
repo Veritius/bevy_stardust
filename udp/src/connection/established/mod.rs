@@ -1,7 +1,7 @@
 mod frame;
 mod systems;
 
-use std::collections::HashMap;
+use std::{collections::HashMap, time::Duration};
 use bevy_stardust::prelude::*;
 use bevy_ecs::prelude::*;
 use self::frame::PacketFrame;
@@ -15,6 +15,7 @@ pub(crate) use systems::{
 #[derive(Component)]
 pub(crate) struct Established {
     frames: Vec<PacketFrame>,
+    reliable_timeout: Duration,
     reliability: ReliablePackets,
     ordering: HashMap<ChannelId, OrderedMessages>,
     errors: u32,
@@ -27,6 +28,7 @@ impl Established {
     ) -> Self {
         Self {
             frames: Vec::with_capacity(8),
+            reliable_timeout: Duration::from_millis(1000), // TODO: Make this a dynamic value based off RTT
             reliability: ReliablePackets::new(reliability.clone()),
             ordering: HashMap::default(),
             errors: 0,

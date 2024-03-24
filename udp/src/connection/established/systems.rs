@@ -1,4 +1,4 @@
-use std::{cell::Cell, cmp::Ordering, ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign}};
+use std::{cell::Cell, cmp::Ordering, ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign}, time::Instant};
 use bevy_ecs::prelude::*;
 use bevy_stardust::prelude::*;
 use thread_local::ThreadLocal;
@@ -219,6 +219,24 @@ pub(crate) fn established_packet_builder_system(
             return a.payload.len().cmp(&b.payload.len());
         });
 
+        // TODO: Make this return &mut Bin instead of the index
+        fn find_or_create_bin(bins: &mut Vec<Bin>, pld_len: usize, header: impl Fn() -> PacketHeader) -> usize {
+            // Check if a bin with sufficient remaining space exists
+            if let Some((index, _)) = bins.iter_mut()
+            .enumerate()
+            .find(|(_, bin)| {
+                let capacity = bin.buffer.capacity() - BLANK_PREFIX_LENGTH;
+                let remaining = capacity - bin.buffer.len();
+                remaining >= pld_len
+            }) { return index }
+
+            // We couldn't find a bin, so make one
+            let mut buffer = Vec::with_capacity(PKT_LEN_WITH_PREFIX);
+            buffer.extend_from_slice(&[0u8; BLANK_PREFIX_LENGTH]);
+            bins.push(Bin { header: header(), buffer, messages: 0 });
+            return bins.len()
+        }
+
         // Process all messages
         for message in scratch.messages.iter() {
             // Put the channel id into the buffer
@@ -240,38 +258,38 @@ pub(crate) fn established_packet_builder_system(
             scratch.bytes.put(&*message.payload);
 
             // Use the first-fit algorithm to find a bin
-            let bin = {
-                // Check if a bin with sufficient remaining space exists
-                let bin = scratch.bins.iter_mut()
-                .find(|v| {
-                    let capacity = v.buffer.capacity() - BLANK_PREFIX_LENGTH;
-                    let remaining = capacity - v.buffer.len();
-                    remaining >= scratch.bytes.len()
-                });
-
-                // Return it if we found something, create it if not
-                match bin {
-                    Some(v) => v,
-                    None => {
-                        // Construct header
-                        let mut header = PacketHeader::new();
-                        let is_reliable = message.flags.is_reliable();
-                        if is_reliable { header |= PacketHeader::FLAG_RELIABLE; }
-
-                        // Construct buffer
-                        let mut buffer = Vec::with_capacity(PKT_LEN_WITH_PREFIX);
-                        buffer.extend_from_slice(&[0u8; BLANK_PREFIX_LENGTH]);
-                        scratch.bins.push(Bin { header, buffer, messages: 0 });
-                        scratch.bins.last_mut().unwrap()
-                    },
-                }
-            };
+            let bin = find_or_create_bin(&mut scratch.bins, scratch.bytes.len(), || {
+                let mut header = PacketHeader::new();
+                if message.flags.is_reliable() { header |= PacketHeader::FLAG_RELIABLE; }
+                return header;
+            });
+            let bin = &mut scratch.bins[bin];
 
             // Extend the bin by the message buffer, and clear the message buffer
             bin.buffer.extend_from_slice(&scratch.bytes);
             bin.messages += 1;
             scratch.bytes.clear();
         }
+
+        // Queue old reliable messages for resending
+        let now = Instant::now();
+        let reliable_timeout = state.reliable_timeout;
+        let mut resends = state.reliability.drain_old(|then| now.duration_since(then) > reliable_timeout);
+        while let Some(packet) = resends.next() {
+            // Get a bin to pack it into
+            let bin = find_or_create_bin(&mut scratch.bins, scratch.bytes.len(), || {
+                let mut header = PacketHeader::new();
+                header |= PacketHeader::FLAG_RELIABLE; // We know this message is reliable.
+                return header;
+            });
+            let bin = &mut scratch.bins[bin];
+
+            // Add the message to the bin
+            bin.buffer.extend_from_slice(&packet.payload);
+        }
+
+        // Manual drop to make borrowck happy
+        drop(resends);
 
         // Add bins to the send queue after some tweaks
         for mut bin in scratch.bins.drain(..) {
