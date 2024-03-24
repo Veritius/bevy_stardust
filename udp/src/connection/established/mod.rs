@@ -1,11 +1,12 @@
 mod frame;
+mod packing;
 mod systems;
 
 use std::{collections::HashMap, time::Duration};
-use bevy_stardust::prelude::*;
 use bevy_ecs::prelude::*;
-use self::frame::PacketFrame;
+use bevy_stardust::prelude::*;
 use super::{ordering::OrderedMessages, reliability::{ReliabilityState, ReliablePackets}};
+pub(crate) use packing::PackingScratch;
 pub(crate) use systems::{
     established_packet_reader_system,
     established_packet_builder_system,
@@ -14,7 +15,6 @@ pub(crate) use systems::{
 
 #[derive(Component)]
 pub(crate) struct Established {
-    frames: Vec<PacketFrame>,
     reliable_timeout: Duration,
     reliability: ReliablePackets,
     ordering: HashMap<ChannelId, OrderedMessages>,
@@ -27,7 +27,6 @@ impl Established {
         reliability: &ReliabilityState,
     ) -> Self {
         Self {
-            frames: Vec::with_capacity(8),
             reliable_timeout: Duration::from_millis(1000), // TODO: Make this a dynamic value based off RTT
             reliability: ReliablePackets::new(reliability.clone()),
             ordering: HashMap::default(),
@@ -43,18 +42,4 @@ impl Established {
                 OrderingGuarantee::Ordered => OrderedMessages::ordered(),
             })
     }
-
-    fn flag_error(&mut self, severity: ErrorSeverity) {
-        self.errors += match severity {
-            ErrorSeverity::Minor => 1,
-            ErrorSeverity::Major => 3,
-            ErrorSeverity::Critical => 9,
-        }
-    }
-}
-
-enum ErrorSeverity {
-    Minor,
-    Major,
-    Critical,
 }

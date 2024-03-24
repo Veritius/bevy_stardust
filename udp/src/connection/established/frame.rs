@@ -1,26 +1,71 @@
-use std::ops::{BitOr, BitOrAssign};
-
+use std::{fmt::Debug, ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign}};
+use bevy_stardust::prelude::*;
 use bytes::Bytes;
+use crate::sequences::SequenceId;
 
-#[derive(Clone, Copy)]
-#[repr(transparent)]
-pub(crate) struct PacketHeader(pub u16);
+#[derive(Debug)]
+pub(super) struct Frame {
+    pub flags: FrameFlags,
+    pub ident: u32,
+    pub order: Option<SequenceId>,
+    pub bytes: Bytes,
+}
 
-impl PacketHeader {
-    pub const FLAG_RELIABLE: Self = Self(1);
-
-    #[inline]
-    pub const fn new() -> Self {
-        Self(0)
+impl Frame {
+    pub fn transport_message(
+        flags: FrameFlags,
+        order: Option<SequenceId>,
+        bytes: Bytes,
+    ) -> Self {
+        Self {
+            flags,
+            ident: 0,
+            order,
+            bytes,
+        }
     }
 
-    #[inline]
-    pub const fn flagged_reliable(&self) -> bool {
-        (self.0 & Self::FLAG_RELIABLE.0) > 0
+    pub fn stardust_message(
+        channel: ChannelId,
+        data: &ChannelData,
+        order: Option<SequenceId>,
+        bytes: Bytes,
+    ) -> Self {
+        let mut flags = FrameFlags::default();
+
+        if data.reliable == ReliabilityGuarantee::Reliable {
+            flags |= FrameFlags::RELIABLE;
+        }
+
+        Self {
+            flags,
+            ident: u32::from(channel).wrapping_add(1),
+            order,
+            bytes,
+        }
     }
 }
 
-impl BitOr for PacketHeader {
+pub(super) struct FrameFlags(pub u32);
+
+impl FrameFlags {
+    pub const RELIABLE: Self = Self(1 << 0);
+}
+
+impl Default for FrameFlags {
+    #[inline]
+    fn default() -> Self {
+        Self(0)
+    }
+}
+
+impl Debug for FrameFlags {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!("{:b}", self.0))
+    }
+}
+
+impl BitOr for FrameFlags {
     type Output = Self;
 
     #[inline]
@@ -29,66 +74,25 @@ impl BitOr for PacketHeader {
     }
 }
 
-impl BitOrAssign for PacketHeader {
+impl BitOrAssign for FrameFlags {
     #[inline]
     fn bitor_assign(&mut self, rhs: Self) {
-        *self = self.bitor(rhs);
+        self.0 |= rhs.0
     }
 }
 
-impl From<u16> for PacketHeader {
+impl BitAnd for FrameFlags {
+    type Output = Self;
+
     #[inline]
-    fn from(value: u16) -> Self {
-        Self(value)
+    fn bitand(self, rhs: Self) -> Self::Output {
+        Self(self.0 & rhs.0)
     }
 }
 
-impl From<PacketHeader> for u16 {
+impl BitAndAssign for FrameFlags {
     #[inline]
-    fn from(value: PacketHeader) -> Self {
-        value.0
+    fn bitand_assign(&mut self, rhs: Self) {
+        self.0 &= rhs.0
     }
 }
-
-/// Management frame types, with an `Ord` implementation comparing how important it is that the frame is sent.
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
-#[repr(u8)]
-pub(super) enum PacketFrameId {
-    Padding = 0,
-    Ping = 1,
-}
-
-impl TryFrom<u8> for PacketFrameId {
-    type Error = ();
-
-    fn try_from(value: u8) -> Result<Self, Self::Error> {
-        use PacketFrameId::*;
-        Ok(match value {
-            0 => Padding,
-            1 => Ping,
-            _ => { return Err(()) }
-        })
-    }
-}
-
-pub(super) struct PacketFrame {
-    pub id: PacketFrameId,
-    pub pld: Bytes,
-}
-
-impl std::fmt::Debug for PacketFrame {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("PacketFrame")
-        .field("identifier", &self.id)
-        .field("pld length", &self.pld.len())
-        .finish()
-    }
-}
-
-impl PartialEq for PacketFrame {
-    fn eq(&self, other: &Self) -> bool {
-        self.id == other.id
-    }
-}
-
-impl Eq for PacketFrame {}
