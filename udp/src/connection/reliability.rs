@@ -37,8 +37,8 @@ impl ReliabilityState {
     /// Acknowledge packets identified in a reliable header. Returns an iterator over the sequences of packets that have been acknowledged by the remote peer.
     pub fn ack(&mut self, header: ReliablePacketHeader, bitfield_bytes: u8) -> impl Iterator<Item = SequenceId> + Clone {
         // Update bitfield and remote sequence
-        let diff = header.sequence.diff(&self.remote_sequence);
-        match header.sequence.cmp_with_diff(&self.remote_sequence, diff) {
+        let diff = header.sequence.wrapping_diff(&self.remote_sequence);
+        match header.sequence.cmp(&self.remote_sequence) {
             Ordering::Less => {
                 // Older packet, mark id as acknowledged
                 self.sequence_memory |= BITMASK.overflowing_shl(diff.into()).0;

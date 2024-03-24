@@ -18,33 +18,17 @@ impl SequenceId {
         Self(fastrand::u16(..))
     }
 
-    pub fn diff(&self, other: &Self) -> u16 {
+    pub fn wrapping_diff(&self, other: &Self) -> u16 {
         let a = self.0;
         let b = other.0;
 
         let diff = a.abs_diff(b);
-        if diff > Self::MID { return diff }
+        if diff < Self::MID { return diff }
 
         if a > b {
             return b.wrapping_sub(a);
         } else {
             return a.wrapping_sub(b);
-        }
-    }
-
-    pub fn cmp_with_diff(&self, other: &Self, diff: u16) -> Ordering {
-        // An adaptation of Glenn Fiedler's wrapping sequence identifier algorithm
-        // https://www.gafferongames.com/post/reliability_ordering_and_congestion_avoidance_over_udp/
-        match diff.cmp(&Self::MID) {
-            Ordering::Equal => Ordering::Equal,
-            Ordering::Less => self.0.cmp(&other.0),
-            Ordering::Greater => {
-                match self.0.cmp(&other.0) {
-                    Ordering::Less => Ordering::Greater,
-                    Ordering::Greater => Ordering::Less,
-                    Ordering::Equal => unreachable!(),
-                }
-            },
         }
     }
 }
@@ -64,9 +48,16 @@ impl PartialOrd for SequenceId {
 }
 
 impl Ord for SequenceId {
-    #[inline]
     fn cmp(&self, other: &Self) -> Ordering {
-        self.cmp_with_diff(other, self.diff(other))
+        // An adaptation of Glenn Fiedler's wrapping sequence identifier algorithm, modified to output an Ordering
+        // https://www.gafferongames.com/post/reliability_ordering_and_congestion_avoidance_over_udp/
+        if self == other { return Ordering::Equal }
+        let a = self.0; let b = other.0;
+        let r = ((a>b)&&(a-b<=Self::MID))||((a<b)&&(b-a>Self::MID));
+        match r {
+            true => Ordering::Greater,
+            false => Ordering::Less,
+        }
     }
 }
 
@@ -170,6 +161,29 @@ impl Display for SequenceId {
 }
 
 #[test]
+fn sequence_id_difference_test() {
+    const MIDPOINT: SequenceId = SequenceId(SequenceId::MID);
+
+    #[inline]
+    fn seq(v: u16) -> SequenceId {
+        SequenceId::from(v)
+    }
+
+    assert_eq!(seq(0).wrapping_diff(&seq(0)), 0);
+    assert_eq!(seq(0).wrapping_diff(&seq(1)), 1);
+    assert_eq!(seq(3).wrapping_diff(&seq(7)), 4);
+    assert_eq!(seq(1).wrapping_diff(&seq(0)), 1);
+    assert_eq!(seq(7).wrapping_diff(&seq(3)), 4);
+    assert_eq!(seq(u16::MAX).wrapping_diff(&seq(u16::MIN)), 1);
+    assert_eq!(seq(u16::MAX).sub(3).wrapping_diff(&seq(u16::MIN).add(3)), 7);
+    assert_eq!(seq(u16::MIN).wrapping_diff(&seq(u16::MAX)), 1);
+    assert_eq!(seq(u16::MIN).add(3).wrapping_diff(&seq(u16::MAX).sub(3)), 7);
+    assert_eq!(MIDPOINT.wrapping_diff(&MIDPOINT), 0);
+    assert_eq!(MIDPOINT.sub(1).wrapping_diff(&MIDPOINT), 1);
+    assert_eq!(MIDPOINT.add(1).wrapping_diff(&MIDPOINT), 1);
+}
+
+#[test]
 fn sequence_id_ordering_test() {
     const MIDPOINT: SequenceId = SequenceId(SequenceId::MID);
 
@@ -179,13 +193,13 @@ fn sequence_id_ordering_test() {
     }
 
     assert_eq!(seq(4).cmp(&seq(4)), Ordering::Equal);
-    assert_eq!(seq(15).cmp(&seq(9)), Ordering::Less);
-    assert_eq!(seq(9).cmp(&seq(15)), Ordering::Greater);
+    assert_eq!(seq(15).cmp(&seq(9)), Ordering::Greater);
+    assert_eq!(seq(9).cmp(&seq(15)), Ordering::Less);
     assert_eq!(seq(65534).cmp(&seq(66)), Ordering::Less);
     assert_eq!(seq(u16::MAX).cmp(&seq(u16::MIN)), Ordering::Less);
     assert_eq!(seq(66).cmp(&seq(65534)), Ordering::Greater);
     assert_eq!(seq(u16::MIN).cmp(&seq(u16::MAX)), Ordering::Greater);
-    assert_eq!(MIDPOINT.sub(1).cmp(&MIDPOINT), Ordering::Greater);
-    assert_eq!(MIDPOINT.add(1).cmp(&MIDPOINT), Ordering::Less);
     assert_eq!(MIDPOINT.cmp(&MIDPOINT), Ordering::Equal);
+    assert_eq!(MIDPOINT.sub(1).cmp(&MIDPOINT), Ordering::Less);
+    assert_eq!(MIDPOINT.add(1).cmp(&MIDPOINT), Ordering::Greater);
 }
