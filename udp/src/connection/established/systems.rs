@@ -234,7 +234,7 @@ pub(crate) fn established_packet_builder_system(
             let mut buffer = Vec::with_capacity(PKT_LEN_WITH_PREFIX);
             buffer.extend_from_slice(&[0u8; BLANK_PREFIX_LENGTH]);
             bins.push(Bin { header: header(), buffer, messages: 0 });
-            return bins.len()
+            return bins.len() - 1;
         }
 
         // Process all messages
