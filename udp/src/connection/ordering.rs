@@ -39,10 +39,10 @@ impl OrderedMessages {
             // If it's newer than the last one, return it.
             // Otherwise, don't do anything.
             Self::Sequenced {
-                send_index,
+                send_index: _,
                 recv_index
             } => {
-                if *send_index >= message.sequence {
+                if *recv_index >= message.sequence {
                     *recv_index = message.sequence + 1;
                     return Some(message);
                 }
