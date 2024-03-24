@@ -1,55 +1,19 @@
 use std::{fmt::Debug, ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign}};
-use bevy_stardust::prelude::*;
 use bytes::Bytes;
-use crate::sequences::SequenceId;
 
 #[derive(Debug)]
 pub(super) struct Frame {
     pub flags: FrameFlags,
     pub ident: u32,
-    pub order: Option<SequenceId>,
     pub bytes: Bytes,
 }
 
-impl Frame {
-    pub fn transport_message(
-        flags: FrameFlags,
-        order: Option<SequenceId>,
-        bytes: Bytes,
-    ) -> Self {
-        Self {
-            flags,
-            ident: 0,
-            order,
-            bytes,
-        }
-    }
-
-    pub fn stardust_message(
-        channel: ChannelId,
-        data: &ChannelData,
-        order: Option<SequenceId>,
-        bytes: Bytes,
-    ) -> Self {
-        let mut flags = FrameFlags::default();
-
-        if data.reliable == ReliabilityGuarantee::Reliable {
-            flags |= FrameFlags::RELIABLE;
-        }
-
-        Self {
-            flags,
-            ident: u32::from(channel).wrapping_add(1),
-            order,
-            bytes,
-        }
-    }
-}
-
+#[derive(Clone, Copy)]
 pub(super) struct FrameFlags(pub u32);
 
 impl FrameFlags {
     pub const RELIABLE: Self = Self(1 << 0);
+    pub const ORDERED: Self = Self(1 << 1);
 }
 
 impl Default for FrameFlags {
