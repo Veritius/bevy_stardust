@@ -3,7 +3,7 @@ use bevy_ecs::prelude::*;
 use bevy_stardust::prelude::*;
 use thread_local::ThreadLocal;
 use unbytes::Reader;
-use crate::{connection::{ordering::{OrderedMessage, OrderedMessages}, reliability::ReliablePacketHeader}, packet::{OutgoingPacket, MTU_SIZE}, plugin::PluginConfiguration, Connection};
+use crate::{connection::{ordering::{OrderedMessage, OrderedMessages}, reliability::ReliablePacketHeader}, packet::{OutgoingPacket, MTU_SIZE}, plugin::PluginConfiguration, sequences::SequenceId, Connection};
 use super::{frame::PacketHeader, Established};
 
 macro_rules! try_read {
@@ -294,7 +294,7 @@ pub(crate) fn established_packet_builder_system(
         for mut bin in scratch.bins.drain(..) {
             // Some variables about the bin
             let is_reliable = bin.header.flagged_reliable();
-            let mut sequence = 0; // not relevant until later
+            let mut sequence = SequenceId::default(); // not relevant until later
 
             // Append the packet header
             scratch.bytes.put_u16(bin.header.into());
@@ -304,7 +304,7 @@ pub(crate) fn established_packet_builder_system(
                 // Create header
                 let header = state.reliability.header();
                 state.reliability.increment_local();
-                sequence = header.sequence.into();
+                sequence = header.sequence;
 
                 // Write header integers
                 scratch.bytes.put_u16(header.sequence.into());

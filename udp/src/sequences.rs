@@ -31,6 +31,22 @@ impl SequenceId {
             return a.wrapping_sub(b);
         }
     }
+
+    pub fn cmp_with_diff(&self, other: &Self, diff: u16) -> Ordering {
+        // An adaptation of Glenn Fiedler's wrapping sequence identifier algorithm
+        // https://www.gafferongames.com/post/reliability_ordering_and_congestion_avoidance_over_udp/
+        match diff.cmp(&Self::MID) {
+            Ordering::Equal => Ordering::Equal,
+            Ordering::Less => self.0.cmp(&other.0),
+            Ordering::Greater => {
+                match self.0.cmp(&other.0) {
+                    Ordering::Less => Ordering::Greater,
+                    Ordering::Greater => Ordering::Less,
+                    Ordering::Equal => unreachable!(),
+                }
+            },
+        }
+    }
 }
 
 impl Default for SequenceId {
@@ -48,20 +64,9 @@ impl PartialOrd for SequenceId {
 }
 
 impl Ord for SequenceId {
-    // An adaptation of Glenn Fiedler's wrapping sequence identifier algorithm
-    // https://www.gafferongames.com/post/reliability_ordering_and_congestion_avoidance_over_udp/
+    #[inline]
     fn cmp(&self, other: &Self) -> Ordering {
-        match self.diff(other).cmp(&Self::MID) {
-            Ordering::Equal => Ordering::Equal,
-            Ordering::Less => self.0.cmp(&other.0),
-            Ordering::Greater => {
-                match self.0.cmp(&other.0) {
-                    Ordering::Less => Ordering::Greater,
-                    Ordering::Greater => Ordering::Less,
-                    Ordering::Equal => unreachable!(),
-                }
-            },
-        }
+        self.cmp_with_diff(other, self.diff(other))
     }
 }
 
