@@ -1,15 +1,19 @@
 use std::{collections::HashMap, net::{SocketAddr, UdpSocket}};
 use bevy_ecs::prelude::*;
+use bevy_stardust::connections::NetworkPerformanceReduction;
 use bytes::Bytes;
 use crate::{endpoint::ConnectionOwnershipToken, Connection, Endpoint, EndpointStatistics};
 
 // Sends packets to UDP sockets
 pub(crate) fn io_sending_system(
     mut endpoints: Query<(Entity, &mut Endpoint)>,
-    connections: Query<&mut Connection>,
+    connections: Query<(&mut Connection, Option<&NetworkPerformanceReduction>)>,
 ) {
     // Iterate all endpoints
     endpoints.par_iter_mut().for_each(|(endpoint_id, mut endpoint)| {
+        // Get an instance of RNG
+        let mut rng = fastrand::Rng::default();
+
         // Stuff for logging
         let mut pkts_sent: u32 = 0;
         let mut bytes_sent: u64 = 0;
@@ -40,7 +44,7 @@ pub(crate) fn io_sending_system(
         // Send all packets that individual connections have queued
         for (_, token) in connection_map {
             // SAFETY: This is safe because ConnectionOwnershipToken ensures that only one endpoint 'owns' a connection.
-            let mut connection = unsafe { match connections.get_unchecked(token.inner()) {
+            let (mut connection, performance) = unsafe { match connections.get_unchecked(token.inner()) {
                 Ok(val) => val,
                 Err(_) => { continue; },
             } };
@@ -51,6 +55,21 @@ pub(crate) fn io_sending_system(
             // Send all packets queued in this peer
             while let Some(packet) = connection.packet_queue.pop_outgoing() {
                 pkts_sent += 1; bytes_sent += packet.payload.len() as u64;
+
+                // Randomly skip actually sending the packet
+                if let Some(performance) = performance {
+                    let roll = rng.f32();
+                    if performance.packet_drop_chance < roll {
+                        // Updating these values simulates a successful packet send
+                        connection.timings.set_last_sent_now();
+                        endpoint_statistics.record_packet_send(packet.payload.len());
+                        connection.statistics.record_packet_send(packet.messages as usize);
+
+                        continue;
+                    }
+                }
+
+                // Send the packet.
                 match socket.send_to(&packet.payload, connection.remote_address()) {
                     Ok(_) => {
                         // Set last_sent in timings
