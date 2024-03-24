@@ -44,7 +44,7 @@ pub(crate) fn established_packet_reader_system(
             // Reliable packets have extra data
             if header.flagged_reliable() {
                 // These two are easy enough
-                let sequence = u16::from_be_bytes(try_read!(reader.read_array::<2>(), continue 'h)).into();
+                let seq = u16::from_be_bytes(try_read!(reader.read_array::<2>(), continue 'h)).into();
                 let ack = u16::from_be_bytes(try_read!(reader.read_array::<2>(), continue 'h)).into();
 
                 // Getting the bitfield is more involved
@@ -52,11 +52,11 @@ pub(crate) fn established_packet_reader_system(
                 let mut arr = [0u8; 16];
                 let mut slice = try_read!(reader.read_slice(config.reliable_bitfield_length), continue 'h);
                 slice.copy_to_slice(&mut arr[..config.reliable_bitfield_length]);
-                let ack_bitfield = u128::from_ne_bytes(arr);
+                let bits = u128::from_ne_bytes(arr);
 
                 // Finally, acknowledge the packet
                 state.reliability.ack(
-                    ReliablePacketHeader { sequence, ack, ack_bitfield },
+                    ReliablePacketHeader { seq, ack, bits },
                     config.reliable_bitfield_length as u8
                 );
             }
@@ -304,14 +304,14 @@ pub(crate) fn established_packet_builder_system(
                 // Create header
                 let header = state.reliability.header();
                 state.reliability.advance();
-                sequence = header.sequence;
+                sequence = header.seq;
 
                 // Write header integers
-                scratch.bytes.put_u16(header.sequence.into());
+                scratch.bytes.put_u16(header.seq.into());
                 scratch.bytes.put_u16(header.ack.into());
 
                 // Write the bitfield
-                let bitfield_bytes = header.ack_bitfield.to_be_bytes();
+                let bitfield_bytes = header.bits.to_be_bytes();
                 scratch.bytes.put(&bitfield_bytes[..config.reliable_bitfield_length as usize]);
             }
 
