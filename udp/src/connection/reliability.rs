@@ -47,6 +47,7 @@ impl ReliabilityState {
                 // The packet is newer, shift the memory bitfield
                 self.remote_sequence = header.sequence;
                 self.sequence_memory = self.sequence_memory.overflowing_shl(diff.into()).0;
+                self.sequence_memory |= BITMASK;
             },
             Ordering::Equal => {}, // Shouldn't happen.
         }
@@ -200,7 +201,7 @@ fn conversation_test() {
     // Bob receives Alice's message
     bob.ack(alice_header, 8);
     assert_eq!(bob.header().ack, 1.into());
-    // assert_eq!(bob.header().ack_bitfield, BITMASK << 1);
+    assert_eq!(bob.header().ack_bitfield, 0b0000_0001);
 
     // Bob sends a message to Alice
     bob.record(1.into(), empty());
@@ -212,7 +213,7 @@ fn conversation_test() {
     // Alice receives Bob's message
     alice.ack(bob_header, 8);
     assert_eq!(alice.header().ack, 1.into());
-    // assert_eq!(alice.header().ack_bitfield, BITMASK << 1);
+    assert_eq!(alice.header().ack_bitfield, 0b0000_0001);
 
     // Alice sends a message to Bob
     // Bob does not receive this message
@@ -227,5 +228,5 @@ fn conversation_test() {
     // Bob receives Alice's second message
     bob.ack(alice_header, 8);
     assert_eq!(bob.header().ack, 3.into());
-    // assert_eq!(bob.header().ack_bitfield, BITMASK << 1 | BITMASK << 3);
+    assert_eq!(bob.header().ack_bitfield, 0b0000_0101);
 }
