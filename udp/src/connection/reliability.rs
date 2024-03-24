@@ -178,40 +178,40 @@ fn conversation_test() {
     // We can't use ReliabilityState::new() since it generates random values.
     // This is our first side of the connection.
     let mut alice = ReliablePackets::new(ReliabilityState {
-        local_sequence: SequenceId::new(0),
+        local_sequence: SequenceId::new(1),
         remote_sequence: SequenceId::new(0),
         sequence_memory: 0,
     });
 
     // This is our other side of the connection.
     let mut bob = ReliablePackets::new(ReliabilityState {
-        local_sequence: SequenceId::new(0),
+        local_sequence: SequenceId::new(1),
         remote_sequence: SequenceId::new(0),
         sequence_memory: 0,
     });
 
     // Alice sends a message to Bob
-    alice.record(0.into(), empty());
+    alice.record(1.into(), empty());
     let alice_header = alice.header();
-    assert_eq!(alice_header.sequence, 0.into());
+    assert_eq!(alice_header.sequence, 1.into());
     alice.advance();
-    assert_eq!(alice.header().sequence, 1.into());
+    assert_eq!(alice.header().sequence, 2.into());
 
     // Bob receives Alice's message
     bob.ack(alice_header, 8);
-    assert_eq!(bob.header().ack, 0.into());
+    assert_eq!(bob.header().ack, 1.into());
     // assert_eq!(bob.header().ack_bitfield, BITMASK << 1);
 
     // Bob sends a message to Alice
-    bob.record(0.into(), empty());
+    bob.record(1.into(), empty());
     let bob_header = bob.header();
-    assert_eq!(bob_header.sequence, 0.into());
+    assert_eq!(bob_header.sequence, 1.into());
     bob.advance();
-    assert_eq!(bob.header().sequence, 1.into());
+    assert_eq!(bob.header().sequence, 2.into());
 
     // Alice receives Bob's message
     alice.ack(bob_header, 8);
-    assert_eq!(alice.header().ack, 0.into());
+    assert_eq!(alice.header().ack, 1.into());
     // assert_eq!(alice.header().ack_bitfield, BITMASK << 1);
 
     // Alice sends a message to Bob
@@ -226,6 +226,6 @@ fn conversation_test() {
 
     // Bob receives Alice's second message
     bob.ack(alice_header, 8);
-    assert_eq!(bob.header().ack, 2.into());
+    assert_eq!(bob.header().ack, 3.into());
     // assert_eq!(bob.header().ack_bitfield, BITMASK << 1 | BITMASK << 3);
 }
