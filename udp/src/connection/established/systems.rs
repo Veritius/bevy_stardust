@@ -303,7 +303,7 @@ pub(crate) fn established_packet_builder_system(
             if is_reliable {
                 // Create header
                 let header = state.reliability.header();
-                state.reliability.increment_local();
+                state.reliability.advance();
                 sequence = header.sequence;
 
                 // Write header integers
