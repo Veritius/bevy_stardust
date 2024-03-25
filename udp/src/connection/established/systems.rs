@@ -50,6 +50,7 @@ pub(crate) fn established_packet_reader_system(
                 let parsed = match ParsedFrame::parse(&mut reader, &config, &registry) {
                     Ok(v) => v,
                     Err(FrameParseError::EndOfInput) => { break 'packet; },
+                    Err(_) => { todo!() },
                 };
 
                 // Get the message data

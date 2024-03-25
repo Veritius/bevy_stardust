@@ -47,6 +47,13 @@ impl From<VarInt> for u64 {
     }
 }
 
+impl From<VarInt> for usize {
+    #[inline]
+    fn from(value: VarInt) -> Self {
+        value.0 as usize
+    }
+}
+
 impl Debug for VarInt {
     #[inline]
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

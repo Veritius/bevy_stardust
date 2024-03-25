@@ -1,6 +1,6 @@
-use bevy_stardust::channels::ChannelRegistry;
+use bevy_stardust::prelude::*;
 use unbytes::*;
-use crate::{connection::reliability::ReliablePacketHeader, plugin::PluginConfiguration, sequences::SequenceId};
+use crate::{connection::reliability::ReliablePacketHeader, plugin::PluginConfiguration, sequences::SequenceId, varint::VarInt};
 use super::packet::PacketHeader;
 
 pub(super) struct PacketHeaderData {
@@ -39,7 +39,6 @@ impl PacketHeaderData {
 }
 
 pub(super) struct ParsedFrame {
-    pub flags: u32,
     pub ident: u32,
     pub order: Option<SequenceId>,
     pub length: usize,
@@ -51,12 +50,47 @@ impl ParsedFrame {
         config: &PluginConfiguration,
         registry: &ChannelRegistry,
     ) -> Result<Self, FrameParseError> {
-        todo!()
+        // Read the identity value
+        const MAX: u64 = 2u64.pow(32);
+        let ident: u64 = VarInt::read(reader)?.into();
+        if ident > VarInt::MAX { return Err(FrameParseError::InvalidIdent); }
+        let ident = ident as u32;
+
+        // Read an ordering value
+        let order = {
+            // Check if an ordering value is present for this identity
+            let has_order = match ident {
+                // Ident 0 is always ordered
+                0 => true,
+
+                // We have to search up the ordering for Stardust channels
+                _ => {
+                    let cid = ChannelId::from(ident.wrapping_sub(1) as u32);
+                    if let Some(config) = registry.channel_config(cid) {
+                        config.ordered != OrderingGuarantee::Unordered
+                    } else {
+                        return Err(FrameParseError::InvalidIdent);
+                    }
+                },
+            };
+
+            if has_order {
+                Some(reader.read_u16()?.into())
+            } else {
+                None
+            }
+        };
+
+        // Get the length of the message
+        let length = usize::from(VarInt::read(reader)?);
+
+        return Ok(Self { ident, order, length })
     }
 }
 
 pub(super) enum FrameParseError {
     EndOfInput,
+    InvalidIdent,
 }
 
 impl From<EndOfInput> for FrameParseError {
