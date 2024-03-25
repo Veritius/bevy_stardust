@@ -9,6 +9,7 @@ use super::{frame::Frame, Established};
 const BYTE_SCRATCH_SIZE: usize = MTU_SIZE;
 const FRAME_STORE_SIZE: usize = 256;
 const BIN_STORE_SIZE: usize = 1;
+const REL_DEAD_MAX: usize = 128;
 
 const BIN_HDR_SIZE: usize = 32;
 const BIN_PLD_SIZE: usize = MTU_SIZE;
@@ -211,7 +212,7 @@ impl<'a> PackingInstance<'a> {
         // never be readable outside of this function, it could be slightly faster.
 
         let remaining = bin.data.capacity() - bin.data.len();
-        if !bin.reliable && remaining > 128 {
+        if !bin.reliable && remaining > REL_DEAD_MAX {
             bin.data.extend((0..remaining).map(|_| { 0 }));
             debug_assert_eq!(bin.data.capacity(), bin.data.len());
         }
