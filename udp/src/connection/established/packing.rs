@@ -3,7 +3,7 @@ use bevy_ecs::system::Resource;
 use bevy_stardust::channels::ChannelRegistryInner;
 use bytes::{BufMut, Bytes, BytesMut};
 use thread_local::ThreadLocal;
-use crate::{connection::established::{packet::PacketHeader}, packet::MTU_SIZE, plugin::PluginConfiguration, varint::VarInt};
+use crate::{connection::established::packet::PacketHeader, packet::MTU_SIZE, plugin::PluginConfiguration, varint::VarInt};
 use super::{packet::Frame, Established};
 
 const BYTE_SCRATCH_SIZE: usize = MTU_SIZE;

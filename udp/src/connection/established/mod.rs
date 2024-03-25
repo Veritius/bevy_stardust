@@ -21,7 +21,7 @@ pub(crate) struct Established {
     reliable_timeout: Duration,
     reliability: ReliablePackets,
     frames: Vec<Frame>,
-    ordering: HashMap<u32, OrderedMessages>,
+    orderings: HashMap<u32, OrderedMessages>,
     errors: u32,
 }
 
@@ -55,13 +55,13 @@ impl Established {
             reliable_timeout: Duration::from_millis(1000), // TODO: Make this a dynamic value based off RTT
             reliability: ReliablePackets::new(reliability.clone()),
             frames: Vec::with_capacity(4),
-            ordering: HashMap::default(),
+            orderings,
             errors: 0,
         }
     }
 
     #[inline]
     pub fn ordering(&mut self, ident: u32) -> &mut OrderedMessages {
-        self.ordering.get_mut(&ident).unwrap()
+        self.orderings.get_mut(&ident).unwrap()
     }
 }
