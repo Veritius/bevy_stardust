@@ -41,7 +41,7 @@ impl Debug for VarInt {
 }
 
 impl VarInt {
-    pub const MAX: Self = Self((1 << 62) - 1);
+    pub const MAX: Self = Self(2u64.pow(62));
     pub const MIN: Self = Self(0);
 
     pub fn read(reader: &mut Reader) -> Result<Self, EndOfInput> {
@@ -89,7 +89,10 @@ fn back_and_forth_test() {
     use bytes::*;
     use unbytes::*;
 
-    fn serial_test(value: VarInt) {
+    fn serial_test(value: u64) {
+        assert!(value > VarInt::MAX.0, "Value passed to serial_test was not representable in a varint");
+        let value = VarInt::try_from(value).unwrap();
+
         let mut bytes = BytesMut::with_capacity(8);
         value.write(&mut bytes);
 
@@ -99,11 +102,11 @@ fn back_and_forth_test() {
         assert_eq!(value, new);
     }
 
-    serial_test(VarInt(0));
-    serial_test(VarInt(1));
-    serial_test(VarInt(7));
-    serial_test(VarInt(50));
-    serial_test(VarInt(70));
-    serial_test(VarInt(125));
-    serial_test(VarInt(55));
+    serial_test(0);
+    serial_test(1);
+    serial_test(7);
+    serial_test(50);
+    serial_test(70);
+    serial_test(125);
+    serial_test(55);
 }
