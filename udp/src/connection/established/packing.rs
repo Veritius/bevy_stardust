@@ -12,12 +12,12 @@ const BIN_STORE_SIZE: usize = 1;
 const BIN_ALLOC_SIZE: usize = MTU_SIZE;
 
 #[derive(Resource, Default)]
-pub(crate) struct PackingScratch(ThreadLocal<Cell<PackingScratchData>>);
+pub(crate) struct PackingScratchCells(ThreadLocal<Cell<PackingScratch>>);
 
-impl PackingScratch {
-    pub(super) fn cell(&self) -> &Cell<PackingScratchData> {
+impl PackingScratchCells {
+    pub(super) fn cell(&self) -> &Cell<PackingScratch> {
         self.0.get_or(|| {
-            Cell::new(PackingScratchData {
+            Cell::new(PackingScratch {
                 bytes: BytesMut::with_capacity(BYTE_SCRATCH_SIZE),
                 frames: Vec::with_capacity(FRAME_STORE_SIZE),
                 bins: Vec::with_capacity(BIN_STORE_SIZE),
@@ -26,13 +26,13 @@ impl PackingScratch {
     }
 }
 
-pub(super) struct PackingScratchData {
+pub(super) struct PackingScratch {
     bytes: BytesMut,
     frames: Vec<Frame>,
     bins: Vec<Bin>,
 }
 
-impl PackingScratchData {
+impl PackingScratch {
     pub fn empty() -> Self {
         Self {
             bytes: BytesMut::with_capacity(0),
@@ -53,13 +53,13 @@ pub(super) struct PackingContext<'a> {
 }
 
 pub(super) struct PackingManager<'a> {
-    scratch: &'a mut PackingScratchData,
+    scratch: &'a mut PackingScratch,
     context: PackingContext<'a>,
 }
 
 impl<'a> PackingManager<'a> {
     pub fn build(
-        scratch: &'a mut PackingScratchData,
+        scratch: &'a mut PackingScratch,
         context: PackingContext<'a>,
     ) -> Self {
         Self { scratch, context }

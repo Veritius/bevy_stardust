@@ -8,7 +8,7 @@ use bevy_stardust::prelude::*;
 use self::frame::Frame;
 
 use super::{ordering::OrderedMessages, reliability::{ReliabilityState, ReliablePackets}};
-pub(crate) use packing::PackingScratch;
+pub(crate) use packing::PackingScratchCells;
 pub(crate) use systems::{
     established_packet_reader_system,
     established_packet_builder_system,

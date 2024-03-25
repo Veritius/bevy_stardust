@@ -67,7 +67,7 @@ impl Plugin for UdpTransportPlugin {
     fn build(&self, app: &mut App) {
         use crate::receiving::io_receiving_system;
         use crate::connection::{
-            PackingScratch,
+            PackingScratchCells,
             potential_new_peers_system,
             handshake_polling_system,
             established_packet_reader_system,
@@ -107,7 +107,7 @@ impl Plugin for UdpTransportPlugin {
             crate::endpoint::statistics::reset_endpoint_statistics_system,
         ));
 
-        app.init_resource::<PackingScratch>();
+        app.init_resource::<PackingScratchCells>();
         app.add_event::<PotentialNewPeer>();
 
         // Add application context resource

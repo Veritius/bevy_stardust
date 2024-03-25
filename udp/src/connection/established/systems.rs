@@ -15,7 +15,7 @@ pub(crate) fn established_packet_reader_system(
 pub(crate) fn established_packet_builder_system(
     registry: ChannelRegistry,
     config: Res<PluginConfiguration>,
-    scratch: Res<PackingScratch>,
+    scratch: Res<PackingScratchCells>,
     mut connections: Query<(Entity, &mut Connection, &mut Established, &NetworkMessages<Outgoing>)>,
 ) {
     // Static context for packing manager
@@ -32,7 +32,7 @@ pub(crate) fn established_packet_builder_system(
 
         // Get the packing scratch data
         let scratch_cell = scratch.cell();
-        let mut scratch_data = scratch_cell.replace(PackingScratchData::empty());
+        let mut scratch_data = scratch_cell.replace(PackingScratch::empty());
 
         // Move management frames into the packing queue
         for frame in established.frames.drain(..) {
