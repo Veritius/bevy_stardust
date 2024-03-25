@@ -107,11 +107,15 @@ fn back_and_forth_test() {
         assert_eq!(value, new);
     }
 
-    serial_test(0);
-    serial_test(1);
-    serial_test(7);
-    serial_test(50);
-    serial_test(70);
-    serial_test(125);
-    serial_test(55);
+    static TEST_SET: &[u64] = &[
+        0, 1, 2, 4, 8, 16, 32, 63, 64, 65, 66, // 0b00
+        8000, 10000, 16000, 16383, 16384, 16385, // 0b01
+        107374000, 1073741823, 1073741824, 1073741825, // 0b10
+        4611686017999999999, 4611686018000000000, 4611686018000000001, // 0b11
+
+    ];
+
+    for item in TEST_SET {
+        serial_test(*item);
+    }
 }
