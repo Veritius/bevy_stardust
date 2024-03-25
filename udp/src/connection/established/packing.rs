@@ -1,10 +1,10 @@
 use std::{cell::Cell, cmp::Ordering};
 use bevy_ecs::system::Resource;
 use bevy_stardust::channels::ChannelRegistryInner;
-use bytes::BytesMut;
+use bytes::{BufMut, BytesMut};
 use thread_local::ThreadLocal;
 use crate::{connection::established::frame::FrameFlags, packet::MTU_SIZE, plugin::PluginConfiguration};
-use super::frame::Frame;
+use super::{frame::Frame, Established};
 
 const BYTE_SCRATCH_SIZE: usize = MTU_SIZE;
 const FRAME_STORE_SIZE: usize = 256;
@@ -53,16 +53,18 @@ pub(super) struct PackingContext<'a> {
 }
 
 pub(super) struct PackingInstance<'a> {
+    component: &'a mut Established,
     scratch: &'a mut PackingScratch,
     context: PackingContext<'a>,
 }
 
 impl<'a> PackingInstance<'a> {
     pub fn build(
+        component: &'a mut Established,
         scratch: &'a mut PackingScratch,
         context: PackingContext<'a>,
     ) -> Self {
-        Self { scratch, context }
+        Self { component, scratch, context }
     }
 
     pub fn run(&mut self) {
@@ -77,6 +79,16 @@ impl<'a> PackingInstance<'a> {
             self.scratch.frames.sort_unstable_by(Self::sort_frames)
         });
 
+        // Pack frames into bins
+        for frame in self.scratch.frames.drain(..) {
+            Self::write_single_frame(
+                &frame,
+                self.context,
+                &mut self.component,
+                &mut self.scratch.bytes
+            );
+        }
+
         todo!()
     }
 
@@ -89,6 +101,28 @@ impl<'a> PackingInstance<'a> {
             (false, true) => Ordering::Less,
             _ => Ordering::Equal,
         }
+    }
+
+    fn write_single_frame(
+        frame: &Frame,
+        context: PackingContext,
+        component: &mut Established,
+        scratch: &mut BytesMut,
+    ) {
+        // Message identifier
+        scratch.put_u32(frame.ident);
+
+        // Ordering data
+        if (frame.flags & FrameFlags::ORDERED).0 > 0 {
+            let seq = component.ordering(frame.ident).advance();
+            scratch.put_u16(seq.into());
+        }
+
+        // Message length
+        scratch.put_u16(frame.bytes.len().try_into().unwrap());
+
+        // Insert the payload
+        scratch.put(&*frame.bytes);
     }
 }
 

@@ -59,7 +59,7 @@ pub(crate) fn established_packet_builder_system(
         }
 
         // Build and run the packing instance
-        let mut instance = PackingInstance::build(&mut scratch_data, context);
+        let mut instance = PackingInstance::build(&mut established, &mut scratch_data, context);
         instance.run();
 
         // Return scratch data to cell

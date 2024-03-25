@@ -45,6 +45,7 @@ use super::Handshaking;
 const RESEND_TIMEOUT: Duration = Duration::from_secs(1);
 
 pub(crate) fn handshake_polling_system(
+    registry: ChannelRegistry,
     config: Res<PluginConfiguration>,
     commands: ParallelCommands,
     mut connections: Query<(Entity, &mut Connection, &mut Handshaking)>,
@@ -238,6 +239,7 @@ pub(crate) fn handshake_polling_system(
                         .insert(Established::new(
                             config.available_payload_len,
                             &handshake.reliability,
+                            &registry,
                         ))
                         .insert(NetworkMessages::<Outgoing>::new())
                         .insert(NetworkMessages::<Incoming>::new())
