@@ -67,25 +67,25 @@ impl<'a> PackingManager<'a> {
         // Sort the data to read reliable frames first
         let trace_span = tracing::trace_span!("Sorting frames");
         trace_span.in_scope(|| {
-            self.scratch.frames.sort_unstable_by(sort_frames)
+            self.scratch.frames.sort_unstable_by(Self::sort_frames)
         });
 
         todo!()
+    }
+
+    fn sort_frames(a: &Frame, b: &Frame) -> Ordering {
+        match (
+            (a.flags & FrameFlags::RELIABLE).0 > 0,
+            (b.flags & FrameFlags::RELIABLE).0 > 0,
+        ) {
+            (true, false) => Ordering::Greater,
+            (false, true) => Ordering::Less,
+            _ => Ordering::Equal,
+        }
     }
 }
 
 struct Bin {
     reliable: bool,
     data: Vec<u8>,
-}
-
-fn sort_frames(a: &Frame, b: &Frame) -> Ordering {
-    match (
-        (a.flags & FrameFlags::RELIABLE).0 > 0,
-        (b.flags & FrameFlags::RELIABLE).0 > 0,
-    ) {
-        (true, false) => Ordering::Greater,
-        (false, true) => Ordering::Less,
-        _ => Ordering::Equal,
-    }
 }
