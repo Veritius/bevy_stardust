@@ -52,12 +52,12 @@ pub(super) struct PackingContext<'a> {
     pub registry: &'a ChannelRegistryInner,
 }
 
-pub(super) struct PackingManager<'a> {
+pub(super) struct PackingInstance<'a> {
     scratch: &'a mut PackingScratch,
     context: PackingContext<'a>,
 }
 
-impl<'a> PackingManager<'a> {
+impl<'a> PackingInstance<'a> {
     pub fn build(
         scratch: &'a mut PackingScratch,
         context: PackingContext<'a>,
