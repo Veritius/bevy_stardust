@@ -18,7 +18,7 @@ pub(crate) fn established_packet_reader_system(
         if connection.packet_queue.incoming().len() == 0 { return; }
 
         // Span for debugging
-        let trace_span = tracing::trace_span!("Reading packets", peer=?entity);
+        let trace_span = tracing::debug_span!("Reading packets", peer=?entity);
         let _entered = trace_span.enter();
 
         // Pop incoming packets
@@ -87,7 +87,7 @@ pub(crate) fn established_packet_builder_system(
     // Iterate all peers
     connections.par_iter_mut().for_each(|(entity, mut connection, mut established, outgoing)| {
         // Span for debugging
-        let trace_span = tracing::trace_span!("Building packets", peer=?entity);
+        let trace_span = tracing::debug_span!("Building packets", peer=?entity);
         let _entered = trace_span.enter();
 
         // Get the packing scratch data
