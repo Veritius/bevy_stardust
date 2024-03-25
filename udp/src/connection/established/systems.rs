@@ -4,7 +4,7 @@ use unbytes::*;
 use crate::{packet::OutgoingPacket, plugin::PluginConfiguration};
 use crate::Connection;
 use super::packet::Frame;
-use super::parsing::{parse_frame_header, FrameParseError, PacketHeaderData};
+use super::parsing::{PacketHeaderData, ParsedFrame, FrameParseError};
 use super::{packing::*, Established};
 
 pub(crate) fn established_packet_reader_system(
@@ -47,7 +47,7 @@ pub(crate) fn established_packet_reader_system(
             // Repeatedly parse frames
             'frame: loop {
                 // Parse a frame header
-                let parsed = match parse_frame_header(&mut reader, &config, &registry) {
+                let parsed = match ParsedFrame::parse(&mut reader, &config, &registry) {
                     Ok(v) => v,
                     Err(FrameParseError::EndOfInput) => { break 'packet; },
                 };

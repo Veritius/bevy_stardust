@@ -38,19 +38,21 @@ impl PacketHeaderData {
     }
 }
 
-pub(super) fn parse_frame_header(
-    reader: &mut Reader,
-    config: &PluginConfiguration,
-    registry: &ChannelRegistry,
-) -> Result<ParsedFrame, FrameParseError> {
-    todo!()
-}
-
 pub(super) struct ParsedFrame {
     pub flags: u32,
     pub ident: u32,
     pub order: Option<SequenceId>,
     pub length: usize,
+}
+
+impl ParsedFrame {
+    pub fn parse(
+        reader: &mut Reader,
+        config: &PluginConfiguration,
+        registry: &ChannelRegistry,
+    ) -> Result<Self, FrameParseError> {
+        todo!()
+    }
 }
 
 pub(super) enum FrameParseError {
