@@ -45,26 +45,27 @@ impl VarInt {
     pub const MIN: Self = Self(0);
 
     pub fn read(reader: &mut Reader) -> Result<Self, EndOfInput> {
-        let mut x = [0u8; 8];
-        let fb = reader.read_byte()?;
-        x[0] = fb & 0b0011_1111;
-        match fb >> 6 {
+        let mut bytes = [0u8; 8];
+        let tag = reader.read_byte()?;
+        bytes[0] = tag & 0b0011_1111;
+
+        match tag >> 6 {
             0b00 => {},
             0b01 => {
-                x[1] = reader.read_byte()?;
+                bytes[1] = reader.read_byte()?;
             },
             0b10 => {
                 let slc = reader.read_slice(3)?;
-                x[1..4].copy_from_slice(slc);
+                bytes[1..4].copy_from_slice(slc);
             },
             0b11 => {
                 let slc = reader.read_slice(7)?;
-                x[1..8].copy_from_slice(slc);
+                bytes[1..8].copy_from_slice(slc);
             },
             _ => unreachable!(),
         }
 
-        return Ok(Self(u64::from_be_bytes(x)))
+        return Ok(Self(u64::from_be_bytes(bytes)))
     }
 
     pub fn write<B: BufMut>(&self, buf: &mut B) {
@@ -76,7 +77,7 @@ impl VarInt {
         } else if x < 2u64.pow(30) {
             buf.put_u32(0b10 << 30 | x as u32);
         } else if x < 2u64.pow(62) {
-            buf.put_u64(0b11 | x);
+            buf.put_u64(0b11 << 62 | x);
         } else {
             unreachable!("bad varint");
         }
@@ -100,6 +101,8 @@ fn back_and_forth_test() {
 
     serial_test(VarInt(0));
     serial_test(VarInt(1));
+    serial_test(VarInt(7));
+    serial_test(VarInt(50));
     serial_test(VarInt(70));
     serial_test(VarInt(125));
     serial_test(VarInt(55));
