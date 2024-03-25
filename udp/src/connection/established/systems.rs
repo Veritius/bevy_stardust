@@ -3,8 +3,9 @@ use bevy_stardust::prelude::*;
 use unbytes::*;
 use crate::{packet::OutgoingPacket, plugin::PluginConfiguration};
 use crate::Connection;
+use super::packet::Frame;
 use super::parsing::PacketHeaderData;
-use super::{frame::*, packing::*, Established};
+use super::{packing::*, Established};
 
 pub(crate) fn established_packet_reader_system(
     registry: ChannelRegistry,
@@ -73,9 +74,10 @@ pub(crate) fn established_packet_builder_system(
             // Collect data about the messages overall
             let channel_int = u32::from(channel).wrapping_add(1);
             let channel_data = registry.channel_config(channel).unwrap();
-            let mut flags = FrameFlags::default();
-            if channel_data.reliable == ReliabilityGuarantee::Reliable { flags |= FrameFlags::RELIABLE; }
-            if channel_data.ordered != OrderingGuarantee::Unordered { flags |= FrameFlags::ORDERED; }
+
+            let mut flags = 0u32;
+            if channel_data.reliable == ReliabilityGuarantee::Reliable { flags |= Frame::IS_RELIABLE; }
+            if channel_data.ordered != OrderingGuarantee::Unordered { flags |= Frame::IS_ORDERED; }
 
             // Add all messages to queue
             for message in messages {

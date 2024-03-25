@@ -3,8 +3,8 @@ use bevy_ecs::system::Resource;
 use bevy_stardust::channels::ChannelRegistryInner;
 use bytes::{BufMut, Bytes, BytesMut};
 use thread_local::ThreadLocal;
-use crate::{connection::established::{frame::FrameFlags, packet::PacketHeader}, packet::MTU_SIZE, plugin::PluginConfiguration, varint::VarInt};
-use super::{frame::Frame, Established};
+use crate::{connection::established::{packet::PacketHeader}, packet::MTU_SIZE, plugin::PluginConfiguration, varint::VarInt};
+use super::{packet::Frame, Established};
 
 const BYTE_SCRATCH_SIZE: usize = MTU_SIZE;
 const FRAME_STORE_SIZE: usize = 256;
@@ -112,8 +112,8 @@ impl<'a> PackingInstance<'a> {
 
     fn sort_frames(a: &Frame, b: &Frame) -> Ordering {
         match (
-            (a.flags & FrameFlags::RELIABLE).0 > 0,
-            (b.flags & FrameFlags::RELIABLE).0 > 0,
+            (a.flags & Frame::IS_RELIABLE) > 0,
+            (b.flags & Frame::IS_RELIABLE) > 0,
         ) {
             (true, false) => Ordering::Greater,
             (false, true) => Ordering::Less,
@@ -130,7 +130,7 @@ impl<'a> PackingInstance<'a> {
         VarInt::from(frame.ident).write(scratch);
 
         // Ordering data
-        if (frame.flags & FrameFlags::ORDERED).0 > 0 {
+        if (frame.flags & Frame::IS_ORDERED) > 0 {
             let seq = component.ordering(frame.ident).advance();
             scratch.put_u16(seq.into());
         }

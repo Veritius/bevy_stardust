@@ -1,4 +1,3 @@
-mod frame;
 mod packet;
 mod parsing;
 mod packing;
@@ -7,7 +6,7 @@ mod systems;
 use std::{collections::HashMap, time::Duration};
 use bevy_ecs::prelude::*;
 use bevy_stardust::prelude::*;
-use self::frame::Frame;
+use packet::Frame;
 
 use super::{ordering::OrderedMessages, reliability::{ReliabilityState, ReliablePackets}};
 pub(crate) use packing::PackingScratchCells;
