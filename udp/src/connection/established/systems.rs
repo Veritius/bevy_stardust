@@ -18,6 +18,13 @@ pub(crate) fn established_packet_builder_system(
     scratch: Res<PackingScratch>,
     mut connections: Query<(Entity, &mut Connection, &mut Established, &NetworkMessages<Outgoing>)>,
 ) {
+    // Static context for packing manager
+    let context = PackingContext {
+        config: &config,
+        registry: &registry,
+    };
+
+    // Iterate all peers
     connections.par_iter_mut().for_each(|(entity, mut connection, mut established, outgoing)| {
         // Span for debugging
         let trace_span = tracing::trace_span!("Building packets", peer=?entity);
@@ -52,7 +59,7 @@ pub(crate) fn established_packet_builder_system(
         }
 
         // Build and run the packing manager
-        let mut packing = PackingManager::build(&mut scratch_data, &config);
+        let mut packing = PackingManager::build(&mut scratch_data, context);
         packing.run();
 
         // Return scratch data to cell

@@ -1,5 +1,6 @@
 use std::{cell::Cell, cmp::Ordering};
 use bevy_ecs::system::Resource;
+use bevy_stardust::channels::ChannelRegistryInner;
 use bytes::BytesMut;
 use thread_local::ThreadLocal;
 use crate::{connection::established::frame::FrameFlags, packet::MTU_SIZE, plugin::PluginConfiguration};
@@ -45,17 +46,23 @@ impl PackingScratchData {
     }
 }
 
+#[derive(Clone, Copy)]
+pub(super) struct PackingContext<'a> {
+    pub config: &'a PluginConfiguration,
+    pub registry: &'a ChannelRegistryInner,
+}
+
 pub(super) struct PackingManager<'a> {
     scratch: &'a mut PackingScratchData,
-    config: &'a PluginConfiguration,
+    context: PackingContext<'a>,
 }
 
 impl<'a> PackingManager<'a> {
     pub fn build(
         scratch: &'a mut PackingScratchData,
-        config: &'a PluginConfiguration,
+        context: PackingContext<'a>,
     ) -> Self {
-        Self { scratch, config }
+        Self { scratch, context }
     }
 
     pub fn run(&mut self) {
