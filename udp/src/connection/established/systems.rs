@@ -1,6 +1,6 @@
 use bevy_ecs::prelude::*;
 use bevy_stardust::prelude::*;
-use crate::plugin::PluginConfiguration;
+use crate::{packet::OutgoingPacket, plugin::PluginConfiguration};
 use crate::Connection;
 use super::{frame::*, packing::*, Established};
 
@@ -60,7 +60,19 @@ pub(crate) fn established_packet_builder_system(
 
         // Build and run the packing instance
         let mut instance = PackingInstance::build(&mut established, &mut scratch_data, context);
-        instance.run();
+        let mut finished = instance.run();
+
+        // Queue all finished packets for sending
+        while let Some(finished) = finished.next() {
+            connection.packet_queue.push_outgoing(OutgoingPacket {
+                payload: finished.full(),
+                messages: 0, // TODO
+            });
+        }
+
+        // Manually drop finished to please
+        // our lord the borrow checker.
+        drop(finished);
 
         // Return scratch data to cell
         scratch_cell.replace(scratch_data);

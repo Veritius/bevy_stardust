@@ -3,7 +3,7 @@ use bevy_ecs::system::Resource;
 use bevy_stardust::channels::ChannelRegistryInner;
 use bytes::{BufMut, Bytes, BytesMut};
 use thread_local::ThreadLocal;
-use crate::{connection::established::frame::FrameFlags, packet::MTU_SIZE, plugin::PluginConfiguration, varint::VarInt};
+use crate::{connection::established::{frame::FrameFlags, packet::PacketHeader}, packet::MTU_SIZE, plugin::PluginConfiguration, varint::VarInt};
 use super::{frame::Frame, Established};
 
 const BYTE_SCRATCH_SIZE: usize = MTU_SIZE;
@@ -73,7 +73,7 @@ impl<'a> PackingInstance<'a> {
         Self { component, scratch, context }
     }
 
-    pub fn run(&mut self) {
+    pub fn run(&'a mut self) -> impl Iterator<Item = Finished> + 'a {
         // Record some data for debugging
         let trace_span = tracing::trace_span!("Running instance");
         let _entered = trace_span.enter();
@@ -97,12 +97,16 @@ impl<'a> PackingInstance<'a> {
         });
 
         // Generate bin headers
-        for bin in self.scratch.bins.drain(..) {
-            let fin = Self::gen_bin_header(bin, &mut self.scratch.bytes, &mut self.component);
-            self.scratch.fin.push(fin);
-        }
+        let trace_span = tracing::trace_span!("Finalizing packets");
+        trace_span.in_scope(|| {
+            for bin in self.scratch.bins.drain(..) {
+                let fin = Self::gen_bin_header(bin, self.context, &mut self.scratch.bytes, &mut self.component);
+                self.scratch.fin.push(fin);
+            }
+        });
 
-        todo!()
+        // Return a draining iterator over all finished packets
+        return self.scratch.fin.drain(..)
     }
 
     fn sort_frames(a: &Frame, b: &Frame) -> Ordering {
@@ -161,11 +165,68 @@ impl<'a> PackingInstance<'a> {
     }
 
     fn gen_bin_header(
-        bin: Bin,
+        mut bin: Bin,
+        context: PackingContext,
         scratch: &mut BytesMut,
         component: &mut Established,
     ) -> Finished {
-        todo!()
+        // Packet header
+        let mut hdr = PacketHeader::default();
+        if bin.reliable { hdr.0 |= PacketHeader::RELIABLE; }
+        scratch.put_u8(hdr.0);
+
+        // This has to be out of scope of the next
+        // block, so it can be used later on.
+        let mut sequence = 0.into();
+
+        // Reliability header
+        if bin.reliable {
+            let header = component.reliability.header();
+            component.reliability.advance();
+
+            scratch.put_u16(header.seq.into());
+            scratch.put_u16(header.ack.into());
+
+            let bytes = header.bits.to_be_bytes();
+            scratch.put(&bytes[..context.config.reliable_bitfield_length]);
+
+            sequence = header.seq;
+        }
+
+        // Copy our new header to the dead prefix in the bin
+        let div = scratch.len();
+        let offset = BIN_HDR_SIZE - div;
+        bin.data[offset..BIN_HDR_SIZE].clone_from_slice(&scratch);
+        let end = bin.data.len();
+
+        // Fill the rest of the bin's unused space with zero bytes
+        // This is necessary to prevent a reallocation when converting to Bytes
+        // We slice the new Bytes object anyway so this data won't be sent
+        // While this wastes some memory, it's dropped soon enough.
+        // However, if the packet is reliable, it'll be kept around.
+        // We impose a limit for this case so we don't waste too much memory.
+
+        // Theoretically, it should be fine to (unsafely) extend the length
+        // making the Bytes store uninitialised data. Since that section will
+        // never be readable outside of this function, it could be slightly faster.
+
+        let remaining = bin.data.capacity() - bin.data.len();
+        if !bin.reliable && remaining > 128 {
+            bin.data.extend((0..remaining).map(|_| { 0 }));
+            debug_assert_eq!(bin.data.capacity(), bin.data.len());
+        }
+
+        // Convert to bytes
+        let full = Bytes::from(bin.data).slice(..end);
+
+        // Store in reliable
+        if bin.reliable {
+            component.reliability.record(sequence, full.slice(div..));
+        }
+
+        // Clean up and return finished
+        scratch.clear();
+        return Finished { full, div }
     }
 }
 
@@ -187,6 +248,20 @@ impl Bin {
 }
 
 pub(super) struct Finished {
-    pub header: Bytes,
-    pub payload: Bytes,
+    full: Bytes,
+    div: usize,
+}
+
+impl Finished {
+    pub fn full(&self) -> Bytes {
+        self.full.clone()
+    }
+
+    pub fn header(&self) -> Bytes {
+        self.full.slice(..self.div)
+    }
+
+    pub fn payload(&self) -> Bytes {
+        self.full.slice(self.div..)
+    }
 }
