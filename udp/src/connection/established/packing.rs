@@ -1,7 +1,7 @@
 use std::{cell::Cell, cmp::Ordering};
 use bevy_ecs::system::Resource;
 use bevy_stardust::channels::ChannelRegistryInner;
-use bytes::{BufMut, BytesMut};
+use bytes::{BufMut, Bytes, BytesMut};
 use thread_local::ThreadLocal;
 use crate::{connection::established::frame::FrameFlags, packet::MTU_SIZE, plugin::PluginConfiguration, varint::VarInt};
 use super::{frame::Frame, Established};
@@ -24,6 +24,7 @@ impl PackingScratchCells {
                 bytes: BytesMut::with_capacity(BYTE_SCRATCH_SIZE),
                 frames: Vec::with_capacity(FRAME_STORE_SIZE),
                 bins: Vec::with_capacity(BIN_STORE_SIZE),
+                fin: Vec::with_capacity(BIN_STORE_SIZE),
             })
         })
     }
@@ -33,6 +34,7 @@ pub(super) struct PackingScratch {
     bytes: BytesMut,
     frames: Vec<Frame>,
     bins: Vec<Bin>,
+    fin: Vec<Finished>,
 }
 
 impl PackingScratch {
@@ -41,6 +43,7 @@ impl PackingScratch {
             bytes: BytesMut::with_capacity(0),
             frames: Vec::with_capacity(0),
             bins: Vec::with_capacity(0),
+            fin: Vec::with_capacity(0),
         }
     }
 
@@ -72,7 +75,7 @@ impl<'a> PackingInstance<'a> {
 
     pub fn run(&mut self) {
         // Record some data for debugging
-        let trace_span = tracing::trace_span!("Packing frames");
+        let trace_span = tracing::trace_span!("Running instance");
         let _entered = trace_span.enter();
         trace_span.record("frames", self.scratch.frames.len());
 
@@ -83,10 +86,20 @@ impl<'a> PackingInstance<'a> {
         });
 
         // Pack frames into bins
-        for frame in self.scratch.frames.drain(..) {
-            Self::write_single_frame(&frame, &mut self.component, &mut self.scratch.bytes);
-            let bin = Self::get_or_make_bin(&mut self.scratch.bins, self.scratch.bytes.len());
-            bin.data.extend_from_slice(&self.scratch.bytes);
+        let trace_span = tracing::trace_span!("Packing frames");
+        trace_span.in_scope(|| {
+            for frame in self.scratch.frames.drain(..) {
+                Self::write_single_frame(&frame, &mut self.component, &mut self.scratch.bytes);
+                let bin = Self::get_or_make_bin(&mut self.scratch.bins, self.scratch.bytes.len());
+                bin.data.extend_from_slice(&self.scratch.bytes);
+                self.scratch.bytes.clear();
+            }
+        });
+
+        // Generate bin headers
+        for bin in self.scratch.bins.drain(..) {
+            let fin = Self::gen_bin_header(bin, &mut self.scratch.bytes, &mut self.component);
+            self.scratch.fin.push(fin);
         }
 
         todo!()
@@ -146,6 +159,14 @@ impl<'a> PackingInstance<'a> {
         bins.push(bin);
         return bins.last_mut().unwrap();
     }
+
+    fn gen_bin_header(
+        bin: Bin,
+        scratch: &mut BytesMut,
+        component: &mut Established,
+    ) -> Finished {
+        todo!()
+    }
 }
 
 struct Bin {
@@ -163,4 +184,9 @@ impl Bin {
             data,
         }
     }
+}
+
+pub(super) struct Finished {
+    pub header: Bytes,
+    pub payload: Bytes,
 }
