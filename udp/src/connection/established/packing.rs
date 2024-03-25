@@ -9,11 +9,11 @@ use super::{frame::Frame, Established};
 const BYTE_SCRATCH_SIZE: usize = MTU_SIZE;
 const FRAME_STORE_SIZE: usize = 256;
 const BIN_STORE_SIZE: usize = 1;
-const REL_DEAD_MAX: usize = 128;
 
 const BIN_HDR_SIZE: usize = 32;
 const BIN_PLD_SIZE: usize = MTU_SIZE;
 const BIN_TTL_SIZE: usize = BIN_HDR_SIZE + BIN_PLD_SIZE;
+const REL_DEAD_MAX: usize = 128;
 
 #[derive(Resource, Default)]
 pub(crate) struct PackingScratchCells(ThreadLocal<Cell<PackingScratch>>);
