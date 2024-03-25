@@ -1,7 +1,9 @@
 use bevy_ecs::prelude::*;
 use bevy_stardust::prelude::*;
+use unbytes::*;
 use crate::{packet::OutgoingPacket, plugin::PluginConfiguration};
 use crate::Connection;
+use super::parsing::PacketHeaderData;
 use super::{frame::*, packing::*, Established};
 
 pub(crate) fn established_packet_reader_system(
@@ -9,7 +11,34 @@ pub(crate) fn established_packet_reader_system(
     config: Res<PluginConfiguration>,
     mut connections: Query<(Entity, &mut Connection, &mut Established, &mut NetworkMessages<Incoming>)>,
 ) {
-    todo!()
+    // Iterate all peers
+    connections.par_iter_mut().for_each(|(entity, mut connection, mut established, outgoing)| {
+        // Skip connections without any incoming packets
+        if connection.packet_queue.incoming().len() == 0 { return; }
+
+        // Span for debugging
+        let trace_span = tracing::trace_span!("Reading packets", peer=?entity);
+        let _entered = trace_span.enter();
+
+        // Pop incoming packets
+        while let Some(packet) = connection.packet_queue.pop_incoming() {
+            // Span for each packet
+            let trace_span = tracing::trace_span!("Reading packet");
+            let _entered = trace_span.enter();
+
+            // Reader to process the packet
+            let mut reader = Reader::new(packet.payload);
+
+            // Get the packet header
+            let header = match PacketHeaderData::parse(&mut reader, &config) {
+                Ok(v) => v,
+                Err(_) => {
+                    // TODO: Handle this case.
+                    continue;
+                },
+            };
+        }
+    });
 }
 
 pub(crate) fn established_packet_builder_system(

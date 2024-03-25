@@ -1,5 +1,6 @@
 mod frame;
 mod packet;
+mod parsing;
 mod packing;
 mod systems;
 
