@@ -48,8 +48,9 @@ impl From<VarInt> for u64 {
 }
 
 impl Debug for VarInt {
+    #[inline]
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        (self.0 & (u64::MAX >> 2)).fmt(f)
+        self.0.fmt(f)
     }
 }
 
