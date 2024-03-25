@@ -1,7 +1,4 @@
 // Variable length integer implementation based on RFC 9000 (QUIC)
-// Some code taken from quinn-proto, licensed under the MIT License
-// https://github.com/quinn-rs/quinn/blob/a2a214b968fbcbc9aa66aba4393851b3d6ab5b49/quinn-proto/src/varint.rs
-// Full copy of the license is here: https://github.com/quinn-rs/quinn/blob/a2a214b968fbcbc9aa66aba4393851b3d6ab5b49/LICENSE-MIT
 
 use std::fmt::Debug;
 
@@ -19,10 +16,10 @@ impl From<u32> for VarInt {
 }
 
 impl TryFrom<u64> for VarInt {
-    type Error = u64;
+    type Error = ();
 
     fn try_from(value: u64) -> Result<Self, Self::Error> {
-        if value > 2u64.pow(62) { return Err(value); }
+        if value > Self::MAX { return Err(()); }
         return Ok(Self(value))
     }
 }
@@ -36,20 +33,21 @@ impl From<VarInt> for u64 {
 
 impl Debug for VarInt {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        (self.0 & u64::MAX >> 2).fmt(f)
+        (self.0 & (u64::MAX >> 2)).fmt(f)
     }
 }
 
 impl VarInt {
-    pub const MAX: Self = Self(2u64.pow(62));
-    pub const MIN: Self = Self(0);
+    pub const MAX: u64 = 2u64.pow(62);
 
     pub fn read(reader: &mut Reader) -> Result<Self, EndOfInput> {
-        let mut bytes = [0u8; 8];
-        let tag = reader.read_byte()?;
-        bytes[0] = tag & 0b0011_1111;
+        const MASK: u8 = 0b0000_0011;
 
-        match tag >> 6 {
+        let mut bytes = [0u8; 8];
+        let fb = reader.read_byte()?;
+        bytes[0] = fb & !MASK;
+
+        match fb & MASK {
             0b00 => {},
             0b01 => {
                 bytes[1] = reader.read_byte()?;
@@ -65,19 +63,25 @@ impl VarInt {
             _ => unreachable!(),
         }
 
-        return Ok(Self(u64::from_be_bytes(bytes)))
+        let val = u64::from_le_bytes(bytes) >> 2;
+        return Ok(Self(val))
     }
 
     pub fn write<B: BufMut>(&self, buf: &mut B) {
         let x = self.0;
+        let mut b = (self.0 << 2).to_le_bytes();
+
         if x < 2u64.pow(6) {
-            buf.put_u8(x as u8);
+            buf.put_u8(b[0]);
         } else if x < 2u64.pow(14) {
-            buf.put_u16(0b01 << 14 | x as u16);
+            b[0] |= 0b01;
+            buf.put(&b[..2]);
         } else if x < 2u64.pow(30) {
-            buf.put_u32(0b10 << 30 | x as u32);
+            b[0] |= 0b10;
+            buf.put(&b[..4]);
         } else if x < 2u64.pow(62) {
-            buf.put_u64(0b11 << 62 | x);
+            b[0] |= 0b11;
+            buf.put(&b[..8]);
         } else {
             unreachable!("bad varint");
         }
@@ -90,13 +94,14 @@ fn back_and_forth_test() {
     use unbytes::*;
 
     fn serial_test(value: u64) {
-        assert!(value > VarInt::MAX.0, "Value passed to serial_test was not representable in a varint");
-        let value = VarInt::try_from(value).unwrap();
+        let value = VarInt::try_from(value)
+        .expect("Value passed to serial_test was not representable in a varint");
 
         let mut bytes = BytesMut::with_capacity(8);
         value.write(&mut bytes);
 
-        let mut reader = Reader::new(bytes.freeze());
+        let bytes = bytes.freeze();
+        let mut reader = Reader::new(bytes);
         let new = VarInt::read(&mut reader).unwrap();
 
         assert_eq!(value, new);
