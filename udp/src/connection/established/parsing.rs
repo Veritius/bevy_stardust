@@ -1,10 +1,11 @@
+use bevy_stardust::channels::ChannelRegistry;
 use unbytes::*;
-use crate::{connection::reliability::ReliablePacketHeader, plugin::PluginConfiguration};
+use crate::{connection::reliability::ReliablePacketHeader, plugin::PluginConfiguration, sequences::SequenceId};
 use super::packet::PacketHeader;
 
 pub(super) struct PacketHeaderData {
-    flags: PacketHeader,
-    reliable: Option<ReliablePacketHeader>,
+    pub flags: PacketHeader,
+    pub reliable: Option<ReliablePacketHeader>,
 }
 
 impl PacketHeaderData {
@@ -34,5 +35,31 @@ impl PacketHeaderData {
         };
 
         Ok(Self { flags, reliable })
+    }
+}
+
+pub(super) fn parse_frame_header(
+    reader: &mut Reader,
+    config: &PluginConfiguration,
+    registry: &ChannelRegistry,
+) -> Result<ParsedFrame, FrameParseError> {
+    todo!()
+}
+
+pub(super) struct ParsedFrame {
+    pub flags: u32,
+    pub ident: u32,
+    pub order: Option<SequenceId>,
+    pub length: usize,
+}
+
+pub(super) enum FrameParseError {
+    EndOfInput,
+}
+
+impl From<EndOfInput> for FrameParseError {
+    #[inline]
+    fn from(_: EndOfInput) -> Self {
+        Self::EndOfInput
     }
 }

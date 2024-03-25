@@ -4,7 +4,7 @@ use unbytes::*;
 use crate::{packet::OutgoingPacket, plugin::PluginConfiguration};
 use crate::Connection;
 use super::packet::Frame;
-use super::parsing::PacketHeaderData;
+use super::parsing::{parse_frame_header, FrameParseError, PacketHeaderData};
 use super::{packing::*, Established};
 
 pub(crate) fn established_packet_reader_system(
@@ -13,7 +13,7 @@ pub(crate) fn established_packet_reader_system(
     mut connections: Query<(Entity, &mut Connection, &mut Established, &mut NetworkMessages<Incoming>)>,
 ) {
     // Iterate all peers
-    connections.par_iter_mut().for_each(|(entity, mut connection, mut established, outgoing)| {
+    connections.par_iter_mut().for_each(|(entity, mut connection, mut established, mut incoming)| {
         // Skip connections without any incoming packets
         if connection.packet_queue.incoming().len() == 0 { return; }
 
@@ -22,7 +22,7 @@ pub(crate) fn established_packet_reader_system(
         let _entered = trace_span.enter();
 
         // Pop incoming packets
-        while let Some(packet) = connection.packet_queue.pop_incoming() {
+        'packet: while let Some(packet) = connection.packet_queue.pop_incoming() {
             // Span for each packet
             let trace_span = tracing::trace_span!("Reading packet");
             let _entered = trace_span.enter();
@@ -35,9 +35,39 @@ pub(crate) fn established_packet_reader_system(
                 Ok(v) => v,
                 Err(_) => {
                     // TODO: Handle this case.
-                    continue;
+                    continue 'packet;
                 },
             };
+
+            // If the packet is reliable, acknowledge it
+            if let Some(reliable) = header.reliable {
+                established.reliability.ack(reliable, config.reliable_bitfield_length as u8);
+            }
+
+            // Repeatedly parse frames
+            'frame: loop {
+                // Parse a frame header
+                let parsed = match parse_frame_header(&mut reader, &config, &registry) {
+                    Ok(v) => v,
+                    Err(FrameParseError::EndOfInput) => { break 'packet; },
+                };
+
+                // Get the message data
+                let message = match reader.read_bytes(parsed.length) {
+                    Ok(v) => v,
+                    Err(_) => { break 'packet; },
+                };
+
+                // Forward it to the correct whatever
+                if parsed.ident > 0 {
+                    // This is a message frame
+                    let ident = parsed.ident.wrapping_sub(1);
+                    incoming.push(ChannelId::from(ident), message);
+                } else {
+                    // This is a transport frame
+                    todo!()
+                }
+            }
         }
     });
 }
