@@ -24,6 +24,22 @@ impl TryFrom<u64> for VarInt {
     }
 }
 
+impl TryFrom<usize> for VarInt {
+    type Error = ();
+
+    #[inline]
+    fn try_from(value: usize) -> Result<Self, Self::Error> {
+        // The pointer size is smaller than the maximum value on a 16 or 32 bit system
+        // which means this conversion won't ever cause any problems.
+        #[cfg(any(target_pointer_width="16", target_pointer_width="32"))]
+        return Ok(Self(value as u64));
+
+        // On 64-bit targets, we actually have to check.
+        #[cfg(target_pointer_width="64")]
+        return (value as u64).try_into();
+    }
+}
+
 impl From<VarInt> for u64 {
     #[inline]
     fn from(value: VarInt) -> Self {

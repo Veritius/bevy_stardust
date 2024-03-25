@@ -3,7 +3,7 @@ use bevy_ecs::system::Resource;
 use bevy_stardust::channels::ChannelRegistryInner;
 use bytes::{BufMut, BytesMut};
 use thread_local::ThreadLocal;
-use crate::{connection::established::frame::FrameFlags, packet::MTU_SIZE, plugin::PluginConfiguration};
+use crate::{connection::established::frame::FrameFlags, packet::MTU_SIZE, plugin::PluginConfiguration, varint::VarInt};
 use super::{frame::Frame, Established};
 
 const BYTE_SCRATCH_SIZE: usize = MTU_SIZE;
@@ -109,7 +109,7 @@ impl<'a> PackingInstance<'a> {
         scratch: &mut BytesMut,
     ) {
         // Message identifier
-        scratch.put_u32(frame.ident);
+        VarInt::from(frame.ident).write(scratch);
 
         // Ordering data
         if (frame.flags & FrameFlags::ORDERED).0 > 0 {
@@ -118,7 +118,7 @@ impl<'a> PackingInstance<'a> {
         }
 
         // Message length
-        scratch.put_u16(frame.bytes.len().try_into().unwrap());
+        VarInt::try_from(frame.bytes.len()).unwrap().write(scratch);
 
         // Insert the payload
         scratch.put(&*frame.bytes);
