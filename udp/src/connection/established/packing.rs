@@ -9,7 +9,10 @@ use super::{frame::Frame, Established};
 const BYTE_SCRATCH_SIZE: usize = MTU_SIZE;
 const FRAME_STORE_SIZE: usize = 256;
 const BIN_STORE_SIZE: usize = 1;
-const BIN_ALLOC_SIZE: usize = MTU_SIZE;
+
+const BIN_HDR_SIZE: usize = 32;
+const BIN_PLD_SIZE: usize = MTU_SIZE;
+const BIN_TTL_SIZE: usize = BIN_HDR_SIZE + BIN_PLD_SIZE;
 
 #[derive(Resource, Default)]
 pub(crate) struct PackingScratchCells(ThreadLocal<Cell<PackingScratch>>);
@@ -81,12 +84,9 @@ impl<'a> PackingInstance<'a> {
 
         // Pack frames into bins
         for frame in self.scratch.frames.drain(..) {
-            Self::write_single_frame(
-                &frame,
-                self.context,
-                &mut self.component,
-                &mut self.scratch.bytes
-            );
+            Self::write_single_frame(&frame, &mut self.component, &mut self.scratch.bytes);
+            let bin = Self::get_or_make_bin(&mut self.scratch.bins, self.scratch.bytes.len());
+            bin.data.extend_from_slice(&self.scratch.bytes);
         }
 
         todo!()
@@ -105,7 +105,6 @@ impl<'a> PackingInstance<'a> {
 
     fn write_single_frame(
         frame: &Frame,
-        context: PackingContext,
         component: &mut Established,
         scratch: &mut BytesMut,
     ) {
@@ -124,9 +123,44 @@ impl<'a> PackingInstance<'a> {
         // Insert the payload
         scratch.put(&*frame.bytes);
     }
+
+    fn get_or_make_bin(
+        bins: &mut Vec<Bin>,
+        size: usize,
+    ) -> &mut Bin {
+        // Returns the first bin that has enough space to store the data
+        let found_bin = bins.iter_mut()
+        .enumerate()
+        .find(|(_, bin)| {
+            (bin.data.capacity() - bin.data.len()) >= size
+        })
+        .map(|(index, _)| index);
+
+        // Return the bin if Some
+        if let Some(index) = found_bin {
+            return &mut bins[index];
+        }
+
+        // Make a bin instead
+        let bin = Bin::new();
+        bins.push(bin);
+        return bins.last_mut().unwrap();
+    }
 }
 
 struct Bin {
     reliable: bool,
     data: Vec<u8>,
+}
+
+impl Bin {
+    fn new() -> Self {
+        let mut data = Vec::with_capacity(BIN_TTL_SIZE);
+        data.extend_from_slice(&[0u8; BIN_HDR_SIZE]);
+
+        Self {
+            reliable: bool::default(),
+            data,
+        }
+    }
 }
