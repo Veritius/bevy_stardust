@@ -161,7 +161,7 @@ pub(crate) fn established_timeout_system(
             }
 
             // Log the disconnection
-            tracing::debug!("{entity:?} timed out after {} seconds", timeout_dur.as_secs());
+            tracing::debug!("Connection {entity:?} timed out after {} seconds", timeout_dur.as_secs());
 
             // Early return to prevent keep-alive check
             return;
