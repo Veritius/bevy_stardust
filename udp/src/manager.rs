@@ -1,4 +1,4 @@
-use std::net::{SocketAddr, ToSocketAddrs};
+use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4, ToSocketAddrs};
 use anyhow::Result;
 use bevy_ecs::{entity::Entities, prelude::*, system::SystemParam};
 use crate::{connection::OutgoingHandshake, endpoint::{ConnectionOwnershipToken, Endpoint}};
@@ -126,4 +126,16 @@ fn resolve_address(address: impl ToSocketAddrs) -> Result<SocketAddr> {
     .ok_or_else(|| {
         anyhow::anyhow!("Invalid address")
     })?)
+}
+
+/// Implements [`ToSocketAddrs`], letting the OS choose the address and port used.
+pub struct Unspecified;
+
+impl ToSocketAddrs for Unspecified {
+    type Iter = std::option::IntoIter<SocketAddr>;
+
+    #[inline]
+    fn to_socket_addrs(&self) -> std::io::Result<Self::Iter> {
+        Ok(Some(SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::new(127, 0, 0, 1), 0))).into_iter())
+    }
 }

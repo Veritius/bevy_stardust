@@ -15,6 +15,6 @@ mod varint;
 
 pub use plugin::UdpTransportPlugin;
 pub use appdata::ApplicationNetworkVersion;
-pub use manager::UdpManager;
+pub use manager::{UdpManager, Unspecified};
 pub use endpoint::{Endpoint, EndpointState, statistics::EndpointStatistics};
 pub use connection::{Connection, ConnectionDirection, ConnectionState, statistics::ConnectionStatistics};
