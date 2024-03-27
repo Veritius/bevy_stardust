@@ -218,7 +218,7 @@ impl<'a> PackingInstance<'a> {
         }
 
         // Convert to bytes
-        let full = Bytes::from(bin.data).slice(..end);
+        let full = Bytes::from(bin.data).slice(offset..end);
 
         // Store in reliable
         if bin.reliable {
