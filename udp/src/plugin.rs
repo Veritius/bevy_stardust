@@ -72,6 +72,7 @@ impl Plugin for UdpTransportPlugin {
             handshake_polling_system,
             established_packet_reader_system,
             established_packet_builder_system,
+            established_timeout_system,
             close_connections_system,
         };
         use crate::sending::io_sending_system;
@@ -96,6 +97,7 @@ impl Plugin for UdpTransportPlugin {
 
         // Packet transmitting systems
         app.add_systems(PostUpdate, (
+            established_timeout_system,
             established_packet_builder_system,
             io_sending_system,
             close_connections_system,
@@ -116,7 +118,7 @@ impl Plugin for UdpTransportPlugin {
             available_payload_len: MTU_SIZE - (4+((self.reliable_bitfield_length as usize)*8)),
             reliable_bitfield_length: self.reliable_bitfield_length as usize,
             attempt_timeout: self.attempt_timeout,
-            established_timeout: self.connection_timeout,
+            connection_timeout: self.connection_timeout,
             keep_alive_timeout: self.keep_alive_timeout,
         });
     }
@@ -128,6 +130,6 @@ pub(crate) struct PluginConfiguration {
     pub available_payload_len: usize,
     pub reliable_bitfield_length: usize,
     pub attempt_timeout: Duration,
-    pub established_timeout: Duration,
+    pub connection_timeout: Duration,
     pub keep_alive_timeout: Duration,
 }
