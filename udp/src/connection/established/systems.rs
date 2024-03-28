@@ -3,6 +3,7 @@ use std::time::Instant;
 use bevy_ecs::prelude::*;
 use bevy_stardust::prelude::*;
 use unbytes::*;
+use crate::packet::MTU_SIZE;
 use crate::{packet::OutgoingPacket, plugin::PluginConfiguration};
 use crate::{Connection, ConnectionState};
 use super::packet::Frame;
@@ -134,12 +135,29 @@ pub(crate) fn established_packet_builder_system(
             });
         }
 
-        // Manually drop finished to please
-        // our lord the borrow checker.
+        // Praise be to the borrow checker, despite this inconvenience (lol)
         drop(finished);
 
         // Return scratch data to cell
         scratch_cell.replace(scratch_data);
+
+        // Resend old reliable packets
+        // TODO: Reduce allocations here
+        let now = Instant::now();
+        let timeout = established.reliable_timeout;
+        let mut needs_resends = established.reliability.drain_old(|v| now.duration_since(v) > timeout).collect::<Vec<_>>();
+        let mut needs_resends = needs_resends.drain(..);
+        while let Some(packet) = needs_resends.next() {
+            let mut buf = BytesMut::with_capacity(MTU_SIZE);
+            let rel_header = established.reliability.header();
+            rel_header.ser(&mut buf, config.reliable_bitfield_length);
+            buf.put(&*packet.payload);
+            established.reliability.record(rel_header.seq, packet.payload);
+            established.reliability.advance();
+        }
+
+        // Manually drop rel_drain to please our lord the borrow checker.
+        drop(needs_resends);
     });
 }
 

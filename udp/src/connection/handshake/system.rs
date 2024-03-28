@@ -125,7 +125,7 @@ pub(crate) fn handshake_polling_system(
                     }
 
                     // Respond with a ClientFinalisePacket
-                    handshake.reliability.increment_local();
+                    handshake.reliability.advance();
                     let r_header = handshake.reliability.header();
                     let mut buf = BytesMut::with_capacity(6);
                     HandshakePacketHeader { sequence: r_header.seq }.write_bytes(&mut buf);
@@ -282,7 +282,7 @@ fn send_close_packet(
     reason: HandshakeResponseCode,
 ) {
     // Send a packet informing them of our denial
-    reliability.increment_local();
+    reliability.advance();
     let r_header = reliability.header();
     packet_queue.push_outgoing(OutgoingPacket {
         payload: closing_packet(&ClosingPacket {

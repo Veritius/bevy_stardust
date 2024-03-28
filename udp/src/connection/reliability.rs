@@ -1,5 +1,5 @@
 use std::{cmp::Ordering, collections::BTreeMap, fmt::Debug, time::Instant};
-use bytes::Bytes;
+use bytes::{BufMut, Bytes};
 use crate::sequences::*;
 
 const BITMASK: u128 = 1;
@@ -30,7 +30,7 @@ impl ReliabilityState {
     }
 
     /// Increments the local sequence by 1
-    pub fn increment_local(&mut self) {
+    pub fn advance(&mut self) {
         self.local_sequence += 1;
     }
 
@@ -100,6 +100,15 @@ pub struct ReliablePacketHeader {
     pub bits: u128,
 }
 
+impl ReliablePacketHeader {
+    pub fn ser<B: BufMut>(&self, buf: &mut B, bf_size: usize){
+        buf.put_u16(self.seq.into());
+        buf.put_u16(self.ack.into());
+        let bytes = self.bits.to_be_bytes();
+        buf.put(&bytes[..bf_size]);
+    }
+}
+
 impl Debug for ReliablePacketHeader {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ReliablePacketHeader")
@@ -130,7 +139,7 @@ impl ReliablePackets {
 
     #[inline]
     pub fn advance(&mut self) {
-        self.state.increment_local()
+        self.state.advance()
     }
 
     pub fn record(&mut self, sequence: SequenceId, payload: Bytes) {

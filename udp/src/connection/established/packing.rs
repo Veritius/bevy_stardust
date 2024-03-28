@@ -11,8 +11,8 @@ const FRAME_STORE_SIZE: usize = 256;
 const BIN_STORE_SIZE: usize = 1;
 
 const BIN_HDR_SIZE: usize = 32;
-const BIN_PLD_SIZE: usize = MTU_SIZE;
-const BIN_TTL_SIZE: usize = BIN_HDR_SIZE + BIN_PLD_SIZE;
+const BIN_PLD_SIZE: usize = MTU_SIZE - BIN_HDR_SIZE;
+const BIN_TTL_SIZE: usize = MTU_SIZE;
 const REL_DEAD_MAX: usize = 128;
 
 #[derive(Resource, Default)]
@@ -183,13 +183,8 @@ impl<'a> PackingInstance<'a> {
         // Reliability header
         if bin.reliable {
             let header = component.reliability.header();
+            header.ser(scratch, context.config.reliable_bitfield_length);
             component.reliability.advance();
-
-            scratch.put_u16(header.seq.into());
-            scratch.put_u16(header.ack.into());
-
-            let bytes = header.bits.to_be_bytes();
-            scratch.put(&bytes[..context.config.reliable_bitfield_length]);
 
             sequence = header.seq;
         }
