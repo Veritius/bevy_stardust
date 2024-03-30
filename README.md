@@ -34,7 +34,7 @@ The following features are planned to be created as additional crates, as part o
 ## Usage
 | Bevy | Stardust |
 | ---- | -------- |
-| 0.13 | 0.4      |
+| 0.13 | 0.5      |
 | 0.12 | 0.2      |
 | 0.11 | 0.1      |
 
@@ -143,6 +143,10 @@ fn read_words_system(
     }
 }
 ```
+
+Available feature flags:
+- `reflect`: Adds `Reflect` to the `Channel` supertrait
+- `hashing`: Allows hashing Stardust-related data
 
 **Please note:** The `hashing` feature flag is dependent on `gxhash`, which will not compile on targets without AES intrinsics. It's made available for local testing, but will break in production. See the [tracking issue](https://github.com/Veritius/bevy_stardust/issues/31) for more.
 

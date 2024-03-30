@@ -1,5 +1,5 @@
 use std::{collections::HashMap, marker::PhantomData};
-use bevy_ecs::prelude::*;
+use bevy::prelude::*;
 use bytes::Bytes;
 use crate::prelude::*;
 use super::direction::DirectionType;

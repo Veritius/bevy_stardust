@@ -1,7 +1,7 @@
 //! The channel registry.
 
 use std::{any::TypeId, collections::BTreeMap, ops::{Deref, DerefMut}, sync::Arc};
-use bevy_ecs::{component::ComponentId, prelude::*, system::SystemParam};
+use bevy::{ecs::{component::ComponentId, system::SystemParam}, prelude::*};
 use crate::prelude::ChannelConfiguration;
 use super::{id::{Channel, ChannelId}, ToChannelId};
 
@@ -51,7 +51,7 @@ unsafe impl<'a> SystemParam for ChannelRegistry<'a> {
     type State = (ComponentId, ComponentId);
     type Item<'w, 's> = ChannelRegistry<'w>;
 
-    fn init_state(world: &mut World, system_meta: &mut bevy_ecs::system::SystemMeta) -> Self::State {
+    fn init_state(world: &mut World, system_meta: &mut bevy::ecs::system::SystemMeta) -> Self::State {
         // SAFETY: Since we can't register accesses, we do it through Res<T> which can
         (
             <Res<FinishedChannelRegistry> as SystemParam>::init_state(world, system_meta),
@@ -61,9 +61,9 @@ unsafe impl<'a> SystemParam for ChannelRegistry<'a> {
 
     unsafe fn get_param<'w, 's>(
         state: &'s mut Self::State,
-        _system_meta: &bevy_ecs::system::SystemMeta,
-        world: bevy_ecs::world::unsafe_world_cell::UnsafeWorldCell<'w>,
-        _change_tick: bevy_ecs::component::Tick,
+        _system_meta: &bevy::ecs::system::SystemMeta,
+        world: bevy::ecs::world::unsafe_world_cell::UnsafeWorldCell<'w>,
+        _change_tick: bevy::ecs::component::Tick,
     ) -> Self::Item<'w, 's> {
         if let Some(ptr) = world.get_resource_by_id(state.0) {
             return ChannelRegistry(ptr.deref::<FinishedChannelRegistry>().0.as_ref());
@@ -199,7 +199,7 @@ pub struct ChannelData {
     /// The channel's `TypeId`.
     pub type_id: TypeId,
 
-    /// The channel's `TypePath` (from `bevy_reflect`)
+    /// The channel's `TypePath` (from `bevy::reflect`)
     #[cfg(feature="reflect")]
     pub type_path: &'static str,
 

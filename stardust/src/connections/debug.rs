@@ -1,4 +1,4 @@
-use bevy_ecs::prelude::*;
+use bevy::prelude::*;
 
 /// Used to intentionally reduce the performance of peers for testing purposes.
 /// If applied to a `NetworkPeer` entity, reduces performance for that peer specifically.

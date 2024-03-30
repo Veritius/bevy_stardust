@@ -1,7 +1,7 @@
 //! "Peers" aka other computers over the network.
 
 use std::time::Instant;
-use bevy_ecs::prelude::*;
+use bevy::prelude::*;
 
 /// An active connection to a remote peer.
 /// 
@@ -18,7 +18,7 @@ use bevy_ecs::prelude::*;
 /// - [`NetworkPeerLifestage`], relating to connection state
 /// - [`SecurityLevel`](super::security::SecurityLevel), relating to encryption
 #[derive(Debug, Component)]
-#[cfg_attr(feature="reflect", derive(bevy_reflect::Reflect))]
+#[cfg_attr(feature="reflect", derive(bevy::reflect::Reflect))]
 pub struct NetworkPeer {
     /// The point in time this peer was added to the `World`.
     pub joined: Instant,
@@ -63,7 +63,7 @@ impl NetworkPeer {
 /// This exists to model the average lifecycle of a connection, from an initial handshake to being disconnected.
 /// An `Ord` implementation is provided, with variants being 'greater' if they're later in the model lifecycle.
 #[derive(Debug, Component, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-#[cfg_attr(feature="reflect", derive(bevy_reflect::Reflect))]
+#[cfg_attr(feature="reflect", derive(bevy::reflect::Reflect))]
 #[non_exhaustive]
 pub enum NetworkPeerLifestage {
     /// Midway through a [handshake].
@@ -90,7 +90,7 @@ pub enum NetworkPeerLifestage {
 /// If you're working with another ID namespace, like UUIDs and Steam IDs, you should
 /// map the ids from that space into a unique value here through some kind of associative array.
 #[derive(Component, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[cfg_attr(feature="reflect", derive(bevy_reflect::Reflect))]
+#[cfg_attr(feature="reflect", derive(bevy::reflect::Reflect))]
 pub struct NetworkPeerUid(pub u64);
 
 impl std::fmt::Debug for NetworkPeerUid {
