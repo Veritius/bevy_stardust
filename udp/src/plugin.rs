@@ -1,6 +1,5 @@
 use std::time::Duration;
-use bevy_app::prelude::*;
-use bevy_ecs::prelude::*;
+use bevy::prelude::*;
 use bevy_stardust::scheduling::*;
 use crate::{appdata::ApplicationNetworkVersion, connection::PotentialNewPeer, packet::MTU_SIZE};
 

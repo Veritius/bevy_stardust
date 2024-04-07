@@ -1,6 +1,6 @@
 use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4, ToSocketAddrs};
 use anyhow::Result;
-use bevy_ecs::{entity::Entities, prelude::*, system::SystemParam};
+use bevy::{prelude::*, ecs::{entity::Entities, system::SystemParam}};
 use crate::{connection::OutgoingHandshake, endpoint::{ConnectionOwnershipToken, Endpoint}};
 
 /// A SystemParam that lets you create [`Endpoints`](Endpoint) and open outgoing [`Connections`](Connection).

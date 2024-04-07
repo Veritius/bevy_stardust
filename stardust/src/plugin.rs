@@ -1,7 +1,6 @@
 //! The Stardust core plugin.
 
-use bevy_app::prelude::*;
-use bevy_ecs::schedule::IntoSystemConfigs;
+use bevy::prelude::*;
 use crate::prelude::*;
 
 /// The Stardust multiplayer plugin.

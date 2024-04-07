@@ -1,7 +1,7 @@
 mod shared;
 use shared::*;
 
-use bevy_app::prelude::*;
+use bevy::prelude::*;
 use bevy_stardust_udp::*;
 
 fn main() {

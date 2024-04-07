@@ -1,5 +1,5 @@
 use std::{io, collections::HashMap, net::{SocketAddr, UdpSocket}};
-use bevy_ecs::prelude::*;
+use bevy::prelude::*;
 use bevy_stardust::connections::NetworkPerformanceReduction;
 use bytes::Bytes;
 use crate::{endpoint::ConnectionOwnershipToken, Connection, Endpoint, EndpointState, EndpointStatistics};

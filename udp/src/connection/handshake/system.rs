@@ -1,5 +1,5 @@
 use std::{collections::HashMap, net::SocketAddr, time::{Duration, Instant}};
-use bevy_ecs::{entity::Entities, prelude::*};
+use bevy::{ecs::entity::Entities, prelude::*};
 use bevy_stardust::prelude::*;
 use bytes::{Bytes, BytesMut};
 use unbytes::Reader;

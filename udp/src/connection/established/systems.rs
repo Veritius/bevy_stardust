@@ -1,6 +1,6 @@
 use std::time::Instant;
 
-use bevy_ecs::prelude::*;
+use bevy::prelude::*;
 use bevy_stardust::prelude::*;
 use unbytes::*;
 use crate::{packet::OutgoingPacket, plugin::PluginConfiguration};

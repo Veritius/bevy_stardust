@@ -7,7 +7,7 @@ use bevy_stardust::connections::NetworkPeer;
 pub(crate) use system::{handshake_polling_system, potential_new_peers_system};
 
 use std::{net::SocketAddr, time::Instant};
-use bevy_ecs::prelude::*;
+use bevy::prelude::*;
 use crate::{Connection, ConnectionDirection};
 use super::reliability::ReliabilityState;
 use codes::HandshakeResponseCode;

@@ -12,7 +12,7 @@ pub(crate) use established::{PackingScratchCells, established_packet_reader_syst
 pub(crate) use closing::close_connections_system;
 
 use std::net::SocketAddr;
-use bevy_ecs::prelude::*;
+use bevy::prelude::*;
 use bytes::Bytes;
 use tracing::warn;
 use crate::packet::PacketQueue;

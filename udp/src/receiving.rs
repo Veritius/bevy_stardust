@@ -1,5 +1,5 @@
 use std::{io::ErrorKind, sync::Mutex};
-use bevy_ecs::prelude::*;
+use bevy::prelude::*;
 use bytes::Bytes;
 use crate::{connection::PotentialNewPeer, packet::IncomingPacket, Connection, Endpoint};
 
