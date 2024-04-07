@@ -1,0 +1,13 @@
+[package]
+name="bevy_stardust_replicate"
+version="0.1.0"
+edition="2021"
+authors=["Veritius <veritiusgaming@gmail.com>"]
+license="MIT OR Apache-2.0"
+description="Authoritative replication functionality for Stardust."
+repository="https://github.com/veritius/bevy_stardust/"
+keywords=["bevy", "gamedev", "networking"]
+
+[dependencies]
+bevy = { version = "0.13", default-features = false }
+bevy_stardust = { version = "0.5", path = "../stardust" }
