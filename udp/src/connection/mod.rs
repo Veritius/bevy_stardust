@@ -105,13 +105,11 @@ impl Drop for Connection {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature="reflect", derive(bevy_reflect::Reflect), reflect(from_reflect = false))]
 pub enum ConnectionDirection {
-    /// Outgoing connection. We are acting as a client.
-    #[doc(alias = "Client")]
-    Outgoing,
+    /// Acting as a client, listening to a server.
+    Client,
 
-    /// Incoming connection. We are acting as a server.
-    #[doc(alias = "Server")]
-    Incoming,
+    /// Acting as a server, talking to a client.
+    Server,
 }
 
 /// The state of the connection.

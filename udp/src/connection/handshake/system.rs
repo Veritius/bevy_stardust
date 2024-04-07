@@ -248,8 +248,8 @@ pub(crate) fn handshake_polling_system(
 
                 // Log success
                 match connection.direction {
-                    ConnectionDirection::Outgoing => tracing::debug!("Successfully connected to {entity:?} ({})", connection.remote_address),
-                    ConnectionDirection::Incoming => tracing::debug!("Remote peer {entity:?} ({}) connected", connection.remote_address),
+                    ConnectionDirection::Client => tracing::debug!("Successfully connected to {entity:?} ({})", connection.remote_address),
+                    ConnectionDirection::Server => tracing::debug!("Remote peer {entity:?} ({}) connected", connection.remote_address),
                 }
             },
             HandshakeState::Failed(reason) => {
@@ -258,8 +258,8 @@ pub(crate) fn handshake_polling_system(
 
                 // Log failure
                 match connection.direction {
-                    ConnectionDirection::Outgoing => tracing::debug!("Handshake with {entity:?} ({}) failed: {reason}", connection.remote_address),
-                    ConnectionDirection::Incoming => tracing::debug!("Remote peer {entity:?} ({}) failed: {reason}", connection.remote_address),
+                    ConnectionDirection::Client => tracing::debug!("Handshake with {entity:?} ({}) failed: {reason}", connection.remote_address),
+                    ConnectionDirection::Server => tracing::debug!("Remote peer {entity:?} ({}) failed: {reason}", connection.remote_address),
                 }
             },
             _ => {}, // Do nothing
@@ -405,7 +405,7 @@ pub(crate) fn potential_new_peers_system(
         let connection = Connection::new(
             event.endpoint,
             event.address,
-            ConnectionDirection::Incoming,
+            ConnectionDirection::Server,
         );
 
         // We have to construct the reliability state from scratch

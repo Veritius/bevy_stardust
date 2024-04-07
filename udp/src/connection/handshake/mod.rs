@@ -28,7 +28,7 @@ impl OutgoingHandshake {
             connection: Connection::new(
                 owning_endpoint,
                 remote_address, 
-                ConnectionDirection::Outgoing,
+                ConnectionDirection::Client,
             ),
             handshake: Handshaking {
                 started: Instant::now(),
