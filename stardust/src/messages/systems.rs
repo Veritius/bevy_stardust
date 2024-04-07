@@ -1,4 +1,4 @@
-use bevy_ecs::prelude::*;
+use bevy::prelude::*;
 use super::*;
 
 pub(crate) fn clear_message_queue_system<D: DirectionType>(

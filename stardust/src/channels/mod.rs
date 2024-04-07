@@ -30,7 +30,7 @@ pub use registry::*;
 pub use extension::ChannelSetupAppExt;
 
 use std::sync::Arc;
-use bevy_app::prelude::*;
+use bevy::prelude::*;
 
 pub(super) fn channel_build(app: &mut App) {
     // Create setup channel registry

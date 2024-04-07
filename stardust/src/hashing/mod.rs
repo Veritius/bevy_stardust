@@ -3,7 +3,7 @@
 mod stablehash;
 mod resource;
 
-use bevy_app::prelude::*;
+use bevy::prelude::*;
 
 pub(crate) use resource::{PendingHashValues, finalise_hasher_system};
 
@@ -12,7 +12,7 @@ pub use resource::ProtocolConfigHash;
 
 mod sealed {
     pub trait Sealed {}
-    impl Sealed for bevy_app::App {}
+    impl Sealed for bevy::app::App {}
 }
 
 /// Extends Bevy's `App` to add methods for generating the [ProtocolId].
