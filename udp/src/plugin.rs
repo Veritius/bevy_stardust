@@ -75,6 +75,9 @@ impl Plugin for UdpTransportPlugin {
             established_timeout_system,
             close_connections_system,
         };
+        use crate::endpoint::{
+            close_endpoints_system
+        };
         use crate::sending::io_sending_system;
 
         // Send some warnings for potentially bad configuration
@@ -101,6 +104,7 @@ impl Plugin for UdpTransportPlugin {
             established_packet_builder_system,
             io_sending_system,
             close_connections_system,
+            close_endpoints_system,
         ).chain().in_set(NetworkWrite::Send));
 
         // Reset tick statistics at the end of the tick

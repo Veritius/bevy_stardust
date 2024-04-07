@@ -1,8 +1,8 @@
-use std::{collections::HashMap, net::{SocketAddr, UdpSocket}};
+use std::{io, collections::HashMap, net::{SocketAddr, UdpSocket}};
 use bevy_ecs::prelude::*;
 use bevy_stardust::connections::NetworkPerformanceReduction;
 use bytes::Bytes;
-use crate::{endpoint::ConnectionOwnershipToken, Connection, Endpoint, EndpointStatistics};
+use crate::{endpoint::ConnectionOwnershipToken, Connection, Endpoint, EndpointState, EndpointStatistics};
 
 // Sends packets to UDP sockets
 pub(crate) fn io_sending_system(
@@ -80,7 +80,10 @@ pub(crate) fn io_sending_system(
                         connection.statistics.record_packet_send(packet.messages as usize);
                     },
 
-                    Err(_) => todo!(),
+                    Err(err) => {
+                        on_send_failure(&mut endpoint, err);
+                        return;
+                    },
                 }
             }
         }
@@ -94,7 +97,10 @@ pub(crate) fn io_sending_system(
                     endpoint_statistics.record_packet_send(payload.len());
                 },
 
-                Err(_) => todo!(),
+                Err(err) => {
+                    on_send_failure(&mut endpoint, err);
+                    return;
+                },
             }
         }
 
@@ -104,4 +110,18 @@ pub(crate) fn io_sending_system(
             span.record("bytes", bytes_sent);
         }
     });
+}
+
+fn on_send_failure(endpoint: &mut Endpoint, error: io::Error) {
+    match error.kind() {
+        io::ErrorKind::WouldBlock => {},
+        _ => {
+            // Log this error
+            let address = endpoint.address();
+            tracing::error!("Socket {address} failed to send packet: {error}");
+
+            // Close the endpoint
+            endpoint.state = EndpointState::Closed;
+        }
+    }
 }
