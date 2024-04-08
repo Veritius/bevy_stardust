@@ -45,7 +45,7 @@ use super::Handshaking;
 const RESEND_TIMEOUT: Duration = Duration::from_secs(1);
 
 pub(crate) fn handshake_polling_system(
-    registry: ChannelRegistry,
+    registry: Res<ChannelRegistry>,
     config: Res<PluginConfiguration>,
     commands: ParallelCommands,
     mut connections: Query<(Entity, &mut Connection, &mut Handshaking)>,

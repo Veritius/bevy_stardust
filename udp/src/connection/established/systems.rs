@@ -10,7 +10,7 @@ use super::parsing::{PacketHeaderData, ParsedFrame, FrameParseError};
 use super::{packing::*, Established};
 
 pub(crate) fn established_packet_reader_system(
-    registry: ChannelRegistry,
+    registry: Res<ChannelRegistry>,
     config: Res<PluginConfiguration>,
     mut connections: Query<(Entity, &mut Connection, &mut Established, &mut NetworkMessages<Incoming>)>,
 ) {
@@ -76,7 +76,7 @@ pub(crate) fn established_packet_reader_system(
 }
 
 pub(crate) fn established_packet_builder_system(
-    registry: ChannelRegistry,
+    registry: Res<ChannelRegistry>,
     config: Res<PluginConfiguration>,
     scratch: Res<PackingScratchCells>,
     mut connections: Query<(Entity, &mut Connection, &mut Established, &NetworkMessages<Outgoing>)>,

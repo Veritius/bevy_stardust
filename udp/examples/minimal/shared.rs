@@ -52,7 +52,7 @@ static GREEK_ALPHABET: &[&str] = &[
 ];
 
 fn send_and_recv_system(
-    registry: ChannelRegistry,
+    registry: Res<ChannelRegistry>,
     mut peers: Query<(Entity, &NetworkMessages<Incoming>, &mut NetworkMessages<Outgoing>), With<NetworkPeer>>,
 ) {
     for (peer, incoming, mut outgoing) in peers.iter_mut() {
