@@ -13,7 +13,7 @@ version = "0.13"
 default-features = false
 
 [dependencies.bevy_stardust]
-version = "0.5"
+version = "0.6"
 path = "../stardust"
 default-features = false
 
@@ -24,5 +24,4 @@ version = "1"
 version = "1.3"
 
 [features]
-default = ["reflect"]
 reflect = ["bevy_stardust/reflect"]

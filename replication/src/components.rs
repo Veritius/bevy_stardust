@@ -1,6 +1,5 @@
 use std::marker::PhantomData;
 use bevy::prelude::*;
-use bevy_stardust::prelude::*;
 use crate::plugin::*;
 use crate::traits::*;
 
