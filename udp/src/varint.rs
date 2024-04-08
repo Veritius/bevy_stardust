@@ -35,7 +35,7 @@ impl TryFrom<usize> for VarInt {
 
         // On 64-bit targets, we actually have to check.
         #[cfg(target_pointer_width="64")]
-        return value.try_into();
+        return (value as u64).try_into()
     }
 }
 
