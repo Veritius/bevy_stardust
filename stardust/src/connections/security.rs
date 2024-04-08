@@ -10,7 +10,7 @@ use bevy::prelude::*;
 /// It's up to it to provide an appropriate value here.
 #[derive(Debug, Component, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 #[cfg_attr(feature="reflect", derive(bevy::reflect::Reflect))]
-pub enum SecurityLevel {
+pub enum NetworkSecurity {
     /// Communication is encrypted but not authenticated, or is fully plain text.
     /// 
     /// **For end users:**
