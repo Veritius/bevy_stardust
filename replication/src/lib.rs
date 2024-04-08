@@ -9,6 +9,7 @@ mod rooms;
 mod traits;
 
 pub use components::*;
+pub use messaging::ReplicationChannelConfiguration;
 pub use plugin::ReplicationPlugin;
 pub use resources::*;
 pub use rooms::*;

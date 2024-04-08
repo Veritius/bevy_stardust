@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 use bevy::prelude::*;
 use bevy_stardust::prelude::*;
-use crate::messaging::ReplicationData;
+use crate::messaging::*;
 use crate::plugin::*;
 use crate::traits::*;
 
@@ -12,8 +12,8 @@ impl<T> ReplicableResource for T where T: Resource + Replicable {}
 
 /// Enables replicating the resource `T`.
 pub struct ReplicateResourcePlugin<T: ReplicableResource> {
-    pub reliable: ReliabilityGuarantee,
-    pub priority: u32,
+    /// Message channel configuration.
+    pub channel: ReplicationChannelConfiguration,
 
     #[doc(hidden)]
     pub phantom: PhantomData<T>,
@@ -26,10 +26,10 @@ impl<T: ReplicableResource> Plugin for ReplicateResourcePlugin<T> {
         }
 
         app.add_channel::<ReplicationData<T>>(ChannelConfiguration {
-            reliable: self.reliable,
+            reliable: self.channel.reliable,
             ordered: OrderingGuarantee::Sequenced,
             fragmented: true,
-            priority: self.priority,
+            priority: self.channel.priority,
         });
     }
 }
