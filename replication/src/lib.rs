@@ -2,6 +2,7 @@
 #![warn(missing_docs)]
 
 mod components;
+mod messaging;
 mod plugin;
 mod resources;
 mod rooms;
