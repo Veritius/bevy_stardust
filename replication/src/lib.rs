@@ -7,6 +7,7 @@ mod messaging;
 mod plugins;
 mod resources;
 mod rooms;
+mod state;
 mod traits;
 
 pub use change::NetChanged;
@@ -16,3 +17,4 @@ pub use plugins::ReplicationPlugin;
 pub use resources::*;
 pub use rooms::*;
 pub use traits::*;
+pub use state::*;

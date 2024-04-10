@@ -77,7 +77,7 @@ unsafe impl<T: ReplicableComponent> WorldQuery for NetChanged<T> {
     unsafe fn set_archetype<'w>(
         fetch: &mut Self::Fetch<'w>,
         state: &Self::State,
-        archetype: &'w bevy::ecs::archetype::Archetype,
+        _archetype: &'w bevy::ecs::archetype::Archetype,
         table: &'w bevy::ecs::storage::Table,
     ) {
         if Self::IS_DENSE {
