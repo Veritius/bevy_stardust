@@ -21,7 +21,6 @@ impl Plugin for ReplicationPlugin {
         }
 
         app.register_type::<NetworkRoom>();
-        app.register_type::<NetworkRoomMember>();
 
         todo!();
     }

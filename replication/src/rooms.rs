@@ -1,49 +1,15 @@
-use bevy::{ecs::system::{EntityCommand, EntityCommands}, prelude::*};
-use bevy_stardust::prelude::*;
+use std::marker::PhantomData;
+use bevy::{ecs::component::TableStorage, prelude::*};
+use crate::*;
 
 /// Defines a 'network room' entity. This filters the entities that are replicated to each peer.
-/// Entity rooms are a many-to-many relationship that are cheap to iterate over.
-/// 
-/// Peers considered members of the room (as per [`NetworkGroup`]) will have entities replicated to them.
-/// Entities considered members of the group (as per this component) will be replicated to peer members.
+///
+/// Peers considered members of the room (as per [`NetworkGroup`](bevy_stardust::prelude::NetworkGroup)) will have entities replicated to them.
 #[derive(Debug, Component, Reflect)]
 #[reflect(Debug, Component)]
 pub struct NetworkRoom {
     /// See [`RoomFilterMode`]'s documentation.
     pub filter: RoomFilterMode,
-    /// See [`RoomHierarchyMode`]'s documentation.
-    pub hierarchy: RoomHierarchyMode,
-
-    members: Vec<Entity>,
-}
-
-impl NetworkRoom {
-    /// Returns `true` if `entity` is a member of the network room.
-    pub fn contains_entity(&self, entity: Entity) {
-        match self.members.binary_search(&entity) {
-            Ok(_) => true,
-            Err(_) => false,
-        };
-    }
-
-    /// Returns all entities that are in the room's scope, in sorted order.
-    pub fn members(&self) -> &[Entity] {
-        &self.members
-    }
-
-    /// Add a membership.
-    fn add(&mut self, room: Entity) {
-        if let Err(index) = self.members.binary_search(&room) {
-            self.members.insert(index, room);
-        }
-    }
-
-    /// Remove a membership.
-    fn remove(&mut self, room: Entity) {
-        if let Ok(index) = self.members.binary_search(&room) {
-            self.members.remove(index);
-        }
-    }
 }
 
 /// A bundle for a minimal network room.
@@ -51,7 +17,6 @@ impl NetworkRoom {
 #[allow(missing_docs)]
 pub struct NetworkRoomBundle {
     pub room: NetworkRoom,
-    pub group: NetworkGroup,
 }
 
 /// Defines how peers in the room should be filtered out.
@@ -65,138 +30,43 @@ pub enum RoomFilterMode {
     Inclusive,
 }
 
-/// Defines how items in the hierarchy should be treated.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Reflect)]
-#[reflect(Debug, PartialEq)]
-pub enum RoomHierarchyMode {
-    /// Only entities specifically defined in the room are considered in scope.
-    Singular,
-    /// Any and all child entities of in-scope entities will also be considered in scope.
-    Recursive,
+/// Controls how rooms affect the replication of type `T`.
+/// 
+/// This type is both a [`Resource`] and [`Component`].
+/// When added to the [`World`] or an [`Entity`], it affects how they are replicated.
+/// 
+/// By default, `T` is [`All`], making it affect all replicated values.
+/// If added to the World, it affects all resources.
+/// If added to an entity, it affects all components.
+/// 
+/// ## Precedence
+/// `T` takes precedence over [`All`] and will override it.
+/// For `T`, the value of `Self<T>` will be used instead of `Self<All>`.
+/// 
+/// | `Self<All>` | `Self<T>` | Precedence  |
+/// | ----------- | --------- | ----------- |
+/// | Yes         | No        | `Self<All>` |
+/// | Yes         | Yes       | `Self<T>`   |
+/// | No          | Yes       | `Self<T>`   |
+/// | No          | No        | Neither     |
+pub struct NetworkRoomFilter<T = All>  {
+    phantom: PhantomData<T>,
 }
 
-/// Stores membership data.
-#[derive(Debug, Component, Reflect)]
-#[reflect(Debug, Component)]
-pub struct NetworkRoomMember(Vec<Entity>);
-
-impl NetworkRoomMember {
-    /// Returns `true` if a member of `room`.
-    pub fn in_room(&self, room: Entity) -> bool {
-        match self.0.binary_search(&room) {
-            Ok(_) => true,
-            Err(_) => false,
-        }
-    }
-
-    /// Returns all rooms this entity is part of, in sorted order.
-    pub fn rooms(&self) -> &[Entity] {
-        &self.0
-    }
-
-    /// Add a membership.
-    fn add(&mut self, room: Entity) {
-        if let Err(index) = self.0.binary_search(&room) {
-            self.0.insert(index, room);
-        }
-    }
-
-    /// Remove a membership.
-    fn remove(&mut self, room: Entity) {
-        if let Ok(index) = self.0.binary_search(&room) {
-            self.0.remove(index);
-        }
-    }
+impl Component for NetworkRoomFilter<All> {
+    type Storage = TableStorage;
 }
 
-/// Adds an entity to a network room.
-#[derive(Debug, Clone, Copy)]
-pub struct AddToNetworkRoom {
-    /// The room to add the entity to.
-    pub room: Entity,
+impl<T: ReplicableComponent> Component for NetworkRoomFilter<T> {
+    type Storage = T::Storage;
 }
 
-impl EntityCommand for AddToNetworkRoom {
-    fn apply(self, id: Entity, world: &mut World) {
-        let room = self.room;
-        if id == room {
-            error!("Tried to add a room as a member of itself: {id:?}");
-            return;
-        }
+impl Resource for NetworkRoomFilter<All> {}
 
-        let mut room_entity = world.entity_mut(room);
-        if let Some(mut comp) = room_entity.get_mut::<NetworkRoom>() {
-            comp.add(id);
-        } else {
-            error!("Tried to add to a room but target wasn't a room: {room:?}");
-            return;
-        }
+impl<T: ReplicableResource> Resource for NetworkRoomFilter<T> {}
 
-        let mut member_entity = world.entity_mut(room);
-        if let Some(mut comp) = member_entity.get_mut::<NetworkRoomMember>() {
-            comp.add(room);
-        } else {
-            member_entity.insert(NetworkRoomMember(vec![room]));
-        }
-    }
-}
-
-/// Removes an entity from a network room.
-#[derive(Debug, Clone, Copy)]
-pub struct RemoveFromNetworkRoom {
-    /// The room to remove the entity from.
-    pub room: Entity,
-}
-
-impl EntityCommand for RemoveFromNetworkRoom {
-    fn apply(self, id: Entity, world: &mut World) {
-        let room = self.room;
-        if id == room {
-            error!("Tried to remove a room as a member of itself: {id:?}");
-            return;
-        }
-
-        let mut room_entity = world.entity_mut(room);
-        if let Some(mut comp) = room_entity.get_mut::<NetworkRoom>() {
-            comp.remove(id);
-        } else {
-            return;
-        }
-
-        let mut member_entity = world.entity_mut(room);
-        if let Some(mut comp) = member_entity.get_mut::<NetworkRoomMember>() {
-            comp.remove(room);
-        } else {
-            unreachable!();
-        }
-    }
-}
-
-/// Extension trait for [`EntityCommands`] for network room related commands.
-pub trait RoomEntityCommandExts: sealed::Sealed {
-    /// Adds the entity to a network room (adds [`AddToNetworkRoom`])
-    /// If the target is not a network room, nothing happens.
-    fn add_to_room(&mut self, room: Entity) -> &mut Self;
-
-    /// Removes the entity from a network room (adds [`RemoveFromNetworkRoom`])
-    fn remove_from_room(&mut self, room: Entity) -> &mut Self;
-}
-
-impl RoomEntityCommandExts for EntityCommands<'_> {
-    fn add_to_room(&mut self, room: Entity) -> &mut Self {
-        self.add(AddToNetworkRoom { room });
-        return self;
-    }
-
-    fn remove_from_room(&mut self, room: Entity) -> &mut Self {
-        self.add(RemoveFromNetworkRoom { room });
-        return self;
-    }
-}
-
-mod sealed {
-    use super::*;
-
-    pub trait Sealed {}
-    impl Sealed for EntityCommands<'_> {}
-}
+/// Special type argument for [`NetworkRoomFilter`].
+/// See the documentation for more information.
+#[derive(Debug, Clone, Copy, Reflect)]
+#[reflect(Debug)]
+pub struct All;
