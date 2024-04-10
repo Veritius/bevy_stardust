@@ -9,7 +9,7 @@ mod resources;
 mod rooms;
 mod traits;
 
-pub use change::*;
+pub use change::NetChanged;
 pub use components::*;
 pub use messaging::ReplicationChannelConfiguration;
 pub use plugins::ReplicationPlugin;
