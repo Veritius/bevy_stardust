@@ -28,4 +28,6 @@ version = "1.13"
 features = ["union"]
 
 [features]
+default = ["bevy_serialize"]
+bevy_serialize = ["bevy/serialize"]
 reflect = ["bevy_stardust/reflect"]

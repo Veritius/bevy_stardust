@@ -1,6 +1,7 @@
 //! Main plugin for replication.
 
 use std::marker::PhantomData;
+use bevy::app::PluginGroupBuilder;
 use bevy::prelude::*;
 use bevy_stardust::prelude::*;
 use crate::*;
@@ -23,6 +24,22 @@ impl Plugin for ReplicationPlugin {
         app.register_type::<NetworkRoom>();
 
         todo!();
+    }
+}
+
+/// Enables network room functionality.
+/// Implicitly adds [`ReplicationPlugin`] if not present.
+/// 
+/// Must be added before typed plugins like:
+/// - [`ReplicateResourcePlugin<T>`]
+/// - [`ReplicateComponentPlugin<T>`]
+pub struct RoomsPlugin;
+
+impl Plugin for RoomsPlugin {
+    fn build(&self, app: &mut App) {
+        if !app.is_plugin_added::<ReplicationPlugin>() {
+            app.add_plugins(ReplicationPlugin);
+        }
     }
 }
 
@@ -80,5 +97,42 @@ impl<T: ReplicableComponent> Plugin for ReplicateComponentPlugin<T> {
             fragmented: true,
             priority: self.channel.priority,
         });
+    }
+}
+
+/// Adds a set of plugins to replicate most Bevy components.
+/// Adds [`RoomsPlugin`] - remove it if you don't want it!
+pub struct DefaultPlugins;
+
+impl PluginGroup for DefaultPlugins {
+    fn build(self) -> PluginGroupBuilder {
+        // const PRIORITY_HIGH: u32 = 128;
+        // const PRIORITY_MED: u32 = 64;
+        // const PRIORITY_LOW: u32 = 32;
+
+        let group = PluginGroupBuilder::start::<Self>()
+            .add(ReplicationPlugin)
+            .add(RoomsPlugin);
+
+        // #[cfg(feature="bevy_serialize")] {
+        //     group = group
+        //     .add(ReplicateComponentPlugin::<Name> {
+        //         channel: ReplicationChannelConfiguration {
+        //             reliable: ReliabilityGuarantee::Reliable,
+        //             priority: PRIORITY_HIGH,
+        //         },
+        //         phantom: PhantomData,
+        //     })
+        //     .add(ReplicateComponentPlugin::<Transform> {
+        //         channel: ReplicationChannelConfiguration {
+        //             reliable: ReliabilityGuarantee::Unreliable,
+        //             priority: PRIORITY_LOW,
+        //         },
+        //         phantom: PhantomData,
+        //     });
+        // }
+
+
+        return group;
     }
 }
