@@ -12,7 +12,7 @@ pub struct ReplicateEntity {
     pub state: ReplicationState,
 }
 
-/// The descendants of this entity will be replicated, as long as the entity also has [`Replicated`].
+/// The descendants of this entity will be replicated, as long as the entity with this component also has [`Replicated`].
 #[derive(Component, Reflect)]
 #[reflect(Component)]
 pub struct ReplicateDescendants;
