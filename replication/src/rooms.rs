@@ -39,17 +39,25 @@ pub struct NetworkRoomBundle {
 /// | No          | Yes       | `Self<T>`   |
 /// | No          | No        | Neither     |
 pub struct NetworkRoomFilter<T = All> {
-    /// The inner config value.
-    pub config: RoomFilterConfig,
+    /// The inner filter method.
+    pub filter: RoomFilterConfig,
     phantom: PhantomData<T>,
 }
 
 impl<T> NetworkRoomFilter<T> {
+    /// Creates a new [`NetworkRoomFilter<T>`].
+    pub fn new(filter: RoomFilterConfig) -> Self {
+        Self {
+            filter,
+            phantom: PhantomData,
+        }
+    }
+
     /// Returns `true` if `group` matches the filter.
     /// Inlines to [`RoomFilterConfig::filter`].
     #[inline]
     pub fn filter(&self, group: Entity) -> bool {
-        self.config.filter(group)
+        self.filter.filter(group)
     }
 }
 
