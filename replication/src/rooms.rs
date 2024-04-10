@@ -38,7 +38,7 @@ pub struct NetworkRoomBundle {
 /// | Yes         | Yes       | `Self<T>`   |
 /// | No          | Yes       | `Self<T>`   |
 /// | No          | No        | Neither     |
-pub struct NetworkRoomFilter<T = All> {
+pub struct NetworkRoomFilter<T: ?Sized = All> {
     /// The inner filter method.
     pub filter: RoomFilterConfig,
     phantom: PhantomData<T>,
