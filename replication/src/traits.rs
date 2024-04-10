@@ -1,6 +1,17 @@
+use bevy::prelude::*;
 use serde::{Serialize, Deserialize};
 
 pub use inner::Replicable;
+
+/// Trait for resources that can be replicated.
+/// Automatically implemented for types that satisfy the requirements.
+pub trait ReplicableResource: Resource + Replicable {}
+impl<T> ReplicableResource for T where T: Resource + Replicable {}
+
+/// Trait for components that can be replicated.
+/// Automatically implemented for types that satisfy the requirements.
+pub trait ReplicableComponent: Component + Replicable {}
+impl<T> ReplicableComponent for T where T: Component + Replicable {}
 
 #[cfg(not(feature="reflect"))]
 mod inner {

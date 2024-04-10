@@ -1,19 +1,21 @@
 use std::marker::PhantomData;
-use bevy::ecs::{component::ComponentTicks, query::QueryFilter};
+use bevy::{prelude::*, ecs::component::ComponentTicks};
 use crate::*;
 
-/// Change tracking for changes over the network.
+/// Metadata about network-replicated types.
 pub struct ReplicateMeta<T: Replicable> {
     pub(crate) changes: NetworkChangeDetectionInner,
     phantom: PhantomData<T>,
 }
 
-/// Change detection state for network-replicated types.
-pub struct NetworkChangeDetectionInner {
-    pub(crate) this: ComponentTicks,
-    pub(crate) other: ComponentTicks,
+impl<T: ReplicableResource> Resource for ReplicateMeta<T> {}
+
+impl<T: ReplicableComponent> Component for ReplicateMeta<T> {
+    type Storage = T::Storage;
 }
 
-struct NetChanged<T: Replicable> {
-    phantom: PhantomData<T>,
+/// Change detection state for network-replicated types.
+pub(crate) struct NetworkChangeDetectionInner {
+    pub(crate) this: ComponentTicks,
+    pub(crate) other: ComponentTicks,
 }
