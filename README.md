@@ -107,7 +107,7 @@ const MESSAGE: Bytes = Bytes::from_static("Hello, world!".as_bytes());
 // Queueing messages just requires component access.
 // This means you can use query filters to achieve better parallelism.
 fn send_words_system(
-    registry: ChannelRegistry,
+    registry: Res<ChannelRegistry>,
     mut query: Query<(Entity, &mut NetworkMessages<Outgoing>), With<NetworkPeer>>
 ) {
     // The ChannelId must be retrieved from the registry.
@@ -128,7 +128,7 @@ fn send_words_system(
 // The reading queue is a different component from the sending queue.
 // This means you can read and send bytes in parallel, or in different systems.
 fn read_words_system(
-    registry: ChannelRegistry,
+    registry: Res<ChannelRegistry>,
     query: Query<(Entity, &NetworkMessages<Incoming>), With<NetworkPeer>>
 ) {
     let channel = registry.channel_id(TypeId::of::<MyChannel>()).unwrap();
