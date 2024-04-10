@@ -2,7 +2,10 @@ use bevy::{ecs::system::{EntityCommand, EntityCommands}, prelude::*};
 use bevy_stardust::prelude::*;
 
 /// Defines a 'network room'. This filters the entities that are replicated to each peer.
+/// Entity rooms are a many-to-many relationship that are cheap to iterate over.
+/// 
 /// Peers considered members of the room (as per [`NetworkGroup`]) will have entities replicated to them.
+/// Entities considered members of the group (as per this component) will be replicated to peer members.
 #[derive(Debug, Component, Reflect)]
 #[reflect(Debug, Component)]
 pub struct NetworkRoom {
