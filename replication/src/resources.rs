@@ -5,7 +5,8 @@ use crate::*;
 /// When added to the [`World`], replicates the resource `T`.
 #[derive(Debug, Resource, Default)]
 pub struct ReplicatedResource<T: ReplicableResource> {
-    /// See [`ReplicationState`]'s documentation.
-    pub state: ReplicationState,
+    /// See [`ReplicationPause`]'s documentation.
+    pub paused: ReplicationPause,
+    pub(crate) computed: bool,
     phantom: PhantomData<T>,
 }

@@ -3,7 +3,7 @@ use bevy::prelude::*;
 /// The 'state' of a replicated object.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash, Reflect)]
 #[reflect(Debug, Default, PartialEq, Hash)]
-pub enum ReplicationState {
+pub enum ReplicationPause {
     /// The component is being kept up to date on all peers.
     Active,
 

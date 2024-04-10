@@ -8,8 +8,9 @@ pub type Replicated = With<ReplicateEntity>;
 #[derive(Component, Default, Reflect)]
 #[reflect(Component)]
 pub struct ReplicateEntity {
-    /// See [`ReplicationState`]'s documentation.
-    pub state: ReplicationState,
+    /// See [`ReplicationPause`]'s documentation.
+    pub paused: ReplicationPause,
+    pub(crate) computed: bool,
 }
 
 /// The descendants of this entity will be replicated, as long as the entity with this component also has [`Replicated`].
