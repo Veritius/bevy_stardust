@@ -1,6 +1,7 @@
-use std::marker::PhantomData;
+use std::{marker::PhantomData, sync::Arc};
 use bevy::{ecs::component::TableStorage, prelude::*};
 use bevy_stardust::prelude::*;
+use smallvec::SmallVec;
 use crate::*;
 
 /// Defines a 'network room' entity. This filters the entities that are replicated to each peer.
@@ -8,10 +9,7 @@ use crate::*;
 /// Peers considered members of the room (as per [`NetworkGroup`]) will have entities replicated to them.
 #[derive(Debug, Component, Reflect)]
 #[reflect(Debug, Component)]
-pub struct NetworkRoom {
-    /// See [`RoomFilterMode`]'s documentation.
-    pub filter: RoomFilterMode,
-}
+pub struct NetworkRoom;
 
 /// A bundle for a minimal network room.
 #[derive(Bundle)]
@@ -19,17 +17,6 @@ pub struct NetworkRoom {
 pub struct NetworkRoomBundle {
     pub room: NetworkRoom,
     pub group: NetworkGroup,
-}
-
-/// Defines how peers in the room should be filtered out.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Reflect)]
-#[reflect(Debug, PartialEq)]
-pub enum RoomFilterMode {
-    /// Only peers in the room will have entities replicated to them.
-    Exclusive,
-
-    /// Only peers outside of the room will have entities replicated to them.
-    Inclusive,
 }
 
 /// Controls how rooms affect the replication of type `T`.
@@ -51,8 +38,19 @@ pub enum RoomFilterMode {
 /// | Yes         | Yes       | `Self<T>`   |
 /// | No          | Yes       | `Self<T>`   |
 /// | No          | No        | Neither     |
-pub struct NetworkRoomFilter<T = All>  {
+pub struct NetworkRoomFilter<T = All> {
+    /// The inner config value.
+    pub config: RoomFilterConfig,
     phantom: PhantomData<T>,
+}
+
+impl<T> NetworkRoomFilter<T> {
+    /// Returns `true` if `group` matches the filter.
+    /// Inlines to [`RoomFilterConfig::filter`].
+    #[inline]
+    pub fn filter(&self, group: Entity) -> bool {
+        self.config.filter(group)
+    }
 }
 
 impl Component for NetworkRoomFilter<All> {
@@ -72,3 +70,31 @@ impl<T: ReplicableResource> Resource for NetworkRoomFilter<T> {}
 #[derive(Debug, Clone, Copy, Reflect)]
 #[reflect(Debug)]
 pub struct All;
+
+/// Filtering method.
+pub enum RoomFilterConfig {
+    /// Replicated to peers that are members of this group.
+    InclusiveSingle(Entity),
+    /// Replicated to peers that are members in at least 1 group.
+    InclusiveMany(SmallVec<[Entity; 4]>),
+    /// Replicated to peers that are not members of this group.
+    ExclusiveSingle(Entity),
+    /// Replicated to peers that are not members of any of the contained groups.
+    ExclusiveMany(SmallVec<[Entity; 4]>),
+    /// Use a custom function for filtering.
+    /// `true` means that the target is replicated.
+    CustomFunc(Arc<dyn Fn(Entity) -> bool + Send + Sync>)
+}
+
+impl RoomFilterConfig {
+    /// Returns `true` if `group` matches the filter.
+    pub fn filter(&self, group: Entity) -> bool {
+        match self {
+            RoomFilterConfig::InclusiveSingle(val) => *val == group,
+            RoomFilterConfig::InclusiveMany(set) => set.contains(&group),
+            RoomFilterConfig::ExclusiveSingle(val) => *val != group,
+            RoomFilterConfig::ExclusiveMany(set) => !set.contains(&group),
+            RoomFilterConfig::CustomFunc(func) => func(group),
+        }
+    }
+}

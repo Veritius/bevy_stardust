@@ -23,5 +23,9 @@ version = "1"
 [dependencies.bincode]
 version = "1.3"
 
+[dependencies.smallvec]
+version = "1.13"
+features = ["union"]
+
 [features]
 reflect = ["bevy_stardust/reflect"]
