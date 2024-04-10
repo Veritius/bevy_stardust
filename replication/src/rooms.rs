@@ -1,10 +1,11 @@
 use std::marker::PhantomData;
 use bevy::{ecs::component::TableStorage, prelude::*};
+use bevy_stardust::prelude::*;
 use crate::*;
 
 /// Defines a 'network room' entity. This filters the entities that are replicated to each peer.
 ///
-/// Peers considered members of the room (as per [`NetworkGroup`](bevy_stardust::prelude::NetworkGroup)) will have entities replicated to them.
+/// Peers considered members of the room (as per [`NetworkGroup`]) will have entities replicated to them.
 #[derive(Debug, Component, Reflect)]
 #[reflect(Debug, Component)]
 pub struct NetworkRoom {
@@ -17,6 +18,7 @@ pub struct NetworkRoom {
 #[allow(missing_docs)]
 pub struct NetworkRoomBundle {
     pub room: NetworkRoom,
+    pub group: NetworkGroup,
 }
 
 /// Defines how peers in the room should be filtered out.
