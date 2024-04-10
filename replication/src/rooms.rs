@@ -83,7 +83,7 @@ pub struct All;
 pub enum RoomFilterConfig {
     /// Replicated to peers that are members of this group.
     InclusiveSingle(Entity),
-    /// Replicated to peers that are members in at least 1 group.
+    /// Replicated to peers that are members in at least one of the contained groups.
     InclusiveMany(SmallVec<[Entity; 4]>),
     /// Replicated to peers that are not members of this group.
     ExclusiveSingle(Entity),
