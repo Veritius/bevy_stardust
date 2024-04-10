@@ -5,7 +5,6 @@ use bevy::prelude::*;
 #[reflect(Debug, Default, PartialEq, Hash)]
 pub enum ReplicationState {
     /// The component is being kept up to date on all peers.
-    #[default]
     Active,
 
     /// The component is not being kept up to date, but is not being removed.
@@ -13,5 +12,6 @@ pub enum ReplicationState {
 
     /// Inherit replication state from a parent, if any.
     /// If there is no parent, acts as if set to [`Active`].
+    #[default]
     Inherit,
 }
