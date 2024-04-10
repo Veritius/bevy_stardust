@@ -4,3 +4,4 @@ Replication functionality for [bevy_stardust](https://github.com/Veritius/bevy_s
 ## Features
 - `Component` and `Resource` replication
 - Controlled entirely with components
+- Special change tracking for replicated data
