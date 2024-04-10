@@ -1,5 +1,4 @@
 use std::marker::PhantomData;
-use bevy::ecs::component::ComponentTicks;
 use bevy::prelude::*;
 use bevy_stardust::prelude::*;
 use crate::messaging::*;
@@ -26,7 +25,7 @@ impl<T: ReplicableComponent> Plugin for ReplicateComponentPlugin<T> {
             panic!("ReplicationPlugin must be added before ReplicateComponentPlugin")
         }
 
-        app.register_type::<Replicated>();
+        app.register_type::<ReplicateEntity>();
         app.register_type::<ReplicateDescendants>();      
 
         app.add_channel::<ReplicationData<T>>(ChannelConfiguration {
@@ -37,16 +36,11 @@ impl<T: ReplicableComponent> Plugin for ReplicateComponentPlugin<T> {
         });
     }
 }
+
 /// Entities with this component will be replicated.
 #[derive(Component, Reflect)]
 #[reflect(Component)]
-pub struct Replicated;
-
-#[derive(Component)]
-pub(crate) struct ReplicationTicks<T: ReplicableComponent> {
-    pub inner: ComponentTicks,
-    phantom: PhantomData<T>,
-}
+pub struct ReplicateEntity;
 
 /// The descendants of this entity will be replicated, as long as the entity also has [`Replicated`].
 #[derive(Component, Reflect)]

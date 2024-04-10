@@ -7,6 +7,7 @@ mod plugin;
 mod resources;
 mod rooms;
 mod traits;
+mod change;
 
 pub use components::*;
 pub use messaging::ReplicationChannelConfiguration;
