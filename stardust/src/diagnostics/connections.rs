@@ -2,9 +2,9 @@ use bevy::{prelude::*, diagnostic::*};
 use crate::prelude::*;
 
 /// Adds diagnostics about connections.
-pub struct ConnectionDiagnosticPlugin;
+pub struct NetworkPeerDiagnosticPlugin;
 
-impl Plugin for ConnectionDiagnosticPlugin {
+impl Plugin for NetworkPeerDiagnosticPlugin {
     fn build(&self, app: &mut App) {
         app.register_diagnostic(Diagnostic::new(Self::COUNT)
             .with_smoothing_factor(0.0)
@@ -14,14 +14,14 @@ impl Plugin for ConnectionDiagnosticPlugin {
     }
 }
 
-impl ConnectionDiagnosticPlugin {
+impl NetworkPeerDiagnosticPlugin {
     /// Diagnostic path for the amount of entities with [`NetworkPeer`].
-    pub const COUNT: DiagnosticPath = DiagnosticPath::const_new("network_peer_count");
+    pub const COUNT: DiagnosticPath = DiagnosticPath::const_new("net/core/peers/total");
 }
 
 fn diagnostic_system(
     mut diagnostics: Diagnostics,
     query: Query<(), With<NetworkPeer>>,
 ) {
-    diagnostics.add_measurement(&ConnectionDiagnosticPlugin::COUNT, || query.iter().count() as f64);
+    diagnostics.add_measurement(&NetworkPeerDiagnosticPlugin::COUNT, || query.iter().count() as f64);
 }

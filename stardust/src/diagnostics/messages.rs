@@ -15,10 +15,10 @@ impl Plugin for MessageCountDiagnosticsPlugin {
 
 impl MessageCountDiagnosticsPlugin {
     /// The number of incoming messages in queues for all peers.
-    pub const INCOMING_COUNT: DiagnosticPath = DiagnosticPath::const_new("incoming_message_count");
+    pub const INCOMING_COUNT: DiagnosticPath = DiagnosticPath::const_new("net/core/messages/outgoing");
 
     /// The number of outgoing messages in queues for all peers.
-    pub const OUTGOING_COUNT: DiagnosticPath = DiagnosticPath::const_new("outgoing_message_count");
+    pub const OUTGOING_COUNT: DiagnosticPath = DiagnosticPath::const_new("net/core/messages/outgoing");
 }
 
 type QueryFilter = (Or<(With<NetworkMessages<Incoming>>, With<NetworkMessages<Outgoing>>)>, With<NetworkPeer>);
