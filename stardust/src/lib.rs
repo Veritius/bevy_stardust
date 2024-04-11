@@ -4,10 +4,12 @@
 
 pub mod channels;
 pub mod connections;
+pub mod diagnostics;
 pub mod messages;
 pub mod plugin;
 pub mod prelude;
 pub mod scheduling;
+pub mod testing;
 
 #[cfg(feature="hashing")]
 pub mod hashing;
