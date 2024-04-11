@@ -1,7 +1,7 @@
 use bevy::{prelude::*, diagnostic::*};
 use crate::prelude::*;
 
-/// Adds diagnostics about various 
+/// Adds diagnostics about connections.
 pub struct ConnectionDiagnosticPlugin;
 
 impl Plugin for ConnectionDiagnosticPlugin {
