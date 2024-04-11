@@ -30,7 +30,7 @@ impl Plugin for LinkTransportPlugin {
 pub struct Link(SideInner);
 
 /// Creates two connected [`Link`] objects.
-pub fn pair() -> [Link; 2] {
+pub fn pair() -> (Link, Link) {
     let (left_tx, left_rx) = channel();
     let (right_tx, right_rx) = channel();
 
@@ -46,7 +46,7 @@ pub fn pair() -> [Link; 2] {
         disconnected: false,
     });
 
-    return [left, right];
+    return (left, right);
 }
 
 struct SideInner {
@@ -103,13 +103,15 @@ fn send_link_data(
 
 fn remove_disconnected(
     mut commands: Commands,
-    mut query: Query<(Entity, &Link, &mut NetworkPeerLifestage)>,
+    mut query: Query<(Entity, &Link, Option<&mut NetworkPeerLifestage>)>,
 ) {
-    for (entity, link, mut stage) in query.iter_mut() {
+    for (entity, link, stage) in query.iter_mut() {
         if link.0.disconnected {
             debug!("Link on entity {entity:?} disconnected");
             commands.entity(entity).remove::<Link>();
-            *stage = NetworkPeerLifestage::Closed;
+            if let Some(mut stage) = stage {
+                *stage = NetworkPeerLifestage::Closed;
+            }
         }
     }
 }
