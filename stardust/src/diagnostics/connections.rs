@@ -15,8 +15,8 @@ impl Plugin for ConnectionDiagnosticPlugin {
 }
 
 impl ConnectionDiagnosticPlugin {
-    /// Diagnostic path for the amount of connections (entities with [`NetworkPeer`])
-    pub const COUNT: DiagnosticPath = DiagnosticPath::const_new("connection_count");
+    /// Diagnostic path for the amount of entities with [`NetworkPeer`].
+    pub const COUNT: DiagnosticPath = DiagnosticPath::const_new("network_peer_count");
 }
 
 fn diagnostic_system(
