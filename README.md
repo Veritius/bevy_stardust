@@ -51,8 +51,7 @@ The following features are planned to be created as additional crates, as part o
 // For the purpose of this example, we'll assume they magically appeared somehow.
 
 use std::any::TypeId;
-use bevy_ecs::prelude::*;
-use bevy_app::{prelude::*, ScheduleRunnerPlugin, MainSchedulePlugin};
+use bevy::{prelude::*, app::{ScheduleRunnerPlugin, MainSchedulePlugin}};
 use bevy_stardust::prelude::*;
 
 // Channels are accessed with types in the type system.
