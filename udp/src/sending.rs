@@ -2,7 +2,7 @@ use std::{io, collections::HashMap, net::{SocketAddr, UdpSocket}};
 use bevy::prelude::*;
 use bevy_stardust::connections::NetworkPerformanceReduction;
 use bytes::Bytes;
-use crate::{endpoint::ConnectionOwnershipToken, Connection, Endpoint, EndpointState, EndpointStatistics};
+use crate::{endpoint::ConnectionOwnershipToken, prelude::*};
 
 // Sends packets to UDP sockets
 pub(crate) fn io_sending_system(

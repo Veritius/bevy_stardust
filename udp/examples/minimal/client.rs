@@ -2,7 +2,7 @@ mod shared;
 use shared::*;
 
 use bevy::prelude::*;
-use bevy_stardust_udp::*;
+use bevy_stardust_udp::prelude::*;
 
 fn main() {
     let mut app = setup_app();

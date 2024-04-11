@@ -4,6 +4,7 @@ use bevy_stardust::prelude::*;
 use bytes::{Bytes, BytesMut};
 use unbytes::Reader;
 use crate::{
+    prelude::*,
     appdata::{
         NetworkVersionData,
         BANNED_MINOR_VERSIONS,
@@ -35,9 +36,6 @@ use crate::{
         PacketQueue
     },
     plugin::PluginConfiguration,
-    ConnectionDirection,
-    ConnectionState,
-    Endpoint
 };
 use super::{codes::HandshakeResponseCode, packets::{ClientFinalisePacket, ServerHelloPacket}, HandshakeFailureReason};
 use super::Handshaking;

@@ -4,7 +4,7 @@ use bytes::Bytes;
 pub(crate) use systems::close_connections_system;
 
 use bevy::prelude::*;
-use crate::ConnectionDirection;
+use crate::prelude::*;
 
 #[derive(Component)]
 pub(crate) struct Closing {

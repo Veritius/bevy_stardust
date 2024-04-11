@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use bevy_stardust::prelude::*;
 use unbytes::*;
 use crate::{packet::OutgoingPacket, plugin::PluginConfiguration};
-use crate::{Connection, ConnectionState};
+use crate::prelude::*;
 use super::packet::Frame;
 use super::parsing::{PacketHeaderData, ParsedFrame, FrameParseError};
 use super::{packing::*, Established};

@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use crate::Connection;
+use crate::prelude::*;
 
 /// Statistics related to a [`Connection`].
 #[derive(Debug, Default, Clone)]

@@ -1,7 +1,7 @@
 use std::{io, sync::Mutex};
 use bevy::prelude::*;
 use bytes::Bytes;
-use crate::{connection::PotentialNewPeer, packet::IncomingPacket, Connection, Endpoint, EndpointState};
+use crate::{connection::PotentialNewPeer, packet::IncomingPacket, prelude::*};
 
 // Receives packets from UDP sockets
 pub(crate) fn io_receiving_system(

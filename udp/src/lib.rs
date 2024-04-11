@@ -12,8 +12,14 @@ mod sending;
 mod sequences;
 mod varint;
 
-pub use plugin::UdpTransportPlugin;
-pub use appdata::ApplicationNetworkVersion;
-pub use manager::{UdpManager, Unspecified};
-pub use endpoint::{Endpoint, EndpointState, statistics::EndpointStatistics};
-pub use connection::{Connection, ConnectionDirection, ConnectionState, statistics::ConnectionStatistics};
+/// Common imports.
+/// 
+/// `use bevy_stardust_udp::prelude::*;`
+pub mod prelude {
+    use super::*;
+    pub use plugin::UdpTransportPlugin;
+    pub use appdata::ApplicationNetworkVersion;
+    pub use manager::{UdpManager, Unspecified};
+    pub use endpoint::{Endpoint, EndpointState, statistics::EndpointStatistics};
+    pub use connection::{Connection, ConnectionDirection, ConnectionState, statistics::ConnectionStatistics};
+}
