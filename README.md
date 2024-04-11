@@ -34,7 +34,7 @@ The following features are planned to be created as additional crates, as part o
 ## Usage
 | Bevy | Stardust |
 | ---- | -------- |
-| 0.13 | 0.5      |
+| 0.13 | 0.6      |
 | 0.12 | 0.2      |
 | 0.11 | 0.1      |
 
