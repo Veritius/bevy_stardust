@@ -5,9 +5,9 @@ use crate::*;
 /// When added to the [`World`], replicates the resource `T`.
 #[derive(Debug, Resource, Default)]
 pub struct ReplicatedResource<T: ReplicableResource> {
-    /// See [`ReplicationPause`]'s documentation.
-    pub paused: ReplicationPause,
-    pub(crate) computed: bool,
+    /// When `true`, stops synchronising data, but doesn't remove the resource.
+    /// To remove the resource from all connections, remove this resource.
+    pub paused: bool,
     phantom: PhantomData<T>,
 }
 
