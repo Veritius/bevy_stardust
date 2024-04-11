@@ -10,7 +10,7 @@ mod rooms;
 mod state;
 mod traits;
 
-pub use change::{NetChanged, NetRes, NetResMut};
+pub use change::{ReplicateMeta, NetChanged};
 pub use components::*;
 pub use messaging::ReplicationChannelConfiguration;
 pub use plugins::ReplicationPlugin;
