@@ -1,0 +1,32 @@
+[package]
+name="bevy_stardust_udp"
+version="0.1.0"
+edition="2021"
+authors=["Veritius <veritiusgaming@gmail.com>"]
+readme="README.md"
+license="MIT OR Apache-2.0"
+description="A transport layer for bevy_stardust that uses native UDP."
+repository="https://github.com/veritius/bevy_stardust/"
+keywords=["bevy", "gamedev", "networking"]
+
+[dependencies]
+# Required dependencies
+bevy = { version = "0.13", default-features = false }
+bevy_stardust = { version = "0.6", path = "../stardust", default-features = false }
+bytes = "1.5.0"
+unbytes = { version = "0.3", features = ["std"] } # matches bytes
+thread_local = "1.1.4" # matches bevy
+fastrand = "2"
+tracing = "0.1"
+anyhow = "1"
+
+[dev-dependencies]
+bevy_log = "0.13"
+
+[[example]]
+name = "minimal-server"
+path = "examples/minimal/server.rs"
+
+[[example]]
+name = "minimal-client"
+path = "examples/minimal/client.rs"
