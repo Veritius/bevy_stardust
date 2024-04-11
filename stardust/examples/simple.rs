@@ -39,10 +39,14 @@ fn main() {
         app.add_channel::<MyChannelC>(config.clone());
 
         app.add_systems(Update, (
-            rw_system::<MyChannelA>,
-            rw_system::<MyChannelB>,
-            rw_system::<MyChannelC>,
+            read_system,
+            write_system::<MyChannelA>,
+            write_system::<MyChannelB>,
+            write_system::<MyChannelC>,
         ));
+
+        // Manually invoke finish as this is a subapp.
+        app.finish();
     }
 
     #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, AppLabel)]
@@ -56,18 +60,25 @@ fn main() {
     core.run();
 }
 
-fn rw_system<C: Channel>(
+fn read_system(
     name: Res<AppName>,
-    registry: Res<ChannelRegistry>,
-    mut query: Query<(&NetworkMessages<Incoming>, &mut NetworkMessages<Outgoing>), With<NetworkPeer>>,
+    query: Query<&NetworkMessages<Incoming>, With<NetworkPeer>>,
 ) {
-    for (incoming, mut outgoing) in query.iter_mut() {
+    for incoming in query.iter() {
         for (channel, queues) in incoming.all_queues() {
             for payload in queues {
                 info!("{}: Received a message from a peer on channel {channel:?}: {payload:?}", name.0);
             }
         }
+    }
+}
 
+fn write_system<C: Channel>(
+    name: Res<AppName>,
+    registry: Res<ChannelRegistry>,
+    mut query: Query<&mut NetworkMessages<Outgoing>, With<NetworkPeer>>,
+) {
+    for mut outgoing in query.iter_mut() {
         let rand = fastrand::u128(..);
         let bytes = Bytes::copy_from_slice(&rand.to_be_bytes()[..]);
 
