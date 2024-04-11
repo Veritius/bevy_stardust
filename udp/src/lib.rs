@@ -12,6 +12,8 @@ mod sending;
 mod sequences;
 mod varint;
 
+pub mod diagnostics;
+
 /// Common imports.
 /// 
 /// `use bevy_stardust_udp::prelude::*;`
