@@ -3,6 +3,7 @@
 
 mod change;
 mod components;
+mod entities;
 mod messaging;
 mod plugins;
 mod resources;
