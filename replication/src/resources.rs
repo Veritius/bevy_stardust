@@ -16,8 +16,8 @@ pub struct ReplicatedResource<T: ReplicableResource> {
 pub struct NetRes<'w, T: ReplicableResource> {
     /// Inner resource data.
     pub data: Res<'w, T>,
-    /// Resource metadata.
-    pub meta: Res<'w, ReplicateMeta<T>>,
+    /// Change detection data.
+    pub changes: Res<'w, NetChanges<T>>,
 }
 
 impl<'w, T: ReplicableResource> NetRes<'w, T> {
@@ -37,8 +37,8 @@ impl<T: ReplicableResource> Deref for NetRes<'_, T> {
 pub struct NetResMut<'w, T: ReplicableResource> {
     /// Inner resource data.
     pub data: ResMut<'w, T>,
-    /// Resource metadata.
-    pub meta: Res<'w, ReplicateMeta<T>>,
+    /// Change detection data.
+    pub changes: Res<'w, NetChanges<T>>,
 }
 
 impl<'w, T: ReplicableResource> NetResMut<'w, T> {

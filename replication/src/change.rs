@@ -4,14 +4,14 @@ use bevy::{ecs::{component::*, ptr::*, query::*, storage::*}, prelude::*};
 use crate::*;
 
 /// Metadata about network-replicated types.
-pub struct ReplicateMeta<T: Replicable> {
+pub struct NetChanges<T: Replicable> {
     pub(crate) changes: NetworkChangeDetectionInner,
     phantom: PhantomData<T>,
 }
 
-impl<T: ReplicableResource> Resource for ReplicateMeta<T> {}
+impl<T: ReplicableResource> Resource for NetChanges<T> {}
 
-impl<T: ReplicableComponent> Component for ReplicateMeta<T> {
+impl<T: ReplicableComponent> Component for NetChanges<T> {
     type Storage = T::Storage;
 }
 
@@ -27,7 +27,7 @@ pub struct NetChanged<T: ReplicableComponent> {
 
 #[doc(hidden)]
 pub struct NetChangedFetch<'w, T: ReplicableComponent> {
-    table_components: Option<ThinSlicePtr<'w, UnsafeCell<ReplicateMeta<T>>>>,
+    table_components: Option<ThinSlicePtr<'w, UnsafeCell<NetChanges<T>>>>,
     sparse_set: Option<&'w ComponentSparseSet>,
     last_run: Tick,
     this_run: Tick,
@@ -119,11 +119,11 @@ unsafe impl<T: ReplicableComponent> WorldQuery for NetChanged<T> {
     }
 
     fn init_state(world: &mut World) -> Self::State {
-        world.init_component::<ReplicateMeta<T>>()
+        world.init_component::<NetChanges<T>>()
     }
 
     fn get_state(world: &World) -> Option<Self::State> {
-        world.component_id::<ReplicateMeta<T>>()
+        world.component_id::<NetChanges<T>>()
     }
 
     fn matches_component_set(
