@@ -1,5 +1,6 @@
 //! The Stardust core plugin.
 
+use std::sync::Arc;
 use bevy::prelude::*;
 use crate::prelude::*;
 
@@ -9,7 +10,8 @@ pub struct StardustPlugin;
 
 impl Plugin for StardustPlugin {
     fn build(&self, app: &mut App) {
-        crate::channels::channel_build(app);
+        // Add ChannelRegistryMut
+        app.insert_resource(ChannelRegistryMut(Box::new(ChannelRegistryInner::new())));
 
         // Add systems
         app.add_systems(Last, crate::connections::systems::despawn_closed_connections_system);
@@ -30,6 +32,8 @@ impl Plugin for StardustPlugin {
     }
 
     fn finish(&self, app: &mut App) {
-        crate::channels::channel_finish(app);
+        // Remove SetupChannelRegistry and put the inner into an Arc inside ChannelRegistry
+        let registry = app.world.remove_resource::<ChannelRegistryMut>().unwrap();
+        app.insert_resource(ChannelRegistry(Arc::from(registry.0)));
     }
 }
