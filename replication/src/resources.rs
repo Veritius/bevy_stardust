@@ -4,7 +4,7 @@ use crate::*;
 
 /// When added to the [`World`], replicates the resource `T`.
 #[derive(Debug, Resource, Default)]
-pub struct ReplicatedResource<T: ReplicableResource> {
+pub struct ReplicateResource<T: ReplicableResource> {
     /// When `true`, stops synchronising data, but doesn't remove the resource.
     /// To remove the resource from all connections, remove this resource.
     pub paused: bool,
