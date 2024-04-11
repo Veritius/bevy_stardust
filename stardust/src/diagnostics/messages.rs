@@ -15,7 +15,7 @@ impl Plugin for MessageCountDiagnosticsPlugin {
 
 impl MessageCountDiagnosticsPlugin {
     /// The number of incoming messages in queues for all peers.
-    pub const INCOMING_COUNT: DiagnosticPath = DiagnosticPath::const_new("net/core/messages/outgoing");
+    pub const INCOMING_COUNT: DiagnosticPath = DiagnosticPath::const_new("net/core/messages/incoming");
 
     /// The number of outgoing messages in queues for all peers.
     pub const OUTGOING_COUNT: DiagnosticPath = DiagnosticPath::const_new("net/core/messages/outgoing");
