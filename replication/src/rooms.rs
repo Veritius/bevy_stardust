@@ -91,7 +91,7 @@ pub enum RoomFilterConfig {
     ExclusiveMany(SmallVec<[Entity; 4]>),
     /// Use a custom function for filtering.
     /// `true` means that the target is replicated.
-    CustomFunc(Arc<dyn Fn(Entity) -> bool + Send + Sync>)
+    CustomFunction(Arc<dyn Fn(Entity) -> bool + Send + Sync>)
 }
 
 impl RoomFilterConfig {
@@ -102,7 +102,7 @@ impl RoomFilterConfig {
             RoomFilterConfig::InclusiveMany(set) => set.contains(&group),
             RoomFilterConfig::ExclusiveSingle(val) => *val != group,
             RoomFilterConfig::ExclusiveMany(set) => !set.contains(&group),
-            RoomFilterConfig::CustomFunc(func) => func(group),
+            RoomFilterConfig::CustomFunction(func) => func(group),
         }
     }
 }
