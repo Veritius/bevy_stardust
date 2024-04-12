@@ -11,11 +11,18 @@ mod rooms;
 mod state;
 mod traits;
 
-pub use change::{NetChanges, NetChanged};
-pub use components::*;
-pub use messaging::ReplicationChannelConfiguration;
-pub use plugins::ReplicationPlugin;
-pub use resources::*;
-pub use rooms::*;
-pub use traits::*;
-pub use state::*;
+pub mod diagnostics;
+
+pub mod prelude {
+    //! Common imports.
+
+    use super::*;
+    pub use change::{NetChanges, NetChanged};
+    pub use components::*;
+    pub use messaging::ReplicationChannelConfiguration;
+    pub use plugins::ReplicationPlugin;
+    pub use resources::*;
+    pub use rooms::*;
+    pub use traits::*;
+    pub use state::*;
+}

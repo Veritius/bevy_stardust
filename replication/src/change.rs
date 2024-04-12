@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 use std::cell::UnsafeCell;
 use bevy::{ecs::{component::*, ptr::*, query::*, storage::*}, prelude::*};
-use crate::*;
+use crate::prelude::*;
 
 /// Metadata about network-replicated types.
 pub struct NetChanges<T: Replicable> {

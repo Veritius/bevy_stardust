@@ -4,7 +4,7 @@ use std::marker::PhantomData;
 use bevy::app::PluginGroupBuilder;
 use bevy::prelude::*;
 use bevy_stardust::prelude::*;
-use crate::*;
+use crate::prelude::*;
 use crate::messaging::ReplicationData;
 
 /// Adds functionality to support replication.

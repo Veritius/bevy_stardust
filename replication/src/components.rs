@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use crate::*;
+use crate::prelude::*;
 
 /// Query filter for entities that are replicated over the network.
 pub type Replicated = With<ReplicateEntity>;

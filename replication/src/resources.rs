@@ -1,6 +1,6 @@
 use std::{marker::PhantomData, ops::{Deref, DerefMut}};
 use bevy::{ecs::system::SystemParam, prelude::*};
-use crate::*;
+use crate::prelude::*;
 
 /// When added to the [`World`], replicates the resource `T`.
 #[derive(Debug, Resource, Default)]

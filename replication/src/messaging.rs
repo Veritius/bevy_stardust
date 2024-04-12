@@ -1,5 +1,5 @@
 use bevy_stardust::prelude::*;
-use crate::Replicable;
+use crate::prelude::*;
 
 #[derive(Default)]
 #[cfg_attr(feature="reflect", derive(bevy::reflect::Reflect), reflect(from_reflect = false))]

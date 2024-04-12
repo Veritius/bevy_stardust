@@ -2,7 +2,7 @@ use std::{marker::PhantomData, sync::Arc};
 use bevy::{ecs::component::TableStorage, prelude::*};
 use bevy_stardust::prelude::*;
 use smallvec::SmallVec;
-use crate::*;
+use crate::prelude::*;
 
 /// Defines a 'network room' entity. This filters the entities that are replicated to each peer.
 ///
