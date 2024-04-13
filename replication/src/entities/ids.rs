@@ -3,8 +3,8 @@ use bevy::{prelude::*, utils::HashMap};
 
 #[derive(Component)]
 pub(crate) struct NetworkEntityIds {
-    ltr: HashMap<NetworkEntityId, Entity>,
-    rtl: HashMap<Entity, NetworkEntityId>,
+    nte: HashMap<NetworkEntityId, Entity>,
+    etn: HashMap<Entity, NetworkEntityId>,
     latest: AtomicU32,
 }
 
@@ -13,9 +13,41 @@ impl NetworkEntityIds {
         NetworkEntityId(self.latest.fetch_add(1, AtomicOrdering::Relaxed))
     }
 
-    pub fn add(&mut self, id: NetworkEntityId, ent: Entity) {
-        self.ltr.insert(id, ent);
-        self.rtl.insert(ent, id);
+    pub fn add_pair(&mut self, eid: Entity, nid: NetworkEntityId) {
+        self.nte.insert(nid, eid);
+        self.etn.insert(eid, nid);
+    }
+
+    pub fn add_eid(&mut self, eid: Entity) -> NetworkEntityId {
+        let nid = self.id();
+        self.add_pair(eid, nid);
+        return nid;
+    }
+
+    pub fn get_net_id(&self, nid: NetworkEntityId) -> Option<Entity> {
+        self.nte.get(&nid).copied()
+    }
+
+    pub fn get_ent_id(&self, eid: Entity) -> Option<NetworkEntityId> {
+        self.etn.get(&eid).copied()
+    }
+
+    pub fn remove_net_id(&mut self, id: NetworkEntityId) -> Option<Entity> {
+        if let Some(ent) = self.nte.remove(&id) {
+            self.etn.remove(&ent);
+            return Some(ent);
+        } else {
+            return None;
+        }
+    }
+
+    pub fn remove_ent_id(&mut self, id: Entity) -> Option<NetworkEntityId> {
+        if let Some(nid) = self.etn.remove(&id) {
+            self.nte.remove(&nid);
+            return Some(nid);
+        } else {
+            return None;
+        }
     }
 }
 
