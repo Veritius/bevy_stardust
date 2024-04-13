@@ -88,7 +88,7 @@ unsafe impl<T: ReplicableComponent> WorldQuery for NetChanged<T> {
             StorageType::SparseSet => debug_unchecked_unwrap(debug_unchecked_unwrap(fetch.sparse_set).get(entity)).deref(),
         };
 
-        return component.changes.this_tick.last_changed_tick().is_newer_than(fetch.last_run, fetch.this_run);
+        return component.ticks.last_changed_tick().is_newer_than(fetch.last_run, fetch.this_run);
     }
 
     fn update_component_access(
