@@ -20,7 +20,7 @@ pub mod prelude {
     pub use change::{NetChanges, NetChanged};
     pub use components::*;
     pub use messaging::ReplicationChannelConfiguration;
-    pub use plugins::ReplicationPlugin;
+    pub use plugins::CoreReplicationPlugin;
     pub use resources::*;
     pub use rooms::*;
     pub use traits::*;

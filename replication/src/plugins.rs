@@ -13,9 +13,9 @@ use crate::messaging::ReplicationData;
 /// - [`ReplicateComponentPlugin<T>`]
 /// 
 /// This plugin must be added after [`StardustPlugin`].
-pub struct ReplicationPlugin;
+pub struct CoreReplicationPlugin;
 
-impl Plugin for ReplicationPlugin {
+impl Plugin for CoreReplicationPlugin {
     fn build(&self, app: &mut App) {
         if !app.is_plugin_added::<StardustPlugin>() {
             panic!("StardustPlugin must be added before ReplicationPlugin");
@@ -28,17 +28,17 @@ impl Plugin for ReplicationPlugin {
 }
 
 /// Enables network room functionality.
-/// Implicitly adds [`ReplicationPlugin`] if not present.
+/// Implicitly adds [`CoreReplicationPlugin`] if not present.
 /// 
 /// Must be added before typed plugins like:
 /// - [`ReplicateResourcePlugin<T>`]
 /// - [`ReplicateComponentPlugin<T>`]
-pub struct RoomsPlugin;
+pub struct ReplicationRoomsPlugin;
 
-impl Plugin for RoomsPlugin {
+impl Plugin for ReplicationRoomsPlugin {
     fn build(&self, app: &mut App) {
-        if !app.is_plugin_added::<ReplicationPlugin>() {
-            app.add_plugins(ReplicationPlugin);
+        if !app.is_plugin_added::<CoreReplicationPlugin>() {
+            app.add_plugins(CoreReplicationPlugin);
         }
     }
 }
@@ -57,8 +57,8 @@ pub struct ReplicateResourcePlugin<T: ReplicableResource> {
 
 impl<T: ReplicableResource> Plugin for ReplicateResourcePlugin<T> {
     fn build(&self, app: &mut App) {
-        if !app.is_plugin_added::<ReplicationPlugin>() {
-            app.add_plugins(ReplicationPlugin);
+        if !app.is_plugin_added::<CoreReplicationPlugin>() {
+            app.add_plugins(CoreReplicationPlugin);
         }
 
         app.add_channel::<ReplicationData<T>>(ChannelConfiguration {
@@ -84,8 +84,8 @@ pub struct ReplicateComponentPlugin<T: ReplicableComponent> {
 
 impl<T: ReplicableComponent> Plugin for ReplicateComponentPlugin<T> {
     fn build(&self, app: &mut App) {
-        if !app.is_plugin_added::<ReplicationPlugin>() {
-            app.add_plugins(ReplicationPlugin);
+        if !app.is_plugin_added::<CoreReplicationPlugin>() {
+            app.add_plugins(CoreReplicationPlugin);
         }
 
         app.register_type::<ReplicateEntity>();
@@ -111,8 +111,8 @@ impl PluginGroup for DefaultPlugins {
         // const PRIORITY_LOW: u32 = 32;
 
         let group = PluginGroupBuilder::start::<Self>()
-            .add(ReplicationPlugin)
-            .add(RoomsPlugin);
+            .add(CoreReplicationPlugin)
+            .add(ReplicationRoomsPlugin);
 
         // #[cfg(feature="bevy_serialize")] {
         //     group = group

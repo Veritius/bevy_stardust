@@ -1,5 +1,7 @@
 # bevy_stardust_replicate
-Replication functionality for [bevy_stardust](https://github.com/Veritius/bevy_stardust/).
+Game state replication for [bevy_stardust](https://github.com/Veritius/bevy_stardust/).
+
+This crate currently only supports server-authoritative (star model) applications.
 
 ## Features
 - `Component` and `Resource` replication

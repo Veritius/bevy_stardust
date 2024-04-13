@@ -5,6 +5,9 @@ use crate::prelude::*;
 pub type Replicated = With<ReplicateEntity>;
 
 /// Entities with this component will be replicated.
+/// 
+/// If you are the authority, removing this component will despawn the entity on all peers.
+
 #[derive(Component, Default, Reflect)]
 #[reflect(Component)]
 pub struct ReplicateEntity {
