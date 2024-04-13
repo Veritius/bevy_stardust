@@ -6,6 +6,7 @@ mod components;
 mod entities;
 mod messages;
 mod plugins;
+mod prediction;
 mod resources;
 mod rooms;
 mod scheduling;
