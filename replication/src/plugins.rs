@@ -4,8 +4,8 @@ use std::marker::PhantomData;
 use bevy::app::PluginGroupBuilder;
 use bevy::prelude::*;
 use bevy_stardust::prelude::*;
+use crate::messages::ReplicationData;
 use crate::prelude::*;
-use crate::messaging::ReplicationData;
 
 /// Adds functionality to support replication.
 /// To replicate things, add other plugins:
@@ -48,8 +48,12 @@ impl Plugin for ReplicationRoomsPlugin {
 /// This plugin must be added before [`StardustPlugin`].
 /// Implicitly adds [`ReplicationPlugin`] if not present.
 pub struct ReplicateResourcePlugin<T: ReplicableResource> {
-    /// Message channel configuration.
-    pub channel: ReplicationChannelConfiguration,
+    /// If replication data should be sent reliably.
+    pub reliability: ReliabilityGuarantee,
+
+    /// The priority of the resource to replicate.
+    /// Higher priority items will be replicated first.
+    pub priority: u32,
 
     #[doc(hidden)]
     pub phantom: PhantomData<T>,
@@ -62,10 +66,10 @@ impl<T: ReplicableResource> Plugin for ReplicateResourcePlugin<T> {
         }
 
         app.add_channel::<ReplicationData<T>>(ChannelConfiguration {
-            reliable: self.channel.reliable,
+            reliable: self.reliability,
             ordered: OrderingGuarantee::Sequenced,
             fragmented: true,
-            priority: self.channel.priority,
+            priority: self.priority,
         });
     }
 }
@@ -75,8 +79,12 @@ impl<T: ReplicableResource> Plugin for ReplicateResourcePlugin<T> {
 /// This plugin must be added before [`StardustPlugin`].
 /// Implicitly adds [`ReplicationPlugin`] if not present.
 pub struct ReplicateComponentPlugin<T: ReplicableComponent> {
-    /// Message channel configuration.
-    pub channel: ReplicationChannelConfiguration,
+    /// If replication data should be sent reliably.
+    pub reliability: ReliabilityGuarantee,
+
+    /// The priority of the resource to replicate.
+    /// Higher priority items will be replicated first.
+    pub priority: u32,
 
     #[doc(hidden)]
     pub phantom: PhantomData<T>,
@@ -92,10 +100,10 @@ impl<T: ReplicableComponent> Plugin for ReplicateComponentPlugin<T> {
         app.register_type::<ReplicateDescendants>();      
 
         app.add_channel::<ReplicationData<T>>(ChannelConfiguration {
-            reliable: self.channel.reliable,
+            reliable: self.reliability,
             ordered: OrderingGuarantee::Sequenced,
             fragmented: true,
-            priority: self.channel.priority,
+            priority: self.priority,
         });
     }
 }

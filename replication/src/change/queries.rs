@@ -3,23 +3,6 @@ use std::cell::UnsafeCell;
 use bevy::{ecs::{component::*, ptr::*, query::*, storage::*}, prelude::*};
 use crate::prelude::*;
 
-/// Metadata about network-replicated types.
-pub struct NetChanges<T: Replicable> {
-    pub(crate) changes: NetworkChangeDetectionInner,
-    phantom: PhantomData<T>,
-}
-
-impl<T: ReplicableResource> Resource for NetChanges<T> {}
-
-impl<T: ReplicableComponent> Component for NetChanges<T> {
-    type Storage = T::Storage;
-}
-
-/// Change detection state for network-replicated types.
-pub(crate) struct NetworkChangeDetectionInner {
-    pub(crate) this_tick: ComponentTicks,
-}
-
 /// Query filter for changes on network-replicated entities.
 pub struct NetChanged<T: ReplicableComponent> {
     phantom: PhantomData<T>,

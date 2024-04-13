@@ -3,8 +3,7 @@
 
 mod change;
 mod components;
-mod entities;
-mod messaging;
+mod messages;
 mod plugins;
 mod resources;
 mod rooms;
@@ -19,7 +18,6 @@ pub mod prelude {
     use super::*;
     pub use change::{NetChanges, NetChanged};
     pub use components::*;
-    pub use messaging::ReplicationChannelConfiguration;
     pub use plugins::CoreReplicationPlugin;
     pub use resources::*;
     pub use rooms::*;
