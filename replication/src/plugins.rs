@@ -23,7 +23,7 @@ impl Plugin for CoreReplicationPlugin {
 
         app.register_type::<NetworkRoom>();
 
-        todo!();
+        crate::scheduling::setup_schedules(app);
     }
 }
 

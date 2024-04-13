@@ -8,6 +8,7 @@ mod messages;
 mod plugins;
 mod resources;
 mod rooms;
+mod scheduling;
 mod state;
 mod traits;
 
@@ -22,6 +23,7 @@ pub mod prelude {
     pub use plugins::CoreReplicationPlugin;
     pub use resources::*;
     pub use rooms::*;
-    pub use traits::*;
+    pub use scheduling::*;
     pub use state::*;
+    pub use traits::*;
 }
