@@ -1,12 +1,11 @@
 #![allow(unused)]
 
 use std::{net::{Ipv4Addr, SocketAddr, SocketAddrV4}, time::Duration};
-use bevy_app::{prelude::*, ScheduleRunnerPlugin};
-use bevy_ecs::prelude::*;
+use bevy::{prelude::*, app::ScheduleRunnerPlugin};
+use bevy::prelude::*;
 use bevy_log::LogPlugin;
-use bevy_reflect::prelude::*;
 use bevy_stardust::prelude::*;
-use bevy_stardust_udp::*;
+use bevy_stardust_udp::prelude::*;
 
 pub const LISTENER_ADDRESS: &str = "127.0.0.1:12345";
 pub const UNSPECIFIED_SOCKET_ADDR: SocketAddr = SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::LOCALHOST, 0));
@@ -53,7 +52,7 @@ static GREEK_ALPHABET: &[&str] = &[
 ];
 
 fn send_and_recv_system(
-    registry: ChannelRegistry,
+    registry: Res<ChannelRegistry>,
     mut peers: Query<(Entity, &NetworkMessages<Incoming>, &mut NetworkMessages<Outgoing>), With<NetworkPeer>>,
 ) {
     for (peer, incoming, mut outgoing) in peers.iter_mut() {

@@ -7,8 +7,8 @@ use bevy_stardust::connections::NetworkPeer;
 pub(crate) use system::{handshake_polling_system, potential_new_peers_system};
 
 use std::{net::SocketAddr, time::Instant};
-use bevy_ecs::prelude::*;
-use crate::{Connection, ConnectionDirection};
+use bevy::prelude::*;
+use crate::prelude::*;
 use super::reliability::ReliabilityState;
 use codes::HandshakeResponseCode;
 
@@ -28,7 +28,7 @@ impl OutgoingHandshake {
             connection: Connection::new(
                 owning_endpoint,
                 remote_address, 
-                ConnectionDirection::Outgoing,
+                ConnectionDirection::Client,
             ),
             handshake: Handshaking {
                 started: Instant::now(),

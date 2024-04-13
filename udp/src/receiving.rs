@@ -1,7 +1,7 @@
-use std::{io::ErrorKind, sync::Mutex};
-use bevy_ecs::prelude::*;
+use std::{io, sync::Mutex};
+use bevy::prelude::*;
 use bytes::Bytes;
-use crate::{connection::PotentialNewPeer, packet::IncomingPacket, Connection, Endpoint};
+use crate::{connection::PotentialNewPeer, packet::IncomingPacket, prelude::*};
 
 // Receives packets from UDP sockets
 pub(crate) fn io_receiving_system(
@@ -58,15 +58,15 @@ pub(crate) fn io_receiving_system(
                 },
 
                 // No more packets to read
-                Err(err) if err.kind() == ErrorKind::WouldBlock => {
+                Err(error) if error.kind() == io::ErrorKind::WouldBlock => {
                     // Break out of the loop
                     break
                 },
 
                 // I/O error reported by the system
-                Err(err) => {
-                    // TODO: Close endpoints based on certain errors
-                    todo!();
+                Err(error) => {
+                    on_recv_failure(&mut endpoint, error);
+                    return;
                 }
             }
         }
@@ -77,4 +77,17 @@ pub(crate) fn io_receiving_system(
             span.record("bytes", bytes_received);
         }
     });
+}
+
+fn on_recv_failure(endpoint: &mut Endpoint, error: io::Error) {
+    match error.kind() {
+        _ => {
+            // Log this error
+            let address = endpoint.address();
+            tracing::error!("Socket {address} failed to send packet: {error}");
+
+            // Close the endpoint
+            endpoint.state = EndpointState::Closed;
+        }
+    }
 }

@@ -1,7 +1,6 @@
 use std::time::Duration;
-use bevy_app::prelude::*;
-use bevy_ecs::prelude::*;
-use bevy_stardust::scheduling::*;
+use bevy::prelude::*;
+use bevy_stardust::prelude::*;
 use crate::{appdata::ApplicationNetworkVersion, connection::PotentialNewPeer, packet::MTU_SIZE};
 
 /// The UDP transport plugin.
@@ -75,7 +74,13 @@ impl Plugin for UdpTransportPlugin {
             established_timeout_system,
             close_connections_system,
         };
+        use crate::endpoint::close_endpoints_system;
         use crate::sending::io_sending_system;
+
+        // Check if the Stardust plugin is added
+        if !app.is_plugin_added::<StardustPlugin>() {
+            panic!("StardustPlugin must be added before UdpTransportPlugin");
+        }
 
         // Send some warnings for potentially bad configuration
         if self.keep_alive_timeout >= self.connection_timeout {
@@ -101,6 +106,7 @@ impl Plugin for UdpTransportPlugin {
             established_packet_builder_system,
             io_sending_system,
             close_connections_system,
+            close_endpoints_system,
         ).chain().in_set(NetworkWrite::Send));
 
         // Reset tick statistics at the end of the tick

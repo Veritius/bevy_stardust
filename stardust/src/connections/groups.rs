@@ -1,6 +1,6 @@
 //! Organisation of network peers.
 
-use bevy_ecs::prelude::*;
+use bevy::prelude::*;
 use smallvec::SmallVec;
 
 /// A collection of network peers, used for organisational purposes.

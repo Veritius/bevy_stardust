@@ -1,17 +1,17 @@
 //! Adds `add_channel` to the `App`.
 
-use bevy_app::App;
+use bevy::app::App;
 use crate::channels::config::ChannelConfiguration;
-use super::{id::Channel, SetupChannelRegistry};
+use super::{id::Channel, ChannelRegistryMut};
 
 mod sealed {
     pub trait Sealed {}
-    impl Sealed for bevy_app::App {}
+    impl Sealed for bevy::app::App {}
 }
 
 /// Adds channel-related functions to the `App`.
 pub trait ChannelSetupAppExt: sealed::Sealed {
-    /// Registers a channel with type `T` and the config and components given.
+    /// Registers a channel with type `C` and the config and components given.
     fn add_channel<C: Channel>(&mut self, config: ChannelConfiguration);
 }
 
@@ -20,6 +20,10 @@ impl ChannelSetupAppExt for App {
         &mut self,
         config: ChannelConfiguration,
     ) {
+        // Register channel type in reflect data
+        #[cfg(feature="reflect")]
+        self.register_type::<C>();
+
         // Change hash value
         #[cfg(feature="hashing")] {
             use crate::hashing::HashingAppExt;
@@ -29,7 +33,7 @@ impl ChannelSetupAppExt for App {
         }
 
         // Add to registry
-        let mut registry = self.world.resource_mut::<SetupChannelRegistry>();
+        let mut registry = self.world.resource_mut::<ChannelRegistryMut>();
         registry.0.register_channel::<C>(config);
     }
 }

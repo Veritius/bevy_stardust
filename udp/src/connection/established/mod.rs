@@ -4,7 +4,7 @@ mod packing;
 mod systems;
 
 use std::{collections::HashMap, time::Duration};
-use bevy_ecs::prelude::*;
+use bevy::prelude::*;
 use bevy_stardust::prelude::*;
 use packet::Frame;
 

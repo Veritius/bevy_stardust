@@ -1,22 +1,21 @@
 //! Schedules used in Stardust.
 
-use bevy_ecs::prelude::*;
-use bevy_app::prelude::*;
+use bevy::prelude::*;
 
-/// Systems dealing with incoming octet strings. Run in the `PreUpdate` schedule.
+/// Systems dealing with receiving messages. Run in the [`PreUpdate`] schedule.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, SystemSet)]
 pub enum NetworkRead {
-    /// Transport layers receive packets from the OS.
+    /// Transport layers receive packets or other transmission media.
     Receive,
-    /// Game systems process octet strings and mutate the World before [Update].
-    /// You can still read octet strings at any time, not just in this component.
+    /// Game systems process messages and mutate the World before [`Update`].
+    /// You can still read messages at any time before [`Receive`](NetworkRead::Receive).
     Read,
 }
 
-/// Systems dealing with outgoing octet strings. Run in the `PostUpdate` schedule.
+/// Systems dealing with outgoing octet strings. Run in the [`PostUpdate`] schedule.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, SystemSet)]
 pub enum NetworkWrite {
-    /// Transport layers send packets written by game systems.
+    /// Transport layers send messages queued by game systems.
     Send,
     /// Queued messages (both the incoming and outgoing buffers) are cleared.
     Clear,

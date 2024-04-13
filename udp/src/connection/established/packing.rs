@@ -1,5 +1,5 @@
 use std::{cell::Cell, cmp::Ordering};
-use bevy_ecs::system::Resource;
+use bevy::prelude::*;
 use bevy_stardust::channels::ChannelRegistryInner;
 use bytes::{BufMut, Bytes, BytesMut};
 use thread_local::ThreadLocal;

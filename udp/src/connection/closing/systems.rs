@@ -1,5 +1,5 @@
-use bevy_ecs::prelude::*;
-use crate::{Connection, ConnectionState, Endpoint};
+use bevy::prelude::*;
+use crate::prelude::*;
 
 // TODO: Use change detection.
 pub(crate) fn close_connections_system(

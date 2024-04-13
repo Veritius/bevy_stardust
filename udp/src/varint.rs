@@ -1,7 +1,6 @@
 // Variable length integer implementation based on RFC 9000 (QUIC)
 
 use std::fmt::Debug;
-
 use bytes::BufMut;
 use unbytes::{EndOfInput, Reader};
 
@@ -36,7 +35,7 @@ impl TryFrom<usize> for VarInt {
 
         // On 64-bit targets, we actually have to check.
         #[cfg(target_pointer_width="64")]
-        return (value as u64).try_into();
+        return (value as u64).try_into()
     }
 }
 
@@ -136,7 +135,6 @@ fn back_and_forth_test() {
         8000, 10000, 16000, 16383, 16384, 16385, // 0b01
         107374000, 1073741823, 1073741824, 1073741825, // 0b10
         4611686017999999999, 4611686018000000000, 4611686018000000001, // 0b11
-
     ];
 
     for item in TEST_SET {
