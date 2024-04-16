@@ -13,6 +13,11 @@ impl<T> ReplicableResource for T where T: Resource + Replicable {}
 pub trait ReplicableComponent: Component + Replicable {}
 impl<T> ReplicableComponent for T where T: Component + Replicable {}
 
+/// Trait for events that can be replicated as-is.
+/// Automatically implemented for types that satisfy the requirements.
+pub trait ReplicableEvent: Event + Replicable {}
+impl<T> ReplicableEvent for T where T: Event + Replicable {}
+
 #[cfg(not(feature="reflect"))]
 mod inner {
     use super::*;
