@@ -65,10 +65,10 @@ pub struct NetworkRoomBundle {
 /// 
 /// By default, `T` is [`All`], making it affect all replicated values.
 /// If added to the World, it affects all resources.
-/// If added to an entity, it affects all components.
+/// If added to an entity, it affects the entity itself.
 /// 
 /// If the component is not present for the relevant type,
-/// filtering is not applied.
+/// filtering is not applied, and the component will be replicated to all peers.
 /// 
 /// ## Precedence
 /// `T` takes precedence over [`All`] and will override it.
