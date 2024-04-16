@@ -21,8 +21,6 @@ impl Plugin for CoreReplicationPlugin {
             panic!("StardustPlugin must be added before ReplicationPlugin");
         }
 
-        app.register_type::<NetworkRoom>();
-
         crate::scheduling::setup_schedules(app);
     }
 }

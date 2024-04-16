@@ -20,6 +20,8 @@ impl Plugin for ReplicationRoomsPlugin {
             app.add_plugins(CoreReplicationPlugin);
         }
 
+        app.register_type::<NetworkRoom>();
+
         app.add_systems(PostUpdate, (
             systems::update_entity_cache,
         ).in_set(PostUpdateReplicationSystems::DetectChanges));
