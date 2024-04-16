@@ -24,11 +24,11 @@ impl NetworkEntityIds {
         return nid;
     }
 
-    pub fn get_net_id(&self, nid: NetworkEntityId) -> Option<Entity> {
+    pub fn get_ent_id(&self, nid: NetworkEntityId) -> Option<Entity> {
         self.nte.get(&nid).copied()
     }
 
-    pub fn get_ent_id(&self, eid: Entity) -> Option<NetworkEntityId> {
+    pub fn get_net_id(&self, eid: Entity) -> Option<NetworkEntityId> {
         self.etn.get(&eid).copied()
     }
 
