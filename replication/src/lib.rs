@@ -10,7 +10,7 @@ mod prediction;
 mod resources;
 mod rooms;
 mod scheduling;
-mod state;
+mod config;
 mod traits;
 
 pub mod diagnostics;
@@ -25,6 +25,6 @@ pub mod prelude {
     pub use resources::*;
     pub use rooms::*;
     pub use scheduling::*;
-    pub use state::*;
+    pub use config::*;
     pub use traits::*;
 }

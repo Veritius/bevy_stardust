@@ -15,3 +15,19 @@ pub enum ReplicationPause {
     #[default]
     Inherit,
 }
+
+/// How replication systems recurse through the entity hierarchy.
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash, Reflect)]
+#[reflect(Debug, Default, PartialEq, Hash)]
+pub enum ReplicationRecursion {
+    /// Recurse all children.
+    #[default]
+    Recurse,
+
+    /// Don't recurse children.
+    Single,
+
+    /// Inherit behavior from a parent, if any.
+    /// Defaults to `Recurse` if no parent exists.
+    Inherit,
+}

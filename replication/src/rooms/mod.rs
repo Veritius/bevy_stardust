@@ -3,7 +3,7 @@ mod systems;
 use std::{marker::PhantomData, sync::Arc};
 use bevy::{ecs::component::TableStorage, prelude::*};
 use bevy_stardust::prelude::*;
-use daggy::stable_dag::StableDag;
+use daggy::{stable_dag::StableDag, NodeIndex};
 use smallvec::SmallVec;
 use crate::prelude::*;
 
@@ -21,14 +21,17 @@ impl Plugin for ReplicationRoomsPlugin {
             app.add_plugins(CoreReplicationPlugin);
         }
 
-        app.add_systems(PostUpdate, systems::update_room_graph_system
-            .in_set(PostUpdateReplicationSystems::DetectChanges));
+        app.add_systems(PostUpdate, (
+            systems::assign_identifiers_system,
+            systems::update_graph_links_system,
+        ).chain().in_set(PostUpdateReplicationSystems::DetectChanges));
 
         app.init_resource::<NetworkRoomGraph>();
     }
 }
 
-pub(crate) type RoomGraphId = u32;
+type RoomGraphId = u32;
+pub(crate) type RoomIndex = NodeIndex<RoomGraphId>;
 
 #[derive(Resource, Default)]
 pub(crate) struct NetworkRoomGraph {
@@ -42,7 +45,7 @@ pub(crate) struct NetworkRoomGraph {
 #[reflect(Debug, Default, Component)]
 pub struct NetworkRoom {
     #[reflect(ignore)]
-    pub(crate) id: Option<RoomGraphId>,
+    pub(crate) id: Option<RoomIndex>,
 }
 
 /// A bundle for a minimal network room.
@@ -76,7 +79,7 @@ pub struct NetworkRoomFilter<T: ?Sized = All> {
     /// The inner filter method.
     pub filter: RoomFilterConfig,
 
-    pub(crate) id: Option<RoomGraphId>,
+    pub(crate) id: Option<RoomIndex>,
     phantom: PhantomData<T>,
 }
 
