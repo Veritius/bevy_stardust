@@ -3,7 +3,6 @@ mod systems;
 use std::{marker::PhantomData, sync::Arc};
 use bevy::{ecs::component::TableStorage, prelude::*};
 use bevy_stardust::prelude::*;
-use daggy::{stable_dag::StableDag, NodeIndex};
 use smallvec::SmallVec;
 use crate::prelude::*;
 
@@ -21,21 +20,10 @@ impl Plugin for ReplicationRoomsPlugin {
             app.add_plugins(CoreReplicationPlugin);
         }
 
-        app.add_systems(PostUpdate, (
-            systems::assign_identifiers_system,
-            systems::update_graph_links_system,
-        ).chain().in_set(PostUpdateReplicationSystems::DetectChanges));
-
-        app.init_resource::<NetworkRoomGraph>();
+        // app.add_systems(PostUpdate, (
+        // 
+        // ).chain().in_set(PostUpdateReplicationSystems::DetectChanges));
     }
-}
-
-type RoomGraphId = u32;
-pub(crate) type RoomIndex = NodeIndex<RoomGraphId>;
-
-#[derive(Resource, Default)]
-pub(crate) struct NetworkRoomGraph {
-    graph: StableDag<Entity, (), RoomGraphId>,
 }
 
 /// Defines a 'network room' entity. This filters the entities that are replicated to each peer.
@@ -43,10 +31,7 @@ pub(crate) struct NetworkRoomGraph {
 /// Peers considered members of the room (as per [`NetworkGroup`]) will have entities replicated to them.
 #[derive(Debug, Default, Component, Reflect)]
 #[reflect(Debug, Default, Component)]
-pub struct NetworkRoom {
-    #[reflect(ignore)]
-    pub(crate) id: Option<RoomIndex>,
-}
+pub struct NetworkRoom;
 
 /// A bundle for a minimal network room.
 #[derive(Bundle)]
@@ -78,8 +63,6 @@ pub struct NetworkRoomBundle {
 pub struct NetworkRoomFilter<T: ?Sized = All> {
     /// The inner filter method.
     pub filter: RoomFilterConfig,
-
-    pub(crate) id: Option<RoomIndex>,
     phantom: PhantomData<T>,
 }
 
@@ -88,7 +71,6 @@ impl<T> NetworkRoomFilter<T> {
     pub fn new(filter: RoomFilterConfig) -> Self {
         Self {
             filter,
-            id: None,
             phantom: PhantomData,
         }
     }
