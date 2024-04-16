@@ -1,13 +1,5 @@
 use bevy::prelude::*;
 
-/// Query filter for entities that are replicated over the network.
-pub type Replicated = With<ReplicateEntity>;
-
-/// Entities with this component will be replicated.
-#[derive(Component, Default, Reflect)]
-#[reflect(Component)]
-pub struct ReplicateEntity;
-
 /// How child entities in a hierarchy are replicated.
 #[derive(Debug, Default, Component, Clone, Copy, PartialEq, Eq, Hash, Reflect)]
 #[reflect(Debug, Default, Component, PartialEq, Hash)]
