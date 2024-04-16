@@ -241,14 +241,13 @@ impl RoomFilterConfig {
     }
 }
 
-/// Cached component memberships for `T`.
-/// This is added to entities with [`NetworkRoom`], not [`NetworkRoomMembership`].
+/// Caches room memberships for the component `T`.
+/// Improves iteration performance for entities with [`NetworkRoomMembership<T>`].
+/// This comes at an additional cost of mutating or adding the [`NetworkRoomMembership<T>`] component.
 /// 
-/// Improves performance for entities that:
-/// - Have `NetworkRoomMembership<T>`
-/// - Are replicated to a large amount of peers
-/// 
-/// Does nothing if [CacheRoomMembershipsPlugin] isn't added.
+/// This should be added to entities with the [`NetworkRoom`] component,
+/// and not the [`NetworkRoomMembership`] component. Does nothing if
+/// [`CacheRoomMembershipsPlugin`] isn't added.
 #[derive(Default)]
 pub struct CacheMemberships<T> {
     cache: BTreeSet<Entity>,
