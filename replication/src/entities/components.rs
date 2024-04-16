@@ -1,5 +1,4 @@
 use bevy::prelude::*;
-use crate::prelude::*;
 
 /// Query filter for entities that are replicated over the network.
 pub type Replicated = With<ReplicateEntity>;
@@ -16,7 +15,7 @@ pub enum ReplicateHierarchy {
     /// Automatically replicates all children.
     Enabled,
 
-    /// Doesn't replicated children.
+    /// Doesn't replicate children.
     Disabled,
 
     /// Inherit the replication mode from a parent, if any.
