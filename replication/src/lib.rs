@@ -2,7 +2,6 @@
 #![warn(missing_docs)]
 
 mod change;
-mod config;
 mod entities;
 mod messages;
 mod plugins;
@@ -24,6 +23,5 @@ pub mod prelude {
     pub use resources::*;
     pub use rooms::*;
     pub use scheduling::*;
-    pub use config::*;
     pub use traits::*;
 }

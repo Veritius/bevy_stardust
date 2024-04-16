@@ -81,7 +81,8 @@ impl<T: ReplicableComponent> Plugin for ReplicateComponentPlugin<T> {
         }
 
         app.register_type::<ReplicateEntity>();
-        app.register_type::<ReplicateDescendants>();      
+        app.register_type::<ReplicationPausingMode>();
+        app.register_type::<ReplicationHierarchyMode>();
 
         app.add_channel::<ReplicationData<T>>(ChannelConfiguration {
             reliable: self.reliability,
