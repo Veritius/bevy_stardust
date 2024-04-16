@@ -258,3 +258,5 @@ pub struct CacheMemberships<T> {
 impl<T: ReplicableComponent> Component for CacheMemberships<T> {
     type Storage = T::Storage;
 }
+
+impl<T: ReplicableResource> Resource for CacheMemberships<T> {}
