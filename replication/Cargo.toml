@@ -17,6 +17,10 @@ version = "0.6"
 path = "../stardust"
 default-features = false
 
+[dependencies.daggy]
+version = "0.8"
+features = ["stable_dag"]
+
 [dependencies.serde]
 version = "1"
 

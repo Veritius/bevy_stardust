@@ -27,22 +27,6 @@ impl Plugin for CoreReplicationPlugin {
     }
 }
 
-/// Enables network room functionality.
-/// Implicitly adds [`CoreReplicationPlugin`] if not present.
-/// 
-/// Must be added before typed plugins like:
-/// - [`ReplicateResourcePlugin<T>`]
-/// - [`ReplicateComponentPlugin<T>`]
-pub struct ReplicationRoomsPlugin;
-
-impl Plugin for ReplicationRoomsPlugin {
-    fn build(&self, app: &mut App) {
-        if !app.is_plugin_added::<CoreReplicationPlugin>() {
-            app.add_plugins(CoreReplicationPlugin);
-        }
-    }
-}
-
 /// Enables replicating the resource `T`.
 /// 
 /// This plugin must be added before [`StardustPlugin`].
@@ -120,7 +104,7 @@ impl PluginGroup for DefaultPlugins {
 
         let group = PluginGroupBuilder::start::<Self>()
             .add(CoreReplicationPlugin)
-            .add(ReplicationRoomsPlugin);
+            .add(crate::rooms::ReplicationRoomsPlugin);
 
         // #[cfg(feature="bevy_serialize")] {
         //     group = group

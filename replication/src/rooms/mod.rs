@@ -1,15 +1,49 @@
+mod systems;
+
 use std::{marker::PhantomData, sync::Arc};
 use bevy::{ecs::component::TableStorage, prelude::*};
 use bevy_stardust::prelude::*;
+use daggy::stable_dag::StableDag;
 use smallvec::SmallVec;
 use crate::prelude::*;
+
+/// Enables network room functionality.
+/// Implicitly adds [`CoreReplicationPlugin`] if not present.
+/// 
+/// Must be added before typed plugins like:
+/// - [`ReplicateResourcePlugin<T>`]
+/// - [`ReplicateComponentPlugin<T>`]
+pub struct ReplicationRoomsPlugin;
+
+impl Plugin for ReplicationRoomsPlugin {
+    fn build(&self, app: &mut App) {
+        if !app.is_plugin_added::<CoreReplicationPlugin>() {
+            app.add_plugins(CoreReplicationPlugin);
+        }
+
+        app.add_systems(PostUpdate, systems::update_room_graph_system
+            .in_set(PostUpdateReplicationSystems::DetectChanges));
+
+        app.init_resource::<NetworkRoomGraph>();
+    }
+}
+
+pub(crate) type RoomGraphId = u32;
+
+#[derive(Resource, Default)]
+pub(crate) struct NetworkRoomGraph {
+    graph: StableDag<Entity, (), RoomGraphId>,
+}
 
 /// Defines a 'network room' entity. This filters the entities that are replicated to each peer.
 ///
 /// Peers considered members of the room (as per [`NetworkGroup`]) will have entities replicated to them.
-#[derive(Debug, Component, Reflect)]
-#[reflect(Debug, Component)]
-pub struct NetworkRoom;
+#[derive(Debug, Default, Component, Reflect)]
+#[reflect(Debug, Default, Component)]
+pub struct NetworkRoom {
+    #[reflect(ignore)]
+    pub(crate) id: Option<RoomGraphId>,
+}
 
 /// A bundle for a minimal network room.
 #[derive(Bundle)]
@@ -41,6 +75,8 @@ pub struct NetworkRoomBundle {
 pub struct NetworkRoomFilter<T: ?Sized = All> {
     /// The inner filter method.
     pub filter: RoomFilterConfig,
+
+    pub(crate) id: Option<RoomGraphId>,
     phantom: PhantomData<T>,
 }
 
@@ -49,6 +85,7 @@ impl<T> NetworkRoomFilter<T> {
     pub fn new(filter: RoomFilterConfig) -> Self {
         Self {
             filter,
+            id: None,
             phantom: PhantomData,
         }
     }
