@@ -24,6 +24,9 @@ impl Plugin for CoreReplicationPlugin {
         app.register_type::<NetworkRoom>();
 
         crate::scheduling::setup_schedules(app);
+
+        app.add_systems(PostUpdate, crate::entities::systems::update_hierarchy_system
+            .in_set(PostUpdateReplicationSystems::DetectChanges));
     }
 }
 
@@ -81,8 +84,7 @@ impl<T: ReplicableComponent> Plugin for ReplicateComponentPlugin<T> {
         }
 
         app.register_type::<ReplicateEntity>();
-        app.register_type::<ReplicationPausingMode>();
-        app.register_type::<ReplicationHierarchyMode>();
+        app.register_type::<ReplicateHierarchy>();
 
         app.add_channel::<ReplicationData<T>>(ChannelConfiguration {
             reliable: self.reliability,
