@@ -3,7 +3,7 @@ mod systems;
 use std::{collections::BTreeSet, marker::PhantomData, sync::Arc};
 use bevy::{ecs::component::TableStorage, prelude::*};
 use bevy_stardust::prelude::*;
-use smallvec::SmallVec;
+use smallvec::{smallvec, SmallVec};
 use crate::prelude::*;
 
 /// Enables network room functionality.
@@ -67,6 +67,9 @@ pub struct NetworkRoomBundle {
 /// If added to the World, it affects all resources.
 /// If added to an entity, it affects all components.
 /// 
+/// If the component is not present for the relevant type,
+/// filtering is not applied.
+/// 
 /// ## Precedence
 /// `T` takes precedence over [`All`] and will override it.
 /// For `T`, the value of `Self<T>` will be used instead of `Self<All>`.
@@ -122,18 +125,102 @@ pub struct All;
 pub enum RoomFilterConfig {
     /// Replicated to peers that are members of this group.
     InclusiveSingle(Entity),
+
     /// Replicated to peers that are members in at least one of the contained groups.
     InclusiveMany(SmallVec<[Entity; 4]>),
+
     /// Replicated to peers that are not members of this group.
     ExclusiveSingle(Entity),
+
     /// Replicated to peers that are not members of any of the contained groups.
     ExclusiveMany(SmallVec<[Entity; 4]>),
+
     /// Use a custom function for filtering.
-    /// `true` means that the target is replicated.
+    /// `true` means that the target is replicated in the room with the passed entity ID.
     CustomFunction(Arc<dyn Fn(Entity) -> bool + Send + Sync>)
 }
 
 impl RoomFilterConfig {
+    fn rm_many(vec: &mut SmallVec<[Entity; 4]>, item: Entity) {
+        let el = vec.iter()
+            .enumerate()
+            .filter(|(_, e)| **e == item)
+            .map(|v| v.0)
+            .collect::<SmallVec<[usize; 8]>>();
+
+        for idx in el.iter() {
+            vec.remove(*idx);
+        }
+    }
+
+    /// Try to add `room` to the set such that in [`filter`](Self::filter) will return `true` when passed `room`.
+    /// 
+    /// Returns `false` if this was impossible.
+    /// This currently only occurs if the variant is [`CustomFunction`][CustomFunction].
+    /// 
+    /// [CustomFunction]: RoomFilterConfig::CustomFunction
+    pub fn include(&mut self, room: Entity) -> bool {
+        match self {
+            RoomFilterConfig::InclusiveSingle(prev) => {
+                if *prev == room { return true; }
+                *self = Self::InclusiveMany(smallvec![*prev, room]);
+                return true;
+            },
+            RoomFilterConfig::InclusiveMany(vec) => {
+                if vec.contains(&room) { return true; }
+                vec.push(room);
+                return true;
+            },
+            RoomFilterConfig::ExclusiveSingle(itm) => {
+                if *itm != room { return true; }
+                *self = Self::ExclusiveMany(smallvec![]);
+                return true;
+            },
+            RoomFilterConfig::ExclusiveMany(vec) => {
+                Self::rm_many(vec, room);
+                return true;
+            },
+            RoomFilterConfig::CustomFunction(_) => {
+                // Not possible
+                return false;
+            },
+        }
+    }
+
+    /// Try to add `room` to the set such that in [`filter`](Self::filter) will return `false` when passed `room`.
+    /// 
+    /// Returns `false` if this was impossible.
+    /// This currently only occurs if the variant is [`CustomFunction`][CustomFunction].
+    /// 
+    /// [CustomFunction]: RoomFilterConfig::CustomFunction
+    pub fn exclude(&mut self, room: Entity) -> bool {
+        match self {
+            RoomFilterConfig::InclusiveSingle(prev) => {
+                if *prev != room { return true; }
+                *self = Self::InclusiveMany(smallvec![]);
+                return true;
+            },
+            RoomFilterConfig::InclusiveMany(vec) => {
+                Self::rm_many(vec, room);
+                return true;
+            },
+            RoomFilterConfig::ExclusiveSingle(prev) => {
+                if *prev == room { return true; }
+                *self = Self::ExclusiveMany(smallvec![*prev, room]);
+                return true;
+            },
+            RoomFilterConfig::ExclusiveMany(vec) => {
+                if vec.contains(&room) { return true; }
+                vec.push(room);
+                return true;
+            },
+            RoomFilterConfig::CustomFunction(_) => {
+                // Not possible
+                return false;
+            },
+        }
+    }
+
     /// Returns `true` if group matches the filter.
     pub fn filter(&self, group: Entity) -> bool {
         self.filter_inlined(group)
@@ -142,7 +229,8 @@ impl RoomFilterConfig {
     /// Returns `true` if `group` matches the filter.
     /// This function is inlined - use [`filter`](Self::filter) if you don't want this.
     #[inline]
-    pub fn filter_inlined(&self, group: Entity) -> bool {
+    pub(crate) fn filter_inlined(&self, group: Entity) -> bool {
+        // TODO: Maybe ensure vecs are sorted so binary search can be used
         match self {
             RoomFilterConfig::InclusiveSingle(val) => *val == group,
             RoomFilterConfig::InclusiveMany(set) => set.contains(&group),
@@ -154,6 +242,8 @@ impl RoomFilterConfig {
 }
 
 /// Cached component memberships for `T`.
+/// This is added to entities with [`NetworkRoom`], not [`NetworkRoomMembership`].
+/// 
 /// Improves performance for entities that:
 /// - Have `NetworkRoomMembership<T>`
 /// - Are replicated to a large amount of peers
