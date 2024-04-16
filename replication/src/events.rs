@@ -6,6 +6,25 @@ use crate::prelude::*;
 #[derive(Default)]
 pub(crate) struct EventReplicationData<T: ReplicableEvent>(PhantomData<T>);
 
+/// Controls how the event of type `T` is replicated to peers.
+pub struct ReplicatedEventRoomMembership<T: ReplicableEvent> {
+    /// See [`RoomFilterConfig`].
+    pub filter: RoomFilterConfig,
+    phantom: PhantomData<T>,
+}
+
+impl<T: ReplicableEvent> Resource for ReplicatedEventRoomMembership<T> {}
+
+impl<T: ReplicableEvent> ReplicatedEventRoomMembership<T> {
+    /// Creates a new [`ReplicatedEventRoomMembership`] resource.
+    pub fn new(filter: RoomFilterConfig) -> Self {
+        Self {
+            filter,
+            phantom: PhantomData,
+        }
+    }
+}
+
 /// Naively relays the event `T` over the network.
 /// 
 /// This plugin must be added before [`StardustPlugin`].
@@ -37,5 +56,27 @@ impl<T: ReplicableEvent> Plugin for ReplicateEventsPlugin<T> {
             fragmented: true,
             priority: self.priority,
         });
+
+        app.add_systems(PreUpdate, rep_events_receiving_system::<T>
+            .in_set(NetworkRead::Read));
+
+        app.add_systems(PostUpdate, rep_events_sending_system::<T>
+            .before(NetworkWrite::Send));
     }
+}
+
+fn rep_events_receiving_system<T: ReplicableEvent>(
+    registry: Res<ChannelRegistry>,
+    membership: Res<ReplicatedEventRoomMembership<T>>,
+    mut events: EventWriter<T>,
+) {
+    todo!()
+}
+
+fn rep_events_sending_system<T: ReplicableEvent>(
+    registry: Res<ChannelRegistry>,
+    membership: Res<ReplicatedEventRoomMembership<T>>,
+    events: EventReader<T>,
+) {
+    todo!()
 }

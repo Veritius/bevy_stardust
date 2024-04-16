@@ -17,8 +17,9 @@ pub mod prelude {
     //! Common imports.
 
     use super::*;
-    pub use entities::{Replicated, ReplicateEntity, ReplicateHierarchy};
     pub use change::{NetChanges, NetChanged};
+    pub use entities::{Replicated, ReplicateEntity, ReplicateHierarchy};
+    pub use events::*;
     pub use plugins::CoreReplicationPlugin;
     pub use resources::*;
     pub use rooms::*;
