@@ -3,7 +3,7 @@
 
 mod change;
 mod entities;
-mod messages;
+mod events;
 mod plugins;
 mod prediction;
 mod resources;

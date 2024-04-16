@@ -1,6 +1,41 @@
 use std::{marker::PhantomData, ops::{Deref, DerefMut}};
 use bevy::{ecs::system::SystemParam, prelude::*};
+use bevy_stardust::prelude::*;
 use crate::prelude::*;
+
+#[derive(Default)]
+pub(crate) struct ResourceReplicationData<T: ReplicableResource>(PhantomData<T>);
+
+/// Enables replicating the resource `T`.
+/// 
+/// This plugin must be added before [`StardustPlugin`].
+/// Implicitly adds [`ReplicationPlugin`] if not present.
+pub struct ReplicateResourcePlugin<T: ReplicableResource> {
+    /// If replication data should be sent reliably.
+    pub reliability: ReliabilityGuarantee,
+
+    /// The priority of the resource to replicate.
+    /// Higher priority items will be replicated first.
+    pub priority: u32,
+
+    #[doc(hidden)]
+    pub phantom: PhantomData<T>,
+}
+
+impl<T: ReplicableResource> Plugin for ReplicateResourcePlugin<T> {
+    fn build(&self, app: &mut App) {
+        if !app.is_plugin_added::<CoreReplicationPlugin>() {
+            app.add_plugins(CoreReplicationPlugin);
+        }
+
+        app.add_channel::<ResourceReplicationData<T>>(ChannelConfiguration {
+            reliable: self.reliability,
+            ordered: OrderingGuarantee::Sequenced,
+            fragmented: true,
+            priority: self.priority,
+        });
+    }
+}
 
 /// When added to the [`World`], replicates the resource `T`.
 #[derive(Debug, Resource, Default)]

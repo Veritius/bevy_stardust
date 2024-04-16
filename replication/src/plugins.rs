@@ -1,11 +1,8 @@
 //! Main plugin for replication.
 
-use std::marker::PhantomData;
 use bevy::app::PluginGroupBuilder;
 use bevy::prelude::*;
 use bevy_stardust::prelude::*;
-use crate::messages::*;
-use crate::prelude::*;
 
 /// Adds functionality to support replication.
 /// To replicate things, add other plugins:
@@ -25,110 +22,11 @@ impl Plugin for CoreReplicationPlugin {
     }
 }
 
-/// Enables replicating the resource `T`.
-/// 
-/// This plugin must be added before [`StardustPlugin`].
-/// Implicitly adds [`ReplicationPlugin`] if not present.
-pub struct ReplicateResourcePlugin<T: ReplicableResource> {
-    /// If replication data should be sent reliably.
-    pub reliability: ReliabilityGuarantee,
-
-    /// The priority of the resource to replicate.
-    /// Higher priority items will be replicated first.
-    pub priority: u32,
-
-    #[doc(hidden)]
-    pub phantom: PhantomData<T>,
-}
-
-impl<T: ReplicableResource> Plugin for ReplicateResourcePlugin<T> {
-    fn build(&self, app: &mut App) {
-        if !app.is_plugin_added::<CoreReplicationPlugin>() {
-            app.add_plugins(CoreReplicationPlugin);
-        }
-
-        app.add_channel::<ResourceReplicationData<T>>(ChannelConfiguration {
-            reliable: self.reliability,
-            ordered: OrderingGuarantee::Sequenced,
-            fragmented: true,
-            priority: self.priority,
-        });
-    }
-}
-
-/// Enables replicating the component `T`.
-/// 
-/// This plugin must be added before [`StardustPlugin`].
-/// Implicitly adds [`ReplicationPlugin`] if not present.
-pub struct ReplicateComponentPlugin<T: ReplicableComponent> {
-    /// If replication data should be sent reliably.
-    pub reliability: ReliabilityGuarantee,
-
-    /// The priority of the resource to replicate.
-    /// Higher priority items will be replicated first.
-    pub priority: u32,
-
-    #[doc(hidden)]
-    pub phantom: PhantomData<T>,
-}
-
-impl<T: ReplicableComponent> Plugin for ReplicateComponentPlugin<T> {
-    fn build(&self, app: &mut App) {
-        if !app.is_plugin_added::<CoreReplicationPlugin>() {
-            app.add_plugins(CoreReplicationPlugin);
-        }
-
-        app.register_type::<ReplicateEntity>();
-        app.register_type::<ReplicateHierarchy>();
-
-        app.add_channel::<ComponentReplicationData<T>>(ChannelConfiguration {
-            reliable: self.reliability,
-            ordered: OrderingGuarantee::Sequenced,
-            fragmented: true,
-            priority: self.priority,
-        });
-    }
-}
-
-/// Naively relays the event `T` over the network.
-/// 
-/// This plugin must be added before [`StardustPlugin`].
-/// Implicitly adds [`ReplicationPlugin`] if not present.
-pub struct ReplicateEventsPlugin<T: ReplicableEvent> {
-    /// If replication data should be sent reliably.
-    pub reliability: ReliabilityGuarantee,
-
-    /// Sets how events are ordered.
-    pub ordering: OrderingGuarantee,
-
-    /// The priority of the resource to replicate.
-    /// Higher priority items will be replicated first.
-    pub priority: u32,
-
-    #[doc(hidden)]
-    pub phantom: PhantomData<T>,
-}
-
-impl<T: ReplicableEvent> Plugin for ReplicateEventsPlugin<T> {
-    fn build(&self, app: &mut App) {
-        if !app.is_plugin_added::<CoreReplicationPlugin>() {
-            app.add_plugins(CoreReplicationPlugin);
-        }
-
-        app.add_channel::<EventReplicationData<T>>(ChannelConfiguration {
-            reliable: self.reliability,
-            ordered: self.ordering,
-            fragmented: true,
-            priority: self.priority,
-        });
-    }
-}
-
 /// Adds a set of plugins to replicate most Bevy components.
 /// Adds [`RoomsPlugin`] - remove it if you don't want it!
-pub struct DefaultPlugins;
+pub struct ReplicationPlugins;
 
-impl PluginGroup for DefaultPlugins {
+impl PluginGroup for ReplicationPlugins {
     fn build(self) -> PluginGroupBuilder {
         // const PRIORITY_HIGH: u32 = 128;
         // const PRIORITY_MED: u32 = 64;
