@@ -249,8 +249,14 @@ impl RoomFilterConfig {
 /// - Are replicated to a large amount of peers
 /// 
 /// Does nothing if [CacheRoomMembershipsPlugin] isn't added.
-#[derive(Default, Component)]
-pub struct CacheMemberships<T: ReplicableComponent> {
+#[derive(Default)]
+pub struct CacheMemberships<T> {
     cache: BTreeSet<Entity>,
     phantom: PhantomData<T>,
 }
+
+impl<T: ReplicableComponent> Component for CacheMemberships<T> {
+    type Storage = T::Storage;
+}
+
+impl<T: ReplicableResource> Resource for CacheMemberships<T> {}
