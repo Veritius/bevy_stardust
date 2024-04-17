@@ -1,14 +1,36 @@
+mod components;
 mod hierarchy;
 mod ids;
 
 pub(crate) use ids::*;
 
+pub use components::*;
 pub use hierarchy::*;
 
-use std::marker::PhantomData;
 use bevy::prelude::*;
 use bevy_stardust::prelude::*;
 use crate::prelude::*;
+
+/// Adds entity replication functionality.
+/// - Doesn't replicate hierarchies. Use [`HierarchyReplicationPlugin`].
+/// - Doesn't replicate components. Use [`ComponentReplicationPlugin`].
+pub struct EntityReplicationPlugin {
+    /// The priority of network messages for entity replication.
+    pub message_priority: u32,
+}
+
+impl Plugin for EntityReplicationPlugin {
+    fn build(&self, app: &mut App) {
+        app.register_type::<ReplicateEntity>();
+        
+        app.add_channel::<EntityReplicationChannel>(ChannelConfiguration {
+            reliable: ReliabilityGuarantee::Reliable,
+            ordered: OrderingGuarantee::Ordered,
+            fragmented: false,
+            priority: self.message_priority,
+        });
+    }
+}
 
 /// Query filter for entities that are replicated over the network.
 pub type Replicated = With<ReplicateEntity>;
@@ -24,42 +46,4 @@ pub struct ReplicateEntity {
 
 /// Stardust channel for entity replication.
 #[derive(Default)]
-pub(crate) struct EntityReplicationData;
-
-/// Stardust channel for component replication for type `T`.
-#[derive(Default)]
-pub(crate) struct ComponentReplicationData<T: ReplicableComponent>(PhantomData<T>);
-
-/// Enables replicating the component `T`.
-/// 
-/// This plugin must be added before [`StardustPlugin`].
-/// Implicitly adds [`ReplicationPlugin`] if not present.
-pub struct ReplicateComponentPlugin<T: ReplicableComponent> {
-    /// If replication data should be sent reliably.
-    pub reliability: ReliabilityGuarantee,
-
-    /// The priority of the resource to replicate.
-    /// Higher priority items will be replicated first.
-    pub priority: u32,
-
-    #[doc(hidden)]
-    pub phantom: PhantomData<T>,
-}
-
-impl<T: ReplicableComponent> Plugin for ReplicateComponentPlugin<T> {
-    fn build(&self, app: &mut App) {
-        if !app.is_plugin_added::<CoreReplicationPlugin>() {
-            app.add_plugins(CoreReplicationPlugin);
-        }
-
-        app.register_type::<ReplicateEntity>();
-        app.register_type::<ReplicateHierarchy>();
-
-        app.add_channel::<ComponentReplicationData<T>>(ChannelConfiguration {
-            reliable: self.reliability,
-            ordered: OrderingGuarantee::Sequenced,
-            fragmented: true,
-            priority: self.priority,
-        });
-    }
-}
+pub(crate) struct EntityReplicationChannel;

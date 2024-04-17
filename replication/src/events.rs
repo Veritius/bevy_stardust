@@ -11,22 +11,21 @@ pub(crate) struct EventReplicationData<T: ReplicableEvent>(PhantomData<T>);
 /// 
 /// This plugin must be added before [`StardustPlugin`].
 /// Implicitly adds [`ReplicationPlugin`] if not present.
-pub struct ReplicateEventsPlugin<T: ReplicableEvent> {
-    /// If replication data should be sent reliably.
+pub struct EventReplicationPlugin<T: ReplicableEvent> {
+    /// If replicated events should be sent reliably.
     pub reliability: ReliabilityGuarantee,
 
-    /// Sets how events are ordered.
+    /// If replicated events should be ordered.
     pub ordering: OrderingGuarantee,
 
-    /// The priority of the resource to replicate.
-    /// Higher priority items will be replicated first.
-    pub priority: u32,
+    /// The priority of network messages for replicating `T`.
+    pub message_priority: u32,
 
     #[doc(hidden)]
     pub phantom: PhantomData<T>,
 }
 
-impl<T: ReplicableEvent> Plugin for ReplicateEventsPlugin<T> {
+impl<T: ReplicableEvent> Plugin for EventReplicationPlugin<T> {
     fn build(&self, app: &mut App) {
         if !app.is_plugin_added::<CoreReplicationPlugin>() {
             app.add_plugins(CoreReplicationPlugin);
@@ -36,7 +35,7 @@ impl<T: ReplicableEvent> Plugin for ReplicateEventsPlugin<T> {
             reliable: self.reliability,
             ordered: self.ordering,
             fragmented: true,
-            priority: self.priority,
+            priority: self.message_priority,
         });
 
         app.add_systems(PreUpdate, rep_events_receiving_system::<T>

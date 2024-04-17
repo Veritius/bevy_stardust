@@ -22,13 +22,6 @@ impl Plugin for CoreReplicationPlugin {
         app.register_type::<ReplicationPeer>();
 
         crate::scheduling::setup_schedules(app);
-
-        app.add_channel::<crate::entities::EntityReplicationData>(ChannelConfiguration {
-            reliable: ReliabilityGuarantee::Reliable,
-            ordered: OrderingGuarantee::Ordered,
-            fragmented: true,
-            priority: 32,
-        });
     }
 }
 
@@ -44,7 +37,7 @@ impl PluginGroup for ReplicationPlugins {
 
         let group = PluginGroupBuilder::start::<Self>()
             .add(CoreReplicationPlugin)
-            .add(crate::rooms::ReplicationRoomsPlugin);
+            .add(ScopedReplicationPlugin);
 
         // #[cfg(feature="bevy_serialize")] {
         //     group = group

@@ -19,7 +19,7 @@ pub mod prelude {
 
     use super::*;
     pub use change::{NetChanges, NetChanged};
-    pub use entities::{Replicated, ReplicateEntity, ReplicateHierarchy};
+    pub use entities::*;
     pub use events::*;
     pub use peer::*;
     pub use plugins::CoreReplicationPlugin;

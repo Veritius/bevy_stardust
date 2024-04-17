@@ -6,15 +6,10 @@ use bevy_stardust::prelude::*;
 use smallvec::{smallvec, SmallVec};
 use crate::prelude::*;
 
-/// Enables network room functionality.
-/// Implicitly adds [`CoreReplicationPlugin`] if not present.
-/// 
-/// Must be added before typed plugins like:
-/// - [`ReplicateResourcePlugin<T>`]
-/// - [`ReplicateComponentPlugin<T>`]
-pub struct ReplicationRoomsPlugin;
+/// Enables scoped replication using network rooms.
+pub struct ScopedReplicationPlugin;
 
-impl Plugin for ReplicationRoomsPlugin {
+impl Plugin for ScopedReplicationPlugin {
     fn build(&self, app: &mut App) {
         if !app.is_plugin_added::<CoreReplicationPlugin>() {
             app.add_plugins(CoreReplicationPlugin);
