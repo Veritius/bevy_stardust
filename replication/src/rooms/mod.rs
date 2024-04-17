@@ -152,9 +152,7 @@ impl MembershipFilter {
     /// Try to add `room` to the set such that in [`filter`](Self::filter) will return `true` when passed `room`.
     /// 
     /// Returns `false` if this was impossible.
-    /// This currently only occurs if the variant is [`CustomFunction`][CustomFunction].
-    /// 
-    /// [CustomFunction]: RoomFilterConfig::CustomFunction
+    /// This currently only occurs if the variant is [`Custom`][MembershipFilter::Custom].
     pub fn include(&mut self, room: Entity) -> bool {
         match self {
             MembershipFilter::Inclusive(vec) => {
@@ -176,9 +174,7 @@ impl MembershipFilter {
     /// Try to add `room` to the set such that in [`filter`](Self::filter) will return `false` when passed `room`.
     /// 
     /// Returns `false` if this was impossible.
-    /// This currently only occurs if the variant is [`CustomFunction`][CustomFunction].
-    /// 
-    /// [CustomFunction]: RoomFilterConfig::CustomFunction
+    /// This currently only occurs if the variant is [`Custom`][MembershipFilter::Custom].
     pub fn exclude(&mut self, room: Entity) -> bool {
         match self {
             MembershipFilter::Inclusive(vec) => {
