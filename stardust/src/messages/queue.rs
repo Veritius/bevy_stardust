@@ -52,7 +52,7 @@ impl<D: DirectionType> NetworkMessages<D> {
     }
 
     /// Returns a slice of the queue for channel `channel`.
-    pub fn channel_queue(&self, channel: ChannelId) -> &[Bytes] {
+    pub fn get(&self, channel: ChannelId) -> &[Bytes] {
         self.queue_map
         .get(&channel)
         .map_or(EMPTY_SLICE, |v| v.as_slice())
@@ -60,11 +60,36 @@ impl<D: DirectionType> NetworkMessages<D> {
 
     /// Returns an iterator over all queues, including their channel ids.
     /// The iterator does not contain empty queues.
-    pub fn all_queues(&self) -> impl Iterator<Item = (ChannelId, &[Bytes])> {
+    pub fn iter(&self) -> impl Iterator<Item = (ChannelId, &[Bytes])> {
         self.queue_map
         .iter()
         .filter(|(_,v)| v.len() != 0)
         .map(|(k,v)| (k.clone(), v.as_slice()))
+    }
+
+    /// Resizes all buffers based on `func`.
+    /// 
+    /// `func` takes the current capacity of the buffer as an input,
+    /// and outputs the new size of the buffer. Nothing happens if the two values are equal.
+    /// If the returned value is lesser, the buffer will resize to either the length or the target,
+    /// whichever is greater. If the returned value is greater, the length will be exactly so.
+    pub fn resize(&mut self, func: impl Fn(usize) -> usize) {
+        self.queue_map.iter_mut().for_each(|(_, buf)| {
+            use std::cmp::Ordering;
+
+            let cur_len = buf.len();
+            let new_len = func(cur_len);
+            match new_len.cmp(&cur_len) {
+                Ordering::Equal => {},
+                Ordering::Less => {
+                    buf.shrink_to(new_len);
+                },
+                Ordering::Greater => {
+                    let diff = new_len - cur_len;
+                    buf.reserve(diff);
+                },
+            }
+        });
     }
 }
 
