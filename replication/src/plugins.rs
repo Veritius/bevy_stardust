@@ -19,6 +19,13 @@ impl Plugin for CoreReplicationPlugin {
         }
 
         crate::scheduling::setup_schedules(app);
+
+        app.add_channel::<crate::entities::EntityReplicationData>(ChannelConfiguration {
+            reliable: ReliabilityGuarantee::Reliable,
+            ordered: OrderingGuarantee::Ordered,
+            fragmented: true,
+            priority: 32,
+        });
     }
 }
 

@@ -18,6 +18,11 @@ pub type Replicated = With<ReplicateEntity>;
 #[reflect(Component)]
 pub struct ReplicateEntity;
 
+/// Stardust channel for entity replication.
+#[derive(Default)]
+pub(crate) struct EntityReplicationData;
+
+/// Stardust channel for component replication for type `T`.
 #[derive(Default)]
 pub(crate) struct ComponentReplicationData<T: ReplicableComponent>(PhantomData<T>);
 
