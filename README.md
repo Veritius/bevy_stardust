@@ -34,7 +34,7 @@ The following features are planned to be created as additional crates, as part o
 ## Usage
 | Bevy | Stardust |
 | ---- | -------- |
-| 0.13 | 0.5      |
+| 0.13 | 0.6      |
 | 0.12 | 0.2      |
 | 0.11 | 0.1      |
 
@@ -51,8 +51,7 @@ The following features are planned to be created as additional crates, as part o
 // For the purpose of this example, we'll assume they magically appeared somehow.
 
 use std::any::TypeId;
-use bevy_ecs::prelude::*;
-use bevy_app::{prelude::*, ScheduleRunnerPlugin, MainSchedulePlugin};
+use bevy::{prelude::*, app::{ScheduleRunnerPlugin, MainSchedulePlugin}};
 use bevy_stardust::prelude::*;
 
 // Channels are accessed with types in the type system.
@@ -107,7 +106,7 @@ const MESSAGE: Bytes = Bytes::from_static("Hello, world!".as_bytes());
 // Queueing messages just requires component access.
 // This means you can use query filters to achieve better parallelism.
 fn send_words_system(
-    registry: ChannelRegistry,
+    registry: Res<ChannelRegistry>,
     mut query: Query<(Entity, &mut NetworkMessages<Outgoing>), With<NetworkPeer>>
 ) {
     // The ChannelId must be retrieved from the registry.
@@ -128,12 +127,12 @@ fn send_words_system(
 // The reading queue is a different component from the sending queue.
 // This means you can read and send bytes in parallel, or in different systems.
 fn read_words_system(
-    registry: ChannelRegistry,
+    registry: Res<ChannelRegistry>,
     query: Query<(Entity, &NetworkMessages<Incoming>), With<NetworkPeer>>
 ) {
     let channel = registry.channel_id(TypeId::of::<MyChannel>()).unwrap();
     for (entity, incoming) in query.iter() {
-        let messages = incoming.channel_queue(channel);
+        let messages = incoming.get(channel);
         for message in messages.iter() {
             // Stardust only outputs bytes, so you need to convert to the desired type.
             // Also, in real products, don't unwrap, write checks. Never trust user data.

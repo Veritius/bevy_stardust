@@ -2,7 +2,7 @@
 
 use bevy::app::App;
 use crate::channels::config::ChannelConfiguration;
-use super::{id::Channel, SetupChannelRegistry};
+use super::{id::Channel, ChannelRegistryMut};
 
 mod sealed {
     pub trait Sealed {}
@@ -33,7 +33,7 @@ impl ChannelSetupAppExt for App {
         }
 
         // Add to registry
-        let mut registry = self.world.resource_mut::<SetupChannelRegistry>();
+        let mut registry = self.world.resource_mut::<ChannelRegistryMut>();
         registry.0.register_channel::<C>(config);
     }
 }
