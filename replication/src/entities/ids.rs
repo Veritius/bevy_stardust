@@ -1,16 +1,29 @@
 use std::sync::atomic::{AtomicU32, Ordering as AtomicOrdering};
 use bevy::{prelude::*, utils::HashMap};
 
+use super::Side;
+
 #[derive(Component)]
 pub(crate) struct NetworkEntityIds {
     nte: HashMap<NetworkEntityId, Entity>,
     etn: HashMap<Entity, NetworkEntityId>,
+    side: Side,
     latest: AtomicU32,
 }
 
 impl NetworkEntityIds {
+    pub fn new(side: Side) -> Self {
+        Self {
+            nte: HashMap::default(),
+            etn: HashMap::default(),
+            side,
+            latest: AtomicU32::new(0),
+        }
+    }
+
     pub fn id(&self) -> NetworkEntityId {
-        NetworkEntityId(self.latest.fetch_add(1, AtomicOrdering::Relaxed))
+        let int = self.latest.fetch_add(1, AtomicOrdering::Relaxed);
+        NetworkEntityId::new(self.side, int).expect("Exceeded networked entity id limit")
     }
 
     pub fn add_pair(&mut self, eid: Entity, nid: NetworkEntityId) {
@@ -51,6 +64,68 @@ impl NetworkEntityIds {
     }
 }
 
-/// Opaque entity ID relevant only to the entity that it originated from.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+/// Opaque entity ID relevant only to connection it originated from.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Reflect)]
 pub(crate) struct NetworkEntityId(u32);
+
+impl NetworkEntityId {
+    pub const MIN: u32 = u32::MIN;
+    pub const MAX: u32 = (1 << 31) - 1;
+
+    const FLAG: u32 = 1 << 31;
+
+    fn new(side: Side, value: u32) -> Result<Self, ()> {
+        // Check for the numerical range limit
+        if Self::left_high(value) { return Err(()); }
+
+        // Create inner value
+        let mut val = value;
+        if side == Side::Left { val |= Self::FLAG; }
+        return Ok(Self(val))
+    }
+
+    #[inline]
+    fn left_high(value: u32) -> bool {
+        value & Self::FLAG > 0
+    }
+
+    pub fn side(&self) -> Side {
+        match Self::left_high(self.0) {
+            true => Side::Left,
+            false => Side::Right,
+        }
+    }
+}
+
+impl From<NetworkEntityId> for u32 {
+    fn from(value: NetworkEntityId) -> Self {
+        // Always disable the is-left flag.
+        value.0 & !NetworkEntityId::FLAG
+    }
+}
+
+/// Storage for the IDs that identify this entity, per peer.
+#[derive(Default)]
+pub(crate) struct AssociatedNetworkIds(HashMap<Entity, NetworkEntityId>);
+
+impl AssociatedNetworkIds {
+    #[inline]
+    pub fn insert(&mut self, peer: Entity, id: NetworkEntityId) {
+        self.0.insert(peer, id);
+    }
+
+    #[inline]
+    pub fn remove(&mut self, peer: Entity) {
+        self.0.remove(&peer);
+    }
+
+    #[inline]
+    pub fn get(&self, peer: Entity) -> Option<NetworkEntityId> {
+        self.0.get(&peer).cloned()
+    }
+
+    #[inline]
+    pub fn all(&self) -> impl Iterator<Item = (Entity, NetworkEntityId)> + '_ {
+        self.0.iter().map(|(k,v)| { (k.clone(), v.clone()) })
+    }
+}

@@ -4,6 +4,7 @@
 mod change;
 mod entities;
 mod events;
+mod peer;
 mod plugins;
 mod prediction;
 mod resources;
@@ -20,6 +21,7 @@ pub mod prelude {
     pub use change::{NetChanges, NetChanged};
     pub use entities::{Replicated, ReplicateEntity, ReplicateHierarchy};
     pub use events::*;
+    pub use peer::*;
     pub use plugins::CoreReplicationPlugin;
     pub use resources::*;
     pub use rooms::*;

@@ -16,7 +16,11 @@ pub type Replicated = With<ReplicateEntity>;
 /// Entities with this component will be replicated.
 #[derive(Component, Default, Reflect)]
 #[reflect(Component)]
-pub struct ReplicateEntity;
+pub struct ReplicateEntity {
+    /// How each entity is referred to per peer.
+    #[reflect(ignore)]
+    pub(crate) ids: AssociatedNetworkIds,
+}
 
 /// Stardust channel for entity replication.
 #[derive(Default)]
