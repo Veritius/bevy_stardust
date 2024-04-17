@@ -1,5 +1,7 @@
 //! Hashing of Stardust's configuration and related plugins.
 
+pub use gxhash;
+
 mod stablehash;
 mod resource;
 

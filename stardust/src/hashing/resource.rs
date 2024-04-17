@@ -4,11 +4,7 @@ use gxhash::GxHasher;
 use super::stablehash::STABLE_HASHER_SEED;
 
 /// A unique value generated during `App` creation, used to ensure two clients have consistent network setups.
-/// 
-/// Mutating this value through the `Reflect` implementation must be avoided.
-/// It's possible, but since this is a computed value, it's bad to have that happen.
-#[derive(Debug, Resource, Reflect)]
-#[reflect(Debug, Resource)]
+#[derive(Debug, Resource)]
 pub struct ProtocolConfigHash {
     int: u64,
 }
