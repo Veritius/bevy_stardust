@@ -84,13 +84,13 @@ pub struct NetworkRoomBundle {
 /// | No          | No        | Neither     |
 pub struct NetworkRoomMembership<T: ?Sized = All> {
     /// The inner filter method.
-    pub filter: RoomFilterConfig,
+    pub filter: MembershipFilter,
     phantom: PhantomData<T>,
 }
 
 impl<T> NetworkRoomMembership<T> {
     /// Creates a new [`NetworkRoomFilter<T>`].
-    pub fn new(filter: RoomFilterConfig) -> Self {
+    pub fn new(filter: MembershipFilter) -> Self {
         Self {
             filter,
             phantom: PhantomData,
@@ -124,25 +124,19 @@ impl<T: ReplicableResource> Resource for NetworkRoomMembership<T> {}
 pub struct All;
 
 /// Filtering method.
-pub enum RoomFilterConfig {
-    /// Replicated to peers that are members of this group.
-    InclusiveSingle(Entity),
-
+pub enum MembershipFilter {
     /// Replicated to peers that are members in at least one of the contained groups.
-    InclusiveMany(SmallVec<[Entity; 4]>),
-
-    /// Replicated to peers that are not members of this group.
-    ExclusiveSingle(Entity),
+    Inclusive(SmallVec<[Entity; 4]>),
 
     /// Replicated to peers that are not members of any of the contained groups.
-    ExclusiveMany(SmallVec<[Entity; 4]>),
+    Exclusive(SmallVec<[Entity; 4]>),
 
     /// Use a custom function for filtering.
     /// `true` means that the target is replicated in the room with the passed entity ID.
-    CustomFunction(Arc<dyn Fn(Entity) -> bool + Send + Sync>)
+    Custom(Arc<dyn Fn(Entity) -> bool + Send + Sync>),
 }
 
-impl RoomFilterConfig {
+impl MembershipFilter {
     fn rm_many(vec: &mut SmallVec<[Entity; 4]>, item: Entity) {
         let el = vec.iter()
             .enumerate()
@@ -163,26 +157,16 @@ impl RoomFilterConfig {
     /// [CustomFunction]: RoomFilterConfig::CustomFunction
     pub fn include(&mut self, room: Entity) -> bool {
         match self {
-            RoomFilterConfig::InclusiveSingle(prev) => {
-                if *prev == room { return true; }
-                *self = Self::InclusiveMany(smallvec![*prev, room]);
-                return true;
-            },
-            RoomFilterConfig::InclusiveMany(vec) => {
+            MembershipFilter::Inclusive(vec) => {
                 if vec.contains(&room) { return true; }
                 vec.push(room);
                 return true;
             },
-            RoomFilterConfig::ExclusiveSingle(itm) => {
-                if *itm != room { return true; }
-                *self = Self::ExclusiveMany(smallvec![]);
-                return true;
-            },
-            RoomFilterConfig::ExclusiveMany(vec) => {
+            MembershipFilter::Exclusive(vec) => {
                 Self::rm_many(vec, room);
                 return true;
             },
-            RoomFilterConfig::CustomFunction(_) => {
+            MembershipFilter::Custom(_) => {
                 // Not possible
                 return false;
             },
@@ -197,26 +181,16 @@ impl RoomFilterConfig {
     /// [CustomFunction]: RoomFilterConfig::CustomFunction
     pub fn exclude(&mut self, room: Entity) -> bool {
         match self {
-            RoomFilterConfig::InclusiveSingle(prev) => {
-                if *prev != room { return true; }
-                *self = Self::InclusiveMany(smallvec![]);
-                return true;
-            },
-            RoomFilterConfig::InclusiveMany(vec) => {
+            MembershipFilter::Inclusive(vec) => {
                 Self::rm_many(vec, room);
                 return true;
             },
-            RoomFilterConfig::ExclusiveSingle(prev) => {
-                if *prev == room { return true; }
-                *self = Self::ExclusiveMany(smallvec![*prev, room]);
-                return true;
-            },
-            RoomFilterConfig::ExclusiveMany(vec) => {
+            MembershipFilter::Exclusive(vec) => {
                 if vec.contains(&room) { return true; }
                 vec.push(room);
                 return true;
             },
-            RoomFilterConfig::CustomFunction(_) => {
+            MembershipFilter::Custom(_) => {
                 // Not possible
                 return false;
             },
@@ -234,18 +208,16 @@ impl RoomFilterConfig {
     pub(crate) fn filter_inlined(&self, group: Entity) -> bool {
         // TODO: Maybe ensure vecs are sorted so binary search can be used
         match self {
-            RoomFilterConfig::InclusiveSingle(val) => *val == group,
-            RoomFilterConfig::InclusiveMany(set) => set.contains(&group),
-            RoomFilterConfig::ExclusiveSingle(val) => *val != group,
-            RoomFilterConfig::ExclusiveMany(set) => !set.contains(&group),
-            RoomFilterConfig::CustomFunction(func) => func(group),
+            MembershipFilter::Inclusive(set) => set.contains(&group),
+            MembershipFilter::Exclusive(set) => !set.contains(&group),
+            MembershipFilter::Custom(func) => func(group),
         }
     }
 }
 
-impl Default for RoomFilterConfig {
+impl Default for MembershipFilter {
     fn default() -> Self {
-        Self::InclusiveMany(smallvec![])
+        Self::Inclusive(smallvec![])
     }
 }
 

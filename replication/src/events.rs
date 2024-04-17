@@ -50,7 +50,7 @@ impl<T: ReplicableEvent> Plugin for ReplicateEventsPlugin<T> {
 /// Controls how the event of type `T` is replicated to peers.
 pub struct ReplicatedEventRoomMembership<T: ReplicableEvent> {
     /// See [`RoomFilterConfig`].
-    pub filter: RoomFilterConfig,
+    pub filter: MembershipFilter,
     phantom: PhantomData<T>,
 }
 
@@ -58,7 +58,7 @@ impl<T: ReplicableEvent> Resource for ReplicatedEventRoomMembership<T> {}
 
 impl<T: ReplicableEvent> ReplicatedEventRoomMembership<T> {
     /// Creates a new [`ReplicatedEventRoomMembership`] resource.
-    pub fn new(filter: RoomFilterConfig) -> Self {
+    pub fn new(filter: MembershipFilter) -> Self {
         Self {
             filter,
             phantom: PhantomData,
