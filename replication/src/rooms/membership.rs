@@ -66,24 +66,23 @@ impl RoomMemberships {
 /// | No          | No        | Neither     |
 pub struct NetworkRoomMembership<T: ?Sized = All> {
     /// The inner filter method.
-    pub filter: RoomMemberships,
+    pub memberships: RoomMemberships,
     phantom: PhantomData<T>,
 }
 
 impl<T> NetworkRoomMembership<T> {
     /// Creates a new [`NetworkRoomFilter<T>`].
-    pub fn new(filter: RoomMemberships) -> Self {
+    pub fn new() -> Self {
         Self {
-            filter,
+            memberships: RoomMemberships::default(),
             phantom: PhantomData,
         }
     }
 
     /// Returns `true` if `group` matches the filter.
-    /// Inlines to [`RoomFilterConfig::filter`].
     #[inline]
-    pub fn filter(&self, group: Entity) -> bool {
-        self.filter.includes(group)
+    pub fn includes(&self, group: Entity) -> bool {
+        self.memberships.includes(group)
     }
 }
 

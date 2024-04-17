@@ -8,7 +8,7 @@ pub(super) fn update_entity_cache(
 ) {
     rooms.par_iter_mut().for_each(|(room_entity, mut room)| {
         for (filter_entity, membership) in filters.iter() {
-            let include = membership.filter.includes(room_entity);
+            let include = membership.memberships.includes(room_entity);
 
             if include {
                 room.cache.insert(filter_entity);
@@ -34,7 +34,7 @@ pub(super) fn update_component_cache<T: Component>(
 ) {
     rooms.par_iter_mut().for_each(|(room_entity, mut room)| {
         for (filter_entity, membership) in filters.iter() {
-            let include = membership.filter.includes(room_entity);
+            let include = membership.memberships.includes(room_entity);
 
             if include {
                 room.cache.insert(filter_entity);
