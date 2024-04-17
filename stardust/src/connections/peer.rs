@@ -16,7 +16,7 @@ use bevy::prelude::*;
 /// - [`NetworkMessages`](crate::messages::NetworkMessages), relating to messages
 /// - [`NetworkPeerUid`], relating to persistent data
 /// - [`NetworkPeerLifestage`], relating to connection state
-/// - [`SecurityLevel`](super::security::SecurityLevel), relating to encryption
+/// - [`NetworkSecurity`](super::security::NetworkSecurity), relating to encryption
 #[derive(Debug, Component, Reflect)]
 #[reflect(Debug, Component)]
 pub struct NetworkPeer {

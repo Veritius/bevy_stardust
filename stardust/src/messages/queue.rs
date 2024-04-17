@@ -9,10 +9,13 @@ static EMPTY_SLICE: &[Bytes] = &[];
 /// A queue-like structure for storing messages, separated by channels.
 /// 
 /// The items in this queue **do not** persist across frames.
-/// They are cleared in [`NetworkWrite::Clear`].
-#[derive(Component)]
+/// They are cleared in [`NetworkWrite::Clear`] in [`PostUpdate`].
+#[derive(Component, Reflect)]
+#[reflect(Debug, Component)]
 pub struct NetworkMessages<D: DirectionType> {
+    #[reflect(ignore)]
     pub(crate) queue_map: HashMap<ChannelId, Vec<Bytes>>,
+    #[reflect(ignore)]
     phantom: PhantomData<D>
 }
 
@@ -62,5 +65,18 @@ impl<D: DirectionType> NetworkMessages<D> {
         .iter()
         .filter(|(_,v)| v.len() != 0)
         .map(|(k,v)| (k.clone(), v.as_slice()))
+    }
+}
+
+impl<D: DirectionType> Default for NetworkMessages<D> {
+    #[inline]
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl<D: DirectionType> std::fmt::Debug for NetworkMessages<D> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!("NetworkMessages<{}>", std::any::type_name::<D>()))
     }
 }

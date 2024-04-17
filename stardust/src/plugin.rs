@@ -26,6 +26,10 @@ impl Plugin for StardustPlugin {
 
         // Register messaging types
         app.register_type::<Direction>();
+        app.register_type::<Incoming>();
+        app.register_type::<Outgoing>();
+        app.register_type::<NetworkMessages<Incoming>>();
+        app.register_type::<NetworkMessages<Outgoing>>();
 
         // Setup orderings
         crate::scheduling::configure_scheduling(app);
