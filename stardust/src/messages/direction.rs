@@ -1,9 +1,8 @@
-use std::fmt::Debug;
-use bevy::reflect::Reflect;
+use std::{any::Any, fmt::Debug};
 
 /// The direction a message is going, as an enum for dynamic use.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Reflect)]
-#[reflect(Debug, PartialEq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[cfg_attr(feature="reflect", derive(bevy_reflect::Reflect))]
 pub enum Direction {
     /// Messages being sent to a remote peer.
     Outgoing,
@@ -16,14 +15,26 @@ pub enum Direction {
 /// Implemented by:
 /// - [`Outgoing`], corresponding to [`Direction::Outgoing`]
 /// - [`Incoming`], corresponding to [`Direction::Incoming`]
-pub trait DirectionType: Debug + Send + Sync + Reflect + sealed::Sealed {
+#[cfg(not(feature="reflect"))]
+pub trait DirectionType: Debug + Send + Sync + Any + sealed::Sealed {
+    /// Returns the corresponding [`Direction`].
+    fn as_enum() -> Direction;
+}
+
+/// The direction a message is going, as a trait for use in the type system.
+/// 
+/// Implemented by:
+/// - [`Outgoing`], corresponding to [`Direction::Outgoing`]
+/// - [`Incoming`], corresponding to [`Direction::Incoming`]
+#[cfg(feature="reflect")]
+pub trait DirectionType: Debug + Send + Sync + Any + bevy_reflect::Reflect + sealed::Sealed {
     /// Returns the corresponding [`Direction`].
     fn as_enum() -> Direction;
 }
 
 /// Messages being sent to a remote peer. Counterpart to [`Incoming`].
-#[derive(Debug, Clone, Copy, Reflect)]
-#[reflect(Debug)]
+#[derive(Debug, Clone, Copy)]
+#[cfg_attr(feature="reflect", derive(bevy_reflect::Reflect))]
 pub struct Outgoing;
 impl DirectionType for Outgoing {
     fn as_enum() -> Direction {
@@ -32,8 +43,8 @@ impl DirectionType for Outgoing {
 }
 
 /// Messages being received from a remote peer. Counterpart to [`Outgoing`].
-#[derive(Debug, Clone, Copy, Reflect)]
-#[reflect(Debug)]
+#[derive(Debug, Clone, Copy)]
+#[cfg_attr(feature="reflect", derive(bevy_reflect::Reflect))]
 pub struct Incoming;
 impl DirectionType for Incoming {
     fn as_enum() -> Direction {

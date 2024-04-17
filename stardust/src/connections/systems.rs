@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy_ecs::prelude::*;
 use super::{NetworkPeer, NetworkPeerLifestage};
 
 pub(crate) fn despawn_closed_connections_system(

@@ -1,6 +1,7 @@
 //! Schedules used in Stardust.
 
-use bevy::prelude::*;
+use bevy_ecs::prelude::*;
+use bevy_app::prelude::*;
 
 /// Systems dealing with receiving messages. Run in the [`PreUpdate`] schedule.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, SystemSet)]

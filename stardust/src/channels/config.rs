@@ -2,14 +2,11 @@
 //! 
 //! All settings are not definitive, but hints to transport layers as how to treat channels.
 
-use bevy::reflect::Reflect;
-
 #[cfg(feature="hashing")]
 use {std::hash::Hasher, crate::hashing::StableHash};
 
 /// Configuration for a channel.
-#[derive(Debug, Clone, Hash, Reflect)]
-#[reflect(Debug, Hash)]
+#[derive(Debug, Clone)]
 pub struct ChannelConfiguration {
     /// Whether messages should be resent if they're missed.
     pub reliable: ReliabilityGuarantee,
@@ -37,8 +34,7 @@ impl StableHash for &ChannelConfiguration {
 }
 
 /// The reliability guarantee of a channel.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Reflect)]
-#[reflect(Debug, PartialEq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ReliabilityGuarantee {
     /// Messages are not guaranteed to arrive.
     Unreliable,
@@ -58,8 +54,7 @@ impl StableHash for ReliabilityGuarantee {
 }
 
 /// The ordering guarantee of a channel.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Reflect)]
-#[reflect(Debug, PartialEq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum OrderingGuarantee {
     /// Messages will be available in the order they are received.
     /// This is not necessarily the order they were sent. If that matters, use a different variant.

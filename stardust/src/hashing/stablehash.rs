@@ -1,23 +1,18 @@
 use std::hash::Hasher;
 
 /// Pre-defined seed used in GxHasher.
-pub const STABLE_HASHER_SEED: i64 = 0x68066CFE6F752C27;
+pub(super) const STABLE_HASHER_SEED: i64 = 0x68066CFE6F752C27;
 
-/// A stably hashable type, for comparing data across machines.
+/// A stably hashable type, for comparing configurations across the network.
+/// Since `#[derive(Hash)]` does not guarantee stability, this trait exists instead.
+/// You should implement it manually.
 /// 
-/// Implementors must uphold the following guarantees:
-/// - The hash is fully deterministic and only changes with crate versions.
-///     - Derive macros should not be used without `#[repr(C)]`, as the Rust compiler can reorder fields.
-///     - Semantic versioning applies: a change in a hashed value should be considered a breaking change.
-/// - The hash must be the same regardless of CPU architecture, platform, Rust version, or compilation.
-/// - Endianness must be taken into account when using the `Hasher`.
-///     - `write` and `write_u8` are fine and don't change with endianness.
-///     - Other functions like `write_u32` should have consistent endianness.
-///     - Use `to_be` or `to_le` on integer types.
-///
-/// While `StableHash` is generic over the `Hasher`,
-/// you should only use a hasher that is known to be stable.
-/// Currently, this is `gxhash`, but this may change in future.
+/// This must always feed the same bytes into the hasher no matter the architecture, platform, Rust version, or compilation.
+/// If this guarantee is not upheld, different compilations of the same application may become incompatible.
+/// If possible, you should always go through the `StableHash` implementation of a type, rather than using the `Hasher`'s API.
+/// 
+/// Notes for implementors:
+/// - Only write bytes (`write`, `write_u8`) - don't use other functions
 pub trait StableHash {
     /// Hashes the type through `H`.
     fn hash<H: Hasher>(&self, state: &mut H);
