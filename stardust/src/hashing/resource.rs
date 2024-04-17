@@ -1,10 +1,10 @@
 use std::hash::Hasher;
-use bevy_ecs::prelude::*;
+use bevy::prelude::*;
 use gxhash::GxHasher;
 use super::stablehash::STABLE_HASHER_SEED;
 
 /// A unique value generated during `App` creation, used to ensure two clients have consistent network setups.
-#[derive(Resource)]
+#[derive(Debug, Resource)]
 pub struct ProtocolConfigHash {
     int: u64,
 }

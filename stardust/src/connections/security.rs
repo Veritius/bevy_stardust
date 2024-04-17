@@ -1,4 +1,4 @@
-use bevy_ecs::prelude::*;
+use bevy::prelude::*;
 
 /// How 'secure' a connection is.
 /// This is set by the transport layer that controls the connection.
@@ -8,9 +8,10 @@ use bevy_ecs::prelude::*;
 ///
 /// This value is set by the transport layer managing this peer.
 /// It's up to it to provide an appropriate value here.
-#[derive(Debug, Component, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-#[cfg_attr(feature="reflect", derive(bevy_reflect::Reflect))]
-pub enum SecurityLevel {
+#[derive(Debug, Component, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Reflect)]
+#[reflect(Debug, Component, PartialEq)]
+#[non_exhaustive]
+pub enum NetworkSecurity {
     /// Communication is encrypted but not authenticated, or is fully plain text.
     /// 
     /// **For end users:**

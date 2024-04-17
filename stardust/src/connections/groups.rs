@@ -1,19 +1,14 @@
 //! Organisation of network peers.
 
-use bevy_ecs::prelude::*;
+use bevy::prelude::*;
 use smallvec::SmallVec;
 
 /// A collection of network peers, used for organisational purposes.
 /// 
 /// This can be used for anything, such as teams of players, rooms for replication, or administrative permissions.
-#[derive(Debug, Component)]
+#[derive(Debug, Default, Component, Reflect)]
+#[reflect(Debug, Component)]
 pub struct NetworkGroup(pub(crate) SmallVec<[Entity; 8]>);
-
-impl Default for NetworkGroup {
-    fn default() -> Self {
-        Self(SmallVec::default())
-    }
-}
 
 impl NetworkGroup {
     /// Adds the peer to the network group.

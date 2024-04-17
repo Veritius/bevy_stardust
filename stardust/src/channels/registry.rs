@@ -1,15 +1,14 @@
 //! The channel registry.
 
 use std::{any::TypeId, collections::BTreeMap, ops::{Deref, DerefMut}, sync::Arc};
-use bevy_ecs::{component::ComponentId, prelude::*, system::SystemParam};
+use bevy::prelude::*;
 use crate::prelude::ChannelConfiguration;
 use super::{id::{Channel, ChannelId}, ToChannelId};
 
-/// Mutable access to the channel registry, only available during app setup.
 #[derive(Resource)]
-pub(crate) struct SetupChannelRegistry(pub(crate) Box<ChannelRegistryInner>);
+pub(crate) struct ChannelRegistryMut(pub(crate) Box<ChannelRegistryInner>);
 
-impl Deref for SetupChannelRegistry {
+impl Deref for ChannelRegistryMut {
     type Target = ChannelRegistryInner;
 
     #[inline]
@@ -18,82 +17,23 @@ impl Deref for SetupChannelRegistry {
     }
 }
 
-impl DerefMut for SetupChannelRegistry {
+impl DerefMut for ChannelRegistryMut {
     #[inline]
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
     }
 }
 
-/// Immutable access to the channel registry, only available after app setup.
+/// Read-only access to the channel registry, only available after app setup.
 /// 
-/// In almost all cases, you should just use the [`ChannelRegistry`] systemparam.
-/// However, this type can be cloned and will point to the same inner value.
-/// This makes it useful for asynchronous programming, like in futures.
+/// This can be freely and cheaply cloned, and will point to the same inner channel registry.
 #[derive(Resource, Clone)]
-pub struct FinishedChannelRegistry(pub(crate) Arc<ChannelRegistryInner>);
+pub struct ChannelRegistry(pub(crate) Arc<ChannelRegistryInner>);
 
-impl Deref for FinishedChannelRegistry {
+impl Deref for ChannelRegistry {
     type Target = ChannelRegistryInner;
 
     #[inline]
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-/// Access to the configuration of registered channels, at any point.
-/// 
-/// If you're writing async code, you might want to look at [`FinishedChannelRegistry`].
-pub struct ChannelRegistry<'a>(&'a ChannelRegistryInner);
-
-unsafe impl<'a> SystemParam for ChannelRegistry<'a> {
-    type State = (ComponentId, ComponentId);
-    type Item<'w, 's> = ChannelRegistry<'w>;
-
-    fn init_state(world: &mut World, system_meta: &mut bevy_ecs::system::SystemMeta) -> Self::State {
-        // SAFETY: Since we can't register accesses, we do it through Res<T> which can
-        (
-            <Res<FinishedChannelRegistry> as SystemParam>::init_state(world, system_meta),
-            <Res<SetupChannelRegistry> as SystemParam>::init_state(world, system_meta),
-        )
-    }
-
-    unsafe fn get_param<'w, 's>(
-        state: &'s mut Self::State,
-        _system_meta: &bevy_ecs::system::SystemMeta,
-        world: bevy_ecs::world::unsafe_world_cell::UnsafeWorldCell<'w>,
-        _change_tick: bevy_ecs::component::Tick,
-    ) -> Self::Item<'w, 's> {
-        if let Some(ptr) = world.get_resource_by_id(state.0) {
-            return ChannelRegistry(ptr.deref::<FinishedChannelRegistry>().0.as_ref());
-        }
-
-        if let Some(ptr) = world.get_resource_by_id(state.1) {
-            return ChannelRegistry(ptr.deref::<SetupChannelRegistry>().0.as_ref());
-        }
-
-        panic!("Neither SetupChannelRegistry or FinishedChannelRegistry were present when attempting to create ChannelRegistry")
-    }
-}
-
-impl ChannelRegistry<'_> {
-    /// Gets the id fom the `ToChannelId` implementation.
-    #[inline]
-    pub fn channel_id(&self, from: impl ToChannelId) -> Option<ChannelId> {
-        self.0.channel_id(from)
-    }
-
-    /// Gets the channel configuration for `id`.
-    #[inline]
-    pub fn channel_config(&self, id: impl ToChannelId) -> Option<&ChannelData> {
-        self.0.channel_config(id)
-    }
-}
-
-impl Deref for ChannelRegistry<'_> {
-    type Target = ChannelRegistryInner;
-
     fn deref(&self) -> &Self::Target {
         &self.0
     }
@@ -199,7 +139,7 @@ pub struct ChannelData {
     /// The channel's `TypeId`.
     pub type_id: TypeId,
 
-    /// The channel's `TypePath` (from `bevy_reflect`)
+    /// The channel's `TypePath` (from `bevy::reflect`)
     #[cfg(feature="reflect")]
     pub type_path: &'static str,
 

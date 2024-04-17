@@ -28,19 +28,3 @@ pub use config::*;
 pub use id::*;
 pub use registry::*;
 pub use extension::ChannelSetupAppExt;
-
-use std::sync::Arc;
-use bevy_app::prelude::*;
-
-pub(super) fn channel_build(app: &mut App) {
-    // Create setup channel registry
-    app.insert_resource(registry::SetupChannelRegistry(Box::new(ChannelRegistryInner::new())));
-
-}
-
-pub(super) fn channel_finish(app: &mut App) {
-    // Remove SetupChannelRegistry and put the inner into an Arc inside ChannelRegistry
-    // This dramatically improves 
-    let registry = app.world.remove_resource::<SetupChannelRegistry>().unwrap();
-    app.insert_resource(FinishedChannelRegistry(Arc::from(registry.0)));
-}
