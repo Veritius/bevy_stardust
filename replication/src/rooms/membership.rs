@@ -2,7 +2,11 @@ use std::{collections::BTreeSet, marker::PhantomData};
 use bevy::{ecs::component::TableStorage, prelude::*};
 use smallvec::SmallVec;
 
-/// Room memberships.
+/// Room membership data.
+/// 
+/// If a group is added to the membership set,
+/// then data will be replicated to any peers in that group.
+/// Multiple groups can be added: as long as a peer is in one of them, it's replicated.
 #[derive(Debug, Default)]
 pub struct RoomMemberships {
     set: SmallVec<[Entity; 4]>,
@@ -15,6 +19,12 @@ impl RoomMemberships {
             Ok(_) => true,
             Err(_) => false,
         }
+    }
+
+    /// Returns an iterator over all memberships.
+    /// This iterator is in sorted order and does not contain duplicates.
+    pub fn iter(&self) -> impl Iterator<Item = Entity> + '_ {
+        self.set.iter().cloned()
     }
 
     /// Adds `group` to the membership set.
