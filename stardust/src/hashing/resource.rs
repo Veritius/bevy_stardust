@@ -4,7 +4,7 @@ use gxhash::GxHasher;
 use super::stablehash::STABLE_HASHER_SEED;
 
 /// A unique value generated during `App` creation, used to ensure two clients have consistent network setups.
-#[derive(Debug, Resource)]
+#[derive(Resource)]
 pub struct ProtocolConfigHash {
     int: u64,
 }

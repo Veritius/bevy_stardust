@@ -2,8 +2,7 @@ use bevy::prelude::*;
 
 /// Used to intentionally reduce the performance of peers for testing purposes.
 /// If applied to a `NetworkPeer` entity, reduces performance for that peer specifically.
-#[derive(Debug, Clone, Component, Reflect)]
-#[reflect(Debug, Component)]
+#[derive(Debug, Component)]
 pub struct NetworkPerformanceReduction {
     /// Chance to drop a packet when sending, if the transport is packet-based.
     /// This chance is from `0.0` (never) to `1.0` (always), with `0.5` dropping 50% of the time.
