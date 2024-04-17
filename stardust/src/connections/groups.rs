@@ -6,7 +6,8 @@ use smallvec::SmallVec;
 /// A collection of network peers, used for organisational purposes.
 /// 
 /// This can be used for anything, such as teams of players, rooms for replication, or administrative permissions.
-#[derive(Debug, Component)]
+#[derive(Debug, Component, Reflect)]
+#[reflect(Debug, Component)]
 pub struct NetworkGroup(pub(crate) SmallVec<[Entity; 8]>);
 
 impl Default for NetworkGroup {
