@@ -6,26 +6,8 @@ use crate::prelude::*;
 #[derive(Default)]
 pub(crate) struct EventReplicationData<T: ReplicableEvent>(PhantomData<T>);
 
-/// Controls how the event of type `T` is replicated to peers.
-pub struct ReplicatedEventRoomMembership<T: ReplicableEvent> {
-    /// See [`RoomFilterConfig`].
-    pub filter: RoomFilterConfig,
-    phantom: PhantomData<T>,
-}
-
-impl<T: ReplicableEvent> Resource for ReplicatedEventRoomMembership<T> {}
-
-impl<T: ReplicableEvent> ReplicatedEventRoomMembership<T> {
-    /// Creates a new [`ReplicatedEventRoomMembership`] resource.
-    pub fn new(filter: RoomFilterConfig) -> Self {
-        Self {
-            filter,
-            phantom: PhantomData,
-        }
-    }
-}
-
 /// Naively relays the event `T` over the network.
+/// It's important that the tick `T` is received does not matter.
 /// 
 /// This plugin must be added before [`StardustPlugin`].
 /// Implicitly adds [`ReplicationPlugin`] if not present.
@@ -62,6 +44,25 @@ impl<T: ReplicableEvent> Plugin for ReplicateEventsPlugin<T> {
 
         app.add_systems(PostUpdate, rep_events_sending_system::<T>
             .before(NetworkWrite::Send));
+    }
+}
+
+/// Controls how the event of type `T` is replicated to peers.
+pub struct ReplicatedEventRoomMembership<T: ReplicableEvent> {
+    /// See [`RoomFilterConfig`].
+    pub filter: RoomFilterConfig,
+    phantom: PhantomData<T>,
+}
+
+impl<T: ReplicableEvent> Resource for ReplicatedEventRoomMembership<T> {}
+
+impl<T: ReplicableEvent> ReplicatedEventRoomMembership<T> {
+    /// Creates a new [`ReplicatedEventRoomMembership`] resource.
+    pub fn new(filter: RoomFilterConfig) -> Self {
+        Self {
+            filter,
+            phantom: PhantomData,
+        }
     }
 }
 
