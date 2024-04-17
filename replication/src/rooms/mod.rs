@@ -27,9 +27,9 @@ impl Plugin for ScopedReplicationPlugin {
 /// This will only apply to rooms with the [`CacheMemberships<T>`](CacheMemberships) component.
 /// 
 /// Entity memberships themselves are always cached.
-pub struct CacheRoomMembershipsPlugin<T: ReplicableComponent>(PhantomData<T>);
+pub struct CacheRoomMembershipsPlugin<T: Component>(PhantomData<T>);
 
-impl<T: ReplicableComponent> Plugin for CacheRoomMembershipsPlugin<T> {
+impl<T: Component> Plugin for CacheRoomMembershipsPlugin<T> {
     fn build(&self, app: &mut App) {
         app.add_systems(PostUpdate, systems::update_component_cache::<T>
             .in_set(PostUpdateReplicationSystems::DetectChanges));
@@ -104,13 +104,13 @@ impl Component for NetworkRoomMembership<All> {
     type Storage = TableStorage;
 }
 
-impl<T: ReplicableComponent> Component for NetworkRoomMembership<T> {
+impl<T: Component> Component for NetworkRoomMembership<T> {
     type Storage = T::Storage;
 }
 
 impl Resource for NetworkRoomMembership<All> {}
 
-impl<T: ReplicableResource> Resource for NetworkRoomMembership<T> {}
+impl<T: Resource> Resource for NetworkRoomMembership<T> {}
 
 /// Special type argument for [`NetworkRoomFilter`].
 /// See the documentation for more information.
@@ -225,6 +225,6 @@ pub struct CacheMemberships<T> {
     phantom: PhantomData<T>,
 }
 
-impl<T: ReplicableComponent> Component for CacheMemberships<T> {
+impl<T: Component> Component for CacheMemberships<T> {
     type Storage = T::Storage;
 }

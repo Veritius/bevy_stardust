@@ -27,7 +27,7 @@ pub(super) fn update_entity_cache(
     });
 }
 
-pub(super) fn update_component_cache<T: ReplicableComponent>(
+pub(super) fn update_component_cache<T: Component>(
     mut rooms: Query<(Entity, &mut CacheMemberships<T>), With<NetworkRoom>>,
     filters: Query<(Entity, &NetworkRoomMembership<T>), Changed<NetworkRoomMembership<T>>>,
     removed: RemovedComponents<NetworkRoomMembership<T>>,

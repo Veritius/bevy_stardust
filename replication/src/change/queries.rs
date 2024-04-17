@@ -4,27 +4,27 @@ use bevy::{ecs::{component::*, ptr::*, query::*, storage::*}, prelude::*};
 use crate::prelude::*;
 
 /// Query filter for changes on network-replicated entities.
-pub struct NetChanged<T: ReplicableComponent> {
+pub struct NetChanged<T: Component> {
     phantom: PhantomData<T>,
 }
 
 #[doc(hidden)]
-pub struct NetChangedFetch<'w, T: ReplicableComponent> {
+pub struct NetChangedFetch<'w, T: Component> {
     table_components: Option<ThinSlicePtr<'w, UnsafeCell<NetChanges<T>>>>,
     sparse_set: Option<&'w ComponentSparseSet>,
     last_run: Tick,
     this_run: Tick,
 }
 
-impl<T: ReplicableComponent> Clone for NetChangedFetch<'_, T> {
+impl<T: Component> Clone for NetChangedFetch<'_, T> {
     fn clone(&self) -> Self {
         *self
     }
 }
 
-impl<T: ReplicableComponent> Copy for NetChangedFetch<'_, T> {}
+impl<T: Component> Copy for NetChangedFetch<'_, T> {}
 
-unsafe impl<T: ReplicableComponent> WorldQuery for NetChanged<T> {
+unsafe impl<T: Component> WorldQuery for NetChanged<T> {
     type Item<'w> = bool;
     type Fetch<'w> = NetChangedFetch<'w, T>;
     type State = ComponentId;
@@ -117,7 +117,7 @@ unsafe impl<T: ReplicableComponent> WorldQuery for NetChanged<T> {
     }
 }
 
-impl<T: ReplicableComponent> QueryFilter for NetChanged<T> {
+impl<T: Component> QueryFilter for NetChanged<T> {
     const IS_ARCHETYPAL: bool = false;
 
     unsafe fn filter_fetch(

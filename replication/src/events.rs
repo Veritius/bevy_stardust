@@ -1,17 +1,21 @@
 use std::marker::PhantomData;
 use bevy::prelude::*;
 use bevy_stardust::prelude::*;
-use crate::prelude::*;
+use crate::{prelude::*, serialisation::SerialisationFunctions};
 
 #[derive(Default)]
-pub(crate) struct EventReplicationData<T: ReplicableEvent>(PhantomData<T>);
+pub(crate) struct EventReplicationData<T: Event>(PhantomData<T>);
 
 /// Naively relays the event `T` over the network.
 /// It's important that the tick `T` is received does not matter.
 /// 
 /// This plugin must be added before [`StardustPlugin`].
 /// Implicitly adds [`ReplicationPlugin`] if not present.
-pub struct EventReplicationPlugin<T: ReplicableEvent> {
+pub struct EventReplicationPlugin<T: Event> {
+    /// Functions used to serialise and deserialize `T`.
+    /// See the [`SerialisationFunctions`] documentation for more information.
+    pub serialisation: SerialisationFunctions<T>,
+
     /// If replicated events should be sent reliably.
     pub reliability: ReliabilityGuarantee,
 
@@ -25,7 +29,7 @@ pub struct EventReplicationPlugin<T: ReplicableEvent> {
     pub phantom: PhantomData<T>,
 }
 
-impl<T: ReplicableEvent> Plugin for EventReplicationPlugin<T> {
+impl<T: Event> Plugin for EventReplicationPlugin<T> {
     fn build(&self, app: &mut App) {
         if !app.is_plugin_added::<CoreReplicationPlugin>() {
             app.add_plugins(CoreReplicationPlugin);
@@ -47,15 +51,15 @@ impl<T: ReplicableEvent> Plugin for EventReplicationPlugin<T> {
 }
 
 /// Controls how the event of type `T` is replicated to peers.
-pub struct ReplicatedEventRoomMembership<T: ReplicableEvent> {
+pub struct ReplicatedEventRoomMembership<T: Event> {
     /// See [`RoomFilterConfig`].
     pub filter: MembershipFilter,
     phantom: PhantomData<T>,
 }
 
-impl<T: ReplicableEvent> Resource for ReplicatedEventRoomMembership<T> {}
+impl<T: Event> Resource for ReplicatedEventRoomMembership<T> {}
 
-impl<T: ReplicableEvent> ReplicatedEventRoomMembership<T> {
+impl<T: Event> ReplicatedEventRoomMembership<T> {
     /// Creates a new [`ReplicatedEventRoomMembership`] resource.
     pub fn new(filter: MembershipFilter) -> Self {
         Self {
@@ -65,7 +69,7 @@ impl<T: ReplicableEvent> ReplicatedEventRoomMembership<T> {
     }
 }
 
-fn rep_events_receiving_system<T: ReplicableEvent>(
+fn rep_events_receiving_system<T: Event>(
     registry: Res<ChannelRegistry>,
     membership: Res<ReplicatedEventRoomMembership<T>>,
     mut events: EventWriter<T>,
@@ -73,7 +77,7 @@ fn rep_events_receiving_system<T: ReplicableEvent>(
     todo!()
 }
 
-fn rep_events_sending_system<T: ReplicableEvent>(
+fn rep_events_sending_system<T: Event>(
     registry: Res<ChannelRegistry>,
     membership: Res<ReplicatedEventRoomMembership<T>>,
     events: EventReader<T>,
