@@ -95,12 +95,36 @@ impl NetworkEntityId {
             false => Side::Right,
         }
     }
+
+    #[inline]
+    pub fn to_bytes(&self) -> [u8; 4] {
+        self.0.to_be_bytes()
+    }
+
+    #[inline]
+    pub fn from_bytes(bytes: [u8; 4]) -> Self {
+        Self(u32::from_be_bytes(bytes))
+    }
 }
 
 impl From<NetworkEntityId> for u32 {
     fn from(value: NetworkEntityId) -> Self {
         // Always disable the is-left flag.
         value.0 & !NetworkEntityId::FLAG
+    }
+}
+
+impl From<[u8; 4]> for NetworkEntityId {
+    #[inline]
+    fn from(value: [u8; 4]) -> Self {
+        Self::from_bytes(value)
+    }
+}
+
+impl From<NetworkEntityId> for [u8; 4] {
+    #[inline]
+    fn from(value: NetworkEntityId) -> Self {
+        value.to_bytes()
     }
 }
 
