@@ -243,6 +243,12 @@ impl RoomFilterConfig {
     }
 }
 
+impl Default for RoomFilterConfig {
+    fn default() -> Self {
+        Self::InclusiveMany(smallvec![])
+    }
+}
+
 /// Caches room memberships for the component `T`.
 /// Improves iteration performance for entities with [`NetworkRoomMembership<T>`].
 /// This comes at an additional cost of mutating or adding the [`NetworkRoomMembership<T>`] component.

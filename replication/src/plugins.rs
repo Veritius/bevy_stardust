@@ -3,6 +3,7 @@
 use bevy::app::PluginGroupBuilder;
 use bevy::prelude::*;
 use bevy_stardust::prelude::*;
+use crate::prelude::*;
 
 /// Adds functionality to support replication.
 /// To replicate things, add other plugins:
@@ -17,6 +18,8 @@ impl Plugin for CoreReplicationPlugin {
         if !app.is_plugin_added::<StardustPlugin>() {
             panic!("StardustPlugin must be added before ReplicationPlugin");
         }
+
+        app.register_type::<ReplicationPeer>();
 
         crate::scheduling::setup_schedules(app);
 
