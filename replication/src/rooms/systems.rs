@@ -7,8 +7,8 @@ pub(super) fn update_entity_cache(
     removed: RemovedComponents<NetworkRoomMembership>,
 ) {
     rooms.par_iter_mut().for_each(|(room_entity, mut room)| {
-        for (filter_entity, filter) in filters.iter() {
-            let include = filter.filter.filter_inlined(room_entity);
+        for (filter_entity, membership) in filters.iter() {
+            let include = membership.filter.includes(room_entity);
 
             if include {
                 room.cache.insert(filter_entity);
@@ -28,13 +28,13 @@ pub(super) fn update_entity_cache(
 }
 
 pub(super) fn update_component_cache<T: Component>(
-    mut rooms: Query<(Entity, &mut CacheMemberships<T>), With<NetworkRoom>>,
+    mut rooms: Query<(Entity, &mut CachedMemberships<T>), With<NetworkRoom>>,
     filters: Query<(Entity, &NetworkRoomMembership<T>), Changed<NetworkRoomMembership<T>>>,
     removed: RemovedComponents<NetworkRoomMembership<T>>,
 ) {
     rooms.par_iter_mut().for_each(|(room_entity, mut room)| {
-        for (filter_entity, filter) in filters.iter() {
-            let include = filter.filter.filter_inlined(room_entity);
+        for (filter_entity, membership) in filters.iter() {
+            let include = membership.filter.includes(room_entity);
 
             if include {
                 room.cache.insert(filter_entity);
