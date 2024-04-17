@@ -1,7 +1,7 @@
 use std::hash::Hasher;
 
 /// Pre-defined seed used in GxHasher.
-pub(super) const STABLE_HASHER_SEED: i64 = 0x68066CFE6F752C27;
+pub const STABLE_HASHER_SEED: i64 = 0x68066CFE6F752C27;
 
 /// A stably hashable type, for comparing data across machines.
 /// 
