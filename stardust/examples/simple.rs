@@ -65,7 +65,7 @@ fn read_system(
     query: Query<&NetworkMessages<Incoming>, With<NetworkPeer>>,
 ) {
     for incoming in query.iter() {
-        for (channel, queues) in incoming.all_queues() {
+        for (channel, queues) in incoming.iter() {
             for payload in queues {
                 info!("{}: Received a message from a peer on channel {channel:?}: {payload:?}", name.0);
             }

@@ -34,7 +34,7 @@ The following features are planned to be created as additional crates, as part o
 ## Usage
 | Bevy | Stardust |
 | ---- | -------- |
-| 0.13 | 0.5      |
+| 0.13 | 0.6      |
 | 0.12 | 0.2      |
 | 0.11 | 0.1      |
 
@@ -132,7 +132,7 @@ fn read_words_system(
 ) {
     let channel = registry.channel_id(TypeId::of::<MyChannel>()).unwrap();
     for (entity, incoming) in query.iter() {
-        let messages = incoming.channel_queue(channel);
+        let messages = incoming.get(channel);
         for message in messages.iter() {
             // Stardust only outputs bytes, so you need to convert to the desired type.
             // Also, in real products, don't unwrap, write checks. Never trust user data.
