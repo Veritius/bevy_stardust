@@ -1,11 +1,9 @@
 mod components;
-mod hierarchy;
 mod ids;
 
 pub(crate) use ids::*;
 
 pub use components::*;
-pub use hierarchy::*;
 
 use bevy::prelude::*;
 use bevy_stardust::prelude::*;
