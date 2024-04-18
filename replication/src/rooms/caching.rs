@@ -34,17 +34,17 @@ impl<T: Component> Component for CachedMemberships<T> {
 
 pub(super) fn update_entity_cache(
     mut rooms: Query<(Entity, &mut NetworkRoom)>,
-    filters: Query<(Entity, &NetworkRoomMembership), Changed<NetworkRoomMembership>>,
+    members: Query<(Entity, &NetworkRoomMembership), Changed<NetworkRoomMembership>>,
     removed: RemovedComponents<NetworkRoomMembership>,
 ) {
     rooms.par_iter_mut().for_each(|(room_entity, mut room)| {
-        for (filter_entity, membership) in filters.iter() {
-            let include = membership.memberships.includes(room_entity);
+        for (member_entity, member_data) in members.iter() {
+            let include = member_data.memberships.includes(room_entity);
 
             if include {
-                room.cache.insert(filter_entity);
+                room.cache.insert(member_entity);
             } else {
-                room.cache.remove(&filter_entity);
+                room.cache.remove(&member_entity);
             };
         }
 
@@ -60,17 +60,17 @@ pub(super) fn update_entity_cache(
 
 pub(super) fn update_component_cache<T: Component>(
     mut rooms: Query<(Entity, &mut CachedMemberships<T>), With<NetworkRoom>>,
-    filters: Query<(Entity, &NetworkRoomMembership<T>), Changed<NetworkRoomMembership<T>>>,
+    members: Query<(Entity, &NetworkRoomMembership<T>), Changed<NetworkRoomMembership<T>>>,
     removed: RemovedComponents<NetworkRoomMembership<T>>,
 ) {
     rooms.par_iter_mut().for_each(|(room_entity, mut room)| {
-        for (filter_entity, membership) in filters.iter() {
-            let include = membership.memberships.includes(room_entity);
+        for (member_entity, member_data) in members.iter() {
+            let include = member_data.memberships.includes(room_entity);
 
             if include {
-                room.cache.insert(filter_entity);
+                room.cache.insert(member_entity);
             } else {
-                room.cache.remove(&filter_entity);
+                room.cache.remove(&member_entity);
             };
         }
 
