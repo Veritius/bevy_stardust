@@ -2,7 +2,7 @@ use std::{collections::HashMap, marker::PhantomData};
 use bevy::prelude::*;
 use bytes::Bytes;
 use crate::prelude::*;
-use super::direction::DirectionType;
+use super::direction::NetDirectionType;
 
 static EMPTY_SLICE: &[Bytes] = &[];
 
@@ -12,14 +12,14 @@ static EMPTY_SLICE: &[Bytes] = &[];
 /// They are cleared in [`NetworkWrite::Clear`] in [`PostUpdate`].
 #[derive(Component, Reflect)]
 #[reflect(Debug, Component)]
-pub struct NetworkMessages<D: DirectionType> {
+pub struct NetworkMessages<D: NetDirectionType> {
     #[reflect(ignore)]
     pub(crate) queue_map: HashMap<ChannelId, Vec<Bytes>>,
     #[reflect(ignore)]
     phantom: PhantomData<D>
 }
 
-impl<D: DirectionType> NetworkMessages<D> {
+impl<D: NetDirectionType> NetworkMessages<D> {
     /// Creates a new `Messages` store. Doesn't allocate until [`push`](Self::push) is used.
     pub fn new() -> Self {
         Self {
@@ -93,14 +93,14 @@ impl<D: DirectionType> NetworkMessages<D> {
     }
 }
 
-impl<D: DirectionType> Default for NetworkMessages<D> {
+impl<D: NetDirectionType> Default for NetworkMessages<D> {
     #[inline]
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<D: DirectionType> std::fmt::Debug for NetworkMessages<D> {
+impl<D: NetDirectionType> std::fmt::Debug for NetworkMessages<D> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_fmt(format_args!("NetworkMessages<{}>", std::any::type_name::<D>()))
     }
