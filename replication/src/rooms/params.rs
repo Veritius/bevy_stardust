@@ -3,7 +3,7 @@ use bevy_stardust::prelude::*;
 use crate::prelude::*;
 use super::RoomsEnabled;
 
-/// Utilities relating to replication scope, such as determining if an entity is in scope to `peer`.
+/// Utilities relating to replication scope, such as determining if an entity is in scope to a peer.
 #[derive(SystemParam)]
 pub struct ReplicationScope<'w, 's> {
     enabled: Option<Res<'w, RoomsEnabled>>,
