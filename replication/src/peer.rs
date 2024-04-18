@@ -4,36 +4,41 @@ use bevy::prelude::*;
 #[derive(Default)]
 pub(crate) struct PeerNegotiation;
 
-/// Automatically added to [`NetworkPeer`] entities that are replicating data.
+/// Enables replication for a peer. Must be added manually.
+/// 
+/// ## Sidedness
+/// You must ensure that for a given connection, one side is a [`Client`](Side::Client) and the other is a [`Server`](Side::Server).
+/// Failure to do so will result in the connection immediately being terminated and an error being logged.
+/// 
+/// The side must not change after being created, especially not through reflection interfaces.
+/// If this occurs, it'll caused unexpected (but memory safe) behavior leading to connection termination.
 #[derive(Debug, Component, Reflect)]
-#[reflect(Debug, Default, Component)]
+#[reflect(Debug, Component)]
 pub struct ReplicationPeer {
-    // Separate type so non-config options aren't reflected and cannot be mutated
-    // ie. changing the side, which would break entity ids, or something else.
-    #[reflect(ignore)]
-    pub(crate) inner: ReplicationPeerInner,
+    side: Side,
 }
 
-impl Default for ReplicationPeer {
-    fn default() -> Self {
-        Self {
-            inner: Default::default(),
-        }
+impl ReplicationPeer {
+    /// Creates a new `ReplicationPeer` for a [`Side`], with reasonable defaults for configuration.
+    pub fn new(side: Side) -> Self {
+        Self { side }
+    }
+
+    /// Returns the [`Side`] of this [`ReplicationPeer`].
+    pub fn side(&self) -> Side {
+        self.side
     }
 }
 
-#[derive(Debug)]
-pub(crate) struct ReplicationPeerInner {
-    pub side: Option<Side>,
-}
+/// Defines whether a peer is a client or a server.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Reflect)]
+#[reflect(Debug, PartialEq)]
+pub enum Side {
+    /// A **non-authority** over the connection.
+    /// There can be unlimited clients out of all connections.
+    Client,
 
-impl Default for ReplicationPeerInner {
-    fn default() -> Self {
-        Self {
-            side: None,
-        }
-    }
+    /// The **authority** over the connection.
+    /// There can only be one server out of all connections.
+    Server,
 }
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum Side { Left, Right }

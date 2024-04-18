@@ -80,7 +80,7 @@ impl NetworkEntityId {
 
         // Create inner value
         let mut val = value;
-        if side == Side::Left { val |= Self::FLAG; }
+        if side == Side::Client { val |= Self::FLAG; }
         return Ok(Self(val))
     }
 
@@ -91,8 +91,8 @@ impl NetworkEntityId {
 
     pub fn side(&self) -> Side {
         match Self::left_high(self.0) {
-            true => Side::Left,
-            false => Side::Right,
+            true => Side::Client,
+            false => Side::Server,
         }
     }
 

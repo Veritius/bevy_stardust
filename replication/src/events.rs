@@ -92,7 +92,7 @@ fn rep_events_receiving_system<T: Event>(
     serialisation: Res<EventSerialisationFns<T>>,
     membership: Res<EventMemberships<T>>,
     mut events: EventWriter<NetworkEvent<T>>,
-    peers: Query<(Entity, &NetworkMessages<Incoming>), With<NetworkPeer>>,
+    peers: Query<(Entity, &NetworkMessages<Incoming>), (With<NetworkPeer>, With<ReplicationPeer>)>,
 ) {
     // Avoid wasting our time
     if peers.is_empty() { return; }
@@ -128,7 +128,7 @@ fn rep_events_sending_system<T: Event>(
     serialisation: Res<EventSerialisationFns<T>>,
     membership: Res<EventMemberships<T>>,
     mut events: EventReader<T>,
-    mut peers: Query<&mut NetworkMessages<Outgoing>, With<NetworkPeer>>,
+    mut peers: Query<&mut NetworkMessages<Outgoing>, (With<NetworkPeer>, With<ReplicationPeer>)>,
 ) {
     // Avoid wasting our time
     if events.is_empty() || peers.is_empty() { return; }
