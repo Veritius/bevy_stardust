@@ -46,8 +46,10 @@ impl<T: Event> Plugin for EventReplicationPlugin<T> {
             app.add_plugins(CoreReplicationPlugin);
         }
 
-        app.insert_resource(EventSerialisationFns(self.serialisation.clone()));
+        app.add_event::<T>();
         app.add_event::<NetworkEvent<T>>();
+
+        app.insert_resource(EventSerialisationFns(self.serialisation.clone()));
 
         app.add_channel::<EventReplicationData<T>>(ChannelConfiguration {
             reliable: self.reliability,
@@ -89,14 +91,14 @@ impl<T: Event> EventMemberships<T> {
 fn rep_events_receiving_system<T: Event>(
     registry: Res<ChannelRegistry>,
     serialisation: Res<EventSerialisationFns<T>>,
-    membership: Res<EventMemberships<T>>,
+    membership: Option<Res<EventMemberships<T>>>,
     mut events: EventWriter<NetworkEvent<T>>,
     peers: Query<(Entity, &NetworkMessages<Incoming>), (With<NetworkPeer>, With<ReplicationPeer>)>,
 ) {
     // Avoid wasting our time
     if peers.is_empty() { return; }
 
-    let channel = registry.channel_id(std::any::TypeId::of::<T>()).unwrap();
+    let channel = registry.channel_id(std::any::TypeId::of::<EventReplicationData<T>>()).unwrap();
     let type_name = std::any::type_name::<T>();
 
     // Iterate all peers and read messages for T
@@ -125,14 +127,14 @@ fn rep_events_receiving_system<T: Event>(
 fn rep_events_sending_system<T: Event>(
     registry: Res<ChannelRegistry>,
     serialisation: Res<EventSerialisationFns<T>>,
-    membership: Res<EventMemberships<T>>,
+    membership: Option<Res<EventMemberships<T>>>,
     mut events: EventReader<T>,
     mut peers: Query<&mut NetworkMessages<Outgoing>, (With<NetworkPeer>, With<ReplicationPeer>)>,
 ) {
     // Avoid wasting our time
     if events.is_empty() || peers.is_empty() { return; }
 
-    let channel = registry.channel_id(std::any::TypeId::of::<T>()).unwrap();
+    let channel = registry.channel_id(std::any::TypeId::of::<EventReplicationData<T>>()).unwrap();
     let type_name = std::any::type_name::<T>();
 
     // Serialise everything ahead of time, since it's expensive

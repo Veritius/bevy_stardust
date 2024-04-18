@@ -25,4 +25,5 @@ pub mod prelude {
     pub use resources::*;
     pub use rooms::*;
     pub use scheduling::*;
+    pub use serialisation::SerialisationFunctions;
 }
