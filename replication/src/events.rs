@@ -6,7 +6,7 @@ use crate::{prelude::*, serialisation::SerialisationFunctions};
 /// Relays the event `T` over the network using the given [`SerialisationFunctions`].
 /// 
 /// Events received over the network are not added as type `T`.
-/// They are instead added as a new event type, [`NetworkEvent<T>`].
+/// They are instead added as a new event type, [`RelayEvent<T>`].
 pub struct EventReplicationPlugin<T: Event> {
     /// Functions used to serialise and deserialize `T`.
     /// See the [`SerialisationFunctions`] documentation for more information.
@@ -32,7 +32,7 @@ impl<T: Event> Plugin for EventReplicationPlugin<T> {
         }
 
         app.add_event::<T>();
-        app.add_event::<NetworkEvent<T>>();
+        app.add_event::<RelayEvent<T>>();
 
         app.insert_resource(EventSerialisationFns(self.serialisation.clone()));
 
@@ -59,7 +59,7 @@ struct EventSerialisationFns<T>(SerialisationFunctions<T>);
 
 /// An event sent over the network.
 #[derive(Event)]
-pub struct NetworkEvent<T> {
+pub struct RelayEvent<T> {
     /// The peer that sent the event.
     pub origin: Entity,
     /// The event data (`T`)
@@ -69,8 +69,8 @@ pub struct NetworkEvent<T> {
     _hidden: (),
 }
 
-/// Convenience type, wrapping `EventReader<NetworkEvent<T>>`.
-pub type NetEventReader<'w, 's, T> = EventReader<'w, 's, NetworkEvent<T>>;
+/// Convenience type, wrapping `EventReader<RelayEvent<T>>`.
+pub type NetEventReader<'w, 's, T> = EventReader<'w, 's, RelayEvent<T>>;
 
 /// Only room memberhips
 pub struct EventMemberships<T: Event> {
@@ -95,7 +95,7 @@ fn rep_events_receiving_system<T: Event>(
     registry: Res<ChannelRegistry>,
     serialisation: Res<EventSerialisationFns<T>>,
     membership: Option<Res<EventMemberships<T>>>,
-    mut events: EventWriter<NetworkEvent<T>>,
+    mut events: EventWriter<RelayEvent<T>>,
     peers: Query<(Entity, &NetworkMessages<Incoming>), (With<NetworkPeer>, With<ReplicationPeer>)>,
 ) {
     // Avoid wasting our time
@@ -112,7 +112,7 @@ fn rep_events_receiving_system<T: Event>(
         for message in messages.iter().cloned() {
             match (serialisation.0.deserialise)(message) {
                 Ok(val) => {
-                    events.send(NetworkEvent {
+                    events.send(RelayEvent {
                         origin: peer,
                         event: val,
                         _hidden: (),
