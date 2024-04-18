@@ -78,8 +78,8 @@ fn main() {
 }
 
 fn read_events_system(
-    mut movements: EventReader<NetworkEvent<PlayerMoveEvent>>,
-    mut attacks: EventReader<NetworkEvent<PlayerAttackEvent>>,
+    mut movements: NetEventReader<PlayerMoveEvent>,
+    mut attacks: NetEventReader<PlayerAttackEvent>,
 ) {
     for net_event in movements.read() {
         info!("{:?} moved {:?}", net_event.origin, net_event.event);

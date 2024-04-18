@@ -1,22 +1,7 @@
 use std::marker::PhantomData;
-use bevy::prelude::*;
+use bevy::{ecs::system::SystemParam, prelude::*};
 use bevy_stardust::prelude::*;
 use crate::{prelude::*, serialisation::SerialisationFunctions};
-
-#[derive(Default)]
-struct EventReplicationData<T: Event>(PhantomData<T>);
-
-/// An event sent over the network.
-#[derive(Event)]
-pub struct NetworkEvent<T> {
-    /// The peer that sent the event.
-    pub origin: Entity,
-    /// The event data (`T`)
-    pub event: T,
-    // Hidden field to prevent manual construction of the struct.
-    // Only the plugin should be able to send these events.
-    _hidden: (),
-}
 
 /// Relays the event `T` over the network using the given [`SerialisationFunctions`].
 /// 
@@ -66,8 +51,26 @@ impl<T: Event> Plugin for EventReplicationPlugin<T> {
     }
 }
 
+#[derive(Default)]
+struct EventReplicationData<T: Event>(PhantomData<T>);
+
 #[derive(Resource)]
 struct EventSerialisationFns<T>(SerialisationFunctions<T>);
+
+/// An event sent over the network.
+#[derive(Event)]
+pub struct NetworkEvent<T> {
+    /// The peer that sent the event.
+    pub origin: Entity,
+    /// The event data (`T`)
+    pub event: T,
+    // Hidden field to prevent manual construction of the struct.
+    // Only the plugin should be able to send these events.
+    _hidden: (),
+}
+
+/// Convenience type, wrapping `EventReader<NetworkEvent<T>>`.
+pub type NetEventReader<'w, 's, T> = EventReader<'w, 's, NetworkEvent<T>>;
 
 /// Only room memberhips
 pub struct EventMemberships<T: Event> {
