@@ -72,7 +72,7 @@ pub struct RelayEvent<T> {
 /// Convenience type, wrapping `EventReader<RelayEvent<T>>`.
 pub type NetEventReader<'w, 's, T> = EventReader<'w, 's, RelayEvent<T>>;
 
-/// Only room memberhips
+/// Defines the peers that will receive `T` events over the network.
 pub struct EventMemberships<T: Event> {
     /// See [`RoomMemberships`].
     pub memberships: RoomMemberships,
