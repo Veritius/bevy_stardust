@@ -15,6 +15,23 @@ impl<T: Component> Plugin for CacheRoomMembershipsPlugin<T> {
     }
 }
 
+/// Caches room memberships for the component `T`.
+/// Improves iteration performance for entities with [`NetworkRoomMembership<T>`].
+/// This comes at an additional cost of mutating or adding the [`NetworkRoomMembership<T>`] component.
+/// 
+/// This should be added to entities with the [`NetworkRoom`] component,
+/// and not the [`NetworkRoomMembership`] component. Does nothing if
+/// [`CacheRoomMembershipsPlugin`] isn't added.
+#[derive(Default)]
+pub struct CachedMemberships<T> {
+    pub(super) cache: BTreeSet<Entity>,
+    phantom: PhantomData<T>,
+}
+
+impl<T: Component> Component for CachedMemberships<T> {
+    type Storage = T::Storage;
+}
+
 pub(super) fn update_entity_cache(
     mut rooms: Query<(Entity, &mut NetworkRoom)>,
     filters: Query<(Entity, &NetworkRoomMembership), Changed<NetworkRoomMembership>>,
@@ -65,21 +82,4 @@ pub(super) fn update_component_cache<T: Component>(
             }
         }
     });
-}
-
-/// Caches room memberships for the component `T`.
-/// Improves iteration performance for entities with [`NetworkRoomMembership<T>`].
-/// This comes at an additional cost of mutating or adding the [`NetworkRoomMembership<T>`] component.
-/// 
-/// This should be added to entities with the [`NetworkRoom`] component,
-/// and not the [`NetworkRoomMembership`] component. Does nothing if
-/// [`CacheRoomMembershipsPlugin`] isn't added.
-#[derive(Default)]
-pub struct CachedMemberships<T> {
-    pub(super) cache: BTreeSet<Entity>,
-    phantom: PhantomData<T>,
-}
-
-impl<T: Component> Component for CachedMemberships<T> {
-    type Storage = T::Storage;
 }
