@@ -6,6 +6,7 @@ use super::*;
 /// This will only apply to rooms with the [`CacheMemberships<T>`](CacheMemberships) component.
 /// 
 /// Entity memberships themselves are always cached.
+#[derive(Default)]
 pub struct CacheRoomMembershipsPlugin<T: Component>(PhantomData<T>);
 
 impl<T: Component> Plugin for CacheRoomMembershipsPlugin<T> {
