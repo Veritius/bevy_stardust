@@ -25,7 +25,7 @@ impl Plugin for StardustPlugin {
         app.register_type::<OrderingGuarantee>();
 
         // Register messaging types
-        app.register_type::<Direction>();
+        app.register_type::<NetDirection>();
         app.register_type::<Incoming>();
         app.register_type::<Outgoing>();
         app.register_type::<NetworkMessages<Incoming>>();
