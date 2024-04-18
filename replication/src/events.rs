@@ -94,7 +94,11 @@ fn rep_events_receiving_system<T: Event>(
     mut events: EventWriter<NetworkEvent<T>>,
     peers: Query<(Entity, &NetworkMessages<Incoming>), With<NetworkPeer>>,
 ) {
+    // Avoid wasting our time
+    if peers.is_empty() { return; }
+
     let channel = registry.channel_id(std::any::TypeId::of::<T>()).unwrap();
+    let type_name = std::any::type_name::<T>();
 
     // Iterate all peers and read messages for T
     for (peer, messages) in peers.iter() {
@@ -112,7 +116,7 @@ fn rep_events_receiving_system<T: Event>(
                 },
                 Err(err) => {
                     // TODO: Kick them if they repeatedly send bad packets
-                    error!("Error while deserialising event for type {} from {peer:?}: {err}", std::any::type_name::<T>());
+                    error!("Error while deserialising event {type_name} from {peer:?}: {err}");
                 },
             }
         }
@@ -123,7 +127,34 @@ fn rep_events_sending_system<T: Event>(
     registry: Res<ChannelRegistry>,
     serialisation: Res<EventSerialisationFns<T>>,
     membership: Res<EventMemberships<T>>,
-    events: EventReader<T>,
+    mut events: EventReader<T>,
+    mut peers: Query<&mut NetworkMessages<Outgoing>, With<NetworkPeer>>,
 ) {
-    todo!()
+    // Avoid wasting our time
+    if events.is_empty() || peers.is_empty() { return; }
+
+    let channel = registry.channel_id(std::any::TypeId::of::<T>()).unwrap();
+    let type_name = std::any::type_name::<T>();
+
+    // Serialise everything ahead of time, since it's expensive
+    // and cloning Bytes objects is a very cheap thing to do
+    let serialised = events
+    .read()
+    .filter_map(|event| {
+        match (serialisation.0.serialise)(event) {
+            Ok(bytes) => Some(bytes),
+            Err(err) => {
+                error!("Error while serialising event {}: {err}", type_name);
+                return None;
+            },
+        }
+    })
+    .collect::<Vec<_>>();
+
+    // Add serialised messages to all peers' message queues
+    for mut messages in peers.iter_mut() {
+        for bytes in serialised.iter().cloned() {
+            messages.push(channel, bytes);
+        }
+    }
 }
