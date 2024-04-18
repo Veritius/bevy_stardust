@@ -6,7 +6,6 @@ mod entities;
 mod events;
 mod peer;
 mod plugins;
-mod prediction;
 mod resources;
 mod scheduling;
 
