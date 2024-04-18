@@ -98,25 +98,8 @@ impl Resource for NetworkRoomMembership<All> {}
 
 impl<T: Resource> Resource for NetworkRoomMembership<T> {}
 
-/// Special type argument for [`NetworkRoomFilter`].
+/// Special type argument for [`NetworkRoomMembership`].
 /// See the documentation for more information.
 #[derive(Debug, Clone, Copy, Reflect)]
 #[reflect(Debug)]
 pub struct All;
-
-/// Caches room memberships for the component `T`.
-/// Improves iteration performance for entities with [`NetworkRoomMembership<T>`].
-/// This comes at an additional cost of mutating or adding the [`NetworkRoomMembership<T>`] component.
-/// 
-/// This should be added to entities with the [`NetworkRoom`] component,
-/// and not the [`NetworkRoomMembership`] component. Does nothing if
-/// [`CacheRoomMembershipsPlugin`] isn't added.
-#[derive(Default)]
-pub struct CachedMemberships<T> {
-    pub(super) cache: BTreeSet<Entity>,
-    phantom: PhantomData<T>,
-}
-
-impl<T: Component> Component for CachedMemberships<T> {
-    type Storage = T::Storage;
-}

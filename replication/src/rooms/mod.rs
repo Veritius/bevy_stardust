@@ -1,8 +1,8 @@
 //! Replication room functionality.
 
+mod caching;
 mod membership;
 mod params;
-mod systems;
 
 pub use membership::*;
 pub use params::*;
@@ -12,10 +12,36 @@ use bevy::prelude::*;
 use bevy_stardust::prelude::*;
 use crate::prelude::*;
 
-#[derive(Resource)]
-struct RoomsEnabled;
+/// Allows enabling/disabling replication scoping while the app is running.
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash, States, Reflect)]
+#[reflect(Debug, Default, PartialEq, Hash)]
+pub enum UseReplicationScope {
+    /// Enables replication scoping.
+    #[default]
+    Enabled,
+
+    /// Disables replication scoping.
+    /// Caches will continue to be updated.
+    Held,
+
+    /// Disables replication scoping.
+    /// Caches will not be updated.
+    /// 
+    /// Changing from this state will incur a significant performance cost as caches are updated.
+    Disabled,
+}
+
+impl UseReplicationScope {
+    /// Returns `true` if replication scope is [`Enabled`](UseReplicationScope::Enabled).
+    #[inline]
+    pub fn is_enabled(&self) -> bool {
+        *self == Self::Enabled
+    }
+}
 
 /// Enables scoped replication using network rooms.
+/// 
+/// Whether scope is enabled or disabled can be controlled with [`ReplicationScoping`].
 pub struct ScopedReplicationPlugin;
 
 impl Plugin for ScopedReplicationPlugin {
@@ -25,25 +51,13 @@ impl Plugin for ScopedReplicationPlugin {
         }
 
         app.register_type::<NetworkRoom>();
+        app.register_type::<UseReplicationScope>();
 
-        app.insert_resource(RoomsEnabled);
+        app.init_state::<UseReplicationScope>();
 
         app.add_systems(PostUpdate, (
-            systems::update_entity_cache,
+            caching::update_entity_cache,
         ).in_set(PostUpdateReplicationSystems::DetectChanges));
-    }
-}
-
-/// Caches room memberships for components of type `T` for faster access.
-/// This will only apply to rooms with the [`CacheMemberships<T>`](CacheMemberships) component.
-/// 
-/// Entity memberships themselves are always cached.
-pub struct CacheRoomMembershipsPlugin<T: Component>(PhantomData<T>);
-
-impl<T: Component> Plugin for CacheRoomMembershipsPlugin<T> {
-    fn build(&self, app: &mut App) {
-        app.add_systems(PostUpdate, systems::update_component_cache::<T>
-            .in_set(PostUpdateReplicationSystems::DetectChanges));
     }
 }
 
@@ -55,7 +69,7 @@ impl<T: Component> Plugin for CacheRoomMembershipsPlugin<T> {
 pub struct NetworkRoom {
     // Cached memberships for entities.
     #[reflect(ignore)]
-    pub(crate) cache: BTreeSet<Entity>,
+    cache: BTreeSet<Entity>,
 }
 
 /// A bundle for a minimal network room.
