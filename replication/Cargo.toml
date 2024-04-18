@@ -34,6 +34,7 @@ optional = true
 
 [dev-dependencies]
 fastrand = "2"
+bevy = { version = "0.13" }
 
 [features]
 default = ["serde"]
