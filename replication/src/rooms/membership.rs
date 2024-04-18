@@ -64,6 +64,7 @@ impl RoomMemberships {
 /// | Yes         | Yes       | `Self<T>`   |
 /// | No          | Yes       | `Self<T>`   |
 /// | No          | No        | Neither     |
+#[derive(Default)]
 pub struct NetworkRoomMembership<T: ?Sized = All> {
     /// The inner filter method.
     pub memberships: RoomMemberships,
@@ -71,14 +72,6 @@ pub struct NetworkRoomMembership<T: ?Sized = All> {
 }
 
 impl<T> NetworkRoomMembership<T> {
-    /// Creates a new [`NetworkRoomFilter<T>`].
-    pub fn new() -> Self {
-        Self {
-            memberships: RoomMemberships::default(),
-            phantom: PhantomData,
-        }
-    }
-
     /// Returns `true` if `group` matches the filter.
     #[inline]
     pub fn includes(&self, group: Entity) -> bool {
@@ -86,20 +79,14 @@ impl<T> NetworkRoomMembership<T> {
     }
 }
 
-impl Component for NetworkRoomMembership<All> {
-    type Storage = TableStorage;
-}
-
 impl<T: Component> Component for NetworkRoomMembership<T> {
     type Storage = T::Storage;
 }
-
-impl Resource for NetworkRoomMembership<All> {}
 
 impl<T: Resource> Resource for NetworkRoomMembership<T> {}
 
 /// Special type argument for [`NetworkRoomMembership`].
 /// See the documentation for more information.
-#[derive(Debug, Clone, Copy, Reflect)]
+#[derive(Debug, Component, Resource, Clone, Copy, Reflect)]
 #[reflect(Debug)]
-pub struct All;
+pub struct All(()); // cannot be constructed

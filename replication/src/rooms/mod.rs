@@ -56,7 +56,7 @@ impl Plugin for ScopedReplicationPlugin {
         app.init_state::<UseReplicationScope>();
 
         app.add_systems(PostUpdate, (
-            caching::update_entity_cache,
+            caching::cache_update_system::<NetworkRoom, All>,
         ).in_set(PostUpdateReplicationSystems::DetectChanges));
     }
 }

@@ -10,7 +10,7 @@ pub struct CacheRoomMembershipsPlugin<T: Component>(PhantomData<T>);
 
 impl<T: Component> Plugin for CacheRoomMembershipsPlugin<T> {
     fn build(&self, app: &mut App) {
-        app.add_systems(PostUpdate, caching::update_component_cache::<T>
+        app.add_systems(PostUpdate, caching::cache_update_system::<CachedMemberships<T>, T>
             .in_set(PostUpdateReplicationSystems::DetectChanges));
     }
 }
@@ -32,19 +32,19 @@ impl<T: Component> Component for CachedMemberships<T> {
     type Storage = T::Storage;
 }
 
-pub(super) fn update_entity_cache(
-    mut rooms: Query<(Entity, &mut NetworkRoom)>,
-    members: Query<(Entity, &NetworkRoomMembership), Changed<NetworkRoomMembership>>,
-    removed: RemovedComponents<NetworkRoomMembership>,
+pub(super) fn cache_update_system<C: MembershipCache + Component, M: Component>(
+    mut rooms: Query<(Entity, &mut C), With<NetworkRoom>>,
+    members: Query<(Entity, &NetworkRoomMembership<M>), Changed<NetworkRoomMembership<M>>>,
+    removed: RemovedComponents<NetworkRoomMembership<M>>,
 ) {
     rooms.par_iter_mut().for_each(|(room_entity, mut room)| {
         for (member_entity, member_data) in members.iter() {
             let include = member_data.memberships.includes(room_entity);
 
             if include {
-                room.cache.insert(member_entity);
+                room.insert(member_entity);
             } else {
-                room.cache.remove(&member_entity);
+                room.remove(member_entity);
             };
         }
 
@@ -52,34 +52,37 @@ pub(super) fn update_entity_cache(
             let mut reader = events.get_reader();
             let events = reader.read(events);
             for event in events {
-                room.cache.remove(&event.clone().into());
+                room.remove(event.clone().into());
             }
         }
     });
 }
 
-pub(super) fn update_component_cache<T: Component>(
-    mut rooms: Query<(Entity, &mut CachedMemberships<T>), With<NetworkRoom>>,
-    members: Query<(Entity, &NetworkRoomMembership<T>), Changed<NetworkRoomMembership<T>>>,
-    removed: RemovedComponents<NetworkRoomMembership<T>>,
-) {
-    rooms.par_iter_mut().for_each(|(room_entity, mut room)| {
-        for (member_entity, member_data) in members.iter() {
-            let include = member_data.memberships.includes(room_entity);
+pub(super) trait MembershipCache {
+    fn insert(&mut self, entity: Entity);
+    fn remove(&mut self, entity: Entity);
+}
 
-            if include {
-                room.cache.insert(member_entity);
-            } else {
-                room.cache.remove(&member_entity);
-            };
-        }
+impl MembershipCache for NetworkRoom {
+    #[inline]
+    fn insert(&mut self, entity: Entity) {
+        self.cache.insert(entity);
+    }
 
-        if let Some(events) = removed.events() {
-            let mut reader = events.get_reader();
-            let events = reader.read(events);
-            for event in events {
-                room.cache.remove(&event.clone().into());
-            }
-        }
-    });
+    #[inline]
+    fn remove(&mut self, entity: Entity) {
+        self.cache.remove(&entity);
+    }
+}
+
+impl<T> MembershipCache for CachedMemberships<T> {
+    #[inline]
+    fn insert(&mut self, entity: Entity) {
+        self.cache.insert(entity);
+    }
+
+    #[inline]
+    fn remove(&mut self, entity: Entity) {
+        self.cache.remove(&entity);
+    }
 }
