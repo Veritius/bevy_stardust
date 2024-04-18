@@ -8,11 +8,11 @@ mod peer;
 mod plugins;
 mod prediction;
 mod resources;
-mod rooms;
 mod scheduling;
 
-pub mod serialisation;
 pub mod diagnostics;
+pub mod rooms;
+pub mod serialisation;
 
 pub mod prelude {
     //! Common imports.

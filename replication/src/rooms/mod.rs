@@ -1,12 +1,19 @@
+//! Replication room functionality.
+
 mod membership;
+mod params;
 mod systems;
 
 pub use membership::*;
+pub use params::*;
 
 use std::{collections::BTreeSet, marker::PhantomData};
 use bevy::prelude::*;
 use bevy_stardust::prelude::*;
 use crate::prelude::*;
+
+#[derive(Resource)]
+struct RoomsEnabled;
 
 /// Enables scoped replication using network rooms.
 pub struct ScopedReplicationPlugin;
@@ -18,6 +25,8 @@ impl Plugin for ScopedReplicationPlugin {
         }
 
         app.register_type::<NetworkRoom>();
+
+        app.insert_resource(RoomsEnabled);
 
         app.add_systems(PostUpdate, (
             systems::update_entity_cache,
