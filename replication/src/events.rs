@@ -15,14 +15,13 @@ pub struct NetworkEvent<T> {
     pub event: T,
     // Hidden field to prevent manual construction of the struct.
     // Only the plugin should be able to send these events.
-    hidden: (),
+    _hidden: (),
 }
 
 /// Relays the event `T` over the network using the given [`SerialisationFunctions`].
-/// It's important that the tick `T` is received does not matter, due to network delay.
 /// 
-/// Received events will be added as `NetworkEvent<T>`, not `T`,
-/// as they contain additional metadata.
+/// Events received over the network are not added as type `T`.
+/// They are instead added as a new event type, [`NetworkEvent<T>`].
 pub struct EventReplicationPlugin<T: Event> {
     /// Functions used to serialise and deserialize `T`.
     /// See the [`SerialisationFunctions`] documentation for more information.
@@ -111,7 +110,7 @@ fn rep_events_receiving_system<T: Event>(
                     events.send(NetworkEvent {
                         origin: peer,
                         event: val,
-                        hidden: (),
+                        _hidden: (),
                     });
                 },
                 Err(err) => {
