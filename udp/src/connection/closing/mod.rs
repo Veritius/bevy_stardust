@@ -1,23 +1,17 @@
 mod systems;
 
-use bytes::Bytes;
 pub(crate) use systems::close_connections_system;
 
+use bytes::Bytes;
 use bevy::prelude::*;
 use crate::prelude::*;
 
+pub const CLOSE_REASON_UNSPECIFIED: Bytes = Bytes::from_static("No reason given".as_bytes());
+
+pub(super) struct CloseOrder {
+    pub hard: bool,
+    pub reason: Bytes,
+}
+
 #[derive(Component)]
-pub(crate) struct Closing {
-    direction: ConnectionDirection,
-    reason: Option<Bytes>,
-}
-
-impl Closing {
-    pub fn new(direction: ConnectionDirection, reason: Option<Bytes>) -> Self {
-        Self { direction, reason }
-    }
-
-    pub fn dir(&self) -> ConnectionDirection {
-        self.direction
-    }
-}
+pub(crate) struct Closing;

@@ -18,6 +18,9 @@ use tracing::warn;
 use crate::packet::PacketQueue;
 use statistics::ConnectionStatistics;
 use timing::ConnectionTimings;
+use closing::CloseOrder;
+
+use self::closing::CLOSE_REASON_UNSPECIFIED;
 
 /// An existing UDP connection.
 #[derive(Component)]
@@ -35,6 +38,8 @@ pub struct Connection {
     pub(crate) direction: ConnectionDirection,
     pub(crate) timings: ConnectionTimings,
     pub(crate) statistics: ConnectionStatistics,
+
+    close_order: Option<CloseOrder>,
 }
 
 /// Functions for controlling the connection.
@@ -54,6 +59,8 @@ impl Connection {
             direction,
             statistics: ConnectionStatistics::default(),
             timings: ConnectionTimings::new(None, None, None),
+
+            close_order: None,
         }
     }
 
@@ -62,8 +69,21 @@ impl Connection {
     /// If `hard` is set to `true`, the connection will be closed immediately.
     /// A packet will be sent to inform the end user of the closure, but it won't be reliable.
     /// This should generally be avoided, as all data that is yet to be received will be lost.
-    pub fn close(&mut self, _hard: bool, _reason: Bytes) {
-        todo!()
+    /// 
+    /// If this has already been used, nothing will happen.
+    /// However, if the previous use was not `hard` and the new use was,
+    /// the new use's arguments will be used instead.
+    pub fn close(&mut self, hard: bool, reason: Option<Bytes>) {
+        // Check if we ought to set the close order or not
+        if let Some(prev) = &self.close_order {
+            if !(!prev.hard && hard) { return }
+        }
+
+        // Set the close order
+        self.close_order = Some(CloseOrder {
+            hard,
+            reason: reason.unwrap_or(CLOSE_REASON_UNSPECIFIED),
+        })
     }
 }
 
