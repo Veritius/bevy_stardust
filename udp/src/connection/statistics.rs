@@ -2,8 +2,8 @@ use bevy::prelude::*;
 use crate::prelude::*;
 
 /// Statistics related to a [`Connection`].
-#[derive(Debug, Default, Clone)]
-#[cfg_attr(feature="reflect", derive(bevy_reflect::Reflect), reflect(from_reflect = false))]
+#[derive(Debug, Default, Clone, Reflect)]
+#[reflect(Debug)]
 pub struct ConnectionStatistics {
     /// How many packets this client has sent, in total.
     pub total_packets_sent: u64,

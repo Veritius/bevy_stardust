@@ -1,6 +1,8 @@
 use std::time::Instant;
+use bevy::prelude::*;
 
-#[cfg_attr(feature="reflect", derive(bevy_reflect::Reflect), reflect(from_reflect = false))]
+#[derive(Reflect)]
+#[reflect(from_reflect = false)]
 pub(crate) struct ConnectionTimings {
     pub started: Instant,
     pub last_sent: Option<Instant>,

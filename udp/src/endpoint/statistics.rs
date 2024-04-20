@@ -2,8 +2,7 @@ use bevy::prelude::*;
 use super::Endpoint;
 
 /// Statistics related to an [`Endpoint`].
-#[derive(Debug, Default, Clone)]
-#[cfg_attr(feature="reflect", derive(bevy_reflect::Reflect), reflect(from_reflect = false))]
+#[derive(Debug, Default, Clone, Reflect)]
 pub struct EndpointStatistics {
     /// How many packets have been sent, in total.
     pub total_packets_sent: u64,

@@ -24,15 +24,15 @@ use closing::CloseOrder;
 use self::closing::CLOSE_REASON_UNSPECIFIED;
 
 /// An existing UDP connection.
-#[derive(Component)]
-#[cfg_attr(feature="reflect", derive(bevy_reflect::Reflect), reflect(from_reflect = false))]
+#[derive(Component, Reflect)]
+#[reflect(from_reflect = false)]
 pub struct Connection {
-    #[cfg_attr(feature="reflect", reflect(ignore))]
+    #[reflect(ignore)]
     remote_address: SocketAddr,
-    #[cfg_attr(feature="reflect", reflect(ignore))]
+    #[reflect(ignore)]
     state: ConnectionState,
 
-    #[cfg_attr(feature="reflect", reflect(ignore))]
+    #[reflect(ignore)]
     pub(crate) packet_queue: PacketQueue,
 
     pub(crate) owning_endpoint: Entity,
@@ -40,6 +40,7 @@ pub struct Connection {
     pub(crate) timings: ConnectionTimings,
     pub(crate) statistics: ConnectionStatistics,
 
+    #[reflect(ignore)]
     close_order: Option<CloseOrder>,
 }
 
@@ -123,8 +124,7 @@ impl Drop for Connection {
 }
 
 /// The direction of the connection.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[cfg_attr(feature="reflect", derive(bevy_reflect::Reflect), reflect(from_reflect = false))]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Reflect)]
 pub enum ConnectionDirection {
     /// Acting as a client, listening to a server.
     Client,
@@ -134,8 +134,7 @@ pub enum ConnectionDirection {
 }
 
 /// The state of the connection.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[cfg_attr(feature="reflect", derive(bevy_reflect::Reflect), reflect(from_reflect = false))]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Reflect)]
 pub enum ConnectionState {
     /// The connection is in the process of being established.
     Handshaking,

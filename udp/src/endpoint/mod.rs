@@ -1,7 +1,6 @@
 mod systems;
 pub(crate) mod statistics;
-
-pub use systems::*;
+pub(crate) use systems::*;
 
 use std::{collections::HashMap, net::{SocketAddr, UdpSocket}};
 use anyhow::Result;
@@ -15,17 +14,17 @@ use statistics::EndpointStatistics;
 /// Removing this component will not inform clients, and they will eventually time out.
 /// Any information from the client that hasn't been received will never be received.
 /// Instead of removing this component, consider using the [`close`](Self::close) method.
-#[derive(Component)]
-#[cfg_attr(feature="reflect", derive(bevy_reflect::Reflect), reflect(from_reflect = false))]
+#[derive(Component, Reflect)]
+#[reflect(from_reflect = false)]
 pub struct Endpoint {
-    #[cfg_attr(feature="reflect", reflect(ignore))]
+    #[reflect(ignore)]
     pub(crate) udp_socket: UdpSocket,
 
-    #[cfg_attr(feature="reflect", reflect(ignore))]
+    #[reflect(ignore)]
     pub(crate) connections: HashMap<SocketAddr, ConnectionOwnershipToken>,
 
     // Outgoing packets that aren't attached to a peer.
-    #[cfg_attr(feature="reflect", reflect(ignore))]
+    #[reflect(ignore)]
     pub(crate) outgoing_pkts: Vec<(SocketAddr, Bytes)>,
 
     pub(crate) statistics: EndpointStatistics,
@@ -134,8 +133,7 @@ impl Drop for Endpoint {
 }
 
 /// The state of the endpoint.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[cfg_attr(feature="reflect", derive(bevy_reflect::Reflect), reflect(from_reflect = false))]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Reflect)]
 pub enum EndpointState {
     /// Working as normal.
     Active,
