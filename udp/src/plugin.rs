@@ -28,6 +28,9 @@ pub struct UdpTransportPlugin {
 
     /// The length of a period of inactivity needed to send a 'keep-alive' packet, which maintains the connection.
     pub keep_alive_timeout: Duration,
+
+    /// The amount of time to wait for a closing message when a peer is in the `Closing` state before doing it anyway.
+    pub close_wait_time: Duration,
 }
 
 /// Different default configurations to optimise the plugin for various things.
@@ -41,6 +44,7 @@ impl UdpTransportPlugin {
             attempt_timeout: Duration::from_secs(10),
             connection_timeout: Duration::from_secs(20),
             keep_alive_timeout: Duration::from_secs(3),
+            close_wait_time: Duration::from_secs(30),
         }
     }
 

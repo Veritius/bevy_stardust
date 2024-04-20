@@ -5,7 +5,7 @@ use crate::prelude::*;
 pub(crate) fn close_connections_system(
     mut commands: Commands,
     mut endpoints: Query<&mut Endpoint>,
-    connections: Query<(Entity, &Connection)>,
+    connections: Query<(Entity, &Connection), Changed<Connection>>,
 ) {
     // This doesn't need to be in parallel.
     for (entity, connection) in connections.iter() {
