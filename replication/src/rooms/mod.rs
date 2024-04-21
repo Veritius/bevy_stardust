@@ -22,7 +22,7 @@ pub enum UseReplicationScope {
 
     /// Disables replication scoping.
     /// Caches will continue to be updated.
-    Held,
+    Frozen,
 
     /// Disables replication scoping.
     /// Caches will not be updated.
