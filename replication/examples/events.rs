@@ -42,7 +42,7 @@ fn main() {
             CoreReplicationPlugin,
         ));
 
-        app.add_plugins(EventReplicationPlugin {
+        app.add_plugins(EventRelayPlugin {
             serialisation: SerialisationFunctions::<PlayerMoveEvent>::serde(),
             reliability: ReliabilityGuarantee::Unreliable,
             ordering: OrderingGuarantee::Sequenced,
@@ -50,7 +50,7 @@ fn main() {
             phantom: Default::default(),
         });
 
-        app.add_plugins(EventReplicationPlugin {
+        app.add_plugins(EventRelayPlugin {
             serialisation: SerialisationFunctions::<PlayerAttackEvent>::serde(),
             reliability: ReliabilityGuarantee::Reliable,
             ordering: OrderingGuarantee::Ordered,

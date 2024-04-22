@@ -1,5 +1,5 @@
 use std::marker::PhantomData;
-use bevy::{ecs::system::SystemParam, prelude::*};
+use bevy::prelude::*;
 use bevy_stardust::prelude::*;
 use crate::{prelude::*, serialisation::SerialisationFunctions};
 
@@ -7,7 +7,7 @@ use crate::{prelude::*, serialisation::SerialisationFunctions};
 /// 
 /// Events received over the network are not added as type `T`.
 /// They are instead added as a new event type, [`RelayEvent<T>`].
-pub struct EventReplicationPlugin<T: Event> {
+pub struct EventRelayPlugin<T: Event> {
     /// Functions used to serialise and deserialize `T`.
     /// See the [`SerialisationFunctions`] documentation for more information.
     pub serialisation: SerialisationFunctions<T>,
@@ -25,14 +25,14 @@ pub struct EventReplicationPlugin<T: Event> {
     pub phantom: PhantomData<T>,
 }
 
-impl<T: Event> Plugin for EventReplicationPlugin<T> {
+impl<T: Event> Plugin for EventRelayPlugin<T> {
     fn build(&self, app: &mut App) {
         if !app.is_plugin_added::<CoreReplicationPlugin>() {
             app.add_plugins(CoreReplicationPlugin);
         }
 
         app.add_event::<T>();
-        app.add_event::<RelayEvent<T>>();
+        app.add_event::<RelayedEvent<T>>();
 
         app.insert_resource(EventSerialisationFns(self.serialisation.clone()));
 
@@ -57,9 +57,9 @@ struct EventReplicationData<T: Event>(PhantomData<T>);
 #[derive(Resource)]
 struct EventSerialisationFns<T>(SerialisationFunctions<T>);
 
-/// An event sent over the network.
+/// An event received by a remote peer.
 #[derive(Event)]
-pub struct RelayEvent<T> {
+pub struct RelayedEvent<T> {
     /// The peer that sent the event.
     pub origin: Entity,
     /// The event data (`T`)
@@ -69,8 +69,8 @@ pub struct RelayEvent<T> {
     _hidden: (),
 }
 
-/// Convenience type, wrapping `EventReader<RelayEvent<T>>`.
-pub type NetEventReader<'w, 's, T> = EventReader<'w, 's, RelayEvent<T>>;
+/// Convenience type, wrapping `EventReader<RelayedEvent<T>>`.
+pub type NetEventReader<'w, 's, T> = EventReader<'w, 's, RelayedEvent<T>>;
 
 /// Defines the peers that will receive `T` events over the network.
 pub struct EventMemberships<T: Event> {
@@ -95,7 +95,7 @@ fn rep_events_receiving_system<T: Event>(
     registry: Res<ChannelRegistry>,
     serialisation: Res<EventSerialisationFns<T>>,
     membership: Option<Res<EventMemberships<T>>>,
-    mut events: EventWriter<RelayEvent<T>>,
+    mut events: EventWriter<RelayedEvent<T>>,
     peers: Query<(Entity, &NetworkMessages<Incoming>), (With<NetworkPeer>, With<ReplicationPeer>)>,
 ) {
     // Avoid wasting our time
@@ -112,7 +112,7 @@ fn rep_events_receiving_system<T: Event>(
         for message in messages.iter().cloned() {
             match (serialisation.0.deserialise)(message) {
                 Ok(val) => {
-                    events.send(RelayEvent {
+                    events.send(RelayedEvent {
                         origin: peer,
                         event: val,
                         _hidden: (),
