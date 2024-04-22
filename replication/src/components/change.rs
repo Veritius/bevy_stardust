@@ -6,7 +6,7 @@ use crate::change::NetChangeTracking;
 #[derive(QueryData)]
 pub struct NetRef<'w, C: Component> {
     value: Ref<'w, C>,
-    netch: Ref<'w, NetChangeTracking<C>>,
+    netch: &'w NetChangeTracking<C>,
 }
 
 impl<'w, C: Component> NetRef<'w, C> {
