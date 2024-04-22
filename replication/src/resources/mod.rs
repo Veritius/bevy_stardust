@@ -1,5 +1,6 @@
 //! Replication for resources.
 
+mod change;
 mod messages;
 mod systems;
 
