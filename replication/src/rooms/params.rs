@@ -1,4 +1,3 @@
-use std::marker::PhantomData;
 use bevy::{ecs::{query::QueryEntityError, system::SystemParam}, prelude::*};
 use bevy_stardust::prelude::*;
 use crate::prelude::*;
@@ -10,7 +9,6 @@ pub struct ReplicationScopeHelpers<'w, 's> {
     enabled: Res<'w, State<UseReplicationScope>>,
     peers: Query<'w, 's, Entity, (With<NetworkPeer>, With<ReplicationPeer>)>,
     groups: Query<'w, 's, (Entity, &'static NetworkRoom, &'static NetworkGroup)>,
-    ph: PhantomData<&'s ()>,
 }
 
 impl<'w, 's> ReplicationScopeHelpers<'w, 's> {
@@ -53,11 +51,19 @@ pub struct ComponentReplicationScope<'w, 's, C: Component> {
     components: Query<'w, 's, &'static NetworkRoomMembership<C>>,
 }
 
+impl<'w, 's, C: Component> ComponentReplicationScope<'w, 's, C> {
+
+}
+
 /// Utilities for reading resource replication scope data.
 #[derive(SystemParam)]
 pub struct ResourceReplicationScope<'w, 's, R: Resource> {
     general: ReplicationScopeHelpers<'w, 's>,
     membership: Res<'w, NetworkRoomMembership<R>>,
+}
+
+impl<'w, 's, R: Resource> ResourceReplicationScope<'w, 's, R> {
+
 }
 
 /// Utilities for reading event replication scope data.
