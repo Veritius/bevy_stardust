@@ -8,11 +8,14 @@ use bevy::prelude::*;
 use bevy_stardust::prelude::*;
 use crate::{prelude::*, serialisation::SerialisationFunctions};
 
+/// Supertrait for traits needed to replicate resources.
+pub trait ReplicableResource: TypePath + Resource {}
+impl<T: TypePath + Resource> ReplicableResource for T {}
+
 /// Enables replicating the resource `T`.
 /// 
 /// This plugin must be added before [`StardustPlugin`].
-/// Implicitly adds [`ReplicationPlugin`] if not present.
-pub struct ResourceReplicationPlugin<T: TypePath + Resource> {
+pub struct ResourceReplicationPlugin<T: ReplicableResource> {
     /// Functions used to serialise and deserialize `T`.
     /// See the [`SerialisationFunctions`] documentation for more information.
     pub serialisation: SerialisationFunctions<T>,
@@ -24,7 +27,7 @@ pub struct ResourceReplicationPlugin<T: TypePath + Resource> {
     pub phantom: PhantomData<T>,
 }
 
-impl<T: TypePath + Resource> Plugin for ResourceReplicationPlugin<T> {
+impl<T: ReplicableResource> Plugin for ResourceReplicationPlugin<T> {
     fn build(&self, app: &mut App) {
         app.insert_resource(messages::ResourceSerialisationFunctions {
             fns: self.serialisation.clone()

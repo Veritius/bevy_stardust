@@ -3,12 +3,12 @@ use bevy::prelude::*;
 use crate::prelude::*;
 
 #[derive(Resource)]
-pub(super) struct ResourceSerialisationFunctions<T: Resource> {
+pub(super) struct ResourceSerialisationFunctions<T: ReplicableResource> {
     pub fns: SerialisationFunctions<T>,
 }
 
 #[derive(TypePath, Default)]
-pub(super) struct ResourceReplicationMessages<T: Resource>(PhantomData<T>);
+pub(super) struct ResourceReplicationMessages<T: ReplicableResource>(PhantomData<T>);
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub(super) enum MessageHeader {

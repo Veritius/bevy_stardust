@@ -3,7 +3,7 @@ use bevy_stardust::prelude::*;
 use crate::prelude::*;
 use super::messages::*;
 
-pub(super) fn recv_resource_data_system<T: Resource>(
+pub(super) fn recv_resource_data_system<T: ReplicableResource>(
     mut res: ResMut<T>,
     ser: Res<ResourceSerialisationFunctions<T>>,
     registry: Res<ChannelRegistry>,
@@ -28,7 +28,7 @@ pub(super) fn recv_resource_data_system<T: Resource>(
     }
 }
 
-pub(super) fn send_resource_data_system<T: Resource>(
+pub(super) fn send_resource_data_system<T: ReplicableResource>(
     res: Res<T>,
     ser: Res<ResourceSerialisationFunctions<T>>,
     registry: Res<ChannelRegistry>,

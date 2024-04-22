@@ -3,11 +3,15 @@ use bevy::prelude::*;
 use bevy_stardust::prelude::*;
 use crate::{prelude::*, serialisation::SerialisationFunctions};
 
+/// Supertrait for traits needed to replicate events.
+pub trait ReplicableEvent: TypePath + Event {}
+impl<T: TypePath + Event> ReplicableEvent for T {}
+
 /// Relays the event `T` over the network using the given [`SerialisationFunctions`].
 /// 
 /// Events received over the network are not added as type `T`.
 /// They are instead added as a new event type, [`RelayEvent<T>`].
-pub struct EventRelayPlugin<T: Event> {
+pub struct EventRelayPlugin<T: ReplicableEvent> {
     /// Functions used to serialise and deserialize `T`.
     /// See the [`SerialisationFunctions`] documentation for more information.
     pub serialisation: SerialisationFunctions<T>,
@@ -25,7 +29,7 @@ pub struct EventRelayPlugin<T: Event> {
     pub phantom: PhantomData<T>,
 }
 
-impl<T: TypePath + Event> Plugin for EventRelayPlugin<T> {
+impl<T: ReplicableEvent> Plugin for EventRelayPlugin<T> {
     fn build(&self, app: &mut App) {
         if !app.is_plugin_added::<CoreReplicationPlugin>() {
             app.add_plugins(CoreReplicationPlugin);
