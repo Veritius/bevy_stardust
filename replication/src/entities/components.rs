@@ -32,8 +32,5 @@ impl<T: Component> Plugin for ComponentReplicationPlugin<T> {
             fragmented: true,
             priority: self.message_priority,
         });
-
-        app.add_systems(PostUpdate, crate::change::undirty_components_system::<T>
-            .in_set(PostUpdateReplicationSystems::ClearDirty));
     }
 }

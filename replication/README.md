@@ -3,7 +3,6 @@ Server-authoritative game state replication for [bevy_stardust].
 
 ## Features
 - `Resource`, `Component`, and `Event` replication
-- Special change tracking for replicated data
 - Fine grained control over replication scope
 - Not reliant on any existing serialisation crate
 - Optional support for [serde] trait implementors

@@ -1,7 +1,6 @@
 #![doc = include_str!("../README.md")]
 #![warn(missing_docs)]
 
-mod change;
 mod entities;
 mod events;
 mod peer;
@@ -17,7 +16,6 @@ pub mod prelude {
     //! Common imports.
 
     use super::*;
-    pub use change::NetChanges;
     pub use entities::*;
     pub use events::*;
     pub use peer::*;
