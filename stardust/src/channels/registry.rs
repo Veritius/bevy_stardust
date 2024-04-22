@@ -64,12 +64,8 @@ impl ChannelRegistryInner {
         
         // Check the channel doesn't already exist
         let type_id = TypeId::of::<C>();
-        #[cfg(feature="reflect")]
         let type_path = C::type_path();
         if self.channel_type_ids.get(&type_id).is_some() {
-            #[cfg(feature="reflect")]
-            panic!("A channel was registered twice: {type_path}");
-            #[cfg(not(feature="reflect"))]
             panic!("A channel was registered twice: {}", std::any::type_name::<C>());
         }
 
@@ -77,18 +73,9 @@ impl ChannelRegistryInner {
         let channel_id = ChannelId::try_from(self.channel_count()).unwrap();
         self.channel_type_ids.insert(type_id, channel_id);
         
-        #[cfg(feature="reflect")]
         self.channel_data.push(ChannelData {
             type_id,
             type_path,
-            channel_id,
-
-            config,
-        });
-
-        #[cfg(not(feature="reflect"))]
-        self.channel_data.push(ChannelData {
-            type_id,
             channel_id,
 
             config,
@@ -140,7 +127,6 @@ pub struct ChannelData {
     pub type_id: TypeId,
 
     /// The channel's `TypePath` (from `bevy::reflect`)
-    #[cfg(feature="reflect")]
     pub type_path: &'static str,
 
     /// The channel's sequential ID assigned by the registry.

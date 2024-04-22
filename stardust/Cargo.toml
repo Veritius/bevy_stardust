@@ -18,5 +18,4 @@ gxhash = { version = "=3.0.0", optional = true } # 3.1 is broken, remove this bo
 fastrand = "2"
 
 [features]
-reflect = []
-hashing = ["reflect", "dep:gxhash"]
+hashing = ["dep:gxhash"]
