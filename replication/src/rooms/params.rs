@@ -39,7 +39,8 @@ impl<'w, 's> EntityReplicationScope<'w, 's> {
         // Entities are always replicated if scope is disabled.
         if !self.general.rooms_enabled() { return Ok(true); }
 
-        todo!();
+        // todo!();
+        return Ok(true);
     }
 }
 
@@ -52,7 +53,14 @@ pub struct ComponentReplicationScope<'w, 's, C: Component> {
 }
 
 impl<'w, 's, C: Component> ComponentReplicationScope<'w, 's, C> {
+    /// Returns whether the component `C` on `entity` is replicated to `peer`.
+    pub fn is_component_replicated_to(&self, entity: Entity, peer: Entity) -> Result<bool, QueryEntityError> {
+        // Components are not visible if their entity is not visible.
+        if !self.entities.is_entity_replicated(entity, peer)? { return Ok(false); }
 
+        // todo!()
+        return Ok(true);
+    }
 }
 
 /// Utilities for reading resource replication scope data.
@@ -63,7 +71,13 @@ pub struct ResourceReplicationScope<'w, 's, R: Resource> {
 }
 
 impl<'w, 's, R: Resource> ResourceReplicationScope<'w, 's, R> {
+    /// Returns whether the resource of type `R` is replicated to `peer`.
+    pub fn is_resource_replicated(&self, peer: Entity) -> Result<bool, QueryEntityError> {
+        if self.general.rooms_enabled() { return Ok(true); }
 
+        // todo!()
+        return Ok(true);
+    }
 }
 
 /// Utilities for reading event replication scope data.
@@ -74,5 +88,11 @@ pub struct EventReplicationScope<'w, 's, E: Event> {
 }
 
 impl<'w, 's, E: Event> EventReplicationScope<'w, 's, E> {
+    /// Returns whether the event of type `E` is replicated to `peer`.
+    pub fn is_event_replicated(&self, peer: Entity) -> Result<bool, QueryEntityError> {
+        if self.general.rooms_enabled() { return Ok(true); }
 
+        // todo!()
+        return Ok(true);
+    }
 }
