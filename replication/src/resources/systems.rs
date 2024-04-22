@@ -1,10 +1,12 @@
-use bevy::prelude::*;
+use bevy::{ecs::system::SystemChangeTick, prelude::*};
 use bevy_stardust::prelude::*;
-use crate::prelude::*;
-use super::messages::*;
+use crate::{change::NetChangeTracking, prelude::*};
+use super::{change::NetRes, messages::*};
 
 pub(super) fn recv_resource_data_system<T: ReplicableResource>(
     mut res: ResMut<T>,
+    mut chg: ResMut<NetChangeTracking<T>>,
+    ticks: SystemChangeTick,
     ser: Res<ResourceSerialisationFunctions<T>>,
     registry: Res<ChannelRegistry>,
     peers: Query<(&ReplicationPeer, &NetworkMessages<Incoming>), With<NetworkPeer>>,
@@ -24,18 +26,21 @@ pub(super) fn recv_resource_data_system<T: ReplicableResource>(
             };
 
             *res = t;
+            chg.changed = ticks.this_run();
         }
     }
 }
 
 pub(super) fn send_resource_data_system<T: ReplicableResource>(
-    res: Res<T>,
+    res: NetRes<T>,
     ser: Res<ResourceSerialisationFunctions<T>>,
     registry: Res<ChannelRegistry>,
     mut peers: Query<(&ReplicationPeer, &mut NetworkMessages<Outgoing>), With<NetworkPeer>>,
 ) {
-    if !res.is_changed() { return; }
+    // Only replicate if the application made the change
+    if !res.is_changed_by_application() { return; }
 
+    // Serialise ahead of time
     let bytes = match (ser.fns.serialise)(&res) {
         Ok(v) => v,
         Err(err) => {
