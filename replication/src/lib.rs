@@ -10,8 +10,8 @@ mod resources;
 mod scheduling;
 
 pub mod diagnostics;
-pub mod rooms;
 pub mod serialisation;
+pub mod visibility;
 
 pub mod prelude {
     //! Common imports.
@@ -23,7 +23,6 @@ pub mod prelude {
     pub use peer::*;
     pub use plugins::CoreReplicationPlugin;
     pub use resources::*;
-    pub use rooms::*;
     pub use scheduling::*;
     pub use serialisation::SerialisationFunctions;
 }

@@ -36,8 +36,7 @@ impl PluginGroup for ReplicationPlugins {
         // const PRIORITY_LOW: u32 = 32;
 
         let group = PluginGroupBuilder::start::<Self>()
-            .add(CoreReplicationPlugin)
-            .add(ScopedReplicationPlugin);
+            .add(CoreReplicationPlugin);
 
         // #[cfg(feature="bevy_serialize")] {
         //     group = group
