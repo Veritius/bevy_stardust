@@ -1,11 +1,12 @@
 //! Replication for resources.
 
 mod messages;
+mod systems;
 
 use std::marker::PhantomData;
 use bevy::prelude::*;
 use bevy_stardust::prelude::*;
-use crate::serialisation::SerialisationFunctions;
+use crate::{prelude::*, serialisation::SerialisationFunctions};
 
 /// Enables replicating the resource `T`.
 /// 
@@ -35,5 +36,11 @@ impl<T: Resource> Plugin for ResourceReplicationPlugin<T> {
             fragmented: true,
             priority: self.message_priority,
         });
+
+        app.add_systems(PreUpdate, systems::recv_resource_data_system::<T>
+            .in_set(ReplicationSystems::UpdateResources));
+
+        app.add_systems(PostUpdate, systems::send_resource_data_system::<T>
+            .in_set(ReplicationSystems::UpdateResources));
     }
 }
