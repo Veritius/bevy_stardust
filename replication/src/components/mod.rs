@@ -4,6 +4,8 @@ mod change;
 mod messages;
 mod systems;
 
+pub use change::NetRef;
+
 use std::marker::PhantomData;
 use bevy::prelude::*;
 use bevy_stardust::prelude::*;
