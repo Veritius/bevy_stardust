@@ -3,7 +3,6 @@ use bevy::prelude::*;
 use bevy_stardust::prelude::*;
 use unbytes::*;
 use crate::prelude::*;
-use crate::entities::ComponentSerialisationFunctions;
 use super::{ids::*, messages::*};
 
 // When Bevy 0.14 releases, use hooks (pr #10756)
@@ -83,69 +82,4 @@ pub(super) fn send_entity_messages(
             todo!()
         }
     });
-}
-
-pub(super) fn receive_component_messages<T: Component>(
-    mut commands: Commands,
-    registry: Res<ChannelRegistry>,
-    peers: Query<(Entity, &ReplicationPeer, &NetworkMessages<Incoming>, &NetworkEntityIds), With<NetworkPeer>>,
-    mut comps: Query<&mut T, With<ReplicateEntity>>,
-    serde_fns: Res<ComponentSerialisationFunctions<T>>,
-) {
-    let channel = registry.channel_id(std::any::TypeId::of::<ComponentReplicationChannel<T>>()).unwrap();
-    for (peer, peer_meta, messages, ids) in peers.iter() {
-        for message in messages.get(channel).iter().cloned() {
-            let mut reader = Reader::new(message);
-
-            // Try blocks when
-            match (|| -> Result<(), Error> {
-                let bt = reader.read_u8()
-                    .context("Malformed network message")?;
-                let hdr = ComponentMessageHeader::try_from(bt).map_err(|_| {
-                    anyhow::anyhow!("Invalid message header value")
-                })?;
-
-                if peer_meta.side() != Side::Client { bail!("Received authority message from client") }
-                let nid = NetworkEntityId::from(reader.read_array::<4>()
-                    .context("Malformed network message")?);
-                let eid = ids.get_ent_id(nid)
-                    .context(format!("No entity ID associated with {nid:?}"))?;
-
-                match hdr {
-                    ComponentMessageHeader::Insert | ComponentMessageHeader::Update => {
-                        let mut cmds = commands.get_entity(eid)
-                            .context("Target entity for insertion did not exist")?;
-                        let cmp = (serde_fns.0.deserialise)(reader.read_to_end())
-                            .context("Couldn't deserialise component")?;
-
-                        match hdr {
-                            ComponentMessageHeader::Insert => {
-                                cmds.try_insert(cmp);
-                            },
-                            ComponentMessageHeader::Update => {
-                                let mut cm = comps.get_mut(eid)
-                                    .context("Couldn't get replicated entity in query")?;
-
-                                *cm = cmp;
-                            },
-                            _ => unreachable!(),
-                        }
-                    },
-
-                    ComponentMessageHeader::Remove => {
-                        commands.get_entity(eid)
-                            .context("Target entity for removal did not exist")?
-                            .remove::<T>();
-                    },
-                }
-
-                Ok(())
-            })() {
-                Ok(_) => {},
-                Err(err) => {
-                    error!("Component replication error: {err}");
-                },
-            }
-        }
-    }
 }

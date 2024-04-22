@@ -1,3 +1,6 @@
+mod messages;
+mod systems;
+
 use std::marker::PhantomData;
 use bevy::prelude::*;
 use bevy_stardust::prelude::*;
@@ -22,20 +25,15 @@ impl<T: Component> Plugin for ComponentReplicationPlugin<T> {
             panic!("ComponentReplicationPlugin must be added after EntityReplicationPlugin");
         }
 
-        app.insert_resource(ComponentSerialisationFunctions(self.serialisation.clone()));
+        app.insert_resource(messages::ComponentSerialisationFunctions {
+            fns: self.serialisation.clone()
+        });
 
-        app.add_channel::<super::messages::ComponentReplicationChannel<T>>(ChannelConfiguration {
+        app.add_channel::<messages::ComponentReplicationMessages<T>>(ChannelConfiguration {
             reliable: ReliabilityGuarantee::Reliable,
             ordered: OrderingGuarantee::Sequenced,
             fragmented: true,
             priority: self.message_priority,
         });
-
-        app.add_systems(PreUpdate, (
-            super::systems::receive_component_messages::<T>
-        ).in_set(PreUpdateReplicationSystems::UpdateComponents).chain());
     }
 }
-
-#[derive(Resource)]
-pub(super) struct ComponentSerialisationFunctions<T: Component>(pub SerialisationFunctions<T>);

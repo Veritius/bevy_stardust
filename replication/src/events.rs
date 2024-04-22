@@ -72,29 +72,9 @@ pub struct RelayedEvent<T> {
 /// Convenience type, wrapping `EventReader<RelayedEvent<T>>`.
 pub type NetEventReader<'w, 's, T> = EventReader<'w, 's, RelayedEvent<T>>;
 
-/// Defines the peers that will receive `T` events over the network.
-pub struct EventMemberships<T: Event> {
-    /// See [`RoomMemberships`].
-    pub memberships: RoomMemberships,
-    phantom: PhantomData<T>,
-}
-
-impl<T: Event> Resource for EventMemberships<T> {}
-
-impl<T: Event> EventMemberships<T> {
-    /// Creates a new [`EventMemberships`] resource.
-    pub fn new(filter: RoomMemberships) -> Self {
-        Self {
-            memberships: filter,
-            phantom: PhantomData,
-        }
-    }
-}
-
 fn rep_events_receiving_system<T: Event>(
     registry: Res<ChannelRegistry>,
     serialisation: Res<EventSerialisationFns<T>>,
-    membership: Option<Res<EventMemberships<T>>>,
     mut events: EventWriter<RelayedEvent<T>>,
     peers: Query<(Entity, &NetworkMessages<Incoming>), (With<NetworkPeer>, With<ReplicationPeer>)>,
 ) {
@@ -130,7 +110,6 @@ fn rep_events_receiving_system<T: Event>(
 fn rep_events_sending_system<T: Event>(
     registry: Res<ChannelRegistry>,
     serialisation: Res<EventSerialisationFns<T>>,
-    membership: Option<Res<EventMemberships<T>>>,
     mut events: EventReader<T>,
     mut peers: Query<&mut NetworkMessages<Outgoing>, (With<NetworkPeer>, With<ReplicationPeer>)>,
 ) {

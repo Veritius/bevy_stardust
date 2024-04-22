@@ -1,11 +1,8 @@
-mod components;
 mod ids;
 mod messages;
 mod systems;
 
 pub(crate) use ids::*;
-
-pub use components::*;
 
 use bevy::prelude::*;
 use bevy_stardust::prelude::*;
