@@ -149,7 +149,7 @@ impl AssociatedNetworkIds {
     }
 
     #[inline]
-    pub fn all(&self) -> impl Iterator<Item = (Entity, NetworkEntityId)> + '_ {
+    pub fn all<'a>(&'a self) -> impl Iterator<Item = (Entity, NetworkEntityId)> + 'a {
         self.0.iter().map(|(k,v)| { (k.clone(), v.clone()) })
     }
 }
