@@ -13,7 +13,10 @@ pub struct NetRes<'w, R: Resource> {
 impl<'w, R: Resource> NetRes<'w, R> {
     /// Returns `true` if and only if the latest change was made by a replication system.
     pub fn is_changed_by_replication(&self) -> bool {
-        todo!()
+        (*self.netch).is_changed(
+            self.ticks.last_run(),
+            self.ticks.this_run(),
+        )
     }
 
     /// Returns `true` if and only if the latest change was made by the application or another plugin.
