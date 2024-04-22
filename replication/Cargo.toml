@@ -46,4 +46,3 @@ bevy = { version = "0.13" }
 [features]
 default = ["serde"]
 serde = ["dep:serde", "dep:bincode", "bevy/serialize"]
-reflect = ["bevy_stardust/reflect"]
