@@ -29,6 +29,7 @@ version = "1.5"
 
 [dependencies.unbytes]
 version = "0.3"
+features = ["std"]
 
 [dependencies.serde]
 version = "1"

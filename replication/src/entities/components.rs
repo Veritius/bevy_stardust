@@ -22,11 +22,20 @@ impl<T: Component> Plugin for ComponentReplicationPlugin<T> {
             panic!("ComponentReplicationPlugin must be added after EntityReplicationPlugin");
         }
 
+        app.insert_resource(ComponentSerialisationFunctions(self.serialisation.clone()));
+
         app.add_channel::<super::messages::ComponentReplicationChannel<T>>(ChannelConfiguration {
             reliable: ReliabilityGuarantee::Reliable,
             ordered: OrderingGuarantee::Sequenced,
             fragmented: true,
             priority: self.message_priority,
         });
+
+        app.add_systems(PreUpdate, (
+            super::systems::receive_component_messages::<T>
+        ).in_set(PreUpdateReplicationSystems::UpdateComponents).chain());
     }
 }
+
+#[derive(Resource)]
+pub(super) struct ComponentSerialisationFunctions<T: Component>(pub SerialisationFunctions<T>);

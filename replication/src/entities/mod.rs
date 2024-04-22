@@ -33,7 +33,7 @@ impl Plugin for EntityReplicationPlugin {
         app.add_systems(PreUpdate, (
             systems::ensure_id_component,
             systems::receive_entity_messages,
-        ).chain());
+        ).in_set(PreUpdateReplicationSystems::UpdateEntities).chain());
     }
 }
 
