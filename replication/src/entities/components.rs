@@ -3,10 +3,6 @@ use bevy::prelude::*;
 use bevy_stardust::prelude::*;
 use crate::{prelude::*, serialisation::SerialisationFunctions};
 
-/// Stardust channel for component replication for type `T`.
-#[derive(Default)]
-pub(crate) struct ComponentReplicationChannel<T: Component>(PhantomData<T>);
-
 /// Enables replicating the component `T` on entities.
 pub struct ComponentReplicationPlugin<T: Component> {
     /// Functions used to serialise and deserialize `T`.
@@ -26,7 +22,7 @@ impl<T: Component> Plugin for ComponentReplicationPlugin<T> {
             panic!("ComponentReplicationPlugin must be added after EntityReplicationPlugin");
         }
 
-        app.add_channel::<ComponentReplicationChannel<T>>(ChannelConfiguration {
+        app.add_channel::<super::messages::ComponentReplicationChannel<T>>(ChannelConfiguration {
             reliable: ReliabilityGuarantee::Reliable,
             ordered: OrderingGuarantee::Sequenced,
             fragmented: true,

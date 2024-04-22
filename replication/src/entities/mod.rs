@@ -1,5 +1,7 @@
 mod components;
 mod ids;
+mod messages;
+mod systems;
 
 pub(crate) use ids::*;
 
@@ -21,12 +23,17 @@ impl Plugin for EntityReplicationPlugin {
     fn build(&self, app: &mut App) {
         app.register_type::<ReplicateEntity>();
         
-        app.add_channel::<EntityReplicationChannel>(ChannelConfiguration {
+        app.add_channel::<messages::EntityReplicationChannel>(ChannelConfiguration {
             reliable: ReliabilityGuarantee::Reliable,
             ordered: OrderingGuarantee::Ordered,
             fragmented: false,
             priority: self.message_priority,
         });
+
+        app.add_systems(PreUpdate, (
+            systems::ensure_id_component,
+            systems::receive_entity_messages,
+        ).chain());
     }
 }
 
@@ -41,7 +48,3 @@ pub struct ReplicateEntity {
     #[reflect(ignore)]
     pub(crate) ids: AssociatedNetworkIds,
 }
-
-/// Stardust channel for entity replication.
-#[derive(Default)]
-pub(crate) struct EntityReplicationChannel;

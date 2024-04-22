@@ -24,7 +24,4 @@ pub enum PostUpdateReplicationSystems {
 
     /// Queues messages for sending.
     SendMessages,
-
-    /// Clears dirty flags.
-    ClearDirty,
 }

@@ -24,6 +24,12 @@ features = ["union"]
 [dependencies.anyhow]
 version = "1"
 
+[dependencies.bytes]
+version = "1.5"
+
+[dependencies.unbytes]
+version = "0.3"
+
 [dependencies.serde]
 version = "1"
 optional = true
