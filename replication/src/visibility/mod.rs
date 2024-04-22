@@ -1,5 +1,4 @@
 //! Visibility groups.
 
-pub struct VisibilityGroupMemberships;
-
-pub struct VisibilityGroupFilters;
+pub mod filters;
+pub mod memberships;
