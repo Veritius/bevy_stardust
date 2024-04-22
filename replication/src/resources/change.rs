@@ -16,7 +16,7 @@ impl<'w, R: Resource> NetRes<'w, R> {
         todo!()
     }
 
-    /// Returns `true` if and only if the latest change was made by a game system.
+    /// Returns `true` if and only if the latest change was made by the application or another plugin.
     pub fn is_changed_by_application(&self) -> bool {
         self.value.last_changed().is_newer_than(
             self.netch.changed,

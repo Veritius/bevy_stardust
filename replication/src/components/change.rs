@@ -1,0 +1,30 @@
+use std::ops::Deref;
+use bevy::{ecs::query::QueryData, prelude::*};
+use crate::change::NetChangeTracking;
+
+/// [`Component`] access with additional change-tracking metadata.
+#[derive(QueryData)]
+pub struct NetRef<'w, C: Component> {
+    value: Ref<'w, C>,
+    netch: Ref<'w, NetChangeTracking<C>>,
+}
+
+impl<'w, C: Component> NetRef<'w, C> {
+    /// Returns `true` if and only if the latest change was made by a replication system.
+    pub fn is_changed_by_replication(&self) -> bool {
+        todo!()
+    }
+
+    /// Returns `true` if and only if the latest change was made by the application or another plugin.
+    pub fn is_changed_by_application(&self) -> bool {
+        todo!()
+    }
+}
+
+impl<'w, C: Component> Deref for NetRef<'w, C> {
+    type Target = Ref<'w, C>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.value
+    }
+}
