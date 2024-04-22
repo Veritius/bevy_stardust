@@ -23,6 +23,7 @@ pub enum PreUpdateReplicationSystems {
     UpdateEntities,
 
     /// Replicate remote components on remote entities.
+    /// Occurs after [`UpdateEntities`](PreUpdateReplicationSystems::UpdateEntities).
     UpdateComponents,
 }
 

@@ -69,6 +69,22 @@ pub(super) fn receive_entity_messages(
     }
 }
 
+pub(super) fn send_entity_messages(
+    mut commands: Commands,
+    registry: Res<ChannelRegistry>,
+    mut peers: Query<(Entity, &ReplicationPeer, &mut NetworkMessages<Outgoing>, &mut NetworkEntityIds), With<NetworkPeer>>,
+    changes: Query<(Entity, Ref<ReplicateEntity>)>,
+    removals: RemovedComponents<ReplicateEntity>,
+) {
+    let channel = registry.channel_id(std::any::TypeId::of::<EntityReplicationChannel>()).unwrap();
+    let changed = changes.iter().filter(|(_, c)| c.is_changed()).map(|(e, r)| (e, r.is_added())).collect::<Vec<_>>();
+    peers.par_iter_mut().for_each(|(peer, peer_meta, mut messages, mut ids)| {
+        for (ent, added) in changed.iter().cloned() {
+            todo!()
+        }
+    });
+}
+
 pub(super) fn receive_component_messages<T: Component>(
     mut commands: Commands,
     registry: Res<ChannelRegistry>,
