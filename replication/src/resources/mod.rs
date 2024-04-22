@@ -1,10 +1,11 @@
-use std::{marker::PhantomData, ops::{Deref, DerefMut}};
-use bevy::{ecs::system::SystemParam, prelude::*};
-use bevy_stardust::prelude::*;
-use crate::{prelude::*, serialisation::SerialisationFunctions};
+//! Replication for resources.
 
-#[derive(Default)]
-pub(crate) struct ResourceReplicationChannel<T: Resource>(PhantomData<T>);
+mod messages;
+
+use std::marker::PhantomData;
+use bevy::prelude::*;
+use bevy_stardust::prelude::*;
+use crate::serialisation::SerialisationFunctions;
 
 /// Enables replicating the resource `T`.
 /// 
@@ -24,7 +25,11 @@ pub struct ResourceReplicationPlugin<T: Resource> {
 
 impl<T: Resource> Plugin for ResourceReplicationPlugin<T> {
     fn build(&self, app: &mut App) {
-        app.add_channel::<ResourceReplicationChannel<T>>(ChannelConfiguration {
+        app.insert_resource(messages::ResourceSerialisationFunctions {
+            fns: self.serialisation.clone()
+        });
+
+        app.add_channel::<messages::ResourceReplicationMessages<T>>(ChannelConfiguration {
             reliable: ReliabilityGuarantee::Reliable,
             ordered: OrderingGuarantee::Sequenced,
             fragmented: true,

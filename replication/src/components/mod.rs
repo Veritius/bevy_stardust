@@ -1,3 +1,5 @@
+//! Replication for components.
+
 mod messages;
 mod systems;
 
