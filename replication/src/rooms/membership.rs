@@ -1,5 +1,5 @@
-use std::{collections::BTreeSet, marker::PhantomData};
-use bevy::{ecs::component::TableStorage, prelude::*};
+use std::marker::PhantomData;
+use bevy::prelude::*;
 use smallvec::SmallVec;
 
 /// Room membership data.

@@ -17,7 +17,7 @@ pub mod prelude {
     //! Common imports.
 
     use super::*;
-    pub use change::{NetChanges, NetChanged};
+    pub use change::NetChanges;
     pub use entities::*;
     pub use events::*;
     pub use peer::*;

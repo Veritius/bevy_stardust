@@ -30,6 +30,9 @@ impl<T: Resource> Plugin for ResourceReplicationPlugin<T> {
             fragmented: true,
             priority: self.message_priority,
         });
+
+        app.add_systems(PostUpdate, crate::change::undirty_resource_system::<T>
+            .in_set(PostUpdateReplicationSystems::ClearDirty));
     }
 }
 
