@@ -25,7 +25,7 @@ pub struct EventRelayPlugin<T: Event> {
     pub phantom: PhantomData<T>,
 }
 
-impl<T: Event> Plugin for EventRelayPlugin<T> {
+impl<T: TypePath + Event> Plugin for EventRelayPlugin<T> {
     fn build(&self, app: &mut App) {
         if !app.is_plugin_added::<CoreReplicationPlugin>() {
             app.add_plugins(CoreReplicationPlugin);
@@ -51,7 +51,7 @@ impl<T: Event> Plugin for EventRelayPlugin<T> {
     }
 }
 
-#[derive(Default)]
+#[derive(TypePath, Default)]
 struct EventReplicationData<T: Event>(PhantomData<T>);
 
 #[derive(Resource)]

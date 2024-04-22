@@ -8,10 +8,10 @@ use bevy_stardust::testing::transport::*;
 use bevy_stardust_replicate::prelude::*;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Event, Serialize, Deserialize)]
+#[derive(Debug, TypePath, Event, Serialize, Deserialize)]
 enum PlayerMoveEvent { Up, Down, Left, Right }
 
-#[derive(Debug, Event, Serialize, Deserialize)]
+#[derive(Debug, TypePath, Event, Serialize, Deserialize)]
 struct PlayerAttackEvent;
 
 fn main() {

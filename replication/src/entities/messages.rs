@@ -1,5 +1,7 @@
+use bevy::prelude::*;
+
 /// Stardust channel for entity replication.
-#[derive(Default)]
+#[derive(Default, TypePath)]
 pub(super) struct EntityReplicationChannel;
 
 #[derive(Debug, PartialEq, Eq)]

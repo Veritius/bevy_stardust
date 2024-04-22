@@ -7,7 +7,7 @@ pub(super) struct ResourceSerialisationFunctions<T: Resource> {
     pub fns: SerialisationFunctions<T>,
 }
 
-#[derive(Default)]
+#[derive(TypePath, Default)]
 pub(super) struct ResourceReplicationMessages<T: Resource>(PhantomData<T>);
 
 #[derive(Debug, Clone, Copy, PartialEq)]

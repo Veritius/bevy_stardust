@@ -12,7 +12,7 @@ use crate::{prelude::*, serialisation::SerialisationFunctions};
 /// 
 /// This plugin must be added before [`StardustPlugin`].
 /// Implicitly adds [`ReplicationPlugin`] if not present.
-pub struct ResourceReplicationPlugin<T: Resource> {
+pub struct ResourceReplicationPlugin<T: TypePath + Resource> {
     /// Functions used to serialise and deserialize `T`.
     /// See the [`SerialisationFunctions`] documentation for more information.
     pub serialisation: SerialisationFunctions<T>,
@@ -24,7 +24,7 @@ pub struct ResourceReplicationPlugin<T: Resource> {
     pub phantom: PhantomData<T>,
 }
 
-impl<T: Resource> Plugin for ResourceReplicationPlugin<T> {
+impl<T: TypePath + Resource> Plugin for ResourceReplicationPlugin<T> {
     fn build(&self, app: &mut App) {
         app.insert_resource(messages::ResourceSerialisationFunctions {
             fns: self.serialisation.clone()

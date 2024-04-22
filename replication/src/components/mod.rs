@@ -9,7 +9,7 @@ use bevy_stardust::prelude::*;
 use crate::{prelude::*, serialisation::SerialisationFunctions};
 
 /// Enables replicating the component `T` on entities.
-pub struct ComponentReplicationPlugin<T: Component> {
+pub struct ComponentReplicationPlugin<T: TypePath + Component> {
     /// Functions used to serialise and deserialize `T`.
     /// See the [`SerialisationFunctions`] documentation for more information.
     pub serialisation: SerialisationFunctions<T>,
@@ -21,7 +21,7 @@ pub struct ComponentReplicationPlugin<T: Component> {
     pub phantom: PhantomData<T>,
 }
 
-impl<T: Component> Plugin for ComponentReplicationPlugin<T> {
+impl<T: TypePath + Component> Plugin for ComponentReplicationPlugin<T> {
     fn build(&self, app: &mut App) {
         if !app.is_plugin_added::<EntityReplicationPlugin>() {
             panic!("ComponentReplicationPlugin must be added after EntityReplicationPlugin");

@@ -7,5 +7,5 @@ pub(super) struct ComponentSerialisationFunctions<T: Component> {
     pub fns: SerialisationFunctions<T>,
 }
 
-#[derive(Default)]
+#[derive(TypePath, Default)]
 pub(super) struct ComponentReplicationMessages<T: Component>(PhantomData<T>);
