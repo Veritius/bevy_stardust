@@ -57,6 +57,8 @@ use bevy_stardust::prelude::*;
 // Channels are accessed with types in the type system.
 // Simply put, you just need to create simple types like this.
 // You can use Rust's privacy system to control channel access.
+// Channels must also implement TypePath: this is easy to derive.
+#[derive(TypePath)]
 struct MyChannel;
 
 fn main() {
@@ -144,8 +146,7 @@ fn read_words_system(
 ```
 
 Available feature flags:
-- `reflect`: Adds `Reflect` to the `Channel` supertrait
-- `hashing`: Allows hashing Stardust-related data
+- `hashing`: Stable (identical across machines) hashing functionality
 
 **Please note:** The `hashing` feature flag is dependent on `gxhash`, which will not compile on targets without AES intrinsics. It's made available for local testing, but will break in production. See the [tracking issue](https://github.com/Veritius/bevy_stardust/issues/31) for more.
 

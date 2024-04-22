@@ -6,8 +6,13 @@ use bevy::prelude::*;
 use bevy_stardust::prelude::*;
 use bevy_stardust::testing::transport::*;
 
+#[derive(TypePath)]
 struct MyChannelA;
+
+#[derive(TypePath)]
 struct MyChannelB;
+
+#[derive(TypePath)]
 struct MyChannelC;
 
 #[derive(Resource)]

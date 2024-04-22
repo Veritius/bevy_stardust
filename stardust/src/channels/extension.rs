@@ -20,10 +20,6 @@ impl ChannelSetupAppExt for App {
         &mut self,
         config: ChannelConfiguration,
     ) {
-        // Register channel type in reflect data
-        #[cfg(feature="reflect")]
-        self.register_type::<C>();
-
         // Change hash value
         #[cfg(feature="hashing")] {
             use crate::hashing::HashingAppExt;
