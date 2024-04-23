@@ -24,7 +24,7 @@ impl OrderedMessages {
         Self {
             mode: OrderingMode::Ordered,
             send_index: SequenceId::default(),
-            recv_queue: Vec::with_capacity(16),
+            recv_queue: Vec::with_capacity(0),
             recv_index: SequenceId::default(),
         }
     }
