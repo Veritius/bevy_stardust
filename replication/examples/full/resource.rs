@@ -76,11 +76,11 @@ fn update_resource_text_system(
     let icba = res.is_changed_by_application();
 
     let msg = match (icbr, icba) {
-        (false, true) => "the application",
+        (false, true) => "this application",
         (true, false) => "the replication plugin",
         (false, false) => "nobody",
         (true, true) => unreachable!(),
     };
 
-    text.sections[0].value = format!("The current movement speed is {}\nLast updated by {msg}\n", res.value);
+    text.sections[0].value = format!("The current movement speed is {}\nLast changed by {msg}\n", res.value);
 }
