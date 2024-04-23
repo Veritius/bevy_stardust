@@ -6,7 +6,6 @@ mod systems;
 
 pub use change::NetRef;
 
-use std::marker::PhantomData;
 use bevy::prelude::*;
 use bevy_stardust::prelude::*;
 use crate::{prelude::*, serialisation::SerialisationFunctions};
@@ -23,9 +22,6 @@ pub struct ComponentReplicationPlugin<T: ReplicableComponent> {
 
     /// The priority of network messages for replicating `T`.
     pub message_priority: u32,
-
-    #[doc(hidden)]
-    pub phantom: PhantomData<T>,
 }
 
 impl<T: ReplicableComponent> Plugin for ComponentReplicationPlugin<T> {
