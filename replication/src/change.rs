@@ -31,21 +31,14 @@ impl<T> NetChangeTracking<T> {
     }
 
     pub(crate) fn cd_inner<C: DetectChanges>(&self, last_run: Tick, this_run: Tick, other: &C, inv: bool) -> bool {
-        // Check if it's been changed at all
-        if !other.last_changed().is_newer_than(last_run, this_run) {
-            return false;
-        }
+        let has_changed = other.last_changed().is_newer_than(last_run, this_run);
+        let was_repl_change = self.last_changed() == other.last_changed();
 
-        // Check if the change was from a replication system
-        if self.last_changed() == other.last_changed() {
-            return match inv {
-                false => true,
-                true => false
-            };
+        match (has_changed, was_repl_change, inv) {
+            (true, true, false) => true,
+            (true, true, true) => false,
+            _ => false,
         }
-
-        // Otherwise, return false
-        return false;
     }
 }
 
