@@ -16,9 +16,9 @@ impl<'w, R: Resource> NetRes<'w, R> {
     /// Returns `true` if and only if the latest change was made by a replication system.
     pub fn is_changed_by_replication(&self) -> bool {
         self.netch.cd_inner(
+            &self.value,
             self.ticks.last_run(),
             self.ticks.this_run(),
-            &self.value,
             false,
         )
     }
@@ -26,9 +26,9 @@ impl<'w, R: Resource> NetRes<'w, R> {
     /// Returns `true` if and only if the latest change was made by the application or another plugin.
     pub fn is_changed_by_application(&self) -> bool {
         self.netch.cd_inner(
+            &self.value,
             self.ticks.last_run(),
             self.ticks.this_run(),
-            &self.value,
             true,
         )
     }

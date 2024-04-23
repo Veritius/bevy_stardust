@@ -30,7 +30,7 @@ impl<T> NetChangeTracking<T> {
         self.changed = tick;
     }
 
-    pub(crate) fn cd_inner<C: DetectChanges>(&self, last_run: Tick, this_run: Tick, other: &C, inv: bool) -> bool {
+    pub(crate) fn cd_inner<C: DetectChanges>(&self, other: &C, last_run: Tick, this_run: Tick, inv: bool) -> bool {
         if !other.last_changed().is_newer_than(last_run, this_run) {
             return false;
         }
