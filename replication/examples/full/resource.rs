@@ -1,4 +1,4 @@
-use bevy::{ecs::system::SystemChangeTick, prelude::*};
+use bevy::prelude::*;
 use bevy_stardust_replicate::prelude::*;
 use serde::{Serialize, Deserialize};
 
@@ -66,7 +66,6 @@ fn spawn_resource_text_system(
 fn update_resource_text_system(
     res: NetRes<MoveSpeedMultiplier>,
     mut query: Query<&mut Text, With<ResourceDisplay>>,
-    ticks: SystemChangeTick,
 ) {
     if !res.is_changed() { return; }
 
