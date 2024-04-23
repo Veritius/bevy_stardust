@@ -74,8 +74,10 @@ fn update_resource_text_system(
 
     if !res.is_changed() { return; }
     text.sections[0].value = format!("The current movement speed is {}\n", res.value);
-    text.sections[1].value = format!("Last updated by {}\n", match res.is_changed_by_application() {
-        true => "the application",
-        false => "the replication plugin",
+    text.sections[1].value = format!("Last updated by {}\n", match (res.is_changed_by_replication(), res.is_changed_by_application()) {
+        (false, true) => "the application",
+        (true, false) => "the replication plugin",
+        (false, false) => "nobody",
+        (true, true) => unreachable!(),
     });
 }
