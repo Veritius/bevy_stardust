@@ -28,13 +28,14 @@ pub(crate) struct MoveSpeedMultiplier {
 fn adjust_resource_system(
     buttons: Res<ButtonInput<KeyCode>>,
     mut res: ResMut<MoveSpeedMultiplier>,
+    time: Res<Time>,
 ) {
     if buttons.pressed(KeyCode::ArrowUp) {
-        res.value += 0.01;
+        res.value += 1.0 * time.delta_seconds();
     }
 
     if buttons.pressed(KeyCode::ArrowDown) {
-        res.value -= 0.01;
+        res.value -= 1.0 * time.delta_seconds();
     }
 }
 
