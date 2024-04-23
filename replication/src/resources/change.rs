@@ -1,8 +1,10 @@
 use std::ops::Deref;
-use bevy::{ecs::system::{SystemChangeTick, SystemParam}, prelude::*};
+use bevy::{ecs::{component::Tick, system::{SystemChangeTick, SystemParam}}, prelude::*};
 use crate::change::NetChangeTracking;
 
 /// [`Resource`] access with additional change-tracking metadata.
+/// 
+/// The [`DetectChanges`] implementation is identical to `Res<R>`.
 #[derive(SystemParam)]
 pub struct NetRes<'w, R: Resource> {
     value: Res<'w, R>,
@@ -29,6 +31,23 @@ impl<'w, R: Resource> NetRes<'w, R> {
             &self.value,
             true,
         )
+    }
+}
+
+impl<'w, R: Resource> DetectChanges for NetRes<'w, R> {
+    #[inline]
+    fn is_added(&self) -> bool {
+        self.value.is_added()
+    }
+
+    #[inline]
+    fn is_changed(&self) -> bool {
+        self.value.is_changed()
+    }
+
+    #[inline]
+    fn last_changed(&self) -> Tick {
+        self.value.last_changed()
     }
 }
 

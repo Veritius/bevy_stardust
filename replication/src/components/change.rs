@@ -1,8 +1,10 @@
 use std::ops::Deref;
-use bevy::{ecs::{query::QueryData, system::SystemChangeTick}, prelude::*};
+use bevy::{ecs::{component::Tick, query::QueryData, system::SystemChangeTick}, prelude::*};
 use crate::change::NetChangeTracking;
 
 /// [`Component`] access with additional change-tracking metadata.
+/// 
+/// The [`DetectChanges`] implementation is identical to `Ref<R>`.
 #[derive(QueryData)]
 pub struct NetRef<'w, C: Component> {
     value: Ref<'w, C>,
@@ -28,6 +30,23 @@ impl<'w, C: Component> NetRef<'w, C> {
             &self.value,
             true,
         )
+    }
+}
+
+impl<'w, C: Component> DetectChanges for NetRef<'w, C> {
+    #[inline]
+    fn is_added(&self) -> bool {
+        self.value.is_added()
+    }
+
+    #[inline]
+    fn is_changed(&self) -> bool {
+        self.value.is_changed()
+    }
+
+    #[inline]
+    fn last_changed(&self) -> Tick {
+        self.value.last_changed()
     }
 }
 
