@@ -71,9 +71,9 @@ fn update_resource_text_system(
     mut query: Query<&mut Text, With<ResourceDisplay>>,
     ticks: SystemChangeTick,
 ) {
-    let mut text = query.single_mut();
-
     if !res.is_changed() { return; }
+
+    let mut text = query.single_mut();
     text.sections[0].value = format!("The current movement speed is {}\n", res.value);
 
     let lch = res.last_changed();
