@@ -1,3 +1,4 @@
+mod resource;
 mod setup;
 
 use bevy::prelude::*;
@@ -15,6 +16,8 @@ fn main() {
 
     let mut app = App::new();
     app.add_plugins((DefaultPlugins, StardustPlugin, CoreReplicationPlugin));
+
+    resource::setup_resources(&mut app);
 
     app.add_systems(Startup, setup::spawn_camera);
 

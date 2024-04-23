@@ -1,7 +1,6 @@
 //! Serialisation related functionality.
 
-pub use bevy_stardust::messages::Bytes;
-
+use bytes::Bytes;
 use anyhow::Result;
 
 /// Function pointers for serialisation and deserialisation for `T`.
