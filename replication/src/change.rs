@@ -37,6 +37,8 @@ impl<T> NetChangeTracking<T> {
         match (has_changed, was_repl_change, inv) {
             (true, true, false) => true,
             (true, true, true) => false,
+            (true, false, false) => false,
+            (true, false, true) => true,
             _ => false,
         }
     }

@@ -49,13 +49,10 @@ fn spawn_resource_text_system(
         text: Text::from_sections([
             TextSection::new(
                 "\n",
-                TextStyle { font_size: 16.0, ..default() }),
-            TextSection::new(
-                "\n",
-                TextStyle { font_size: 16.0, ..default() }),
+                TextStyle { font_size: 20.0, ..default() }),
             TextSection::new(
                 "Use ArrowUp to increase and ArrowDown to decrease",
-                TextStyle { font_size: 12.0, ..default()}),
+                TextStyle { font_size: 16.0, ..default()}),
         ]),
         style: Style {
             justify_content: JustifyContent::FlexStart,
@@ -74,11 +71,6 @@ fn update_resource_text_system(
     if !res.is_changed() { return; }
 
     let mut text = query.single_mut();
-    text.sections[0].value = format!("The current movement speed is {}\n", res.value);
-
-    let lch = res.last_changed();
-    let lrn = ticks.last_run();
-    let trn = ticks.this_run();
 
     let icbr = res.is_changed_by_replication();
     let icba = res.is_changed_by_application();
@@ -90,5 +82,5 @@ fn update_resource_text_system(
         (true, true) => unreachable!(),
     };
 
-    text.sections[1].value = format!("Last updated by {msg} ({icbr} {icba}) ({lch:?} {lrn:?} {trn:?})\n");
+    text.sections[0].value = format!("The current movement speed is {}\nLast updated by {msg}\n", res.value);
 }
