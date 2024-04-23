@@ -47,14 +47,14 @@ fn spawn_resource_text_system(
     commands.spawn((ResourceDisplay, TextBundle {
         text: Text::from_sections([
             TextSection::new(
-                "",
-                TextStyle { font_size: 12.0, ..default() }),
+                "\n",
+                TextStyle { font_size: 16.0, ..default() }),
             TextSection::new(
-                "",
-                TextStyle { font_size: 12.0, ..default() }),
+                "\n",
+                TextStyle { font_size: 16.0, ..default() }),
             TextSection::new(
                 "Use ArrowUp to increase and ArrowDown to decrease",
-                TextStyle { font_size: 10.0, ..default()}),
+                TextStyle { font_size: 12.0, ..default()}),
         ]),
         style: Style {
             justify_content: JustifyContent::FlexStart,
@@ -72,8 +72,8 @@ fn update_resource_text_system(
     let mut text = query.single_mut();
 
     if !res.is_changed() { return; }
-    text.sections[0].value = format!("The current movement speed is {}", res.value);
-    text.sections[1].value = format!("Last updated by {}", match res.is_changed_by_application() {
+    text.sections[0].value = format!("The current movement speed is {}\n", res.value);
+    text.sections[1].value = format!("Last updated by {}\n", match res.is_changed_by_application() {
         true => "the application",
         false => "the replication plugin",
     });
