@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::{ecs::system::SystemChangeTick, prelude::*};
 use bevy_stardust_replicate::prelude::*;
 use serde::{Serialize, Deserialize};
 
@@ -69,15 +69,26 @@ fn spawn_resource_text_system(
 fn update_resource_text_system(
     res: NetRes<MoveSpeedMultiplier>,
     mut query: Query<&mut Text, With<ResourceDisplay>>,
+    ticks: SystemChangeTick,
 ) {
     let mut text = query.single_mut();
 
     if !res.is_changed() { return; }
     text.sections[0].value = format!("The current movement speed is {}\n", res.value);
-    text.sections[1].value = format!("Last updated by {}\n", match (res.is_changed_by_replication(), res.is_changed_by_application()) {
+
+    let lch = res.last_changed();
+    let lrn = ticks.last_run();
+    let trn = ticks.this_run();
+
+    let icbr = res.is_changed_by_replication();
+    let icba = res.is_changed_by_application();
+
+    let msg = match (icbr, icba) {
         (false, true) => "the application",
         (true, false) => "the replication plugin",
         (false, false) => "nobody",
         (true, true) => unreachable!(),
-    });
+    };
+
+    text.sections[1].value = format!("Last updated by {msg} ({icbr} {icba}) ({lch:?} {lrn:?} {trn:?})\n");
 }
