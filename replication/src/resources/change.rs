@@ -13,21 +13,21 @@ pub struct NetRes<'w, R: Resource> {
 impl<'w, R: Resource> NetRes<'w, R> {
     /// Returns `true` if and only if the latest change was made by a replication system.
     pub fn is_changed_by_replication(&self) -> bool {
-        if self.netch.changed == self.value.last_changed() {
-            return true;
-        }
-
-        return (*self.netch).is_changed(
+        self.netch.cd_inner(
             self.ticks.last_run(),
             self.ticks.this_run(),
-        );
+            &self.value,
+            false,
+        )
     }
 
     /// Returns `true` if and only if the latest change was made by the application or another plugin.
     pub fn is_changed_by_application(&self) -> bool {
-        self.value.last_changed().is_newer_than(
-            self.netch.changed,
-            self.ticks.this_run()
+        self.netch.cd_inner(
+            self.ticks.last_run(),
+            self.ticks.this_run(),
+            &self.value,
+            true,
         )
     }
 }

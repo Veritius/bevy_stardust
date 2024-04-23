@@ -26,7 +26,7 @@ pub(super) fn recv_resource_data_system<T: ReplicableResource>(
             };
 
             *res = t;
-            chg.changed = ticks.this_run();
+            chg.set_change_tick(ticks.this_run());
         }
     }
 }

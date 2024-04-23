@@ -12,21 +12,21 @@ pub struct NetRef<'w, C: Component> {
 impl<'w, C: Component> NetRef<'w, C> {
     /// Returns `true` if and only if the latest change was made by a replication system.
     pub fn is_changed_by_replication(&self, ticks: &SystemChangeTick) -> bool {
-        if self.netch.changed == self.value.last_changed() {
-            return true;
-        }
-
-        return (*self.netch).is_changed(
+        self.netch.cd_inner(
             ticks.last_run(),
             ticks.this_run(),
-        );
+            &self.value,
+            false,
+        )
     }
 
     /// Returns `true` if and only if the latest change was made by the application or another plugin.
     pub fn is_changed_by_application(&self, ticks: &SystemChangeTick) -> bool {
-        self.value.last_changed().is_newer_than(
-            self.netch.changed,
+        self.netch.cd_inner(
+            ticks.last_run(),
             ticks.this_run(),
+            &self.value,
+            true,
         )
     }
 }
