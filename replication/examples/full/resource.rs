@@ -57,6 +57,7 @@ fn spawn_resource_text_system(
         style: Style {
             justify_content: JustifyContent::FlexStart,
             align_items: AlignItems::FlexStart,
+            margin: UiRect::all(Val::Px(5.0)),
             ..default()
         },
         ..default()
