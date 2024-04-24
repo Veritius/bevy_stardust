@@ -1,10 +1,11 @@
 # bevy_stardust_replicate
-Server-authoritative game state replication for [bevy_stardust].
+Authoritative game state replication for [bevy_stardust].
 
 ## Features
 - `Resource`, `Component`, and `Event` replication
+- Integration with Bevy's change detection
 - Not reliant on any existing serialisation crate
-- Optional support for [serde] trait implementors
+- Optional support for using [serde] (with [bincode])
 
 ## Future features
 - Delta encoding/compression
