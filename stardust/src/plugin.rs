@@ -33,6 +33,9 @@ impl Plugin for StardustPlugin {
 
         // Register events
         app.add_event::<DisconnectPeerEvent>();
+        app.add_event::<PeerConnectingEvent>();
+        app.add_event::<PeerConnectedEvent>();
+        app.add_event::<PeerDisconnectingEvent>();
         app.add_event::<PeerDisconnectedEvent>();
 
         // Setup orderings
