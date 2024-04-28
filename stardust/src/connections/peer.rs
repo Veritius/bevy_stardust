@@ -1,6 +1,6 @@
 //! "Peers" aka other computers over the network.
 
-use std::time::Instant;
+use std::{net::SocketAddr, time::Instant};
 use bevy::prelude::*;
 
 /// An active connection to a remote peer.
@@ -13,10 +13,11 @@ use bevy::prelude::*;
 /// Instead, it should be managed by transport layer plugins.
 /// 
 /// Entities with this component may also have the following components:
-/// - [`NetworkMessages`](crate::messages::NetworkMessages), relating to messages
-/// - [`NetworkPeerUid`], relating to persistent data
-/// - [`NetworkPeerLifestage`], relating to connection state
-/// - [`NetworkSecurity`](super::security::NetworkSecurity), relating to encryption
+/// - [`NetworkMessages`](crate::messages::NetworkMessages), relating to messages.
+/// - [`NetworkPeerAddress`], relating to IP address data.
+/// - [`NetworkPeerUid`], relating to persistent data.
+/// - [`NetworkPeerLifestage`], relating to connection state.
+/// - [`NetworkSecurity`](super::security::NetworkSecurity), relating to encryption.
 #[derive(Debug, Component, Reflect)]
 #[reflect(Debug, Component)]
 pub struct NetworkPeer {
@@ -83,6 +84,10 @@ pub enum NetworkPeerLifestage {
     /// The connection is closed, and the entity will soon be despawned automatically.
     Closed,
 }
+
+/// The IP address of a network peer, if it has one.
+#[derive(Component, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct NetworkPeerAddress(pub SocketAddr);
 
 /// A unique identifier for a [`NetworkPeer`], to store persistent data across multiple connections.
 /// This component should only be constructed by the app developer, but can be read by any plugins.
