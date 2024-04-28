@@ -31,6 +31,10 @@ impl Plugin for StardustPlugin {
         app.register_type::<NetworkMessages<Incoming>>();
         app.register_type::<NetworkMessages<Outgoing>>();
 
+        // Register events
+        app.add_event::<DisconnectPeerEvent>();
+        app.add_event::<PeerDisconnectedEvent>();
+
         // Setup orderings
         crate::scheduling::configure_scheduling(app);
 
