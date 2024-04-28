@@ -10,6 +10,37 @@ pub struct StardustPlugin;
 
 impl Plugin for StardustPlugin {
     fn build(&self, app: &mut App) {
+        // Register connection types
+        app.register_type::<NetworkPeer>();
+        app.register_type::<NetworkPeerUid>();
+        app.register_type::<NetworkGroup>();
+        app.register_type::<NetworkPeerLifestage>();
+        app.register_type::<NetworkSecurity>();
+        app.register_type::<NetworkPerformanceReduction>();
+
+        // Register channel types
+        app.register_type::<ChannelId>();
+        app.register_type::<ChannelConfiguration>();
+        app.register_type::<ReliabilityGuarantee>();
+        app.register_type::<OrderingGuarantee>();
+
+        // Register messaging types
+        app.register_type::<NetDirection>();
+        app.register_type::<Incoming>();
+        app.register_type::<Outgoing>();
+        app.register_type::<NetworkMessages<Incoming>>();
+        app.register_type::<NetworkMessages<Outgoing>>();
+
+        // Register events
+        app.add_event::<DisconnectPeerEvent>();
+        app.add_event::<PeerConnectingEvent>();
+        app.add_event::<PeerConnectedEvent>();
+        app.add_event::<PeerDisconnectingEvent>();
+        app.add_event::<PeerDisconnectedEvent>();
+
+        // Setup orderings
+        crate::scheduling::configure_scheduling(app);
+
         // Add ChannelRegistryMut
         app.insert_resource(ChannelRegistryMut(Box::new(ChannelRegistryInner::new())));
 
@@ -19,9 +50,6 @@ impl Plugin for StardustPlugin {
             crate::messages::systems::clear_message_queue_system::<Outgoing>,
             crate::messages::systems::clear_message_queue_system::<Incoming>,
         ).in_set(NetworkWrite::Clear));
-
-        // Setup orderings
-        crate::scheduling::configure_scheduling(app);
 
         // Hashing-related functionality
         #[cfg(feature="hashing")] {

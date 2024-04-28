@@ -8,8 +8,9 @@ use bevy::prelude::*;
 ///
 /// This value is set by the transport layer managing this peer.
 /// It's up to it to provide an appropriate value here.
-#[derive(Debug, Component, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-#[cfg_attr(feature="reflect", derive(bevy::reflect::Reflect))]
+#[derive(Debug, Component, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Reflect)]
+#[reflect(Debug, Component, PartialEq)]
+#[non_exhaustive]
 pub enum NetworkSecurity {
     /// Communication is encrypted but not authenticated, or is fully plain text.
     /// 

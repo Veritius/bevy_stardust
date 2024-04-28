@@ -6,8 +6,13 @@ use bevy::prelude::*;
 use bevy_stardust::prelude::*;
 use bevy_stardust::testing::transport::*;
 
+#[derive(TypePath)]
 struct MyChannelA;
+
+#[derive(TypePath)]
 struct MyChannelB;
+
+#[derive(TypePath)]
 struct MyChannelC;
 
 #[derive(Resource)]
@@ -65,7 +70,7 @@ fn read_system(
     query: Query<&NetworkMessages<Incoming>, With<NetworkPeer>>,
 ) {
     for incoming in query.iter() {
-        for (channel, queues) in incoming.all_queues() {
+        for (channel, queues) in incoming.iter() {
             for payload in queues {
                 info!("{}: Received a message from a peer on channel {channel:?}: {payload:?}", name.0);
             }

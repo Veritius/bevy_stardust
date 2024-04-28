@@ -1,6 +1,6 @@
 //! "Peers" aka other computers over the network.
 
-use std::time::Instant;
+use std::{net::SocketAddr, time::Instant};
 use bevy::prelude::*;
 
 /// An active connection to a remote peer.
@@ -13,12 +13,13 @@ use bevy::prelude::*;
 /// Instead, it should be managed by transport layer plugins.
 /// 
 /// Entities with this component may also have the following components:
-/// - [`NetworkMessages`](crate::messages::NetworkMessages), relating to messages
-/// - [`NetworkPeerUid`], relating to persistent data
-/// - [`NetworkPeerLifestage`], relating to connection state
-/// - [`SecurityLevel`](super::security::SecurityLevel), relating to encryption
-#[derive(Debug, Component)]
-#[cfg_attr(feature="reflect", derive(bevy::reflect::Reflect))]
+/// - [`NetworkMessages`](crate::messages::NetworkMessages), relating to messages.
+/// - [`NetworkPeerAddress`], relating to IP address data.
+/// - [`NetworkPeerUid`], relating to persistent data.
+/// - [`NetworkPeerLifestage`], relating to connection state.
+/// - [`NetworkSecurity`](super::security::NetworkSecurity), relating to encryption.
+#[derive(Debug, Component, Reflect)]
+#[reflect(Debug, Component)]
 pub struct NetworkPeer {
     /// The point in time this peer was added to the `World`.
     pub joined: Instant,
@@ -62,8 +63,8 @@ impl NetworkPeer {
 /// 
 /// This exists to model the average lifecycle of a connection, from an initial handshake to being disconnected.
 /// An `Ord` implementation is provided, with variants being 'greater' if they're later in the model lifecycle.
-#[derive(Debug, Component, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-#[cfg_attr(feature="reflect", derive(bevy::reflect::Reflect))]
+#[derive(Debug, Component, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Reflect)]
+#[reflect(Debug, Component, PartialEq)]
 #[non_exhaustive]
 pub enum NetworkPeerLifestage {
     /// Midway through a [handshake].
@@ -84,13 +85,17 @@ pub enum NetworkPeerLifestage {
     Closed,
 }
 
+/// The IP address of a network peer, if it has one.
+#[derive(Component, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct NetworkPeerAddress(pub SocketAddr);
+
 /// A unique identifier for a [`NetworkPeer`], to store persistent data across multiple connections.
 /// This component should only be constructed by the app developer, but can be read by any plugins.
 /// 
 /// If you're working with another ID namespace, like UUIDs and Steam IDs, you should
 /// map the ids from that space into a unique value here through some kind of associative array.
-#[derive(Component, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[cfg_attr(feature="reflect", derive(bevy::reflect::Reflect))]
+#[derive(Component, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Reflect)]
+#[reflect(Debug, Component, PartialEq, Hash)]
 pub struct NetworkPeerUid(pub u64);
 
 impl std::fmt::Debug for NetworkPeerUid {
