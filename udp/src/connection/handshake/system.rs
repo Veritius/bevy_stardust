@@ -74,7 +74,7 @@ pub(crate) fn handshake_polling_system(
                         HandshakeParsingResponse::Continue(val) => val,
                         HandshakeParsingResponse::WeRejected(code) => {
                             // Set handshake state to failed
-                            handshake.state = HandshakeFailureReason::WeRejected(code).into();
+                            handshake.state = HandshakeFailureReason::WeRejected { code, message: None }.into();
 
                             // Check if we ought to send a response packet
                             if !code.should_respond_on_rejection() { break; }
@@ -86,8 +86,15 @@ pub(crate) fn handshake_polling_system(
                             break 'outer;
                         },
                         HandshakeParsingResponse::TheyRejected(code) => {
+                            // Read any additional data as a message
+                            let message = reader.read_to_end();
+                            let message = match message.len() {
+                                0 => None,
+                                _ => Some(message),
+                            };
+
                             // Set handshake state to failed
-                            handshake.state = HandshakeFailureReason::TheyRejected(code).into();
+                            handshake.state = HandshakeFailureReason::TheyRejected { code, message }.into();
 
                             // We're done
                             break 'outer;
@@ -111,7 +118,7 @@ pub(crate) fn handshake_polling_system(
                             Ok(_) => {},
                             Err(code) => {
                                 // Set handshake state to failed
-                                handshake.state = HandshakeFailureReason::WeRejected(code).into();
+                                handshake.state = HandshakeFailureReason::WeRejected { code, message: None }.into();
 
                                 // Send a packet informing them of our denial
                                 send_close_packet(&mut connection.packet_queue, &mut handshake.reliability, code);
@@ -174,14 +181,21 @@ pub(crate) fn handshake_polling_system(
                         HandshakeParsingResponse::Continue(val) => val,
                         HandshakeParsingResponse::WeRejected(code) => {
                             // Set handshake state to failed
-                            handshake.state = HandshakeFailureReason::WeRejected(code).into();
+                            handshake.state = HandshakeFailureReason::WeRejected { code, message: None }.into();
 
                             // We're done here
                             break 'outer;
                         },
                         HandshakeParsingResponse::TheyRejected(code) => {
+                            // Read any additional data as a message
+                            let message = reader.read_to_end();
+                            let message = match message.len() {
+                                0 => None,
+                                _ => Some(message),
+                            };
+
                             // Set handshake state to failed
-                            handshake.state = HandshakeFailureReason::TheyRejected(code).into();
+                            handshake.state = HandshakeFailureReason::TheyRejected { code, message }.into();
 
                             // We're done here
                             break 'outer;

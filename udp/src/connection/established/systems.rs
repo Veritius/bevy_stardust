@@ -104,7 +104,7 @@ pub(crate) fn established_packet_builder_system(
         }
 
         // Move Stardust messages into the packing queue
-        for (channel, messages) in outgoing.all_queues() {
+        for (channel, messages) in outgoing.iter() {
             // Collect data about the messages overall
             let channel_int = u32::from(channel).wrapping_add(1);
             let channel_data = registry.channel_config(channel).unwrap();

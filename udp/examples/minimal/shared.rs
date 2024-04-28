@@ -60,7 +60,7 @@ fn send_and_recv_system(
         let id = registry.channel_id(std::any::TypeId::of::<MyChannel>()).unwrap();
 
         // Read all messages
-        for message in incoming.channel_queue(id) {
+        for message in incoming.get(id) {
             let message = std::str::from_utf8(&message).unwrap();
             tracing::info!("Received a message from {peer:?}: {message}");
         }

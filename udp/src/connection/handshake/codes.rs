@@ -25,6 +25,7 @@ pub(super) enum HandshakeResponseCode {
     IncompatibleApplicationMinorVersion = 9,
 
     ServerNotListening = 10,
+    CloseEventSent = 11,
 }
 
 impl HandshakeResponseCode {
@@ -56,6 +57,7 @@ impl From<u16> for HandshakeResponseCode {
             9 => IncompatibleApplicationMinorVersion,
 
             10 => ServerNotListening,
+            11 => CloseEventSent,
 
             _ => Unknown,
         }
@@ -83,6 +85,7 @@ impl std::fmt::Display for HandshakeResponseCode {
             IncompatibleApplicationMinorVersion => "incompatible application minor version",
 
             ServerNotListening => "server not accepting connections",
+            CloseEventSent => "close event sent during handshake",
         })
     }
 }

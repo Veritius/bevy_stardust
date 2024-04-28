@@ -4,6 +4,7 @@ mod packets;
 mod system;
 
 use bevy_stardust::connections::NetworkPeer;
+use bytes::Bytes;
 pub(crate) use system::{handshake_polling_system, potential_new_peers_system};
 
 use std::{net::SocketAddr, time::Instant};
@@ -74,8 +75,14 @@ impl From<HandshakeFailureReason> for HandshakeState {
 #[derive(Debug)]
 enum HandshakeFailureReason {
     TimedOut,
-    WeRejected(HandshakeResponseCode),
-    TheyRejected(HandshakeResponseCode),
+    WeRejected {
+        code: HandshakeResponseCode,
+        message: Option<Bytes>,
+    },
+    TheyRejected {
+        code: HandshakeResponseCode,
+        message: Option<Bytes>,
+    },
 }
 
 impl std::fmt::Display for HandshakeFailureReason {
@@ -83,8 +90,8 @@ impl std::fmt::Display for HandshakeFailureReason {
         use HandshakeFailureReason::*;
         match self {
             TimedOut => f.write_str("timed out"),
-            WeRejected(error_code) => f.write_fmt(format_args!("we rejected by remote peer: {error_code}")),
-            TheyRejected(error_code) => f.write_fmt(format_args!("rejected by remote peer: {error_code}")),
+            WeRejected { code, message } => f.write_fmt(format_args!("we rejected remote peer: {code} ({message:?})")),
+            TheyRejected { code, message } => f.write_fmt(format_args!("rejected by remote peer: {code} ({message:?})")),
         }
     }
 }
