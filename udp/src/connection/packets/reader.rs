@@ -1,5 +1,7 @@
 use std::collections::VecDeque;
 use bytes::Bytes;
+use crate::connection::reliability::ReliablePackets;
+
 use super::frames::Frame;
 
 /// Parses incoming packets into an iterator of `Frame` objects.
@@ -16,7 +18,7 @@ impl Default for PacketReader {
 }
 
 impl PacketReader {
-    pub fn iter<'a>(&'a mut self) -> PacketReaderIter<'a> {
+    pub fn iter<'a>(&'a mut self, context: PacketReaderContext<'a>) -> PacketReaderIter<'a> {
         todo!()
     }
 
@@ -25,8 +27,13 @@ impl PacketReader {
     }
 }
 
+pub(crate) struct PacketReaderContext<'a> {
+    pub reliability: &'a mut ReliablePackets,
+}
+
 pub(crate) struct PacketReaderIter<'a> {
     inner: &'a mut PacketReader,
+    ctx: PacketReaderContext<'a>,
 }
 
 impl Iterator for PacketReaderIter<'_> {

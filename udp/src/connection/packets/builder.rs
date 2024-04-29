@@ -1,4 +1,6 @@
 use bytes::Bytes;
+use crate::connection::reliability::ReliablePackets;
+
 use super::frames::Frame;
 
 /// Packs a queue of `Frame` objects into a single packet.
@@ -15,7 +17,7 @@ impl Default for PacketBuilder {
 }
 
 impl PacketBuilder {
-    pub fn iter<'a>(&'a mut self) -> PacketBuilderIter<'a> {
+    pub fn iter<'a>(&'a mut self, context: PacketBuilderContext<'a>) -> PacketBuilderIter<'a> {
         // Sort the queue by priority using Frame's Ord impl
         self.queue.sort_unstable();
 
@@ -27,8 +29,13 @@ impl PacketBuilder {
     }
 }
 
+pub(crate) struct PacketBuilderContext<'a> {
+    pub reliability: &'a mut ReliablePackets,
+}
+
 pub(crate) struct PacketBuilderIter<'a> {
     inner: &'a mut PacketBuilder,
+    ctx: PacketBuilderContext<'a>,
 }
 
 impl Iterator for PacketBuilderIter<'_> {
