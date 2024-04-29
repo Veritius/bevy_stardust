@@ -15,6 +15,9 @@ impl Default for PacketBuilder {
 
 impl PacketBuilder {
     pub fn iter<'a>(&'a mut self) -> PacketBuilderIter<'a> {
+        // Sort the queue by priority using Frame's Ord impl
+        self.queue.sort_unstable();
+
         todo!()
     }
 

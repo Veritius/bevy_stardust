@@ -16,7 +16,7 @@ use tracing::warn;
 use statistics::ConnectionStatistics;
 use timing::ConnectionTimings;
 
-use self::packets::{builder::PacketBuilder, frames::FrameInner, reader::PacketReader};
+use self::packets::{builder::PacketBuilder, reader::PacketReader};
 
 /// An existing UDP connection.
 #[derive(Component, Reflect)]
