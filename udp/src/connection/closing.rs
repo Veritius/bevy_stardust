@@ -4,10 +4,10 @@ use super::{Connection, ConnectionState};
 
 pub(super) fn close_events_system(
     mut events: EventReader<DisconnectPeerEvent>,
-    mut connections: Query<&mut Connection>,
+    mut connections: Query<(&mut Connection, Option<&mut NetworkPeerLifestage>)>,
 ) {
     for event in events.read() {
-        let mut connection = match connections.get_mut(event.peer) {
+        let (mut connection, mut lifestage) = match connections.get_mut(event.peer) {
             Ok(connection) => connection,
             Err(_) => { continue; },
         };
@@ -18,5 +18,12 @@ pub(super) fn close_events_system(
             true => ConnectionState::Closed,
             false => ConnectionState::Closing,
         };
+
+        if let Some(mut lifestage) = lifestage {
+            *lifestage = match event.force {
+                true => NetworkPeerLifestage::Closed,
+                false => NetworkPeerLifestage::Closing,
+            }
+        }
     }
 }
