@@ -29,8 +29,6 @@ pub struct Connection {
 
     #[reflect(ignore)]
     state: ConnectionState,
-    #[reflect(ignore)]
-    state_changed: bool,
 
     #[reflect(ignore)]
     pub(crate) packet_queue: PacketQueue,
@@ -52,7 +50,6 @@ impl Connection {
             remote_address,
 
             state: ConnectionState::Handshaking,
-            state_changed: false,
 
             packet_queue: PacketQueue::new(16, 16),
 

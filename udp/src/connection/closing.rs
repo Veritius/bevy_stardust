@@ -24,14 +24,21 @@ impl Closing {
 }
 
 pub(super) fn close_events_system(
+    mut commands: Commands,
     mut events: EventReader<DisconnectPeerEvent>,
-    mut connections: Query<(&mut Connection, Option<&mut NetworkPeerLifestage>)>,
+    mut connections: Query<(Entity, &mut Connection, Option<&mut NetworkPeerLifestage>)>,
 ) {
     for event in events.read() {
-        let (mut connection, lifestage) = match connections.get_mut(event.peer) {
+        let (entity, mut connection, lifestage) = match connections.get_mut(event.peer) {
             Ok(connection) => connection,
             Err(_) => { continue; },
         };
+
+        match (event.force, connection.state()) {
+            (_, ConnectionState::Closed) => { continue; }
+            (false, ConnectionState::Closing) => { continue },
+            _ => {},
+        }
 
         connection.state = match event.force {
             true => ConnectionState::Closed,
@@ -44,5 +51,12 @@ pub(super) fn close_events_system(
                 false => NetworkPeerLifestage::Closing,
             }
         }
+
+        commands.entity(entity).insert(Closing {
+            reason: event.reason.clone(),
+            close_start: Instant::now(),
+            this_side_closed: false,
+            other_side_closed: false,
+        });
     }
 }
