@@ -1,7 +1,7 @@
 use std::time::Duration;
 use bevy::prelude::*;
 use bevy_stardust::prelude::*;
-use crate::{appdata::ApplicationNetworkVersion, connection::PotentialNewPeer, packet::MTU_SIZE};
+use crate::{appdata::ApplicationNetworkVersion, connection::PotentialNewPeer};
 
 /// The UDP transport plugin.
 /// 
@@ -69,15 +69,7 @@ impl UdpTransportPlugin {
 impl Plugin for UdpTransportPlugin {
     fn build(&self, app: &mut App) {
         use crate::receiving::io_receiving_system;
-        use crate::connection::{
-            PackingScratchCells,
-            potential_new_peers_system,
-            handshake_polling_system,
-            established_packet_reader_system,
-            established_packet_builder_system,
-            established_timeout_system,
-            close_connections_system,
-        };
+        use crate::connection::close_connections_system;
         use crate::endpoint::close_endpoints_system;
         use crate::sending::io_sending_system;
 
@@ -95,19 +87,19 @@ impl Plugin for UdpTransportPlugin {
         // Packet receiving system
         app.add_systems(PreUpdate, (
             io_receiving_system,
-            established_packet_reader_system,
+            // established_packet_reader_system,
         ).chain().in_set(NetworkRead::Receive));
 
         // These systems can run at any time
-        app.add_systems(Update, (
+        /* app.add_systems(Update, (
             potential_new_peers_system,
             handshake_polling_system,
-        ));
+        )); */
 
         // Packet transmitting systems
         app.add_systems(PostUpdate, (
-            established_timeout_system,
-            established_packet_builder_system,
+            // established_timeout_system,
+            // established_packet_builder_system,
             io_sending_system,
             close_connections_system,
             close_endpoints_system,
@@ -119,13 +111,11 @@ impl Plugin for UdpTransportPlugin {
             crate::endpoint::statistics::reset_endpoint_statistics_system,
         ));
 
-        app.init_resource::<PackingScratchCells>();
         app.add_event::<PotentialNewPeer>();
 
         // Add application context resource
         app.insert_resource(PluginConfiguration {
             application_version: self.application_version.clone(),
-            available_payload_len: MTU_SIZE - (4+((self.reliable_bitfield_length as usize)*8)),
             reliable_bitfield_length: self.reliable_bitfield_length as usize,
             attempt_timeout: self.attempt_timeout,
             connection_timeout: self.connection_timeout,
@@ -137,7 +127,6 @@ impl Plugin for UdpTransportPlugin {
 #[derive(Resource)]
 pub(crate) struct PluginConfiguration {
     pub application_version: ApplicationNetworkVersion,
-    pub available_payload_len: usize,
     pub reliable_bitfield_length: usize,
     pub attempt_timeout: Duration,
     pub connection_timeout: Duration,

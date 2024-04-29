@@ -1,7 +1,7 @@
 use std::{io, sync::Mutex};
 use bevy::prelude::*;
 use bytes::Bytes;
-use crate::{connection::PotentialNewPeer, packet::IncomingPacket, prelude::*};
+use crate::{connection::PotentialNewPeer, prelude::*};
 
 // Receives packets from UDP sockets
 pub(crate) fn io_receiving_system(
@@ -43,7 +43,7 @@ pub(crate) fn io_receiving_system(
                             connection.timings.set_last_recv_now();
 
                             // We append it to the queue for later processing
-                            connection.packet_queue.push_incoming(IncomingPacket { payload });
+                            // connection.packet_queue.push_incoming(IncomingPacket { payload });
                         },
 
                         // We don't know this peer

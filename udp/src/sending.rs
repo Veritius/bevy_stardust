@@ -50,10 +50,10 @@ pub(crate) fn io_sending_system(
             } };
         
             // Check if there's anything to send
-            if connection.packet_queue.outgoing().len() == 0 { continue }
+            // if connection.packet_queue.outgoing().len() == 0 { continue }
 
             // Send all packets queued in this peer
-            while let Some(packet) = connection.packet_queue.pop_outgoing() {
+            /* while let Some(packet) = connection.packet_queue.pop_outgoing() {
                 pkts_sent += 1; bytes_sent += packet.payload.len() as u64;
 
                 // Randomly skip actually sending the packet
@@ -85,7 +85,7 @@ pub(crate) fn io_sending_system(
                         return;
                     },
                 }
-            }
+            } */
         }
 
         // Send all packets that have just been queued on the endpoint
