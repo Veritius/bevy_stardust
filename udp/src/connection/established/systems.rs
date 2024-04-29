@@ -154,6 +154,10 @@ pub(crate) fn established_packet_builder_system(
             buf.put(&*packet.payload);
             established.reliability.record(rel_header.seq, packet.payload);
             established.reliability.advance();
+            connection.packet_queue.push_outgoing(OutgoingPacket {
+                payload: buf.freeze(),
+                messages: 0, // TODO
+            });
         }
 
         // Manually drop rel_drain to please our lord the borrow checker.
