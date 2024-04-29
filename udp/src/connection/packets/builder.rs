@@ -6,18 +6,24 @@ use super::frames::Frame;
 /// Packs a queue of `Frame` objects into a single packet.
 pub(crate) struct PacketBuilder {
     queue: Vec<Frame>,
+    budget: usize,
 }
 
 impl Default for PacketBuilder {
     fn default() -> Self {
         Self {
             queue: Vec::with_capacity(32),
+            budget: 0,
         }
     }
 }
 
 impl PacketBuilder {
-    pub fn iter<'a>(&'a mut self, context: PacketBuilderContext<'a>) -> PacketBuilderIter<'a> {
+    pub fn iter<'a>(
+        &'a mut self,
+        budget: usize,
+        context: PacketBuilderContext<'a>
+    ) -> PacketBuilderIter<'a> {
         // Sort the queue by priority using Frame's Ord impl
         self.queue.sort_unstable();
 
