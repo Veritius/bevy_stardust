@@ -1,3 +1,4 @@
+use bytes::Bytes;
 use super::frames::Frame;
 
 /// Packs a queue of `Frame` objects into a single packet.
@@ -28,4 +29,12 @@ impl PacketBuilder {
 
 pub(crate) struct PacketBuilderIter<'a> {
     inner: &'a mut PacketBuilder,
+}
+
+impl Iterator for PacketBuilderIter<'_> {
+    type Item = Bytes;
+    
+    fn next(&mut self) -> Option<Self::Item> {
+        todo!()
+    }
 }

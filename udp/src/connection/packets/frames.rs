@@ -2,10 +2,10 @@ use std::{cmp::Ordering, time::Instant};
 use bevy_stardust::channels::ChannelId;
 use bytes::Bytes;
 
-pub(in crate::connection) struct Frame {
+pub(crate) struct Frame {
     pub priority: u32,
     pub instant: Instant,
-    pub inner: FrameInner,
+    pub(in crate::connection) inner: FrameInner,
 }
 
 impl PartialEq for Frame {

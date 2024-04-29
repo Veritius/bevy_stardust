@@ -1,5 +1,6 @@
 use std::collections::VecDeque;
 use bytes::Bytes;
+use super::frames::Frame;
 
 /// Parses incoming packets into an iterator of `Frame` objects.
 pub(crate) struct PacketReader {
@@ -26,4 +27,12 @@ impl PacketReader {
 
 pub(crate) struct PacketReaderIter<'a> {
     inner: &'a mut PacketReader,
+}
+
+impl Iterator for PacketReaderIter<'_> {
+    type Item = Frame;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        todo!()
+    }
 }
