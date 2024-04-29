@@ -37,6 +37,10 @@ pub struct Connection {
     pub(crate) timings: ConnectionTimings,
     pub(crate) statistics: ConnectionStatistics,
 
+    #[reflect(ignore)]
+    close_reason: Option<Bytes>,
+    #[reflect(ignore)]
+    local_close_sent: bool,
     local_closed: bool,
     remote_closed: bool,
 }
@@ -59,7 +63,9 @@ impl Connection {
             statistics: ConnectionStatistics::default(),
             timings: ConnectionTimings::new(None, None, None),
 
+            close_reason: None,
             local_closed: false,
+            local_close_sent: false,
             remote_closed: false,
         }
     }
