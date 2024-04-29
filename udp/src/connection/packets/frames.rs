@@ -2,6 +2,7 @@ use std::{cmp::Ordering, time::Instant};
 use bevy_stardust::channels::ChannelId;
 use bytes::Bytes;
 
+#[derive(Clone)]
 pub(crate) struct Frame {
     pub priority: u32,
     pub instant: Instant,
@@ -40,20 +41,24 @@ impl Ord for Frame {
     }
 }
 
+#[derive(Clone)]
 pub(in crate::connection) enum FrameInner {
     Control(ControlFrame),
     Handshake(HandshakeFrame),
     Stardust(StardustFrame),
 }
 
+#[derive(Clone)]
 pub(in crate::connection) struct ControlFrame {
     pub payload: Bytes,
 }
 
+#[derive(Clone)]
 pub(in crate::connection) struct HandshakeFrame {
     pub payload: Bytes,
 }
 
+#[derive(Clone)]
 pub(in crate::connection) struct StardustFrame {
     pub channel: ChannelId,
     pub payload: Bytes,
