@@ -7,7 +7,7 @@ pub(super) fn close_events_system(
     mut connections: Query<(&mut Connection, Option<&mut NetworkPeerLifestage>)>,
 ) {
     for event in events.read() {
-        let (mut connection, mut lifestage) = match connections.get_mut(event.peer) {
+        let (mut connection, lifestage) = match connections.get_mut(event.peer) {
             Ok(connection) => connection,
             Err(_) => { continue; },
         };
