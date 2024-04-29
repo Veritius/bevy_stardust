@@ -9,7 +9,7 @@ mod timing;
 
 pub(crate) use systems::close_connections_system;
 
-use std::{collections::VecDeque, net::SocketAddr};
+use std::net::SocketAddr;
 use bevy::prelude::*;
 use bytes::Bytes;
 use tracing::warn;
