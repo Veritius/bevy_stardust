@@ -1,6 +1,5 @@
 pub mod statistics;
 
-mod closing;
 mod events;
 mod ordering;
 mod packets;
@@ -17,6 +16,8 @@ use tracing::warn;
 use statistics::ConnectionStatistics;
 use timing::ConnectionTimings;
 
+use self::packets::{builder::PacketBuilder, frames::FrameInner, reader::PacketReader};
+
 /// An existing UDP connection.
 #[derive(Component, Reflect)]
 #[reflect(from_reflect = false)]
@@ -27,21 +28,14 @@ pub struct Connection {
     state: ConnectionState,
 
     #[reflect(ignore)]
-    pub(crate) recv_packet_queue: VecDeque<Bytes>,
+    pub(crate) packet_builder: PacketBuilder,
     #[reflect(ignore)]
-    pub(crate) send_packet_queue: VecDeque<Bytes>,
+    pub(crate) packet_reader: PacketReader,
 
     pub(crate) owning_endpoint: Entity,
     pub(crate) direction: ConnectionDirection,
     pub(crate) timings: ConnectionTimings,
     pub(crate) statistics: ConnectionStatistics,
-
-    #[reflect(ignore)]
-    close_reason: Option<Bytes>,
-    #[reflect(ignore)]
-    local_close_sent: bool,
-    local_closed: bool,
-    remote_closed: bool,
 }
 
 /// Functions for controlling the connection.
@@ -55,18 +49,13 @@ impl Connection {
             remote_address,
             state: ConnectionState::Handshaking,
 
-            recv_packet_queue: VecDeque::with_capacity(16),
-            send_packet_queue: VecDeque::with_capacity(16),
+            packet_builder: PacketBuilder::default(),
+            packet_reader: PacketReader::default(),
 
             owning_endpoint,
             direction,
             statistics: ConnectionStatistics::default(),
             timings: ConnectionTimings::new(None, None, None),
-
-            close_reason: None,
-            local_closed: false,
-            local_close_sent: false,
-            remote_closed: false,
         }
     }
 }

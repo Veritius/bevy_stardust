@@ -1,17 +1,30 @@
 use std::collections::VecDeque;
 use bytes::Bytes;
 
-pub(in crate::connection) struct PacketReader {
+/// Parses incoming packets into an iterator of `Frame` objects.
+pub(crate) struct PacketReader {
+    queue: VecDeque<Bytes>,
+}
 
+impl Default for PacketReader {
+    fn default() -> Self {
+        Self {
+            queue: VecDeque::with_capacity(16),
+        }
+    }
 }
 
 impl PacketReader {
     pub fn iter<'a>(&'a mut self, queue: &'a mut VecDeque<Bytes>) -> PacketReaderIter<'a> {
         todo!()
     }
+
+    pub(in crate::connection) fn push(&mut self, packet: Bytes) {
+        self.queue.push_back(packet)
+    }
 }
 
-pub(in crate::connection) struct PacketReaderIter<'a> {
+pub(crate) struct PacketReaderIter<'a> {
     inner: &'a mut PacketReader,
     queue: &'a mut VecDeque<Bytes>,
 }
