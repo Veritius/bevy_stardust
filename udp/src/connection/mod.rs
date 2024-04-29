@@ -1,20 +1,23 @@
 pub mod statistics;
 
+mod closing;
+mod established;
 mod events;
 mod handshake;
 mod ordering;
 mod packets;
 mod reliability;
-mod systems;
 
-pub(crate) use systems::close_connections_system;
-pub(crate) use self::packets::{RecvPacket, SendPacket};
+pub(crate) use packets::frames::{Frame, FrameHeader};
+pub(crate) use packets::{RecvPacket, SendPacket};
 
-use std::{collections::VecDeque, net::SocketAddr, time::Instant};
 use bevy::prelude::*;
-use bytes::Bytes;
-use tracing::warn;
+use closing::Closing;
+use established::Established;
+use handshake::Handshake;
 use statistics::ConnectionStatistics;
+use std::{collections::VecDeque, net::SocketAddr, time::Instant};
+use tracing::warn;
 
 /// An existing UDP connection.
 #[derive(Component, Reflect)]
@@ -22,6 +25,9 @@ use statistics::ConnectionStatistics;
 pub struct Connection {
     #[reflect(ignore)]
     remote_address: SocketAddr,
+
+    #[reflect(ignore)]
+    stage: ConnectionStage,
 
     #[reflect(ignore)]
     pub(crate) recv_packets: VecDeque<RecvPacket>,
@@ -37,7 +43,6 @@ pub struct Connection {
     pub(crate) statistics: ConnectionStatistics,
 }
 
-/// Functions for controlling the connection.
 impl Connection {
     fn new(
         owning_endpoint: Entity,
@@ -46,6 +51,8 @@ impl Connection {
     ) -> Self {
         Self {
             remote_address,
+
+            stage: ConnectionStage::Closed,
 
             recv_packets: VecDeque::with_capacity(128),
             send_packets: VecDeque::with_capacity(16),
@@ -74,11 +81,6 @@ impl Connection {
         self.direction.clone()
     }
 
-    /// Returns the [`ConnectionState`] of the connection.
-    pub fn state(&self) -> ConnectionState {
-        todo!()
-    }
-
     /// Returns statistics related to the Connection. See [`ConnectionStatistics`] for more.
     pub fn statistics(&self) -> &ConnectionStatistics {
         &self.statistics
@@ -89,8 +91,9 @@ impl Connection {
 // This happens with component removals and drops in scope
 impl Drop for Connection {
     fn drop(&mut self) {
-        if self.state() != ConnectionState::Closed {
-            warn!("Connection dropped while in the {:?} state", self.state());
+        match self.stage {
+            ConnectionStage::Closed => {},
+            _ => { warn!("An open connection was dropped. Connections should be closed before they're removed.") },
         }
     }
 }
@@ -98,26 +101,18 @@ impl Drop for Connection {
 /// The direction of the connection.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Reflect)]
 pub enum ConnectionDirection {
-    /// Acting as a client, listening to a server.
-    Client,
+    /// The peer that sent the connection attempt,
+    Initiator,
 
-    /// Acting as a server, talking to a client.
-    Server,
+    /// The peer that received the connection attempt.
+    Listener,
 }
 
 /// The state of the connection.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Reflect)]
-pub enum ConnectionState {
-    /// The connection is in the process of being established.
-    Handshaking,
-
-    /// The connection is fully active and ready to communicate.
-    Connected,
-
-    /// The connection is closing and waiting for final data transfer to occur.
-    Closing,
-
-    /// The connection is closed and the entity will be despawned soon.
+enum ConnectionStage {
+    Handshaking(Handshake),
+    Established(Established),
+    Closing(Closing),
     Closed,
 }
 
@@ -125,5 +120,5 @@ pub enum ConnectionState {
 pub(crate) struct PotentialNewPeer {
     pub endpoint: Entity,
     pub address: SocketAddr,
-    pub payload: Bytes,
+    pub packet: RecvPacket,
 }

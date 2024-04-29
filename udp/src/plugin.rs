@@ -69,7 +69,6 @@ impl UdpTransportPlugin {
 impl Plugin for UdpTransportPlugin {
     fn build(&self, app: &mut App) {
         use crate::receiving::io_receiving_system;
-        use crate::connection::close_connections_system;
         use crate::endpoint::close_endpoints_system;
         use crate::sending::io_sending_system;
 
@@ -101,7 +100,6 @@ impl Plugin for UdpTransportPlugin {
             // established_timeout_system,
             // established_packet_builder_system,
             io_sending_system,
-            close_connections_system,
             close_endpoints_system,
         ).chain().in_set(NetworkWrite::Send));
 

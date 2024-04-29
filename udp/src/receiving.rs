@@ -56,7 +56,7 @@ pub(crate) fn io_receiving_system(
                             new_peers.lock().unwrap().send(PotentialNewPeer {
                                 endpoint: endpoint_id,
                                 address: origin,
-                                payload,
+                                packet: RecvPacket { time: Instant::now(), payload },
                             });
                         },
                     }

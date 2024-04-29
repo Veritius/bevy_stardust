@@ -1,8 +1,18 @@
 use std::fmt::Display;
 
+pub(super) struct Handshake {
+    state: HandshakeState,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum HandshakeState {
+    ClientHello,
+    ServerHello,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u16)]
-pub enum HandshakeResponseCode {
+pub(super) enum HandshakeResponseCode {
     // The following values should not be changed.
     // They are used for good error responses in older versions.
 
