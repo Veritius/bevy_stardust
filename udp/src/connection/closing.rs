@@ -1,3 +1,4 @@
+use std::time::Instant;
 use bevy::prelude::*;
 use bevy_stardust::prelude::*;
 use super::{Connection, ConnectionState};
@@ -5,9 +6,21 @@ use super::{Connection, ConnectionState};
 #[derive(Component)]
 #[component(storage = "SparseSet")]
 pub(super) struct Closing {
-    pub reason: Option<Bytes>,
+    reason: Option<Bytes>,
+    close_start: Instant,
     this_side_closed: bool,
     other_side_closed: bool,
+}
+
+impl Closing {
+    pub fn new(reason: Option<Bytes>, start: Instant) -> Self {
+        Self {
+            reason,
+            close_start: start,
+            this_side_closed: false,
+            other_side_closed: false,
+        }
+    }
 }
 
 pub(super) fn close_events_system(
