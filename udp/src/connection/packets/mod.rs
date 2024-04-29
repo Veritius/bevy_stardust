@@ -12,4 +12,5 @@ pub(crate) struct RecvPacket {
 
 pub(crate) struct SendPacket {
     pub payload: Bytes,
+    pub messages: u32,
 }

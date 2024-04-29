@@ -1,4 +1,4 @@
-use std::{io, collections::HashMap, net::{SocketAddr, UdpSocket}};
+use std::{collections::HashMap, io, net::{SocketAddr, UdpSocket}, time::Instant};
 use bevy::prelude::*;
 use bevy_stardust::connections::NetworkPerformanceReduction;
 use bytes::Bytes;
@@ -53,7 +53,7 @@ pub(crate) fn io_sending_system(
             // if connection.packet_queue.outgoing().len() == 0 { continue }
 
             // Send all packets queued in this peer
-            /* while let Some(packet) = connection.packet_queue.pop_outgoing() {
+            while let Some(packet) = connection.send_packets.pop_front() {
                 pkts_sent += 1; bytes_sent += packet.payload.len() as u64;
 
                 // Randomly skip actually sending the packet
@@ -61,7 +61,7 @@ pub(crate) fn io_sending_system(
                     let roll = rng.f32();
                     if performance.packet_drop_chance < roll {
                         // Updating these values simulates a successful packet send
-                        connection.timings.set_last_sent_now();
+                        connection.last_send = Some(Instant::now());
                         endpoint_statistics.record_packet_send(packet.payload.len());
                         connection.statistics.record_packet_send(packet.messages as usize);
 
@@ -73,7 +73,7 @@ pub(crate) fn io_sending_system(
                 match socket.send_to(&packet.payload, connection.remote_address()) {
                     Ok(_) => {
                         // Set last_sent in timings
-                        connection.timings.set_last_sent_now();
+                        connection.last_send = Some(Instant::now());
 
                         // Add to statistics counters
                         endpoint_statistics.record_packet_send(packet.payload.len());
@@ -85,7 +85,7 @@ pub(crate) fn io_sending_system(
                         return;
                     },
                 }
-            } */
+            }
         }
 
         // Send all packets that have just been queued on the endpoint

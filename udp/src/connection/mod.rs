@@ -8,13 +8,13 @@ mod reliability;
 mod systems;
 
 pub(crate) use systems::close_connections_system;
+pub(crate) use self::packets::{RecvPacket, SendPacket};
 
 use std::{collections::VecDeque, net::SocketAddr, time::Instant};
 use bevy::prelude::*;
 use bytes::Bytes;
 use tracing::warn;
 use statistics::ConnectionStatistics;
-use self::packets::{RecvPacket, SendPacket};
 
 /// An existing UDP connection.
 #[derive(Component, Reflect)]

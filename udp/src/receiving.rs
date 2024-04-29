@@ -1,7 +1,7 @@
 use std::{io, sync::Mutex, time::Instant};
 use bevy::prelude::*;
 use bytes::Bytes;
-use crate::{connection::PotentialNewPeer, prelude::*};
+use crate::{connection::{PotentialNewPeer, RecvPacket}, prelude::*};
 
 // Receives packets from UDP sockets
 pub(crate) fn io_receiving_system(
@@ -39,11 +39,16 @@ pub(crate) fn io_receiving_system(
                             // SAFETY: This is fine because of ConnectionOwnershipToken's guarantees
                             let mut connection = unsafe { connections.get_unchecked(token.inner()).unwrap() };
 
+                            let now = Instant::now();
+
                             // Set last_recv in timings and update statistics
-                            connection.last_recv = Some(Instant::now());
+                            connection.last_recv = Some(now);
 
                             // We append it to the queue for later processing
-                            // connection.packet_queue.push_incoming(IncomingPacket { payload });
+                            connection.recv_packets.push_back(RecvPacket {
+                                time: now,
+                                payload,
+                            });
                         },
 
                         // We don't know this peer
