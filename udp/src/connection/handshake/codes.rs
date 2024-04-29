@@ -63,25 +63,25 @@ impl Display for HandshakeResponseCode {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         use HandshakeResponseCode::*;
 
-        match self {
-            Continue => write!(f, "no error"),
-            Unknown => write!(f, "unknown"),
+        f.write_str(match self {
+            Continue => "no error",
+            Unknown => "unknown",
 
-            Unspecified => write!(f, "unspecified"),
-            MalformedResponse => write!(f, "malformed packet"),
-            InvalidResponse => write!(f, "invalid response"),
+            Unspecified => "unspecified",
+            MalformedResponse => "malformed packet",
+            InvalidResponse => "invalid response",
 
-            IncompatibleTransportIdentifier => write!(f, "incompatible transport"),
-            IncompatibleTransportMajorVersion => write!(f, "incompatible transport major version"),
-            IncompatibleTransportMinorVersion => write!(f, "incompatible transport minor version"),
+            IncompatibleTransportIdentifier => "incompatible transport",
+            IncompatibleTransportMajorVersion => "incompatible transport major version",
+            IncompatibleTransportMinorVersion => "incompatible transport minor version",
 
-            IncompatibleApplicationIdentifier => write!(f, "incompatible application"),
-            IncompatibleApplicationMajorVersion => write!(f, "incompatible application major version"),
-            IncompatibleApplicationMinorVersion => write!(f, "incompatible application minor version"),
+            IncompatibleApplicationIdentifier => "incompatible application",
+            IncompatibleApplicationMajorVersion => "incompatible application major version",
+            IncompatibleApplicationMinorVersion => "incompatible application minor version",
 
-            ServerNotListening => write!(f, "server not accepting connections"),
-            ApplicationCloseEvent => write!(f, "closed by application"),
-            UnacceptableBehavior => write!(f, "behaved strangely too many times"),
-        }
+            ServerNotListening => "server not accepting connections",
+            ApplicationCloseEvent => "closed by application",
+            UnacceptableBehavior => "behaved strangely too many times",
+        })
     }
 }
