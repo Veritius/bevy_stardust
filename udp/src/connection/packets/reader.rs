@@ -15,7 +15,7 @@ impl Default for PacketReader {
 }
 
 impl PacketReader {
-    pub fn iter<'a>(&'a mut self, queue: &'a mut VecDeque<Bytes>) -> PacketReaderIter<'a> {
+    pub fn iter<'a>(&'a mut self) -> PacketReaderIter<'a> {
         todo!()
     }
 
@@ -26,5 +26,4 @@ impl PacketReader {
 
 pub(crate) struct PacketReaderIter<'a> {
     inner: &'a mut PacketReader,
-    queue: &'a mut VecDeque<Bytes>,
 }
