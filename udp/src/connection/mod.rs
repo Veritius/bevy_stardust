@@ -1,6 +1,7 @@
 pub mod statistics;
 
 mod events;
+mod handshake;
 mod ordering;
 mod packets;
 mod reliability;
@@ -16,7 +17,7 @@ use tracing::warn;
 use statistics::ConnectionStatistics;
 use timing::ConnectionTimings;
 
-use self::packets::{builder::PacketBuilder, reader::PacketReader};
+use self::{packets::{builder::PacketBuilder, reader::PacketReader}, reliability::{ReliabilityState, ReliablePackets}};
 
 /// An existing UDP connection.
 #[derive(Component, Reflect)]
@@ -26,6 +27,9 @@ pub struct Connection {
     remote_address: SocketAddr,
     #[reflect(ignore)]
     state: ConnectionState,
+
+    #[reflect(ignore)]
+    pub(crate) reliability: ReliablePackets,
 
     #[reflect(ignore)]
     pub(crate) packet_builder: PacketBuilder,
@@ -48,6 +52,8 @@ impl Connection {
         Self {
             remote_address,
             state: ConnectionState::Handshaking,
+
+            reliability: ReliablePackets::new(ReliabilityState::new()),
 
             packet_builder: PacketBuilder::default(),
             packet_reader: PacketReader::default(),
