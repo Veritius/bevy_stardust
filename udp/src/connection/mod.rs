@@ -6,18 +6,15 @@ mod ordering;
 mod packets;
 mod reliability;
 mod systems;
-mod timing;
 
 pub(crate) use systems::close_connections_system;
 
-use std::net::SocketAddr;
+use std::{collections::VecDeque, net::SocketAddr, time::Instant};
 use bevy::prelude::*;
 use bytes::Bytes;
 use tracing::warn;
 use statistics::ConnectionStatistics;
-use timing::ConnectionTimings;
-
-use self::{packets::{builder::PacketBuilder, reader::PacketReader}, reliability::{ReliabilityState, ReliablePackets}};
+use self::packets::{RecvPacket, SendPacket};
 
 /// An existing UDP connection.
 #[derive(Component, Reflect)]
@@ -25,20 +22,18 @@ use self::{packets::{builder::PacketBuilder, reader::PacketReader}, reliability:
 pub struct Connection {
     #[reflect(ignore)]
     remote_address: SocketAddr,
-    #[reflect(ignore)]
-    state: ConnectionState,
 
     #[reflect(ignore)]
-    pub(crate) reliability: ReliablePackets,
+    pub(crate) recv_packets: VecDeque<RecvPacket>,
+    #[reflect(ignore)]
+    pub(crate) send_packets: VecDeque<SendPacket>,
 
-    #[reflect(ignore)]
-    pub(crate) packet_builder: PacketBuilder,
-    #[reflect(ignore)]
-    pub(crate) packet_reader: PacketReader,
+    pub(crate) started: Instant,
+    pub(crate) last_recv: Option<Instant>,
+    pub(crate) last_send: Option<Instant>,
 
     pub(crate) owning_endpoint: Entity,
     pub(crate) direction: ConnectionDirection,
-    pub(crate) timings: ConnectionTimings,
     pub(crate) statistics: ConnectionStatistics,
 }
 
@@ -51,17 +46,17 @@ impl Connection {
     ) -> Self {
         Self {
             remote_address,
-            state: ConnectionState::Handshaking,
 
-            reliability: ReliablePackets::new(ReliabilityState::new()),
+            recv_packets: VecDeque::with_capacity(128),
+            send_packets: VecDeque::with_capacity(16),
 
-            packet_builder: PacketBuilder::default(),
-            packet_reader: PacketReader::default(),
+            started: Instant::now(),
+            last_recv: None,
+            last_send: None,
 
             owning_endpoint,
             direction,
             statistics: ConnectionStatistics::default(),
-            timings: ConnectionTimings::new(None, None, None),
         }
     }
 }
@@ -81,7 +76,7 @@ impl Connection {
 
     /// Returns the [`ConnectionState`] of the connection.
     pub fn state(&self) -> ConnectionState {
-        self.state
+        todo!()
     }
 
     /// Returns statistics related to the Connection. See [`ConnectionStatistics`] for more.

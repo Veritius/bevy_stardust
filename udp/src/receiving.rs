@@ -1,4 +1,4 @@
-use std::{io, sync::Mutex};
+use std::{io, sync::Mutex, time::Instant};
 use bevy::prelude::*;
 use bytes::Bytes;
 use crate::{connection::PotentialNewPeer, prelude::*};
@@ -40,7 +40,7 @@ pub(crate) fn io_receiving_system(
                             let mut connection = unsafe { connections.get_unchecked(token.inner()).unwrap() };
 
                             // Set last_recv in timings and update statistics
-                            connection.timings.set_last_recv_now();
+                            connection.last_recv = Some(Instant::now());
 
                             // We append it to the queue for later processing
                             // connection.packet_queue.push_incoming(IncomingPacket { payload });
