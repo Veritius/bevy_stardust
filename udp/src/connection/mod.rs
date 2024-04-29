@@ -26,8 +26,11 @@ use timing::ConnectionTimings;
 pub struct Connection {
     #[reflect(ignore)]
     remote_address: SocketAddr,
+
     #[reflect(ignore)]
     state: ConnectionState,
+    #[reflect(ignore)]
+    state_changed: bool,
 
     #[reflect(ignore)]
     pub(crate) packet_queue: PacketQueue,
@@ -36,13 +39,6 @@ pub struct Connection {
     pub(crate) direction: ConnectionDirection,
     pub(crate) timings: ConnectionTimings,
     pub(crate) statistics: ConnectionStatistics,
-
-    #[reflect(ignore)]
-    close_reason: Option<Bytes>,
-    #[reflect(ignore)]
-    local_close_sent: bool,
-    local_closed: bool,
-    remote_closed: bool,
 }
 
 /// Functions for controlling the connection.
@@ -54,7 +50,9 @@ impl Connection {
     ) -> Self {
         Self {
             remote_address,
+
             state: ConnectionState::Handshaking,
+            state_changed: false,
 
             packet_queue: PacketQueue::new(16, 16),
 
@@ -62,11 +60,6 @@ impl Connection {
             direction,
             statistics: ConnectionStatistics::default(),
             timings: ConnectionTimings::new(None, None, None),
-
-            close_reason: None,
-            local_closed: false,
-            local_close_sent: false,
-            remote_closed: false,
         }
     }
 }

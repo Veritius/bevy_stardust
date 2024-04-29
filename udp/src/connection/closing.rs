@@ -2,6 +2,14 @@ use bevy::prelude::*;
 use bevy_stardust::prelude::*;
 use super::{Connection, ConnectionState};
 
+#[derive(Component)]
+#[component(storage = "SparseSet")]
+pub(super) struct Closing {
+    pub reason: Option<Bytes>,
+    this_side_closed: bool,
+    other_side_closed: bool,
+}
+
 pub(super) fn close_events_system(
     mut events: EventReader<DisconnectPeerEvent>,
     mut connections: Query<(&mut Connection, Option<&mut NetworkPeerLifestage>)>,
@@ -12,8 +20,6 @@ pub(super) fn close_events_system(
             Err(_) => { continue; },
         };
 
-        connection.close_reason = event.reason.clone();
-        connection.local_closed = true;
         connection.state = match event.force {
             true => ConnectionState::Closed,
             false => ConnectionState::Closing,

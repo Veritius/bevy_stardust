@@ -50,28 +50,6 @@ pub(crate) fn handshake_polling_system(
 ) {
     // Iterate connections in parallel
     connections.par_iter_mut().for_each(|(entity, mut connection, mut handshake)| {
-        let state = connection.state();
-        if state == ConnectionState::Closing || state == ConnectionState::Closed {
-            if connection.local_closed || !connection.local_close_sent {
-                // Send close packet
-                let close_reason = connection.close_reason.clone();
-                send_close_packet(
-                    &mut connection.packet_queue,
-                    &mut handshake.reliability,
-                    HandshakeResponseCode::ApplicationCloseEvent,
-                    close_reason.clone(),
-                );
-
-                // Update components
-                connection.local_closed = true;
-                connection.local_close_sent = true;
-                handshake.state = HandshakeFailureReason::WeRejected {
-                    code: HandshakeResponseCode::ApplicationCloseEvent,
-                    message: close_reason.clone(),
-                }.into();
-            }
-        }
-
         'outer: { match &handshake.state {
             // Sending ClientHelloPackets to the remote peer and waiting for a ServerHelloPacket
             HandshakeState::ClientHello => {
