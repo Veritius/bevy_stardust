@@ -181,7 +181,7 @@ impl BitAndAssign for FrameFlags {
 
 impl std::fmt::Debug for FrameFlags {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_tuple("FrameFlags").field(&format_args!("{:b}", self.0)).finish()
+        f.debug_tuple("FrameFlags").field(&format_args!("{:16b}", self.0)).finish()
     }
 }
 

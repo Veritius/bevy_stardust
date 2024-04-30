@@ -1,7 +1,4 @@
-use std::cell::Cell;
-use bevy::prelude::Resource;
 use bytes::Bytes;
-use thread_local::ThreadLocal;
 use tracing::trace_span;
 use crate::plugin::PluginConfiguration;
 use super::frames::{Frame, FrameQueue, FrameQueueIter};
@@ -40,13 +37,11 @@ impl PacketBuilder {
     /// `max_size` is the maximum size of an individual packet.
     /// 
     /// `context` is information about the application.
-    /// `scratch` is scratch memory that can be shared between runs.
     pub fn run(
         &mut self,
         budget: usize,
         max_size: usize,
         context: PacketBuilderContext,
-        scratch: &mut PackingBuilderScratch,
     ) -> Vec<Bytes> {
         // Check the budget is enough to work with
         assert!(max_size >= MIN_MTU, "MTU was too small");
@@ -71,6 +66,7 @@ impl PacketBuilder {
 
         // Shared state data used by all packing functions
         let shared_context = PackFnSharedCtx {
+            context,
             frames,
             overall_estimate,
             reliable_estimate,
@@ -113,7 +109,13 @@ impl PacketBuilder {
     }
 }
 
+/// Static information about the application.
+pub(crate) struct PacketBuilderContext<'a> {
+    pub config: &'a PluginConfiguration,
+}
+
 struct PackFnSharedCtx<'a> {
+    context: PacketBuilderContext<'a>,
     frames: FrameQueueIter<'a>,
     overall_estimate: usize,
     reliable_estimate: usize,
@@ -136,37 +138,4 @@ fn pack_generic(
     mut ctx: PackFnSharedCtx,
 ) -> Vec<Bytes> {
     todo!()
-}
-
-/// Static information about the application.
-pub(crate) struct PacketBuilderContext<'a> {
-    pub config: &'a PluginConfiguration,
-}
-
-/// Scratch memory that can be shared between runs of [`PacketBuilder`].
-pub(crate) struct PackingBuilderScratch {
-    scratch: Vec<u8>,
-}
-
-impl PackingBuilderScratch {
-    pub fn no_alloc() -> Self {
-        Self {
-            scratch: Vec::with_capacity(0),
-        }
-    }
-}
-
-#[derive(Resource, Default)]
-pub(crate) struct PackingBuilderScratchCells {
-    cells: ThreadLocal<Cell<PackingBuilderScratch>>,
-}
-
-impl PackingBuilderScratchCells {
-    pub(super) fn get_cell(&self) -> &Cell<PackingBuilderScratch> {
-        self.cells.get_or(|| {
-            Cell::new(PackingBuilderScratch {
-                scratch: Vec::with_capacity(1024),
-            })
-        })
-    }
 }
