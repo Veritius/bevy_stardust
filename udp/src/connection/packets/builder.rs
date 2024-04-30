@@ -44,20 +44,28 @@ impl PacketBuilder {
         context: PacketBuilderContext,
         scratch: &mut PackingBuilderScratch,
     ) -> Vec<Bytes> {
+        // Record these here because they reset when drain is called.
+        let overall_estimate = self.queue.total_est();
+        let reliable_estimate = self.queue.reliable_est();
+        let unreliable_estimate = self.queue.unreliable_est();
+
         // Record data for debugging
         let trace_span = trace_span!("Packing");
         let _entered = trace_span.enter();
         trace_span.record("budget", budget);
         trace_span.record("mtu", max_size);
-        trace_span.record("queue_est_total", self.queue.total_est());
-        trace_span.record("queue_est_no_rel", self.queue.unreliable_est());
-        trace_span.record("queue_est_rel", self.queue.reliable_est());
+        trace_span.record("queue_est_total", overall_estimate);
+        trace_span.record("queue_est_no_rel", unreliable_estimate);
+        trace_span.record("queue_est_rel", reliable_estimate);
 
         // Get an iterator of frames that need to be put into packets
         // Automatically sorts the queue by priority using Frame's Ord impl
-        let mut frames = self.queue.drain();
+        let mut frames = self.queue.iter();
 
-        todo!()
+        // Storage for bins we've yet to fill up
+        let mut finished = Vec::new();
+
+        return finished;
     }
 
     pub fn put<'a>(

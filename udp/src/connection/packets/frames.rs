@@ -1,8 +1,8 @@
-use std::{cmp::Ordering, ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign}, time::Instant};
+use std::{cmp::Ordering, ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign}, time::Instant, vec::Drain};
 use bytes::Bytes;
 use tracing::trace_span;
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub(crate) struct Frame {
     pub priority: u32,
     pub time: Instant,
@@ -100,7 +100,7 @@ fn frame_ord_test() {
     assert_eq!(b.cmp(&a), Ordering::Greater);
 }
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum FrameType {
     Control,
     Stardust,
@@ -179,6 +179,12 @@ impl BitAndAssign for FrameFlags {
     }
 }
 
+impl std::fmt::Debug for FrameFlags {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_tuple("FrameFlags").field(&format_args!("{:b}", self.0)).finish()
+    }
+}
+
 pub(super) struct FrameQueue {
     queue: Vec<Frame>,
     total_byte_est: usize,
@@ -190,9 +196,9 @@ impl FrameQueue {
     pub fn push(&mut self, frame: Frame) {
         // Estimate counter which adjusts from flags
         let bytes_estimate = frame.bytes_est();
-        self.total_byte_est += 1;
+        self.total_byte_est += bytes_estimate;
 
-        // Individual ounters for reliable and unreliable frames
+        // Individual counters for reliable and unreliable frames
         match frame.flags.any_high(FrameFlags::RELIABLE) {
             true  => { self.rel_byte_est += bytes_estimate    },
             false => { self.no_rel_byte_est += bytes_estimate },
@@ -202,13 +208,22 @@ impl FrameQueue {
         self.queue.push(frame);
     }
 
-    pub fn drain<'a>(&'a mut self) -> impl Iterator<Item = Frame> + 'a {
+    pub fn iter<'a>(&'a mut self) -> FrameQueueIter<'a> {
+        // Reset counters
+        self.total_byte_est = 0;
+        self.no_rel_byte_est = 0;
+        self.rel_byte_est = 0;
+
+        // Sort packets
         let trace_span = trace_span!("Sorting frames for packing");
         trace_span.in_scope(|| {
             self.queue.sort_unstable();
         });
 
-        self.queue.drain(..)
+        // Return iterator
+        FrameQueueIter {
+            inner: &mut self.queue
+        }
     }
 
     #[inline]
@@ -234,4 +249,51 @@ impl FrameQueue {
             rel_byte_est: 0,
         }
     }
+}
+
+pub(crate) struct FrameQueueIter<'a> {
+    inner: &'a mut Vec<Frame>,
+}
+
+impl Iterator for FrameQueueIter<'_> {
+    type Item = Frame;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.inner.pop()
+    }
+}
+
+#[test]
+fn frame_queue_test() {
+    static PAYLOAD: Bytes = Bytes::from_static(&[]);
+
+    fn dummy(priority: u32, time: Instant) -> Frame {
+        Frame {
+            priority, time,
+            flags: FrameFlags::EMPTY,
+            ftype: FrameType::Control,
+            payload: PAYLOAD.clone(),
+        }
+    }
+
+    let mut queue = FrameQueue::with_capacity(16);
+    let time = Instant::now();
+
+    queue.push(dummy(100, time));
+    queue.push(dummy(15, time));
+    queue.push(dummy(76, time));
+    queue.push(dummy(512, time));
+
+    let mut iter = queue.iter();
+    let a = iter.next().unwrap();
+    let b = iter.next().unwrap();
+    assert_eq!(a.cmp(&b), Ordering::Greater);
+
+    let c = iter.next().unwrap();
+    assert_eq!(b.cmp(&c), Ordering::Greater);
+
+    let d = iter.next().unwrap();
+    assert_eq!(c.cmp(&d), Ordering::Greater);
+
+    assert_eq!(iter.next(), None);
 }
