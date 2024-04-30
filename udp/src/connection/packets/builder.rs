@@ -1,7 +1,7 @@
 use bytes::Bytes;
 use tracing::trace_span;
 use crate::plugin::PluginConfiguration;
-use super::frames::{Frame, FrameQueue, FrameQueueIter};
+use super::frames::{SendFrame, FrameQueue, FrameQueueIter};
 
 /*
     Packets are created using the first-fit bin packing algorithm.
@@ -103,7 +103,7 @@ impl PacketBuilder {
 
     pub fn put<'a>(
         &'a mut self,
-        frame: Frame,
+        frame: SendFrame,
     ) {
         self.queue.push(frame);
     }

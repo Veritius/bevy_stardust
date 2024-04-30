@@ -1,9 +1,15 @@
-use std::{cmp::Ordering, ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign}, time::Instant, vec::Drain};
+use std::{cmp::Ordering, ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign}, time::Instant};
 use bytes::Bytes;
 use tracing::trace_span;
 
 #[derive(Debug, Clone)]
-pub(crate) struct Frame {
+pub(crate) struct RecvFrame {
+    pub ftype: FrameType,
+    pub payload: Bytes,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct SendFrame {
     pub priority: u32,
     pub time: Instant,
     pub flags: FrameFlags,
@@ -11,7 +17,7 @@ pub(crate) struct Frame {
     pub payload: Bytes,
 }
 
-impl Frame {
+impl SendFrame {
     pub fn bytes_est(&self) -> usize {
         // Always takes up at least as many bytes at the header + payload
         let mut estimate = FrameType::WIRE_SIZE + self.payload.len();
@@ -24,7 +30,7 @@ impl Frame {
     }
 }
 
-impl PartialEq for Frame {
+impl PartialEq for SendFrame {
     fn eq(&self, other: &Self) -> bool {
         if self.priority != other.priority { return false }
         if self.time != other.time { return false }
@@ -32,16 +38,16 @@ impl PartialEq for Frame {
     }
 }
 
-impl Eq for Frame {}
+impl Eq for SendFrame {}
 
-impl PartialOrd for Frame {
+impl PartialOrd for SendFrame {
     #[inline]
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
-impl Ord for Frame {
+impl Ord for SendFrame {
     fn cmp(&self, other: &Self) -> Ordering {
         const PRIORITY_MULTIPLIER: i128 = 256;
 
@@ -60,8 +66,8 @@ impl Ord for Frame {
 fn frame_ord_test() {
     use std::time::Duration;
 
-    fn frame(priority: u32, time: Instant) -> Frame {
-        Frame {
+    fn frame(priority: u32, time: Instant) -> SendFrame {
+        SendFrame {
             priority, time,
             flags: FrameFlags::EMPTY,
             ftype: FrameType::Control,
@@ -186,14 +192,14 @@ impl std::fmt::Debug for FrameFlags {
 }
 
 pub(super) struct FrameQueue {
-    queue: Vec<Frame>,
+    queue: Vec<SendFrame>,
     total_byte_est: usize,
     no_rel_byte_est: usize,
     rel_byte_est: usize,
 }
 
 impl FrameQueue {
-    pub fn push(&mut self, frame: Frame) {
+    pub fn push(&mut self, frame: SendFrame) {
         // Estimate counter which adjusts from flags
         let bytes_estimate = frame.bytes_est();
         self.total_byte_est += bytes_estimate;
@@ -252,11 +258,11 @@ impl FrameQueue {
 }
 
 pub(crate) struct FrameQueueIter<'a> {
-    inner: &'a mut Vec<Frame>,
+    inner: &'a mut Vec<SendFrame>,
 }
 
 impl Iterator for FrameQueueIter<'_> {
-    type Item = Frame;
+    type Item = SendFrame;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.inner.pop()
@@ -267,8 +273,8 @@ impl Iterator for FrameQueueIter<'_> {
 fn frame_queue_test() {
     static PAYLOAD: Bytes = Bytes::from_static(&[]);
 
-    fn dummy(priority: u32, time: Instant) -> Frame {
-        Frame {
+    fn dummy(priority: u32, time: Instant) -> SendFrame {
+        SendFrame {
             priority, time,
             flags: FrameFlags::EMPTY,
             ftype: FrameType::Control,
