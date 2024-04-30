@@ -122,6 +122,12 @@ struct PackFnSharedCtx<'a> {
     unreliable_estimate: usize,
 }
 
+fn pack_generic(
+    mut ctx: PackFnSharedCtx,
+) -> Vec<Bytes> {
+    todo!()
+}
+
 fn pack_special_reliable_only(
     mut ctx: PackFnSharedCtx,
 ) -> Vec<Bytes> {
@@ -129,12 +135,6 @@ fn pack_special_reliable_only(
 }
 
 fn pack_special_unreliable_only(
-    mut ctx: PackFnSharedCtx,
-) -> Vec<Bytes> {
-    todo!()
-}
-
-fn pack_generic(
     mut ctx: PackFnSharedCtx,
 ) -> Vec<Bytes> {
     todo!()
