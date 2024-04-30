@@ -1,5 +1,6 @@
 use std::{cmp::Ordering, ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign}, time::Instant};
 use bytes::Bytes;
+use tracing::trace_span;
 
 #[derive(Clone)]
 pub(crate) struct Frame {
@@ -202,7 +203,11 @@ impl FrameQueue {
     }
 
     pub fn drain<'a>(&'a mut self) -> impl Iterator<Item = Frame> + 'a {
-        self.queue.sort_unstable();
+        let trace_span = trace_span!("Sorting frames for packing");
+        trace_span.in_scope(|| {
+            self.queue.sort_unstable();
+        });
+
         self.queue.drain(..)
     }
 
