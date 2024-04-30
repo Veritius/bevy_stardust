@@ -62,10 +62,16 @@ impl Iterator for PacketReaderIter<'_> {
     type Item = Result<RecvFrame, PacketReadError>;
 
     fn next(&mut self) -> Option<Self::Item> {
+        // Create reader if none is present
+        // This occurs when this type is first created
+        // or if the previous frame was consumed
         if self.current.is_none() {
             let bytes = self.inner.queue.pop_front()?;
             self.current = Some(Reader::new(bytes));
         }
+
+        // Unwrapped access to the reader now we know it's created.
+        let reader = self.current.as_mut().unwrap();
 
         todo!()
     }
