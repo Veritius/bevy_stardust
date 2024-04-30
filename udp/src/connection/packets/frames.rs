@@ -1,17 +1,25 @@
-use std::{cmp::Ordering, time::Instant};
+use std::{cmp::Ordering, ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign}, time::Instant};
 use bytes::Bytes;
 
 #[derive(Clone)]
 pub(crate) struct Frame {
     pub priority: u32,
     pub time: Instant,
+    pub flags: FrameFlags,
     pub ftype: FrameType,
     pub payload: Bytes,
 }
 
 impl Frame {
     pub fn bytes_est(&self) -> usize {
-        todo!()
+        // Always takes up at least as many bytes at the header + payload
+        let mut estimate = FrameType::WIRE_SIZE + self.payload.len();
+
+        // Ordered frames take up an additional 2 bytes for their sequence id
+        if self.flags.any_high(FrameFlags::ORDERED) { estimate += 2;}
+
+        // Estimate is one
+        return estimate;
     }
 }
 
@@ -54,6 +62,7 @@ fn frame_ord_test() {
     fn frame(priority: u32, time: Instant) -> Frame {
         Frame {
             priority, time,
+            flags: FrameFlags::EMPTY,
             ftype: FrameType::Control,
             payload: Bytes::from_static(&[]),
         }
@@ -96,6 +105,11 @@ pub(crate) enum FrameType {
     Stardust,
 }
 
+impl FrameType {
+    /// The size of a frame type code, in bytes.
+    pub const WIRE_SIZE: usize = 1;
+}
+
 impl TryFrom<u8> for FrameType {
     type Error = u8;
     
@@ -117,14 +131,73 @@ impl From<FrameType> for u8 {
     }
 }
 
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub(crate) struct FrameFlags(u16);
+
+impl FrameFlags {
+    pub const EMPTY: Self = Self(0);
+
+    pub const RELIABLE: Self = Self(1 << 0);
+    pub const ORDERED:  Self = Self(1 << 1);
+
+    #[inline]
+    pub fn any_high(&self, mask: FrameFlags) -> bool {
+        return (*self & mask).0 > 0;
+    }
+}
+
+impl BitOr for FrameFlags {
+    type Output = Self;
+
+    #[inline]
+    fn bitor(self, rhs: Self) -> Self::Output {
+        Self(self.0 | rhs.0)
+    }
+}
+
+impl BitOrAssign for FrameFlags {
+    #[inline]
+    fn bitor_assign(&mut self, rhs: Self) {
+        self.0 |= rhs.0
+    }
+}
+
+impl BitAnd for FrameFlags {
+    type Output = Self;
+
+    #[inline]
+    fn bitand(self, rhs: Self) -> Self::Output {
+        Self(self.0 & rhs.0)
+    }
+}
+
+impl BitAndAssign for FrameFlags {
+    #[inline]
+    fn bitand_assign(&mut self, rhs: Self) {
+        self.0 &= rhs.0
+    }
+}
+
 pub(super) struct FrameQueue {
     queue: Vec<Frame>,
-    byte_est: usize,
+    total_byte_est: usize,
+    no_rel_byte_est: usize,
+    rel_byte_est: usize,
 }
 
 impl FrameQueue {
     pub fn push(&mut self, frame: Frame) {
-        self.byte_est += frame.bytes_est();
+        // Estimate counter which adjusts from flags
+        let bytes_estimate = frame.bytes_est();
+        self.total_byte_est += 1;
+
+        // Individual ounters for reliable and unreliable frames
+        match frame.flags.any_high(FrameFlags::RELIABLE) {
+            true  => { self.rel_byte_est += bytes_estimate    },
+            false => { self.no_rel_byte_est += bytes_estimate },
+        }
+
+        // Add to the queue
         self.queue.push(frame);
     }
 
@@ -133,10 +206,27 @@ impl FrameQueue {
         self.queue.drain(..)
     }
 
+    #[inline]
+    pub fn total_est(&self) -> usize {
+        self.total_byte_est
+    }
+
+    #[inline]
+    pub fn unreliable_est(&self) -> usize {
+        self.no_rel_byte_est
+    }
+
+    #[inline]
+    pub fn reliable_est(&self) -> usize {
+        self.rel_byte_est
+    }
+
     pub fn with_capacity(size: usize) -> Self {
         Self {
             queue: Vec::with_capacity(size),
-            byte_est: 0,
+            total_byte_est: 0,
+            no_rel_byte_est: 0,
+            rel_byte_est: 0,
         }
     }
 }

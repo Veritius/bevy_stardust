@@ -1,7 +1,20 @@
-use bytes::{Bytes, BytesMut};
+use std::cell::Cell;
+use bevy::prelude::Resource;
+use bytes::Bytes;
+use thread_local::ThreadLocal;
 use crate::plugin::PluginConfiguration;
-
 use super::frames::{Frame, FrameQueue};
+
+/*
+    Packets are created using the first-fit bin packing algorithm.
+    However, since we also need to have a header for each packet,
+    we allocate an additional N bytes (BIN_HDR_SCR_SIZE) to each buffer.
+    By doing this, we don't need to reallocate or copy when the time
+    comes to create a packet header, which speeds things up significantly.
+*/
+
+/// The amount of space allocated for a frame header.
+pub const BIN_HDR_SCR_SIZE: usize = 32;
 
 pub(crate) struct PacketBuilder {
     queue: FrameQueue,
@@ -52,5 +65,28 @@ pub(crate) struct PacketBuilderContext<'a> {
 
 /// Scratch memory that can be shared between runs of [`PacketBuilder`].
 pub(crate) struct PackingBuilderScratch {
-    scratch: BytesMut,
+    scratch: Vec<u8>,
+}
+
+impl PackingBuilderScratch {
+    pub fn no_alloc() -> Self {
+        Self {
+            scratch: Vec::with_capacity(0),
+        }
+    }
+}
+
+#[derive(Resource, Default)]
+pub(crate) struct PackingBuilderScratchCells {
+    cells: ThreadLocal<Cell<PackingBuilderScratch>>,
+}
+
+impl PackingBuilderScratchCells {
+    pub(super) fn get_cell(&self) -> &Cell<PackingBuilderScratch> {
+        self.cells.get_or(|| {
+            Cell::new(PackingBuilderScratch {
+                scratch: Vec::with_capacity(1024),
+            })
+        })
+    }
 }
