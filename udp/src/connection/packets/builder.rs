@@ -14,8 +14,12 @@ use super::frames::{Frame, FrameQueue, FrameQueueIter};
     comes to create a packet header, which speeds things up significantly.
 */
 
+/// The minimum MTU for a connection.
+/// Values lower than this will panic.
+pub(crate) const MIN_MTU: usize = 128;
+
 /// The amount of space allocated for a frame header.
-pub const BIN_HDR_SCR_SIZE: usize = 32;
+const BIN_HDR_SCR_SIZE: usize = 32;
 
 pub(crate) struct PacketBuilder {
     queue: FrameQueue,
@@ -44,6 +48,9 @@ impl PacketBuilder {
         context: PacketBuilderContext,
         scratch: &mut PackingBuilderScratch,
     ) -> Vec<Bytes> {
+        // Check the budget is enough to work with
+        assert!(max_size >= MIN_MTU, "MTU was too small");
+
         // Record these here because they reset when drain is called.
         let overall_estimate = self.queue.total_est();
         let reliable_estimate = self.queue.reliable_est();
