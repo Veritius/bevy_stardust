@@ -4,7 +4,7 @@ use bytes::Bytes;
 use thread_local::ThreadLocal;
 use tracing::trace_span;
 use crate::plugin::PluginConfiguration;
-use super::frames::{Frame, FrameQueue};
+use super::frames::{Frame, FrameQueue, FrameQueueIter};
 
 /*
     Packets are created using the first-fit bin packing algorithm.
@@ -55,17 +55,47 @@ impl PacketBuilder {
         trace_span.record("budget", budget);
         trace_span.record("mtu", max_size);
         trace_span.record("queue_est_total", overall_estimate);
-        trace_span.record("queue_est_no_rel", unreliable_estimate);
         trace_span.record("queue_est_rel", reliable_estimate);
+        trace_span.record("queue_est_no_rel", unreliable_estimate);
 
         // Get an iterator of frames that need to be put into packets
         // Automatically sorts the queue by priority using Frame's Ord impl
-        let mut frames = self.queue.iter();
+        let frames = self.queue.iter();
 
-        // Storage for bins we've yet to fill up
-        let mut finished = Vec::new();
+        // Shared state data used by all packing functions
+        let shared_context = PackFnSharedCtx {
+            frames,
+            overall_estimate,
+            reliable_estimate,
+            unreliable_estimate,
+        };
 
-        return finished;
+        // Case matching to try and find an optimal configuration of bins.
+        let ret = match (overall_estimate, reliable_estimate, unreliable_estimate) {
+            // There is no data to be transmitted.
+            // Purpose: early return.
+            (0, _, _) => { return Vec::with_capacity(0) },
+
+            // There is only reliable data to be transmitted.
+            // Purpose: concise, specialised packets.
+            (_, x, 0) if x > 0 => pack_special_reliable_only(shared_context),
+
+            // There is only unreliable data to be transmitted.
+            // Purpose: concise, specialised packets.
+            (_, 0, x) if x > 0 => pack_special_unreliable_only(shared_context),
+
+            // There is mostly reliable data to be transmitted.
+            // (a, b, c) if b > c && b.abs_diff(c) > a / 3 => todo!(),
+
+            // There is mostly unreliable data to be transmitted.
+            // (a, b, c) if c > b && b.abs_diff(c) > a / 3 => todo!(),
+
+            // Generic case. No special behavior.
+            _ => pack_generic(shared_context),
+        };
+
+        // Return
+        return ret;
     }
 
     pub fn put<'a>(
@@ -74,6 +104,31 @@ impl PacketBuilder {
     ) {
         self.queue.push(frame);
     }
+}
+
+struct PackFnSharedCtx<'a> {
+    frames: FrameQueueIter<'a>,
+    overall_estimate: usize,
+    reliable_estimate: usize,
+    unreliable_estimate: usize,
+}
+
+fn pack_special_reliable_only(
+    mut ctx: PackFnSharedCtx,
+) -> Vec<Bytes> {
+    todo!()
+}
+
+fn pack_special_unreliable_only(
+    mut ctx: PackFnSharedCtx,
+) -> Vec<Bytes> {
+    todo!()
+}
+
+fn pack_generic(
+    mut ctx: PackFnSharedCtx,
+) -> Vec<Bytes> {
+    todo!()
 }
 
 /// Static information about the application.
