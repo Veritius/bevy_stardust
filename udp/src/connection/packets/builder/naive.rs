@@ -91,7 +91,7 @@ pub(super) fn pack_naive(
         scr.put(frame.payload);
 
         #[cfg(debug_assertions)]
-        assert_eq!(previous_length - scr.len(), frame_size_estimate);
+        assert_eq!(scr.len() - previous_length, frame_size_estimate);
 
         // Increment the frame index
         idx += 1;
