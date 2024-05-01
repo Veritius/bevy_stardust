@@ -1,5 +1,5 @@
-use bytes::{Bytes, BytesMut};
-use crate::connection::packets::frames::*;
+use bytes::{Bytes, BufMut};
+use crate::{connection::packets::frames::*, varint::VarInt};
 use super::PackFnSharedCtx;
 
 /// For every reliable frame, this many unreliable frames will be sent.
@@ -73,10 +73,29 @@ pub(super) fn pack_naive(
             break 'bin &mut bins[bin_idx];
         };
 
-        todo!();
+        let scr = &mut bin.inner_data;
+
+        #[cfg(debug_assertions)]
+        let previous_length = scr.len();
+
+        // Put the frame type into the bin
+        scr.put_u8(frame.ftype.into());
+
+        // Put the payload length into the bin using a varint
+        // Unwrapping is fine since I doubt anyone will try to
+        // send a payload with a length of 4,611 petabytes.
+        // Not that there's any computers that can even store that.
+        VarInt::try_from(frame.payload.len()).unwrap();
+
+        // Put in the payload itself
+        scr.put(frame.payload);
+
+        #[cfg(debug_assertions)]
+        assert_eq!(previous_length + used, scr.len());
 
         // Increment the frame index
         idx += 1;
+        used += frame_size_estimate;
     }
 
     // Return all unread frames back into the queue
