@@ -18,12 +18,11 @@ pub(crate) struct SendFrame {
 }
 
 impl SendFrame {
+    /// Return an estimate for how many bytes this frame will take up when serialised.
+    /// The estimate must be equal to or greater than the real value, or panics will occur.
     pub fn bytes_est(&self) -> usize {
         // Always takes up at least as many bytes at the header + payload
-        let mut estimate = FrameType::WIRE_SIZE + self.payload.len();
-
-        // Ordered frames take up an additional 2 bytes for their sequence id
-        if self.flags.any_high(FrameFlags::ORDERED) { estimate += 2;}
+        let estimate = FrameType::WIRE_SIZE + self.payload.len();
 
         // Estimate is one
         return estimate;
@@ -145,7 +144,6 @@ impl FrameFlags {
     pub const EMPTY: Self = Self(0);
 
     pub const RELIABLE: Self = Self(1 << 0);
-    pub const ORDERED:  Self = Self(1 << 1);
 
     #[inline]
     pub fn any_high(&self, mask: FrameFlags) -> bool {
