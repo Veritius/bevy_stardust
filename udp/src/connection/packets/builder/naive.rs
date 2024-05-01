@@ -57,7 +57,7 @@ pub(super) fn pack_naive(
                 .enumerate()
                 .find(|(_, bin)| {
                     if bin.remaining() < frame_size_estimate { return false };
-                    if !(rel_frm && bin.is_reliable) { return false };
+                    if rel_frm != bin.is_reliable { return false };
                     true
                 })
                 .map(|(idx, _)| idx);
