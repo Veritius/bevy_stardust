@@ -1,6 +1,6 @@
-use bytes::Bytes;
+use bytes::{BufMut, Bytes, BytesMut};
 use tracing::trace_span;
-use crate::plugin::PluginConfiguration;
+use crate::{connection::{packets::header::PacketHeaderFlags, reliability::ReliabilityState}, plugin::PluginConfiguration};
 use super::frames::{SendFrame, FrameQueue, FrameQueueIter};
 
 /*
@@ -68,6 +68,8 @@ impl PacketBuilder {
         let shared_context = PackFnSharedCtx {
             context,
             frames,
+            budget,
+            max_size,
             overall_estimate,
             reliable_estimate,
             unreliable_estimate,
@@ -78,14 +80,6 @@ impl PacketBuilder {
             // There is no data to be transmitted.
             // Purpose: early return.
             (0, _, _) => { return Vec::with_capacity(0) },
-
-            // There is only reliable data to be transmitted.
-            // Purpose: concise, specialised packets.
-            (_, x, 0) if x > 0 => pack_special_reliable_only(shared_context),
-
-            // There is only unreliable data to be transmitted.
-            // Purpose: concise, specialised packets.
-            (_, 0, x) if x > 0 => pack_special_unreliable_only(shared_context),
 
             // There is mostly reliable data to be transmitted.
             // (a, b, c) if b > c && b.abs_diff(c) > a / 3 => todo!(),
@@ -112,11 +106,14 @@ impl PacketBuilder {
 /// Static information about the application.
 pub(crate) struct PacketBuilderContext<'a> {
     pub config: &'a PluginConfiguration,
+    pub rel_state: &'a mut ReliabilityState,
 }
 
 struct PackFnSharedCtx<'a> {
     context: PacketBuilderContext<'a>,
     frames: FrameQueueIter<'a>,
+    budget: usize,
+    max_size: usize,
     overall_estimate: usize,
     reliable_estimate: usize,
     unreliable_estimate: usize,
@@ -125,17 +122,5 @@ struct PackFnSharedCtx<'a> {
 fn pack_generic(
     mut ctx: PackFnSharedCtx,
 ) -> Vec<Bytes> {
-    todo!()
-}
-
-fn pack_special_reliable_only(
-    mut ctx: PackFnSharedCtx,
-) -> Vec<Bytes> {
-    todo!()
-}
-
-fn pack_special_unreliable_only(
-    mut ctx: PackFnSharedCtx,
-) -> Vec<Bytes> {
-    todo!()
+    todo!();
 }
