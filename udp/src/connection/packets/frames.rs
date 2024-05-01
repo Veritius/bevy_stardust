@@ -193,33 +193,35 @@ impl std::fmt::Debug for FrameFlags {
 
 pub(super) struct FrameQueue {
     queue: Vec<SendFrame>,
-    total_byte_est: usize,
-    no_rel_byte_est: usize,
-    rel_byte_est: usize,
 }
 
 impl FrameQueue {
+    pub fn assess(&self) -> FrameQueueStats {
+        let mut stats = FrameQueueStats {
+            total_frames_count: self.queue.len(),
+            reliable_frames_count: 0,
+            unreliable_frames_count: 0,
+            total_bytes_estimate: 0,
+        };
+
+        self.queue.iter().for_each(|frame| {
+            stats.total_bytes_estimate += frame.bytes_est();
+
+            match frame.flags.any_high(FrameFlags::RELIABLE) {
+                true => stats.reliable_frames_count += 1,
+                false => stats.unreliable_frames_count += 1,
+            }
+        });
+
+        return stats;
+    }
+
     pub fn push(&mut self, frame: SendFrame) {
-        // Estimate counter which adjusts from flags
-        let bytes_estimate = frame.bytes_est();
-        self.total_byte_est += bytes_estimate;
-
-        // Individual counters for reliable and unreliable frames
-        match frame.flags.any_high(FrameFlags::RELIABLE) {
-            true  => { self.rel_byte_est += bytes_estimate    },
-            false => { self.no_rel_byte_est += bytes_estimate },
-        }
-
         // Add to the queue
         self.queue.push(frame);
     }
 
     pub fn iter<'a>(&'a mut self) -> FrameQueueIter<'a> {
-        // Reset counters
-        self.total_byte_est = 0;
-        self.no_rel_byte_est = 0;
-        self.rel_byte_est = 0;
-
         // Sort packets
         let trace_span = trace_span!("Sorting frames for packing");
         trace_span.in_scope(|| {
@@ -232,33 +234,31 @@ impl FrameQueue {
         }
     }
 
-    #[inline]
-    pub fn total_est(&self) -> usize {
-        self.total_byte_est
-    }
-
-    #[inline]
-    pub fn unreliable_est(&self) -> usize {
-        self.no_rel_byte_est
-    }
-
-    #[inline]
-    pub fn reliable_est(&self) -> usize {
-        self.rel_byte_est
-    }
-
     pub fn with_capacity(size: usize) -> Self {
         Self {
             queue: Vec::with_capacity(size),
-            total_byte_est: 0,
-            no_rel_byte_est: 0,
-            rel_byte_est: 0,
         }
     }
 }
 
+#[derive(Clone)]
+pub(super) struct FrameQueueStats {
+    pub total_frames_count: usize,
+    pub reliable_frames_count: usize,
+    pub unreliable_frames_count: usize,
+    pub total_bytes_estimate: usize,
+}
+
 pub(crate) struct FrameQueueIter<'a> {
     inner: &'a mut Vec<SendFrame>,
+}
+
+impl<'a> FrameQueueIter<'a> {
+    pub fn finish(self, iter: impl Iterator<Item = SendFrame>) {
+        for frame in iter {
+            self.inner.push(frame);
+        }
+    }
 }
 
 impl Iterator for FrameQueueIter<'_> {
