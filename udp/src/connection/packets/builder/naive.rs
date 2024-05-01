@@ -1,5 +1,5 @@
 use bytes::{Bytes, BufMut};
-use crate::{connection::packets::frames::*, varint::VarInt};
+use crate::{connection::packets::{builder::BIN_HDR_SCR_SIZE, frames::*}, varint::VarInt};
 use super::PackFnSharedCtx;
 
 /// For every reliable frame, this many unreliable frames will be sent.
@@ -68,7 +68,10 @@ pub(super) fn pack_naive(
             }
 
             // Create a new bin for use
-            bins.push(WorkingBin::new(rel_frm, ctx.max_size));
+            // Also fill it with a certain amount of bytes for a 'dead' header
+            let mut bin = WorkingBin::new(rel_frm, ctx.max_size);
+            bin.inner_data.extend((0..BIN_HDR_SCR_SIZE).into_iter().map(|_| 0));
+            bins.push(bin);
             let bin_idx = bins.len();
             break 'bin &mut bins[bin_idx];
         };
