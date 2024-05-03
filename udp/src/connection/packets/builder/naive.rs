@@ -137,7 +137,7 @@ pub(super) fn pack_naive(
         // Put acknowledgement data
         // Unlike the sequence id, this is always present
         scr.put_u16(rel_hdr.remote_sequence.0);
-        let bf_bts = rel_hdr.ack_memory.to_be_bytes();
+        let bf_bts = rel_hdr.ack_memory.into_array();
         scr.put(&bf_bts[..ctx.context.config.reliable_bitfield_length]);
 
         // It's very important we don't accidentally overrun

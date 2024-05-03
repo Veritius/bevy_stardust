@@ -2,13 +2,11 @@ use std::{cmp::Ordering, collections::BTreeMap, fmt::Debug, time::Instant};
 use bytes::Bytes;
 use crate::sequences::*;
 
-const BITMASK: u128 = 1;
-
 #[derive(Debug, Clone)]
 pub(crate) struct ReliabilityState {
     pub local_sequence: SequenceId,
     pub remote_sequence: SequenceId,
-    pub ack_memory: u128,
+    pub ack_memory: AckMemory,
 }
 
 impl ReliabilityState {
@@ -16,7 +14,7 @@ impl ReliabilityState {
         Self {
             local_sequence: SequenceId::random(),
             remote_sequence: 0.into(),
-            ack_memory: 0,
+            ack_memory: AckMemory::default(),
         }
     }
 
@@ -32,20 +30,25 @@ impl ReliabilityState {
         match self.remote_sequence.cmp(&seq) {
             Ordering::Greater => {
                 // The packet is older, flag it as acknowledged
-                self.ack_memory |= BITMASK.overflowing_shl(diff.into()).0;
+                self.ack_memory.set_high(diff as u32);
             },
             Ordering::Less => {
                 // The packet is newer, shift the memory bitfield
                 self.remote_sequence = seq;
-                self.ack_memory = self.ack_memory.overflowing_shl(diff.into()).0;
-                self.ack_memory |= BITMASK.overflowing_shl(diff.wrapping_sub(1).into()).0;
+                self.ack_memory.shift(diff as u32);
+                self.ack_memory.set_high(diff.wrapping_sub(1) as u32);
             },
             Ordering::Equal => {}, // Shouldn't happen.
         }
     }
 
     /// Record a remote packet's acknowledgements.
-    pub fn ack_bits(&mut self, ack: SequenceId, bitfield: u128, bitfield_bytes: u8) -> impl Iterator<Item = SequenceId> + Clone {
+    pub fn ack_bits(
+        &mut self,
+        ack: SequenceId,
+        bitfield: AckMemory,
+        bitfield_bytes: u8
+    ) -> impl Iterator<Item = SequenceId> + Clone {
         // Iterator object for acknowledgements
         #[derive(Clone)]
         struct AcknowledgementIterator {
@@ -65,7 +68,7 @@ impl ReliabilityState {
                     if self.cursor == self.limit { return None }
 
                     // Get the ack value
-                    let mask = BITMASK.overflowing_shl(self.cursor.into()).0;
+                    let mask = AckMemory::BITMASK.overflowing_shl(self.cursor.into()).0;
                     if self.bitfield & mask == 0 { self.cursor += 1; continue }
                     let ack = self.origin + self.cursor as u16;
 
@@ -81,7 +84,7 @@ impl ReliabilityState {
             origin: ack,
             cursor: 0,
             limit: (bitfield_bytes * 8),
-            bitfield
+            bitfield: bitfield.0,
         }
     }
 }
@@ -120,7 +123,12 @@ impl ReliablePackets {
         self.state.ack_seq(seq)
     }
 
-    pub fn rec_ack(&mut self, ack: SequenceId, bitfield: u128, bitfield_bytes: u8) {
+    pub fn rec_ack(
+        &mut self,
+        ack: SequenceId,
+        bitfield: AckMemory,
+        bitfield_bytes: u8,
+    ) {
         let iter = self.state.ack_bits(ack, bitfield, bitfield_bytes);
         for seq in iter {
             self.unacked.remove(&seq.into());
@@ -155,6 +163,46 @@ impl ReliablePackets {
     }
 }
 
+#[derive(Default, Clone)]
+pub struct AckMemory(u128);
+
+impl AckMemory {
+    const BITMASK: u128 = 1;
+
+    #[inline(always)]
+    pub fn from_array(array: [u8; 16]) -> Self {
+        Self(u128::from_be_bytes(array))
+    }
+
+    #[inline(always)]
+    pub fn from_slice(slice: &[u8]) -> Result<Self, ()> {
+        if slice.len() < 16 { return Err(()); }
+
+        todo!()
+    }
+
+    #[inline(always)]
+    pub fn into_array(&self) -> [u8; 16] {
+        self.0.to_be_bytes()
+    }
+
+    #[inline(always)]
+    pub fn shift(&mut self, bits: u32) {
+        self.0 = self.0.overflowing_shl(bits).0
+    }
+
+    #[inline(always)]
+    pub fn set_high(&mut self, idx: u32) {
+        self.0 |= Self::BITMASK.overflowing_shl(idx).0;
+    }
+}
+
+impl Debug for AckMemory {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!("{:b}", self.0))
+    }
+}
+
 #[derive(Debug)]
 pub(crate) struct UnackedPacket {
     pub payload: Bytes,
@@ -176,14 +224,14 @@ fn conversation_test() {
     let mut alice = ReliablePackets::new(ReliabilityState {
         local_sequence: SequenceId::new(1),
         remote_sequence: SequenceId::new(0),
-        ack_memory: 0,
+        ack_memory: AckMemory::default(),
     });
 
     // This is our other side of the connection.
     let mut bob = ReliablePackets::new(ReliabilityState {
         local_sequence: SequenceId::new(1),
         remote_sequence: SequenceId::new(0),
-        ack_memory: 0,
+        ack_memory: AckMemory::default(),
     });
 
     // Alice sends a message to Bob
@@ -196,7 +244,7 @@ fn conversation_test() {
     // Bob receives Alice's message
     bob.ack_state_testing_only(alice_header);
     assert_eq!(bob.clone_state().remote_sequence, 1.into());
-    assert_eq!(bob.clone_state().ack_memory, 0b0000_0001);
+    assert_eq!(bob.clone_state().ack_memory.0, 0b0000_0001);
 
     // Bob sends a message to Alice
     bob.record(1.into(), empty());
@@ -208,7 +256,7 @@ fn conversation_test() {
     // Alice receives Bob's message
     alice.ack_state_testing_only(bob_header);
     assert_eq!(alice.clone_state().remote_sequence, 1.into());
-    assert_eq!(alice.clone_state().ack_memory, 0b0000_0001);
+    assert_eq!(alice.clone_state().ack_memory.0, 0b0000_0001);
 
     // Alice sends a message to Bob
     // Bob does not receive this message
@@ -223,7 +271,7 @@ fn conversation_test() {
     // Bob receives Alice's second message
     bob.ack_state_testing_only(alice_header);
     assert_eq!(bob.clone_state().remote_sequence, 3.into());
-    assert_eq!(bob.clone_state().ack_memory, 0b0000_0110);
+    assert_eq!(bob.clone_state().ack_memory.0, 0b0000_0110);
 
     // Bob sends a message to Alice
     bob.record(2.into(), empty());
@@ -234,7 +282,7 @@ fn conversation_test() {
     // Alice receives Bob's message
     alice.ack_state_testing_only(bob_header);
     assert_eq!(alice.clone_state().remote_sequence, 2.into());
-    assert_eq!(alice.clone_state().ack_memory, 0b0000_0011);
+    assert_eq!(alice.clone_state().ack_memory.0, 0b0000_0011);
 
     // Alice should have one packet that needs retransmission
     let mut lost_iter = alice.drain_old(|_| true);

@@ -102,7 +102,7 @@ pub(crate) fn handshake_polling_system(
                     handshake.reliability.ack_seq(header.sequence);
                     let _ = handshake.reliability.ack_bits(
                         packet.reliability_ack,
-                        rel_bitfield_16_to_128(packet.reliability_bits),
+                        todo!(),
                         2
                     );
 
@@ -134,7 +134,7 @@ pub(crate) fn handshake_polling_system(
                     HandshakePacketHeader { sequence: r_header.local_sequence }.write_bytes(&mut buf);
                     ClientFinalisePacket {
                         reliability_ack: r_header.remote_sequence,
-                        reliability_bits: rel_bitfield_128_to_16(handshake.reliability.ack_memory),
+                        reliability_bits: rel_bitfield_128_to_16(todo!()),
                     }.write_bytes(&mut buf);
                     connection.packet_queue.push_outgoing(OutgoingPacket::from(buf.freeze()));
 
@@ -204,7 +204,7 @@ pub(crate) fn handshake_polling_system(
                     handshake.reliability.ack_seq(header.sequence);
                     handshake.reliability.ack_bits(
                         packet.reliability_ack,
-                        rel_bitfield_16_to_128(packet.reliability_bits),
+                        todo!(),
                         2,
                     );
 
@@ -222,7 +222,7 @@ pub(crate) fn handshake_polling_system(
                         transport: TRANSPORT_VERSION_DATA.clone(),
                         application: config.application_version.as_nvd(),
                         reliability_ack: header.remote_sequence,
-                        reliability_bits: rel_bitfield_128_to_16(header.ack_memory),
+                        reliability_bits: rel_bitfield_128_to_16(todo!()),
                     }.write_bytes(&mut buf);
                     connection.packet_queue.push_outgoing(OutgoingPacket::from(buf.freeze()));
                 }
@@ -423,7 +423,8 @@ pub(crate) fn potential_new_peers_system(
         // We have to construct the reliability state from scratch
         let mut reliability = ReliabilityState::new();
         reliability.remote_sequence = header.sequence;
-        reliability.ack_memory |= 1u128 << 127;
+        todo!();
+        // reliability.ack_memory |= 1u128 << 127;
 
         let handshake = Handshaking {
             started: Instant::now(),
