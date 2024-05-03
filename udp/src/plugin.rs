@@ -16,6 +16,7 @@ pub struct UdpTransportPlugin {
     pub reliable_channel_count: u8,
 
     /// The length of the bitfield used to acknowledge packets.
+    /// Must be within the range of `1` to `16` inclusive.
     /// 
     /// Higher values improve packet loss detection.
     pub reliable_bitfield_length: u16,
@@ -82,7 +83,7 @@ impl Plugin for UdpTransportPlugin {
 
         // Check if the Stardust plugin is added
         if !app.is_plugin_added::<StardustPlugin>() {
-            panic!("StardustPlugin must be added before UdpTransportPlugin");
+            panic!("StardustPlugin muaest be added before UdpTransportPlugin");
         }
 
         // Send some warnings for potentially bad configuration
