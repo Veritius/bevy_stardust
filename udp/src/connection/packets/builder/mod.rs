@@ -17,9 +17,6 @@ use super::frames::{FrameQueue, FrameQueueIter, FrameQueueStats, SendFrame};
 /// Values lower than this will panic.
 pub(crate) const MIN_MTU: usize = 128;
 
-/// The amount of space allocated for a frame header.
-const BIN_HDR_SCR_SIZE: usize = 32;
-
 pub(crate) struct PacketBuilder {
     queue: FrameQueue,
 }

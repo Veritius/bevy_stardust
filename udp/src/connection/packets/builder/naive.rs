@@ -1,6 +1,9 @@
 use bytes::{Bytes, BufMut};
-use crate::{connection::packets::{builder::BIN_HDR_SCR_SIZE, frames::*, header::PacketHeaderFlags}, varint::VarInt};
+use crate::{connection::packets::{frames::*, header::PacketHeaderFlags}, varint::VarInt};
 use super::PackFnSharedCtx;
+
+/// The amount of space allocated for a frame header.
+const BIN_HDR_SCR_SIZE: usize = 32;
 
 /// For every reliable frame, this many unreliable frames will be sent.
 const UNRELIABLE_FRAME_BIAS: usize = 3;
