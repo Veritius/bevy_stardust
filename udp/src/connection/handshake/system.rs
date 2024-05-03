@@ -22,10 +22,7 @@ use crate::{
             },
             HandshakeState
         },
-        reliability::{
-            ReliabilityState,
-            ReliablePacketHeader
-        },
+        reliability::ReliabilityState,
         Connection,
         PotentialNewPeer
     },
@@ -102,11 +99,12 @@ pub(crate) fn handshake_polling_system(
                     };
 
                     // Update reliability
-                    let _ = handshake.reliability.ack(ReliablePacketHeader {
-                        seq: header.sequence,
-                        ack: packet.reliability_ack,
-                        bits: rel_bitfield_16_to_128(packet.reliability_bits),
-                    }, 2);
+                    handshake.reliability.ack_seq(header.sequence);
+                    let _ = handshake.reliability.ack_bits(
+                        packet.reliability_ack,
+                        rel_bitfield_16_to_128(packet.reliability_bits),
+                        2
+                    );
 
                     // Check transport and application versions
                     for (us, them, banlist, is_app) in [
@@ -131,12 +129,12 @@ pub(crate) fn handshake_polling_system(
 
                     // Respond with a ClientFinalisePacket
                     handshake.reliability.advance();
-                    let r_header = handshake.reliability.header();
+                    let r_header = handshake.reliability.clone();
                     let mut buf = BytesMut::with_capacity(6);
-                    HandshakePacketHeader { sequence: r_header.seq }.write_bytes(&mut buf);
+                    HandshakePacketHeader { sequence: r_header.local_sequence }.write_bytes(&mut buf);
                     ClientFinalisePacket {
-                        reliability_ack: r_header.ack,
-                        reliability_bits: rel_bitfield_128_to_16(handshake.reliability.sequence_memory),
+                        reliability_ack: r_header.remote_sequence,
+                        reliability_bits: rel_bitfield_128_to_16(handshake.reliability.ack_memory),
                     }.write_bytes(&mut buf);
                     connection.packet_queue.push_outgoing(OutgoingPacket::from(buf.freeze()));
 
@@ -148,8 +146,8 @@ pub(crate) fn handshake_polling_system(
                 // Check if we need to send a packet
                 if timeout_check(connection.timings.last_sent, RESEND_TIMEOUT) {
                     let mut buf = BytesMut::with_capacity(36);
-                    let header = handshake.reliability.header();
-                    HandshakePacketHeader { sequence: header.seq }.write_bytes(&mut buf);
+                    let header = handshake.reliability.clone();
+                    HandshakePacketHeader { sequence: header.local_sequence }.write_bytes(&mut buf);
                     ClientHelloPacket {
                         transport: TRANSPORT_VERSION_DATA.clone(),
                         application: config.application_version.as_nvd(),
@@ -203,11 +201,12 @@ pub(crate) fn handshake_polling_system(
                     };
 
                     // Update reliability
-                    let _ = handshake.reliability.ack(ReliablePacketHeader {
-                        seq: header.sequence,
-                        ack: packet.reliability_ack,
-                        bits: rel_bitfield_16_to_128(packet.reliability_bits),
-                    }, 2);
+                    handshake.reliability.ack_seq(header.sequence);
+                    handshake.reliability.ack_bits(
+                        packet.reliability_ack,
+                        rel_bitfield_16_to_128(packet.reliability_bits),
+                        2,
+                    );
 
                     // Mark as finalised
                     handshake.state = HandshakeState::Finished;
@@ -217,13 +216,13 @@ pub(crate) fn handshake_polling_system(
                 // Check if we need to send a packet
                 if timeout_check(connection.timings.last_sent, RESEND_TIMEOUT) {
                     let mut buf = BytesMut::with_capacity(38);
-                    let header = handshake.reliability.header();
-                    HandshakePacketHeader { sequence: header.seq }.write_bytes(&mut buf);
+                    let header = handshake.reliability.clone();
+                    HandshakePacketHeader { sequence: header.local_sequence }.write_bytes(&mut buf);
                     ServerHelloPacket {
                         transport: TRANSPORT_VERSION_DATA.clone(),
                         application: config.application_version.as_nvd(),
-                        reliability_ack: header.ack,
-                        reliability_bits: rel_bitfield_128_to_16(header.bits),
+                        reliability_ack: header.remote_sequence,
+                        reliability_bits: rel_bitfield_128_to_16(header.ack_memory),
                     }.write_bytes(&mut buf);
                     connection.packet_queue.push_outgoing(OutgoingPacket::from(buf.freeze()));
                 }
@@ -296,10 +295,10 @@ fn send_close_packet(
 ) {
     // Send a packet informing them of our denial
     reliability.advance();
-    let r_header = reliability.header();
+    let r_header = reliability.clone();
     packet_queue.push_outgoing(OutgoingPacket {
         payload: closing_packet(&ClosingPacket {
-            header: HandshakePacketHeader { sequence: r_header.seq },
+            header: HandshakePacketHeader { sequence: r_header.local_sequence },
             reason,
             additional,
         }),
@@ -424,7 +423,7 @@ pub(crate) fn potential_new_peers_system(
         // We have to construct the reliability state from scratch
         let mut reliability = ReliabilityState::new();
         reliability.remote_sequence = header.sequence;
-        reliability.sequence_memory |= 1u128 << 127;
+        reliability.ack_memory |= 1u128 << 127;
 
         let handshake = Handshaking {
             started: Instant::now(),

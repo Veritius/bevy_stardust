@@ -1,6 +1,4 @@
 mod packet;
-mod parsing;
-mod packing;
 mod systems;
 
 use std::{collections::HashMap, time::Duration};
@@ -9,7 +7,6 @@ use bevy_stardust::prelude::*;
 use packet::Frame;
 
 use super::{ordering::OrderedMessages, reliability::{ReliabilityState, ReliablePackets}};
-pub(crate) use packing::PackingScratchCells;
 pub(crate) use systems::{
     established_packet_reader_system,
     established_packet_builder_system,

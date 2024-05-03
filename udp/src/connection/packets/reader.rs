@@ -2,7 +2,7 @@ use std::collections::VecDeque;
 use bytes::Bytes;
 use tracing::error;
 use unbytes::Reader;
-use crate::{connection::{packets::header::PacketHeaderFlags, reliability::ReliablePackets}, plugin::PluginConfiguration};
+use crate::{connection::{packets::header::PacketHeaderFlags, reliability::ReliablePackets}, plugin::PluginConfiguration, sequences::SequenceId};
 use super::frames::RecvFrame;
 
 /// Parses incoming packets into an iterator of `Frame` objects.
@@ -101,9 +101,11 @@ fn parse_header(
     let flags = PacketHeaderFlags(reader.read_byte()
         .map_err(|_| PacketReadError::InvalidHeader)?);
 
-    // Check if the packet is reliable
+    // Reliability stuff
+    // let is_reliable = 
     if flags.any_high(PacketHeaderFlags::RELIABLE) {
-        todo!()
+        let seq = SequenceId(reader.read_u16().map_err(|_| PacketReadError::InvalidHeader)?);
+        // context.reliability.ack(header, bitfield_bytes);
     }
 
     todo!()

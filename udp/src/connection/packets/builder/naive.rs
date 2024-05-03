@@ -128,16 +128,16 @@ pub(super) fn pack_naive(
 
         // Get the current reliability state
         // If this is reliable, push a sequence id for this packet
-        let rel_hdr = ctx.context.rel_state.header();
+        let rel_hdr = ctx.context.rel_state.clone();
         if bin.is_reliable {
-            scr.put_u16(rel_hdr.seq.0);
+            scr.put_u16(rel_hdr.local_sequence.0);
             ctx.context.rel_state.advance();
         }
 
         // Put acknowledgement data
         // Unlike the sequence id, this is always present
-        scr.put_u16(rel_hdr.ack.0);
-        let bf_bts = rel_hdr.bits.to_be_bytes();
+        scr.put_u16(rel_hdr.remote_sequence.0);
+        let bf_bts = rel_hdr.ack_memory.to_be_bytes();
         scr.put(&bf_bts[..ctx.context.config.reliable_bitfield_length]);
 
         // It's very important we don't accidentally overrun
