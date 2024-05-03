@@ -174,7 +174,7 @@ pub(super) fn pack_naive(
             }
             false => { 
                 // Case 2: don't reallocate
-                // This avoidtodo!()s reallocation by filling the vec
+                // This avoids reallocation by filling the vec
                 // up to its length with data we don't care about.
                 // Since Bytes reallocates based on length, this
                 // prevents the reallocation.
