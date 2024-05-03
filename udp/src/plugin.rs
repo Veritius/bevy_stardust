@@ -122,6 +122,8 @@ impl Plugin for UdpTransportPlugin {
 
         // Sanity checks for plugin configuration
         // Most of these, if not checked here, would panic elsewhere
+        assert!(self.reliable_bitfield_length > 0,
+            "The length of reliable bitfields must be above 0");
         assert!(self.reliable_bitfield_length < 16,
             "The length of reliable bitfields cannot exceed 16");
 
