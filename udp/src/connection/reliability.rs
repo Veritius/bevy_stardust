@@ -120,7 +120,7 @@ impl ReliablePackets {
         self.state.ack_seq(seq)
     }
 
-    pub fn ack_bits(&mut self, ack: SequenceId, bitfield: u128, bitfield_bytes: u8) {
+    pub fn rec_ack(&mut self, ack: SequenceId, bitfield: u128, bitfield_bytes: u8) {
         let iter = self.state.ack_bits(ack, bitfield, bitfield_bytes);
         for seq in iter {
             self.unacked.remove(&seq.into());
@@ -129,7 +129,7 @@ impl ReliablePackets {
 
     fn ack_state_testing_only(&mut self, state: ReliabilityState) {
         self.ack_seq(state.local_sequence);
-        self.ack_bits(state.remote_sequence, state.ack_memory, 16);
+        self.rec_ack(state.remote_sequence, state.ack_memory, 16);
     }
 
     pub fn drain_old<'a, Filter: Fn(Instant) -> bool + 'a>(&'a mut self, filter: Filter) -> impl Iterator<Item = UnackedPacket> + 'a {

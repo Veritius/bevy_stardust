@@ -74,7 +74,7 @@ impl Iterator for PacketReaderIter<'_> {
                 let mut reader = Reader::new(bytes);
 
                 // Read the first bit of information about the packet.
-                if let Err(error) = parse_header(&mut reader, &self.context) {
+                if let Err(error) = parse_header(&mut reader, &mut self.context) {
                     // If the header is broken, there's not much point to going further.
                     return Some(Err(error));
                 }
@@ -95,20 +95,27 @@ impl Iterator for PacketReaderIter<'_> {
 
 fn parse_header(
     reader: &mut Reader,
-    context: &PacketReaderContext,
+    context: &mut PacketReaderContext,
 ) -> Result<(), PacketReadError> {
     // Read the packet header flags byte
     let flags = PacketHeaderFlags(reader.read_byte()
         .map_err(|_| PacketReadError::InvalidHeader)?);
 
-    // Reliability stuff
-    // let is_reliable = 
+    // If the packet is flagged reliable, it has a sequence id
     if flags.any_high(PacketHeaderFlags::RELIABLE) {
-        let seq = SequenceId(reader.read_u16().map_err(|_| PacketReadError::InvalidHeader)?);
-        // context.reliability.ack(header, bitfield_bytes);
+        let seq = SequenceId(reader.read_u16()
+            .map_err(|_| PacketReadError::InvalidHeader)?);
+        context.reliability.ack_seq(seq);
     }
 
-    todo!()
+    // These reliability values are always present
+    let ack = SequenceId(reader.read_u16()
+        .map_err(|_| PacketReadError::InvalidHeader)?);
+    let mut ack_bits = [0u8; 16];
+    // SequenceId(reader.read_slice(context.config.reliable_bitfield_length)
+    //     .map_err(|_| PacketReadError::InvalidHeader)?);
+
+    return Ok(())
 }
 
 fn parse_frame(
