@@ -177,8 +177,9 @@ impl AckMemory {
     #[inline(always)]
     pub fn from_slice(slice: &[u8]) -> Result<Self, ()> {
         if slice.len() < 16 { return Err(()); }
-
-        todo!()
+        let mut bytes = [0u8; 16];
+        bytes[..].copy_from_slice(&slice[..16]);
+        return Ok(Self::from_array(bytes))
     }
 
     #[inline(always)]
