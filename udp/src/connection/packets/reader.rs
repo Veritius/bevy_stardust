@@ -2,8 +2,8 @@ use std::collections::VecDeque;
 use bytes::Bytes;
 use tracing::error;
 use unbytes::Reader;
-use crate::{connection::{packets::header::PacketHeaderFlags, reliability::{AckMemory, ReliablePackets}}, plugin::PluginConfiguration, sequences::SequenceId};
-use super::frames::RecvFrame;
+use crate::{connection::{packets::header::PacketHeaderFlags, reliability::{AckMemory, ReliablePackets}}, plugin::PluginConfiguration, sequences::SequenceId, varint::VarInt};
+use super::frames::{FrameType, RecvFrame};
 
 /// Parses incoming packets into an iterator of `Frame` objects.
 pub(crate) struct PacketReader {
@@ -99,21 +99,21 @@ fn parse_header(
 ) -> Result<(), PacketReadError> {
     // Read the packet header flags byte
     let flags = PacketHeaderFlags(reader.read_byte()
-        .map_err(|_| PacketReadError::InvalidHeader)?);
+        .map_err(|_| PacketReadError::UnexpectedEnd)?);
 
     // If the packet is flagged reliable, it has a sequence id
     if flags.any_high(PacketHeaderFlags::RELIABLE) {
         let seq = SequenceId(reader.read_u16()
-            .map_err(|_| PacketReadError::InvalidHeader)?);
+            .map_err(|_| PacketReadError::UnexpectedEnd)?);
         context.reliability.ack_seq(seq);
     }
 
     // These reliability values are always present
     let ack_bits_len = context.config.reliable_bitfield_length;
     let ack = SequenceId(reader.read_u16()
-        .map_err(|_| PacketReadError::InvalidHeader)?);
+        .map_err(|_| PacketReadError::UnexpectedEnd)?);
     let ack_bits = AckMemory::from_slice(reader.read_slice(ack_bits_len)
-        .map_err(|_| PacketReadError::InvalidHeader)?).unwrap();
+        .map_err(|_| PacketReadError::UnexpectedEnd)?).unwrap();
     context.reliability.rec_ack(ack, ack_bits, ack_bits_len as u8);
 
     return Ok(())
@@ -122,10 +122,28 @@ fn parse_header(
 fn parse_frame(
     reader: &mut Reader,
 ) -> Result<RecvFrame, PacketReadError> {
-    todo!()
+    // Parse the frame header type
+    let ftype = reader.read_u8()
+        .map_err(|_| PacketReadError::UnexpectedEnd)?;
+    let ftype = FrameType::try_from(ftype)
+        .map_err(|_| PacketReadError::InvalidFrameType)?;
+
+    // Read the length of the packet
+    let len: usize = VarInt::read(reader)
+        .map_err(|_| PacketReadError::InvalidVarInt)?
+        .into();
+
+    // Read the next few bytes as per len
+    let payload = reader.read_bytes(len)
+        .map_err(|_| PacketReadError::UnexpectedEnd)?;
+
+    // Return the frame
+    return Ok(RecvFrame { ftype, payload });
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum PacketReadError {
-    InvalidHeader,
+    UnexpectedEnd,
+    InvalidFrameType,
+    InvalidVarInt,
 }
