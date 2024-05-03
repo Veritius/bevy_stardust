@@ -110,6 +110,7 @@ impl PacketBuilder {
 pub(crate) struct PacketBuilderContext<'a> {
     pub config: &'a PluginConfiguration,
     pub rel_state: &'a mut ReliabilityState,
+    pub scratch: &'a mut Vec<u8>,
 }
 
 struct PackFnSharedCtx<'a> {

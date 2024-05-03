@@ -1,18 +1,20 @@
 use bytes::{Bytes, BufMut};
-use crate::{connection::packets::{builder::BIN_HDR_SCR_SIZE, frames::*}, varint::VarInt};
+use crate::{connection::packets::{builder::BIN_HDR_SCR_SIZE, frames::*, header::PacketHeaderFlags}, varint::VarInt};
 use super::PackFnSharedCtx;
 
 /// For every reliable frame, this many unreliable frames will be sent.
 const UNRELIABLE_FRAME_BIAS: usize = 3;
 
+// The relative amount of data that can be wasted in exchange for avoiding a reallocation.
+// If this threshold is exceeded, bins will reallocate when turning into Bytes.
+// These two values apply to reliable and unreliable bins, respectively.
+const RELIABLE_WASTE_TOLERANCE: usize = 2;
+const UNRELIABLE_WASTE_TOLERANCE: usize = 4;
+
 /// Simple, naive packing algorithm. Works okay on any incoming sets.
 pub(super) fn pack_naive(
     mut ctx: PackFnSharedCtx,
 ) -> Vec<Bytes> {
-    // Storage for our finished packets
-    // We allocate 1 slot as if we reach this point we have at least 1 message.
-    let mut finished = Vec::with_capacity(1);
-
     // Storage for bins that are still being packed.
     let mut bins: Vec<WorkingBin> = Vec::with_capacity(1);
 
@@ -96,6 +98,9 @@ pub(super) fn pack_naive(
         #[cfg(debug_assertions)]
         assert_eq!(scr.len() - previous_length, frame_size_estimate);
 
+        // Update the bin
+        bin.is_reliable |= rel_frm;
+
         // Increment the frame index
         idx += 1;
         used += frame_size_estimate;
@@ -104,10 +109,83 @@ pub(super) fn pack_naive(
     // Return all unread frames back into the queue
     // This occurs if we have a high message load that exceeds our budget
     // We need to do this to ensure we don't drop packets that get unlucky
+    // This can be done at any point, so we might as well do it here.
     ctx.frames.finish(unreliable.drain(..).chain(reliable.drain(..)));
 
-    // Return the set of finished packets.
-    return finished;
+    // Take all bins, and generate their headers
+    // If a bin is reliable, this is where it's recorded
+    // Bins are also frozen into a Bytes for returning
+    return bins.drain(..)
+    .map(|mut bin| {
+        // Get and clear the scratch buffer for use
+        let scr = &mut ctx.context.scratch;
+        scr.clear();
+
+        // Create the packet header flags and push them
+        let mut header = PacketHeaderFlags::EMPTY;
+        if bin.is_reliable { header |= PacketHeaderFlags::RELIABLE }
+        scr.put_u8(header.0);
+
+        // Get the current reliability state
+        // If this is reliable, push a sequence id for this packet
+        let rel_hdr = ctx.context.rel_state.header();
+        if bin.is_reliable {
+            scr.put_u16(rel_hdr.seq.0);
+            ctx.context.rel_state.advance();
+        }
+
+        // Put acknowledgement data
+        // Unlike the sequence id, this is always present
+        scr.put_u16(rel_hdr.ack.0);
+        let bf_bts = rel_hdr.bits.to_be_bytes();
+        scr.put(&bf_bts[..ctx.context.config.reliable_bitfield_length]);
+
+        // It's very important we don't accidentally overrun
+        // the 'dead header' we've been assigned. We check here just in case.
+        // Though, it'll probably panic anyway, but hey, it's easier to debug.
+        debug_assert!(scr.len() <= BIN_HDR_SCR_SIZE);
+
+        // Put the new header into the unused space in the bin's allocation
+        // This makes sure the end of the header slice lines up with the start
+        // of the payload, which we generated earlier, and put in this buffer.
+        let hdr_len = scr.len();
+        let offset = BIN_HDR_SCR_SIZE - hdr_len;
+        bin.inner_data[offset..BIN_HDR_SCR_SIZE].clone_from_slice(&scr);
+
+        // Calculate how much space has been wasted or otherwise unused in the allocation.
+        // We also pick a threshold value based on whether or not the bin is reliable.
+        // If a certain ratio of bytes in the allocation are unused, this triggers a reallocation.
+        let utilised_bytes = bin.inner_data.len() - offset;
+        let unused_bytes = bin.inner_data.capacity() - utilised_bytes;
+        let usage_ratio = utilised_bytes / unused_bytes;
+        let tolerance = match bin.is_reliable {
+            true => RELIABLE_WASTE_TOLERANCE,
+            false => UNRELIABLE_WASTE_TOLERANCE,
+        };
+
+        // Decide whether it's worth reallocating
+        // This is what creates the Bytes we return
+        match usage_ratio > tolerance {
+            true => {
+                // Case 1: reallocate data
+                // We don't really need to do anything, since the 
+                // copy_from_slice fn does everything for us.
+                Bytes::copy_from_slice(&bin.inner_data[offset..])
+            }
+            false => { 
+                // Case 2: don't reallocate
+                // This avoidtodo!()s reallocation by filling the vec
+                // up to its length with data we don't care about.
+                // Since Bytes reallocates based on length, this
+                // prevents the reallocation.
+                let len = bin.inner_data.len();
+                bin.inner_data[len..].fill(0);
+                let bytes = Bytes::from(bin.inner_data);
+                bytes.slice(offset..len)
+            },
+        }
+    })
+    .collect::<Vec<Bytes>>()
 }
 
 struct WorkingBin {
