@@ -2,7 +2,7 @@ use std::collections::VecDeque;
 use bytes::Bytes;
 use tracing::error;
 use unbytes::Reader;
-use crate::connection::reliability::ReliablePackets;
+use crate::{connection::{packets::header::PacketHeaderFlags, reliability::ReliablePackets}, plugin::PluginConfiguration};
 use super::frames::RecvFrame;
 
 /// Parses incoming packets into an iterator of `Frame` objects.
@@ -32,6 +32,7 @@ impl PacketReader {
 }
 
 pub(crate) struct PacketReaderContext<'a> {
+    pub config: &'a PluginConfiguration,
     pub reliability: &'a mut ReliablePackets,
 }
 
@@ -65,19 +66,56 @@ impl Iterator for PacketReaderIter<'_> {
         // Create reader if none is present
         // This occurs when this type is first created
         // or if the previous frame was consumed
-        if self.current.is_none() {
-            let bytes = self.inner.queue.pop_front()?;
-            self.current = Some(Reader::new(bytes));
-        }
+        let reader = match self.current {
+            Some(ref mut reader) => reader,
+            None => {
+                // Fetch the next message for reading.
+                let bytes = self.inner.queue.pop_front()?;
+                let mut reader = Reader::new(bytes);
 
-        // Unwrapped access to the reader now we know it's created.
-        let reader = self.current.as_mut().unwrap();
+                // Read the first bit of information about the packet.
+                if let Err(error) = parse_header(&mut reader, &self.context) {
+                    // If the header is broken, there's not much point to going further.
+                    return Some(Err(error));
+                }
 
+                // SAFETY: It's assigned and then immediately accessed.
+                // I have to do this because get_or_insert_with doesn't
+                // allow you to terminate the outer function.
+                // TODO: Find a safe solution.
+                self.current = Some(reader);
+                unsafe { self.current.as_mut().unwrap_unchecked() }
+            },
+        };
+
+        // Run the parser function
+        Some(parse_frame(reader))
+    }
+}
+
+fn parse_header(
+    reader: &mut Reader,
+    context: &PacketReaderContext,
+) -> Result<(), PacketReadError> {
+    // Read the packet header flags byte
+    let flags = PacketHeaderFlags(reader.read_byte()
+        .map_err(|_| PacketReadError::InvalidHeader)?);
+
+    // Check if the packet is reliable
+    if flags.any_high(PacketHeaderFlags::RELIABLE) {
         todo!()
     }
+
+    todo!()
+}
+
+fn parse_frame(
+    reader: &mut Reader,
+) -> Result<RecvFrame, PacketReadError> {
+    todo!()
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum PacketReadError {
-
+    InvalidHeader,
 }

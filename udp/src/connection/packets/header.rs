@@ -7,6 +7,11 @@ impl PacketHeaderFlags {
     pub const EMPTY: Self = Self(0);
 
     pub const RELIABLE: Self = Self(1 << 0);
+
+    #[inline]
+    pub fn any_high(&self, mask: PacketHeaderFlags) -> bool {
+        return (*self & mask).0 > 0;
+    }
 }
 
 impl BitOr for PacketHeaderFlags {
