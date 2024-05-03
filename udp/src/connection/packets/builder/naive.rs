@@ -171,7 +171,7 @@ pub(super) fn pack_naive(
                 // We don't really need to do anything, since the 
                 // copy_from_slice fn does everything for us.
                 Bytes::copy_from_slice(&bin.inner_data[offset..])
-            }
+            },
             false => { 
                 // Case 2: don't reallocate
                 // This avoids reallocation by filling the vec
