@@ -2,7 +2,7 @@ use std::collections::VecDeque;
 use bytes::Bytes;
 use tracing::error;
 use unbytes::Reader;
-use crate::{connection::{packets::header::PacketHeaderFlags, reliability::ReliablePackets}, plugin::PluginConfiguration, sequences::SequenceId};
+use crate::{connection::{packets::header::PacketHeaderFlags, reliability::{AckMemory, ReliablePackets}}, plugin::PluginConfiguration, sequences::SequenceId};
 use super::frames::RecvFrame;
 
 /// Parses incoming packets into an iterator of `Frame` objects.
@@ -109,11 +109,12 @@ fn parse_header(
     }
 
     // These reliability values are always present
+    let ack_bits_len = context.config.reliable_bitfield_length;
     let ack = SequenceId(reader.read_u16()
         .map_err(|_| PacketReadError::InvalidHeader)?);
-    let mut ack_bits = [0u8; 16];
-    // SequenceId(reader.read_slice(context.config.reliable_bitfield_length)
-    //     .map_err(|_| PacketReadError::InvalidHeader)?);
+    let ack_bits = AckMemory::from_slice(reader.read_slice(ack_bits_len)
+        .map_err(|_| PacketReadError::InvalidHeader)?).unwrap();
+    context.reliability.rec_ack(ack, ack_bits, ack_bits_len as u8);
 
     return Ok(())
 }

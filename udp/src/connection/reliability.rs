@@ -169,30 +169,30 @@ pub struct AckMemory(u128);
 impl AckMemory {
     const BITMASK: u128 = 1;
 
-    #[inline(always)]
+    #[inline]
     pub fn from_array(array: [u8; 16]) -> Self {
         Self(u128::from_be_bytes(array))
     }
 
-    #[inline(always)]
     pub fn from_slice(slice: &[u8]) -> Result<Self, ()> {
-        if slice.len() < 16 { return Err(()); }
+        let len = slice.len().max(16);
+        if len == 0 { return Err(()); }
         let mut bytes = [0u8; 16];
-        bytes[..].copy_from_slice(&slice[..16]);
+        bytes[..len].copy_from_slice(&slice[..len]);
         return Ok(Self::from_array(bytes))
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn into_array(&self) -> [u8; 16] {
         self.0.to_be_bytes()
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn shift(&mut self, bits: u32) {
         self.0 = self.0.overflowing_shl(bits).0
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn set_high(&mut self, idx: u32) {
         self.0 |= Self::BITMASK.overflowing_shl(idx).0;
     }

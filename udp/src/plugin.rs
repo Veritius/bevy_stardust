@@ -120,6 +120,11 @@ impl Plugin for UdpTransportPlugin {
 
         app.add_event::<PotentialNewPeer>();
 
+        // Sanity checks for plugin configuration
+        // Most of these, if not checked here, would panic elsewhere
+        assert!(self.reliable_bitfield_length < 16,
+            "The length of reliable bitfields cannot exceed 16");
+
         // Add application context resource
         app.insert_resource(PluginConfiguration {
             application_version: self.application_version.clone(),
