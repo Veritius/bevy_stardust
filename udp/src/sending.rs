@@ -50,11 +50,11 @@ pub(crate) fn io_sending_system(
             } };
         
             // Check if there's anything to send
-            if connection.packet_queue.outgoing().len() == 0 { continue }
+            if connection.send_queue.len() == 0 { continue }
 
             // Send all packets queued in this peer
-            while let Some(packet) = connection.packet_queue.pop_outgoing() {
-                pkts_sent += 1; bytes_sent += packet.payload.len() as u64;
+            while let Some(payload) = connection.send_queue.pop_front() {
+                pkts_sent += 1; bytes_sent += payload.len() as u64;
 
                 // Randomly skip actually sending the packet
                 if let Some(performance) = performance {
@@ -62,22 +62,20 @@ pub(crate) fn io_sending_system(
                     if performance.packet_drop_chance < roll {
                         // Updating these values simulates a successful packet send
                         connection.timings.set_last_sent_now();
-                        endpoint_statistics.record_packet_send(packet.payload.len());
-                        connection.statistics.record_packet_send(packet.messages as usize);
+                        endpoint_statistics.record_packet_send(payload.len());
 
                         continue;
                     }
                 }
 
                 // Send the packet.
-                match socket.send_to(&packet.payload, connection.remote_address()) {
+                match socket.send_to(&payload, connection.remote_address()) {
                     Ok(_) => {
                         // Set last_sent in timings
                         connection.timings.set_last_sent_now();
 
                         // Add to statistics counters
-                        endpoint_statistics.record_packet_send(packet.payload.len());
-                        connection.statistics.record_packet_send(packet.messages as usize);
+                        endpoint_statistics.record_packet_send(payload.len());
                     },
 
                     Err(err) => {

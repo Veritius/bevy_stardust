@@ -13,18 +13,28 @@ pub(crate) use handshake::{handshake_polling_system, potential_new_peers_system,
 pub(crate) use established::{established_packet_reader_system, established_packet_builder_system, established_timeout_system};
 pub(crate) use systems::close_connections_system;
 
-use std::net::SocketAddr;
+use std::{collections::VecDeque, net::SocketAddr};
 use bevy::prelude::*;
 use bytes::Bytes;
 use tracing::warn;
-use crate::packet::PacketQueue;
 use statistics::ConnectionStatistics;
 use timing::ConnectionTimings;
+
+pub const DEFAULT_MTU: usize = 1472;
 
 /// An existing UDP connection.
 #[derive(Component, Reflect)]
 #[reflect(from_reflect = false)]
 pub struct Connection {
+    /// The maximum transport units (packet size limit) of the connection.
+    /// Currently, MTU is not detected, and this variable lets you change it manually.
+    /// For most cases, the default ([`DEFAULT_MTU`]) is good enough.
+    /// 
+    /// MTUs that are too high will cause data loss, and MTUs that are too low will be inefficient.
+    /// 
+    /// When MTU detection is added, this variable will be deprecated, and then removed.
+    pub mtu: usize,
+
     #[reflect(ignore)]
     remote_address: SocketAddr,
 
@@ -32,7 +42,10 @@ pub struct Connection {
     state: ConnectionState,
 
     #[reflect(ignore)]
-    pub(crate) packet_queue: PacketQueue,
+    pub(crate) send_queue: VecDeque<Bytes>,
+
+    #[reflect(ignore)]
+    pub(crate) recv_queue: VecDeque<Bytes>,
 
     pub(crate) owning_endpoint: Entity,
     pub(crate) direction: ConnectionDirection,
@@ -48,11 +61,14 @@ impl Connection {
         direction: ConnectionDirection,
     ) -> Self {
         Self {
+            mtu: DEFAULT_MTU,
+
             remote_address,
 
             state: ConnectionState::Handshaking,
 
-            packet_queue: PacketQueue::new(16, 16),
+            send_queue: VecDeque::with_capacity(16),
+            recv_queue: VecDeque::with_capacity(32),
 
             owning_endpoint,
             direction,

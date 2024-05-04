@@ -1,7 +1,7 @@
 use std::time::Duration;
 use bevy::prelude::*;
 use bevy_stardust::prelude::*;
-use crate::{appdata::ApplicationNetworkVersion, connection::PotentialNewPeer, packet::MTU_SIZE};
+use crate::{appdata::ApplicationNetworkVersion, connection::PotentialNewPeer};
 
 /// The UDP transport plugin.
 /// 
@@ -131,7 +131,6 @@ impl Plugin for UdpTransportPlugin {
         // Add application context resource
         app.insert_resource(PluginConfiguration {
             application_version: self.application_version.clone(),
-            available_payload_len: MTU_SIZE - (4+((self.reliable_bitfield_length as usize)*8)),
             reliable_bitfield_length: self.reliable_bitfield_length as usize,
             attempt_timeout: self.attempt_timeout,
             connection_timeout: self.connection_timeout,
@@ -143,7 +142,6 @@ impl Plugin for UdpTransportPlugin {
 #[derive(Resource)]
 pub(crate) struct PluginConfiguration {
     pub application_version: ApplicationNetworkVersion,
-    pub available_payload_len: usize,
     pub reliable_bitfield_length: usize,
     pub attempt_timeout: Duration,
     pub connection_timeout: Duration,

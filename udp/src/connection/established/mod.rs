@@ -18,14 +18,12 @@ pub(crate) use systems::{
 pub(crate) struct Established {
     reliable_timeout: Duration,
     reliability: ReliablePackets,
-    frames: Vec<Frame>,
     orderings: HashMap<u32, OrderedMessages>,
     errors: u32,
 }
 
 impl Established {
     pub(in super::super) fn new(
-        packet_size: usize,
         reliability: &ReliabilityState,
         registry: &ChannelRegistryInner,
     ) -> Self {
@@ -52,7 +50,6 @@ impl Established {
         Self {
             reliable_timeout: Duration::from_millis(1000), // TODO: Make this a dynamic value based off RTT
             reliability: ReliablePackets::new(reliability.clone()),
-            frames: Vec::with_capacity(4),
             orderings,
             errors: 0,
         }

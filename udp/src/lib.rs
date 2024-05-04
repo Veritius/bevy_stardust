@@ -5,7 +5,6 @@ mod appdata;
 mod connection;
 mod endpoint;
 mod manager;
-mod packet;
 mod plugin;
 mod receiving;
 mod sending;

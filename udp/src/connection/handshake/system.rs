@@ -1,4 +1,4 @@
-use std::{collections::HashMap, net::SocketAddr, time::{Duration, Instant}};
+use std::{collections::{HashMap, VecDeque}, net::SocketAddr, time::{Duration, Instant}};
 use bevy::{ecs::entity::Entities, prelude::*};
 use bevy_stardust::prelude::*;
 use bytes::{Bytes, BytesMut};
@@ -27,11 +27,6 @@ use crate::{
         PotentialNewPeer
     },
     endpoint::ConnectionOwnershipToken,
-    packet::{
-        IncomingPacket,
-        OutgoingPacket,
-        PacketQueue
-    },
     plugin::PluginConfiguration,
 };
 use super::{codes::HandshakeResponseCode, packets::{ClientFinalisePacket, ServerHelloPacket}, HandshakeFailureReason};
@@ -51,8 +46,8 @@ pub(crate) fn handshake_polling_system(
             // Sending ClientHelloPackets to the remote peer and waiting for a ServerHelloPacket
             HandshakeState::ClientHello => {
                 // Read any incoming packets
-                while let Some(packet) = connection.packet_queue.pop_incoming() {
-                    let mut reader = Reader::new(packet.payload);
+                while let Some(packet) = connection.recv_queue.pop_front() {
+                    let mut reader = Reader::new(packet);
 
                     // Try to read the header before anything else
                     let header = match HandshakePacketHeader::from_bytes(&mut reader) {
@@ -77,7 +72,7 @@ pub(crate) fn handshake_polling_system(
                             if !code.should_respond_on_rejection() { break; }
 
                             // Send a packet informing them of our denial
-                            send_close_packet(&mut connection.packet_queue, &mut handshake.reliability, code, None);
+                            send_close_packet(&mut connection.send_queue, &mut handshake.reliability, code, None);
 
                             // We're done
                             break 'outer;
@@ -119,7 +114,7 @@ pub(crate) fn handshake_polling_system(
                                 handshake.state = HandshakeFailureReason::WeRejected { code, message: None }.into();
 
                                 // Send a packet informing them of our denial
-                                send_close_packet(&mut connection.packet_queue, &mut handshake.reliability, code, None);
+                                send_close_packet(&mut connection.send_queue, &mut handshake.reliability, code, None);
 
                                 // We're done
                                 break 'outer;
@@ -136,7 +131,7 @@ pub(crate) fn handshake_polling_system(
                         reliability_ack: r_header.remote_sequence,
                         reliability_bits: rel_bitfield_128_to_16(todo!()),
                     }.write_bytes(&mut buf);
-                    connection.packet_queue.push_outgoing(OutgoingPacket::from(buf.freeze()));
+                    connection.send_queue.push_back(buf.freeze());
 
                     // Mark as finalised
                     handshake.state = HandshakeState::Finished;
@@ -152,15 +147,15 @@ pub(crate) fn handshake_polling_system(
                         transport: TRANSPORT_VERSION_DATA.clone(),
                         application: config.application_version.as_nvd(),
                     }.write_bytes(&mut buf);
-                    connection.packet_queue.push_outgoing(OutgoingPacket::from(buf.freeze()));
+                    connection.send_queue.push_back(buf.freeze());
                 }
             }
 
             // Sending ServerHelloPackets to the remote peer and waiting for a ClientFinalisePacket
             HandshakeState::ServerHello => {
                 // Read any incoming packets
-                while let Some(packet) = connection.packet_queue.pop_incoming() {
-                    let mut reader = Reader::new(packet.payload);
+                while let Some(packet) = connection.recv_queue.pop_front() {
+                    let mut reader = Reader::new(packet);
 
                     // Try to read the header before anything else
                     let header = match HandshakePacketHeader::from_bytes(&mut reader) {
@@ -224,7 +219,7 @@ pub(crate) fn handshake_polling_system(
                         reliability_ack: header.remote_sequence,
                         reliability_bits: rel_bitfield_128_to_16(todo!()),
                     }.write_bytes(&mut buf);
-                    connection.packet_queue.push_outgoing(OutgoingPacket::from(buf.freeze()));
+                    connection.send_queue.push_back(buf.freeze());
                 }
             },
 
@@ -248,7 +243,6 @@ pub(crate) fn handshake_polling_system(
                     commands.entity(entity)
                         .remove::<Handshaking>()
                         .insert(Established::new(
-                            config.available_payload_len,
                             &handshake.reliability,
                             &registry,
                         ))
@@ -288,7 +282,7 @@ fn timeout_check(
 }
 
 fn send_close_packet(
-    packet_queue: &mut PacketQueue,
+    packet_queue: &mut VecDeque<Bytes>,
     reliability: &mut ReliabilityState,
     reason: HandshakeResponseCode,
     additional: Option<Bytes>,
@@ -296,14 +290,13 @@ fn send_close_packet(
     // Send a packet informing them of our denial
     reliability.advance();
     let r_header = reliability.clone();
-    packet_queue.push_outgoing(OutgoingPacket {
-        payload: closing_packet(&ClosingPacket {
+    packet_queue.push_back(
+        closing_packet(&ClosingPacket {
             header: HandshakePacketHeader { sequence: r_header.local_sequence },
             reason,
             additional,
-        }),
-        messages: 0,
-    });
+        })
+    );
 }
 
 fn rel_bitfield_16_to_128(bitfield: u16) -> u128 {
@@ -330,7 +323,7 @@ pub(crate) fn potential_new_peers_system(
     'outer: while let Some(event) = ev_iter.next() {
         // There is the potential of bunched-up packet arrivals, so we push them to the queue just in case.
         if let Some(item) = pending.get_mut(&event.address) {
-            item.1.packet_queue.push_incoming(IncomingPacket { payload: event.payload.clone() });
+            item.1.send_queue.push_back(event.payload.clone());
             continue;
         }
 
