@@ -118,7 +118,7 @@ pub(super) fn pack_naive(
     // Take all bins, and generate their headers
     // If a bin is reliable, this is where it's recorded
     // Bins are also frozen into a Bytes for returning
-    return bins.drain(..)
+    bins.drain(..)
     .map(|mut bin| {
         // Get and clear the scratch buffer for use
         let scr = &mut ctx.context.scratch;
@@ -131,7 +131,7 @@ pub(super) fn pack_naive(
 
         // Get the current reliability state
         // If this is reliable, push a sequence id for this packet
-        let rel_hdr = ctx.context.rel_state.clone();
+        let rel_hdr = ctx.context.rel_state.clone_state();
         if bin.is_reliable {
             scr.put_u16(rel_hdr.local_sequence.0);
             ctx.context.rel_state.advance();
@@ -168,7 +168,7 @@ pub(super) fn pack_naive(
 
         // Decide whether it's worth reallocating
         // This is what creates the Bytes we return
-        match usage_ratio > tolerance {
+        let bytes = match usage_ratio > tolerance {
             true => {
                 // Case 1: reallocate data
                 // We don't really need to do anything, since the 
@@ -186,7 +186,18 @@ pub(super) fn pack_naive(
                 let bytes = Bytes::from(bin.inner_data);
                 bytes.slice(offset..len)
             },
+        };
+
+        // If the bin is reliable, record the payload
+        // This makes sure we can resend it on failure
+        if bin.is_reliable {
+            // Excludes the header from the slice
+            let payload = bytes.slice(hdr_len..);
+            ctx.context.rel_state.record(rel_hdr.local_sequence, payload);
         }
+
+        // Return the full bytes object
+        return bytes;
     })
     .collect::<Vec<Bytes>>()
 }

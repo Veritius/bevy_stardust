@@ -2,7 +2,7 @@ mod naive;
 
 use bytes::Bytes;
 use tracing::trace_span;
-use crate::{connection::reliability::ReliabilityState, plugin::PluginConfiguration};
+use crate::{connection::reliability::ReliablePackets, plugin::PluginConfiguration};
 use super::frames::{FrameQueue, FrameQueueIter, FrameQueueStats, SendFrame};
 
 /*
@@ -106,7 +106,7 @@ impl PacketBuilder {
 /// Static information about the application.
 pub(crate) struct PacketBuilderContext<'a> {
     pub config: &'a PluginConfiguration,
-    pub rel_state: &'a mut ReliabilityState,
+    pub rel_state: &'a mut ReliablePackets,
     pub scratch: &'a mut Vec<u8>,
 }
 
