@@ -130,7 +130,7 @@ fn parse_frame(
 
     // Read the length of the packet
     let len: usize = VarInt::read(reader)
-        .map_err(|_| PacketReadError::InvalidVarInt)?
+        .map_err(|_| PacketReadError::InvalidFrameLen)?
         .into();
 
     // Read the next few bytes as per len
@@ -145,5 +145,5 @@ fn parse_frame(
 pub(crate) enum PacketReadError {
     UnexpectedEnd,
     InvalidFrameType,
-    InvalidVarInt,
+    InvalidFrameLen,
 }

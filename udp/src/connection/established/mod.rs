@@ -4,15 +4,13 @@ mod systems;
 use std::{collections::HashMap, time::Duration};
 use bevy::prelude::*;
 use bevy_stardust::prelude::*;
-use packet::Frame;
 
-use super::{ordering::OrderedMessages, reliability::{ReliabilityState, ReliablePackets}};
+use super::{ordering::OrderedMessages, packets::{builder::PacketBuilder, reader::PacketReader}, reliability::{ReliabilityState, ReliablePackets}};
 pub(crate) use systems::{
     established_packet_reader_system,
     established_packet_builder_system,
     established_timeout_system,
 };
-
 
 #[derive(Component)]
 pub(crate) struct Established {
@@ -20,6 +18,9 @@ pub(crate) struct Established {
     reliability: ReliablePackets,
     orderings: HashMap<u32, OrderedMessages>,
     errors: u32,
+
+    reader: PacketReader,
+    builder: PacketBuilder,
 }
 
 impl Established {
@@ -52,6 +53,9 @@ impl Established {
             reliability: ReliablePackets::new(reliability.clone()),
             orderings,
             errors: 0,
+
+            reader: PacketReader::default(),
+            builder: PacketBuilder::default(),
         }
     }
 
