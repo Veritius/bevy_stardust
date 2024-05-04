@@ -63,30 +63,27 @@ impl Iterator for PacketReaderIter<'_> {
     type Item = Result<RecvFrame, PacketReadError>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        // Create reader if none is present
-        // This occurs when this type is first created
-        // or if the previous frame was consumed
-        let reader = match self.current {
-            Some(ref mut reader) => reader,
-            None => {
-                // Fetch the next message for reading.
-                let bytes = self.inner.queue.pop_front()?;
-                let mut reader = Reader::new(bytes);
-
-                // Read the first bit of information about the packet.
-                if let Err(error) = parse_header(&mut reader, &mut self.context) {
-                    // If the header is broken, there's not much point to going further.
-                    return Some(Err(error));
-                }
-
-                // SAFETY: It's assigned and then immediately accessed.
-                // I have to do this because get_or_insert_with doesn't
-                // allow you to terminate the outer function.
-                // TODO: Find a safe solution.
-                self.current = Some(reader);
-                unsafe { self.current.as_mut().unwrap_unchecked() }
-            },
+        let new_reader = match self.current {
+            Some(ref reader) => { reader.remaining() == 0 },
+            None => true,
         };
+
+        if new_reader {
+            // Fetch the next message for reading.
+            let bytes = self.inner.queue.pop_front()?;
+            let mut reader = Reader::new(bytes);
+
+            // Read the first bit of information about the packet.
+            if let Err(error) = parse_header(&mut reader, &mut self.context) {
+                // If the header is broken, there's not much point to going further.
+                return Some(Err(error));
+            }
+
+            // Set the reader variable
+            self.current = Some(reader);
+        };
+
+        let reader = self.current.as_mut().unwrap();
 
         // Run the parser function
         Some(parse_frame(reader))
