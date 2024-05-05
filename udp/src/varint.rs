@@ -99,19 +99,31 @@ impl VarInt {
         let x = self.0;
         let mut b = (self.0 << 2).to_le_bytes();
 
-        if x < Self::B1_LMT {
-            buf.put_u8(b[0]);
-        } else if x < Self::B2_LMT {
-            b[0] |= 0b01;
-            buf.put(&b[..2]);
-        } else if x < Self::B4_LMT {
-            b[0] |= 0b10;
-            buf.put(&b[..4]);
-        } else if x < Self::B8_LMT {
-            b[0] |= 0b11;
-            buf.put(&b[..8]);
-        } else {
-            unreachable!("bad varint");
+        match self.0 {
+            // First case: one byte
+            x if x < Self::B1_LMT => {
+                buf.put_u8(b[0])
+            },
+
+            // Second case: two bytes
+            x if x < Self::B2_LMT => {
+                b[0] |= 0b01;
+                buf.put(&b[..2]);
+            },
+
+            // Third case: four bytes
+            x if x < Self::B4_LMT => {
+                b[0] |= 0b10;
+                buf.put(&b[..4]);
+            },
+
+            // Fourth case: eight bytes
+            x if x < Self::B8_LMT => {
+                b[0] |= 0b11;
+                buf.put(&b[..8]);
+            },
+
+            _ => unreachable!("bad varint"),
         }
     }
 
