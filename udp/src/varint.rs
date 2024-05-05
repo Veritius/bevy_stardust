@@ -109,6 +109,11 @@ impl VarInt {
             unreachable!("bad varint");
         }
     }
+
+    /// Returns how many bytes this varint will use on the wire.
+    pub fn estimate_size(&self) -> usize {
+        todo!()
+    }
 }
 
 #[test]

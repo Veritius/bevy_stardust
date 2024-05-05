@@ -5,8 +5,11 @@ use crate::{sequences::SequenceId, varint::VarInt};
 
 #[derive(Debug, Clone)]
 pub(crate) struct RecvFrame {
+    pub flags: FrameFlags,
     pub ftype: FrameType,
-    pub furdat: Bytes,
+    pub order: Option<SequenceId>,
+    pub ident: Option<VarInt>,
+    pub payload: Bytes,
 }
 
 #[derive(Debug, Clone)]
@@ -15,6 +18,7 @@ pub(crate) struct SendFrame {
     pub time: Instant,
     pub flags: FrameFlags,
     pub ftype: FrameType,
+    pub reliable: bool,
     pub order: Option<SequenceId>,
     pub ident: Option<VarInt>,
     pub payload: Bytes,
@@ -24,8 +28,17 @@ impl SendFrame {
     /// Return an estimate for how many bytes this frame will take up when serialised.
     /// The estimate must be equal to or greater than the real value, or panics will occur.
     pub fn bytes_est(&self) -> usize {
-        // Always takes up at least as many bytes at the header + payload
-        let estimate = FrameType::WIRE_SIZE + self.payload.len();
+        // Always takes up a certain amount of data
+        // (flags + type + payload)
+        let mut estimate = 2 + self.payload.len();
+
+        // Ordering id takes always takes up two bytes
+        if self.order.is_some() { estimate += 2 }
+
+        // Identifier takes up space as well
+        if let Some(ident) = self.ident {
+            estimate += ident.estimate_size();
+        }
 
         // Estimate is one
         return estimate;
@@ -73,6 +86,7 @@ fn frame_ord_test() {
             priority, time,
             flags: FrameFlags::EMPTY,
             ftype: FrameType::Control,
+            reliable: false,
             order: None,
             ident: None,
             payload: Bytes::from_static(&[]),
@@ -143,16 +157,31 @@ impl From<FrameType> for u8 {
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
-pub(crate) struct FrameFlags(u16);
+pub(crate) struct FrameFlags(u8);
 
 impl FrameFlags {
     pub const EMPTY: Self = Self(0);
 
-    pub const RELIABLE: Self = Self(1 << 0);
+    pub const ORDERED    : Self = Self(1 << 0);
+    pub const IDENTIFIED : Self = Self(1 << 1);
 
     #[inline]
     pub fn any_high(&self, mask: FrameFlags) -> bool {
         return (*self & mask).0 > 0;
+    }
+}
+
+impl From<u8> for FrameFlags {
+    #[inline]
+    fn from(value: u8) -> Self {
+        Self(value)
+    }
+}
+
+impl From<FrameFlags> for u8 {
+    #[inline]
+    fn from(value: FrameFlags) -> Self {
+        value.0
     }
 }
 
@@ -210,7 +239,7 @@ impl FrameQueue {
         self.queue.iter().for_each(|frame| {
             stats.total_bytes_estimate += frame.bytes_est();
 
-            match frame.flags.any_high(FrameFlags::RELIABLE) {
+            match frame.reliable {
                 true => stats.reliable_frames_count += 1,
                 false => stats.unreliable_frames_count += 1,
             }
@@ -281,6 +310,7 @@ fn frame_queue_test() {
             priority, time,
             flags: FrameFlags::EMPTY,
             ftype: FrameType::Control,
+            reliable: false,
             order: None,
             ident: None,
             payload: PAYLOAD.clone(),

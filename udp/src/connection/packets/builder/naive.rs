@@ -26,7 +26,7 @@ pub(super) fn pack_naive(
     let mut unreliable = Vec::with_capacity(ctx.stats.unreliable_frames_count);
     let mut reliable = Vec::with_capacity(ctx.stats.reliable_frames_count);
     while let Some(frame) = ctx.frames.next() {
-        match frame.flags.any_high(FrameFlags::RELIABLE) {
+        match frame.reliable {
             false => unreliable.push(frame),
             true => reliable.push(frame),
         }
@@ -85,6 +85,9 @@ pub(super) fn pack_naive(
 
         #[cfg(debug_assertions)]
         let previous_length = scr.len();
+
+        // Put the frame flags into the bin
+        scr.put_u8(frame.flags.into());
 
         // Put the frame type into the bin
         scr.put_u8(frame.ftype.into());

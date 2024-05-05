@@ -3,7 +3,7 @@ use bytes::Bytes;
 use tracing::error;
 use unbytes::Reader;
 use crate::{connection::{packets::header::PacketHeaderFlags, reliability::{AckMemory, ReliablePackets}}, plugin::PluginConfiguration, sequences::SequenceId, varint::VarInt};
-use super::frames::{FrameType, RecvFrame};
+use super::frames::{FrameFlags, FrameType, RecvFrame};
 
 /// Parses incoming packets into an iterator of `Frame` objects.
 pub(crate) struct PacketReader {}
@@ -112,6 +112,25 @@ fn parse_header(
 fn parse_frame(
     reader: &mut Reader,
 ) -> Result<RecvFrame, PacketReadError> {
+    // Get the byte for frame flags
+    let flags: FrameFlags = reader.read_u8()
+        .map_err(|_| PacketReadError::UnexpectedEnd)?
+        .into();
+
+    // Get the frame channel id if present
+    let ident = match flags.any_high(FrameFlags::IDENTIFIED) {
+        false => None,
+        true => Some(VarInt::read(reader)
+            .map_err(|_| PacketReadError::UnexpectedEnd)?),
+    };
+
+    // Get the frame channel ordering if present
+    let order = match flags.any_high(FrameFlags::ORDERED) {
+        false => None,
+        true => Some(reader.read_u16()
+            .map_err(|_| PacketReadError::UnexpectedEnd)?.into()),
+    };
+
     // Parse the frame header type
     let ftype = reader.read_u8()
         .map_err(|_| PacketReadError::UnexpectedEnd)?;
@@ -128,7 +147,7 @@ fn parse_frame(
         .map_err(|_| PacketReadError::UnexpectedEnd)?;
 
     // Return the frame
-    return Ok(RecvFrame { ftype, furdat: payload });
+    return Ok(RecvFrame { flags, ftype, order, ident, payload });
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
