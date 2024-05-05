@@ -96,7 +96,7 @@ impl VarInt {
     }
 
     pub fn write<B: BufMut>(&self, buf: &mut B) {
-        let x = self.0;
+        // Little endian bytes: least significant bits first
         let mut b = (self.0 << 2).to_le_bytes();
 
         match self.0 {
