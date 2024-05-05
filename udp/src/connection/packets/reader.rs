@@ -6,32 +6,25 @@ use crate::{connection::{packets::header::PacketHeaderFlags, reliability::{AckMe
 use super::frames::{FrameType, RecvFrame};
 
 /// Parses incoming packets into an iterator of `Frame` objects.
-pub(crate) struct PacketReader {
-    queue: VecDeque<Bytes>,
-}
+pub(crate) struct PacketReader {}
 
 impl Default for PacketReader {
     fn default() -> Self {
         Self {
-            queue: VecDeque::with_capacity(16),
+
         }
     }
 }
 
 impl PacketReader {
+    #[must_use]
     pub fn iter<'a>(&'a mut self, context: PacketReaderContext<'a>) -> PacketReaderIter<'a> {
         PacketReaderIter { inner: self, current: None, context }
-    }
-
-    pub(in crate::connection) fn push(
-        &mut self,
-        packet: Bytes,
-    ) {
-        self.queue.push_back(packet)
     }
 }
 
 pub(crate) struct PacketReaderContext<'a> {
+    pub queue: &'a mut VecDeque<Bytes>,
     pub config: &'a PluginConfiguration,
     pub reliability: &'a mut ReliablePackets,
 }
@@ -70,7 +63,7 @@ impl Iterator for PacketReaderIter<'_> {
 
         if new_reader {
             // Fetch the next message for reading.
-            let bytes = self.inner.queue.pop_front()?;
+            let bytes = self.context.queue.pop_front()?;
             let mut reader = Reader::new(bytes);
 
             // Read the first bit of information about the packet.
@@ -135,7 +128,7 @@ fn parse_frame(
         .map_err(|_| PacketReadError::UnexpectedEnd)?;
 
     // Return the frame
-    return Ok(RecvFrame { ftype, payload });
+    return Ok(RecvFrame { ftype, furdat: payload });
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

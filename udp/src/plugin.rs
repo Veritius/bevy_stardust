@@ -74,7 +74,7 @@ impl Plugin for UdpTransportPlugin {
             potential_new_peers_system,
             handshake_polling_system,
             established_packet_reader_system,
-            established_packet_builder_system,
+            established_packet_writing_system,
             established_timeout_system,
             close_connections_system,
         };
@@ -114,7 +114,7 @@ impl Plugin for UdpTransportPlugin {
         // Packet transmitting systems
         app.add_systems(PostUpdate, (
             established_timeout_system,
-            established_packet_builder_system,
+            established_packet_writing_system,
             io_sending_system,
             close_connections_system,
             close_endpoints_system,

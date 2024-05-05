@@ -6,22 +6,6 @@ use crate::plugin::PluginConfiguration;
 use crate::prelude::*;
 use super::Established;
 
-pub(crate) fn established_packet_reader_system(
-    registry: Res<ChannelRegistry>,
-    config: Res<PluginConfiguration>,
-    mut connections: Query<(Entity, &mut Connection, &mut Established, &mut NetworkMessages<Incoming>)>,
-) {
-    todo!()
-}
-
-pub(crate) fn established_packet_builder_system(
-    registry: Res<ChannelRegistry>,
-    config: Res<PluginConfiguration>,
-    mut connections: Query<(Entity, &mut Connection, &mut Established, &NetworkMessages<Outgoing>)>,
-) {
-    todo!()
-}
-
 pub(crate) fn established_timeout_system(
     config: Res<PluginConfiguration>,
     mut connections: Query<(Entity, &mut Connection, &mut Established, Option<&mut NetworkPeerLifestage>)>,
