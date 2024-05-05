@@ -1,8 +1,7 @@
 use std::{cmp::Ordering, ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign}, time::Instant};
 use bytes::Bytes;
 use tracing::trace_span;
-
-use crate::sequences::SequenceId;
+use crate::{sequences::SequenceId, varint::VarInt};
 
 #[derive(Debug, Clone)]
 pub(crate) struct RecvFrame {
@@ -17,6 +16,7 @@ pub(crate) struct SendFrame {
     pub flags: FrameFlags,
     pub ftype: FrameType,
     pub order: Option<SequenceId>,
+    pub ident: Option<VarInt>,
     pub payload: Bytes,
 }
 
@@ -74,6 +74,7 @@ fn frame_ord_test() {
             flags: FrameFlags::EMPTY,
             ftype: FrameType::Control,
             order: None,
+            ident: None,
             payload: Bytes::from_static(&[]),
         }
     }
@@ -281,6 +282,7 @@ fn frame_queue_test() {
             flags: FrameFlags::EMPTY,
             ftype: FrameType::Control,
             order: None,
+            ident: None,
             payload: PAYLOAD.clone(),
         }
     }

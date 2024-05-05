@@ -89,6 +89,16 @@ pub(super) fn pack_naive(
         // Put the frame type into the bin
         scr.put_u8(frame.ftype.into());
 
+        // If the frame has an identifier, put it in.
+        if let Some(ident) = frame.ident {
+            ident.write(scr);
+        }
+
+        // If the frame has an ordering, put it in!
+        if let Some(order) = frame.order {
+            scr.put_u16(order.into());
+        }
+
         // Put the payload length into the bin using a varint
         // Unwrapping is fine since I doubt anyone will try to
         // send a payload with a length of 4,611 petabytes.
