@@ -63,6 +63,11 @@ impl Debug for VarInt {
 impl VarInt {
     pub const MAX: u64 = 2u64.pow(62);
 
+    pub const B1_LMT: u64 = 2u64.pow(6);
+    pub const B2_LMT: u64 = 2u64.pow(14);
+    pub const B4_LMT: u64 = 2u64.pow(30);
+    pub const B8_LMT: u64 = 2u64.pow(62);
+
     pub fn read(reader: &mut Reader) -> Result<Self, EndOfInput> {
         const MASK: u8 = 0b0000_0011;
 
@@ -94,15 +99,15 @@ impl VarInt {
         let x = self.0;
         let mut b = (self.0 << 2).to_le_bytes();
 
-        if x < 2u64.pow(6) {
+        if x < Self::B1_LMT {
             buf.put_u8(b[0]);
-        } else if x < 2u64.pow(14) {
+        } else if x < Self::B2_LMT {
             b[0] |= 0b01;
             buf.put(&b[..2]);
-        } else if x < 2u64.pow(30) {
+        } else if x < Self::B4_LMT {
             b[0] |= 0b10;
             buf.put(&b[..4]);
-        } else if x < 2u64.pow(62) {
+        } else if x < Self::B8_LMT {
             b[0] |= 0b11;
             buf.put(&b[..8]);
         } else {
@@ -111,8 +116,14 @@ impl VarInt {
     }
 
     /// Returns how many bytes this varint will use on the wire.
-    pub fn estimate_size(&self) -> usize {
-        todo!()
+    pub fn size(&self) -> usize {
+        match self.0 {
+            x if x < Self::B1_LMT => 1,
+            x if x < Self::B2_LMT => 2,
+            x if x < Self::B4_LMT => 4,
+            x if x < Self::B8_LMT => 8,
+            _ => unreachable!("bad varint"),
+        }
     }
 }
 
@@ -123,15 +134,16 @@ fn back_and_forth_test() {
 
     fn serial_test(value: u64) {
         let value = VarInt::try_from(value)
-        .expect("Value passed to serial_test was not representable in a varint");
+            .expect("Value passed to serial_test was not representable in a varint");
 
         let mut bytes = BytesMut::with_capacity(8);
         value.write(&mut bytes);
 
         let bytes = bytes.freeze();
         let mut reader = Reader::new(bytes);
-        let new = VarInt::read(&mut reader).unwrap();
+        assert_eq!(reader.remaining(), value.size());
 
+        let new = VarInt::read(&mut reader).unwrap();
         assert_eq!(value, new);
     }
 

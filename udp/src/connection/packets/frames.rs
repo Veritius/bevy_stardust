@@ -37,7 +37,7 @@ impl SendFrame {
 
         // Identifier takes up space as well
         if let Some(ident) = self.ident {
-            estimate += ident.estimate_size();
+            estimate += ident.size();
         }
 
         // Estimate is one
