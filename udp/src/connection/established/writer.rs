@@ -53,7 +53,8 @@ pub(crate) fn established_packet_writing_system(
                 // This is fine since all messages are similar
                 let mut flags = FrameFlags::IDENTIFIED;
                 if channel_data.ordered != OrderingGuarantee::Unordered {
-                    flags |= FrameFlags::ORDERED;
+                    // TODO
+                    // flags |= FrameFlags::ORDERED;
                 }
 
                 // Iterate over all messages
