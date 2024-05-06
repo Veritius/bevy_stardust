@@ -254,10 +254,7 @@ impl FrameQueue {
 
     pub fn iter<'a>(&'a mut self) -> FrameQueueIter<'a> {
         // Sort packets
-        let trace_span = trace_span!("Sorting frames for packing");
-        trace_span.in_scope(|| {
-            self.queue.sort_unstable();
-        });
+        self.queue.sort_unstable();
 
         // Return iterator
         FrameQueueIter {

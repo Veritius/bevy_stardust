@@ -73,10 +73,6 @@ impl PacketBuilder {
             stats: queue_stats.clone(),
         };
 
-        // More tracing stuff
-        let trace_span = trace_span!("Packing frames");
-        let _entered = trace_span.enter();
-
         // Case matching to try and find an optimal configuration of bins.
         let ret = match (
             queue_stats.total_frames_count,
