@@ -78,10 +78,16 @@ impl Iterator for PacketReaderIter<'_> {
 
         // Run the parser function
         let reader = self.current.as_mut().unwrap();
-        let k = parse_frame(reader);
-        if reader.remaining() == 0 { self.current = None; }
+        let result = parse_frame(reader);
 
-        return Some(k);
+        // Errors anywhere force us to discard the packet
+        // Also, if we've finished reading it, clear the slot
+        if result.is_err() || reader.remaining() == 0 {
+            self.current = None;
+        }
+
+        // Return the result
+        return Some(result);
     }
 }
 
