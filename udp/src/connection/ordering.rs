@@ -184,6 +184,9 @@ mod tests {
         assert_eq!(state.recv(OrderedMessage::blank(2.into())), Some(OrderedMessage::blank(2.into())));
 
         let re = state.drain_available().unwrap().collect::<Vec<_>>();
-        assert_eq!(re, vec![OrderedMessage::blank(3.into()), OrderedMessage::blank(4.into())]);
+        assert_eq!(re, vec![
+            OrderedMessage::blank(3.into()),
+            OrderedMessage::blank(4.into()),
+        ]);
     }
 }
