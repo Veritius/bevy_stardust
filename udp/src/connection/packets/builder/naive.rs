@@ -114,7 +114,7 @@ pub(super) fn pack_naive(
         // Unwrapping is fine since I doubt anyone will try to
         // send a payload with a length of 4,611 petabytes.
         // Not that there's any computers that can even store that.
-        VarInt::try_from(frame.payload.len()).unwrap();
+        VarInt::try_from(frame.payload.len()).unwrap().write(scr);
 
         // Put in the payload itself
         scr.put(frame.payload);
