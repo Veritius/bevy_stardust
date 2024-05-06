@@ -58,7 +58,7 @@ pub(crate) fn established_packet_reader_system(
                             };
 
                             match channel_data.ordered != OrderingGuarantee::Unordered {
-                                // Case 1: Ordered message
+                                // Case 1.2.1: Ordered message
                                 true => {
                                     // Ensure that we have an ordering id to use
                                     if frame.order.is_none() { todo!() }
@@ -85,7 +85,7 @@ pub(crate) fn established_packet_reader_system(
                                     }
                                 },
 
-                                // Case 2: Unordered message
+                                // Case 1.2.2: Unordered message
                                 false => {
                                     messages.push(channel, frame.payload);
                                 },
