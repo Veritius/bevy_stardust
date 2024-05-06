@@ -65,7 +65,7 @@ pub(crate) fn established_packet_writing_system(
                         flags,
                         ftype: FrameType::Stardust,
                         reliable: is_reliable,
-                        order: todo!(),
+                        order: None, // TODO
                         ident: Some(channel_ident),
                         payload: message,
                     };
