@@ -97,7 +97,7 @@ pub(crate) fn established_packet_reader_system(
                 // Case 2: Error while reading
                 // This doesn't make us terminate
                 Some(Err(error)) => {
-                    todo!()
+                    error!("Error: {error:?}");
                 },
 
                 // Case 3: No more packets to read

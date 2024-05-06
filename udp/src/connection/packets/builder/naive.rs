@@ -35,12 +35,20 @@ pub(super) fn pack_naive(
     // Try to pack as many frames as possible
     let mut used = 0;
     let mut idx = 0;
-    loop {
-        // Check if we've run out of frames to pack
-        if reliable.is_empty() && unreliable.is_empty() { break }
+    'outer: loop {
+        // Determine the next packet to read
+        let rel_frm = {
+            let rel_is_empty = reliable.is_empty();
+            let unrel_is_empty = unreliable.is_empty();
 
-        // Store whether or not the current frame will be reliable
-        let rel_frm = !(idx % UNRELIABLE_FRAME_BIAS == 0 || reliable.is_empty());
+            match (idx % UNRELIABLE_FRAME_BIAS, rel_is_empty, unrel_is_empty) {
+                (_, true, true) => { break 'outer },
+                (_, true, false) => false,
+                (_, false, true) => true,
+                (x, _, _) if x == 0 => true,
+                (_, _, _) => false,
+            }
+        };
 
         // Get the frame from either buffer
         // Unwraps are fine since we checked previously
@@ -52,7 +60,7 @@ pub(super) fn pack_naive(
         // Store and compare the estimate to make sure
         // that we don't go over budget, and for later use
         let frame_size_estimate = frame.bytes_est();
-        if (frame_size_estimate + used) > ctx.budget { continue }
+        if (frame_size_estimate + used) > ctx.budget { continue 'outer; }
 
         // Find a suitable bin to pack into
         let bin = 'bin: {
@@ -78,7 +86,7 @@ pub(super) fn pack_naive(
             bin.inner_data.extend((0..BIN_HDR_SCR_SIZE).into_iter().map(|_| 0));
             bins.push(bin);
             let bin_idx = bins.len();
-            break 'bin &mut bins[bin_idx];
+            break 'bin &mut bins[bin_idx - 1];
         };
 
         let scr = &mut bin.inner_data;

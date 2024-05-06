@@ -175,7 +175,7 @@ impl AckMemory {
     }
 
     pub fn from_slice(slice: &[u8]) -> Result<Self, ()> {
-        let len = slice.len().max(16);
+        let len = slice.len().min(16);
         if len == 0 { return Err(()); }
         let mut bytes = [0u8; 16];
         bytes[..len].copy_from_slice(&slice[..len]);
