@@ -44,5 +44,63 @@ The ack bitfield is closely connected to the acknowledgement value, but the leng
 [uX] Acknowledgement bitfield
 ```
 
+### Frames
+After the header, the packet is composed of **frames.** These are individual message items within the packet.
+
+```
+[u8] Frame flags
+```
+
+The packet flags value changes the meaning of the next few bytes. This is what each bit means.
+
+| Bit | Significance        |
+| --- | ------------------- |
+| `0` | Frame is ordered    |
+| `1` | Frame is identified |
+| `2` | Unassigned          |
+| `3` | Unassigned          |
+| `4` | Unassigned          |
+| `5` | Unassigned          |
+| `6` | Unassigned          |
+| `7` | Unassigned          |
+
+If the frame is identified (bit `1` is high), a varint will be read which controls the channel the message goes to. This is currently only used for Stardust message frames.
+
+```
+[uX] Id varint
+```
+
+If the frame is ordered (bit `0` is high), a `u16` with its sequence value will be read.
+
+```
+[u16] Ordering id
+```
+
+***
+
+The frame type determines the purpose of the packet, and is used to have UDP control data and Stardust messages in the same packet.
+
+```
+[u8] Frame type
+```
+
+| Value | Variant  |
+| ----- | -------- |
+| `0`   | Control  |
+| `1`   | Stardust |
+
+Next is the length of the frame's payload. This is a varint of any length.
+
+```
+[uX] Length varint
+```
+
+Based on the length, the next N bytes will be read as a payload.
+
+```
+[uX] Payload
+```
+
+
 ### Reliability
 TODO
