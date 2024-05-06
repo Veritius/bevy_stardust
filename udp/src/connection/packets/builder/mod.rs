@@ -45,14 +45,16 @@ impl PacketBuilder {
         // Check the budget is enough to work with
         assert!(max_size >= MIN_MTU, "MTU was too small");
 
-        // Record these here because they reset when drain is called.
-        let queue_stats = self.queue.assess();
-
         // Record data for debugging
-        let trace_span = trace_span!("Packing");
+        let trace_span = trace_span!("Running builder");
         let _entered = trace_span.enter();
         trace_span.record("budget", budget);
         trace_span.record("mtu", max_size);
+
+        // Store these here because they reset when drain is called.
+        let queue_stats = self.queue.assess();
+
+        // Record everything in queue_stats
         trace_span.record("total_bytes", queue_stats.total_bytes_estimate);
         trace_span.record("total_frames", queue_stats.total_frames_count);
         trace_span.record("unreliable_frames", queue_stats.unreliable_frames_count);
@@ -60,7 +62,7 @@ impl PacketBuilder {
 
         // Get an iterator of frames that need to be put into packets
         // Automatically sorts the queue by priority using Frame's Ord impl
-        let frames = self.queue.iter();
+        let frames = trace_span!("Sorting frames").in_scope(|| { self.queue.iter() });
 
         // Shared state data used by all packing functions
         let shared_context = PackFnSharedCtx {
@@ -70,6 +72,10 @@ impl PacketBuilder {
             max_size,
             stats: queue_stats.clone(),
         };
+
+        // More tracing stuff
+        let trace_span = trace_span!("Packing frames");
+        let _entered = trace_span.enter();
 
         // Case matching to try and find an optimal configuration of bins.
         let ret = match (
