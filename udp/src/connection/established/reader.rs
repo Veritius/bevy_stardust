@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 use bevy_stardust::prelude::*;
+use crate::connection::packets::frames::FrameType;
 use crate::connection::packets::reader::{PacketReader, PacketReaderContext};
 use crate::connection::reliability::ReliablePackets;
 use crate::plugin::PluginConfiguration;
@@ -34,7 +35,29 @@ pub(crate) fn established_packet_reader_system(
             match iter.next() {
                 // Case 1: Another frame was read
                 Some(Ok(frame)) => {
-                    todo!()
+                    match frame.ftype {
+                        // Case 1.1: Connection control frame
+                        FrameType::Control => {
+                            todo!()
+                        },
+
+                        // Case 1.2: Stardust message frame
+                        FrameType::Stardust => {
+                            // Unwrapping is ok since the presence of ident is checked in the parser
+                            // It's also checked to be within 2^32 (max channel ids) so we can unwrap there too
+                            let channel: ChannelId = frame.ident.unwrap().try_into().unwrap();
+
+                            // Quickly check that the channel exists
+                            if !registry.channel_exists(channel) {
+                                todo!()
+                            }
+
+                            // TODO: Ordering stuff
+
+                            // Add to the incoming queue component
+                            messages.push(channel, frame.payload);
+                        },
+                    }
                 },
 
                 // Case 2: Error while reading

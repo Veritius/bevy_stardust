@@ -5,7 +5,6 @@ use crate::{sequences::SequenceId, varint::VarInt};
 
 #[derive(Debug, Clone)]
 pub(crate) struct RecvFrame {
-    pub flags: FrameFlags,
     pub ftype: FrameType,
     pub order: Option<SequenceId>,
     pub ident: Option<VarInt>,
@@ -128,11 +127,6 @@ fn frame_ord_test() {
 pub(crate) enum FrameType {
     Control,
     Stardust,
-}
-
-impl FrameType {
-    /// The size of a frame type code, in bytes.
-    pub const WIRE_SIZE: usize = 1;
 }
 
 impl TryFrom<u8> for FrameType {

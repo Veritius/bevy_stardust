@@ -15,10 +15,10 @@ pub(crate) fn established_packet_writing_system(
     mut connections: Query<(Entity, &mut Connection, &mut Established, &NetworkMessages<Outgoing>)>,
 ) {
     // Iterate all peers in parallel
-    connections.par_iter_mut().for_each(|(entity, mut connection, mut established, outgoing)| {
+    connections.par_iter_mut().for_each(|(entity, mut connection, mut established, messages)| {
         // Find out how many frames we need to send
         let mut frame_total = 0;
-        let outgoing_count = outgoing.count();
+        let outgoing_count = messages.count();
         frame_total += outgoing_count;
         frame_total += established.as_ref().builder.len();
 
@@ -40,7 +40,7 @@ pub(crate) fn established_packet_writing_system(
         // Add all outgoing messages as frames
         if outgoing_count > 0 {
             // Iterate over all channels
-            for (channel, messages) in outgoing.iter() {
+            for (channel, messages) in messages.iter() {
                 // Get channel data from the registry
                 let channel_data = registry.channel_config(channel)
                     .expect(&format!("Message sent on nonexistent channel {channel:?}"));

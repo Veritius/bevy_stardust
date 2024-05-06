@@ -1,6 +1,7 @@
 // Variable length integer implementation based on RFC 9000 (QUIC)
 
 use std::fmt::Debug;
+use bevy_stardust::channels::ChannelId;
 use bytes::BufMut;
 use unbytes::{EndOfInput, Reader};
 
@@ -50,6 +51,15 @@ impl From<VarInt> for usize {
     #[inline]
     fn from(value: VarInt) -> Self {
         value.0 as usize
+    }
+}
+
+impl TryFrom<VarInt> for ChannelId {
+    type Error = ();
+
+    fn try_from(value: VarInt) -> Result<Self, Self::Error> {
+        if value.0 > 2u64.pow(32) { return Err(()); }
+        return Ok(ChannelId::from(value.0 as u32))
     }
 }
 

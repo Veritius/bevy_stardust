@@ -121,7 +121,7 @@ fn parse_frame(
     let ident = match flags.any_high(FrameFlags::IDENTIFIED) {
         false => None,
         true => Some(VarInt::read(reader)
-            .map_err(|_| PacketReadError::UnexpectedEnd)?),
+            .map_err(|_| PacketReadError::InvalidFrameIdent)?),
     };
 
     // Get the frame channel ordering if present
@@ -137,6 +137,24 @@ fn parse_frame(
     let ftype = FrameType::try_from(ftype)
         .map_err(|_| PacketReadError::InvalidFrameType)?;
 
+    // There are extra constraints for Stardust messages
+    if ftype == FrameType::Stardust {
+        match ident {
+            // Stardust messages always have an associated channel id
+            None => {
+                return Err(PacketReadError::InvalidFrameIdent);
+            },
+
+            // Stardust messages only have 2^32 possible channels
+            Some(x) if u64::from(x) > u32::MAX as u64 => {
+                return Err(PacketReadError::InvalidFrameIdent);
+            },
+
+            // All checks passed, do nothing.
+            Some(_) => {},
+        }
+    }
+
     // Read the length of the packet
     let len: usize = VarInt::read(reader)
         .map_err(|_| PacketReadError::InvalidFrameLen)?
@@ -147,12 +165,13 @@ fn parse_frame(
         .map_err(|_| PacketReadError::UnexpectedEnd)?;
 
     // Return the frame
-    return Ok(RecvFrame { flags, ftype, order, ident, payload });
+    return Ok(RecvFrame { ftype, order, ident, payload });
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum PacketReadError {
     UnexpectedEnd,
     InvalidFrameType,
+    InvalidFrameIdent,
     InvalidFrameLen,
 }
