@@ -117,6 +117,12 @@ fn parse_frame(
         .map_err(|_| PacketReadError::UnexpectedEnd)?
         .into();
 
+    // Parse the frame header type
+    let ftype = reader.read_u8()
+        .map_err(|_| PacketReadError::UnexpectedEnd)?;
+    let ftype = FrameType::try_from(ftype)
+        .map_err(|_| PacketReadError::InvalidFrameType)?;
+
     // Get the frame channel id if present
     let ident = match flags.any_high(FrameFlags::IDENTIFIED) {
         false => None,
@@ -130,12 +136,6 @@ fn parse_frame(
         true => Some(reader.read_u16()
             .map_err(|_| PacketReadError::UnexpectedEnd)?.into()),
     };
-
-    // Parse the frame header type
-    let ftype = reader.read_u8()
-        .map_err(|_| PacketReadError::UnexpectedEnd)?;
-    let ftype = FrameType::try_from(ftype)
-        .map_err(|_| PacketReadError::InvalidFrameType)?;
 
     // There are extra constraints for Stardust messages
     if ftype == FrameType::Stardust {
