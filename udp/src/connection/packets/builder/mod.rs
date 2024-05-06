@@ -101,6 +101,11 @@ impl PacketBuilder {
     ) {
         self.queue.push(frame);
     }
+
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.queue.len()
+    }
 }
 
 /// Static information about the application.

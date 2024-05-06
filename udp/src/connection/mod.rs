@@ -13,7 +13,7 @@ pub(crate) use handshake::{handshake_polling_system, potential_new_peers_system,
 pub(crate) use established::{established_packet_reader_system, established_packet_writing_system, established_timeout_system};
 pub(crate) use systems::close_connections_system;
 
-use std::{collections::VecDeque, net::SocketAddr};
+use std::{collections::VecDeque, net::SocketAddr, time::Instant};
 use bevy::prelude::*;
 use bytes::Bytes;
 use tracing::warn;
@@ -21,30 +21,20 @@ use statistics::ConnectionStatistics;
 use timing::ConnectionTimings;
 
 pub const DEFAULT_MTU: usize = 1472;
+pub const DEFAULT_BUDGET: usize = 16384;
 
 /// An existing UDP connection.
-#[derive(Component, Reflect)]
-#[reflect(from_reflect = false)]
+#[derive(Component)]
 pub struct Connection {
-    /// The maximum transport units (packet size limit) of the connection.
-    /// Currently, MTU is not detected, and this variable lets you change it manually.
-    /// For most cases, the default ([`DEFAULT_MTU`]) is good enough.
-    /// 
-    /// MTUs that are too high will cause data loss, and MTUs that are too low will be inefficient.
-    /// 
-    /// When MTU detection is added, this variable will be deprecated, and then removed.
-    pub mtu: usize,
+    mtu_limit: usize,
+    budget_limit: usize,
+    budget_count: usize,
+    budget_ltime: Instant,
 
-    #[reflect(ignore)]
     remote_address: SocketAddr,
-
-    #[reflect(ignore)]
     state: ConnectionState,
 
-    #[reflect(ignore)]
     pub(crate) send_queue: VecDeque<Bytes>,
-
-    #[reflect(ignore)]
     pub(crate) recv_queue: VecDeque<Bytes>,
 
     pub(crate) owning_endpoint: Entity,
@@ -61,7 +51,10 @@ impl Connection {
         direction: ConnectionDirection,
     ) -> Self {
         Self {
-            mtu: DEFAULT_MTU,
+            mtu_limit: DEFAULT_MTU,
+            budget_limit: DEFAULT_BUDGET,
+            budget_count: DEFAULT_BUDGET,
+            budget_ltime: Instant::now(),
 
             remote_address,
 
@@ -99,6 +92,31 @@ impl Connection {
     /// Returns statistics related to the Connection. See [`ConnectionStatistics`] for more.
     pub fn statistics(&self) -> &ConnectionStatistics {
         &self.statistics
+    }
+}
+
+/// Advanced configuration for power users.
+impl Connection {
+    /// Sets the maximum transport units (packet size limit) of the connection.
+    /// Currently, MTU is not detected, and this variable lets you change it manually.
+    /// For most cases, the default ([`DEFAULT_MTU`]) is good enough.
+    /// 
+    /// MTUs that are too high will cause data loss, and MTUs that are too low will be inefficient.
+    /// Note that the average MTU a user will have is probably `1472`, the Ethernet link layer limit.
+    /// 
+    /// When MTU detection is added, this function will be deprecated, and then removed.
+    pub fn set_mtu(&mut self, mtu: usize) {
+        self.mtu_limit = mtu;
+    }
+
+    /// Sets the limit of the number of bytes that will be sent each **second.**
+    /// For most cases, the default ([`DEFAULT_BUDGET`]) is good enough.
+    /// However, if the connection is running through loopback, it can be
+    /// safely set to [`usize::MAX`] for better testing performance.
+    /// 
+    /// When congestion control is added, this function will be deprecated, and then removed.
+    pub fn set_budget(&mut self, budget: usize) {
+        self.budget_limit = budget;
     }
 }
 

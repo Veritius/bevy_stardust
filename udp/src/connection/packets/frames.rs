@@ -228,6 +228,11 @@ pub(super) struct FrameQueue {
 }
 
 impl FrameQueue {
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.queue.len()
+    }
+
     pub fn assess(&self) -> FrameQueueStats {
         let mut stats = FrameQueueStats {
             total_frames_count: self.queue.len(),
