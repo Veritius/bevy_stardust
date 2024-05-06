@@ -4,13 +4,11 @@ use bevy_stardust::prelude::*;
 use bytes::{Bytes, BytesMut};
 use unbytes::Reader;
 use crate::{
-    prelude::*,
     appdata::{
         NetworkVersionData,
         BANNED_MINOR_VERSIONS,
         TRANSPORT_VERSION_DATA
-    },
-    connection::{
+    }, connection::{
         established::Established,
         handshake::{
             packets::{
@@ -22,12 +20,10 @@ use crate::{
             },
             HandshakeState
         },
-        reliability::ReliabilityState,
+        reliability::{AckMemory, ReliabilityState},
         Connection,
         PotentialNewPeer
-    },
-    endpoint::ConnectionOwnershipToken,
-    plugin::PluginConfiguration,
+    }, endpoint::ConnectionOwnershipToken, plugin::PluginConfiguration, prelude::*
 };
 use super::{codes::HandshakeResponseCode, packets::{ClientFinalisePacket, ServerHelloPacket}, HandshakeFailureReason};
 use super::Handshaking;
@@ -97,7 +93,7 @@ pub(crate) fn handshake_polling_system(
                     handshake.reliability.ack_seq(header.sequence);
                     let _ = handshake.reliability.ack_bits(
                         packet.reliability_ack,
-                        todo!(),
+                        rel_bitfield_16_to_128(packet.reliability_bits),
                         2
                     );
 
@@ -129,7 +125,7 @@ pub(crate) fn handshake_polling_system(
                     HandshakePacketHeader { sequence: r_header.local_sequence }.write_bytes(&mut buf);
                     ClientFinalisePacket {
                         reliability_ack: r_header.remote_sequence,
-                        reliability_bits: rel_bitfield_128_to_16(todo!()),
+                        reliability_bits: rel_bitfield_128_to_16(r_header.ack_memory.into_array()),
                     }.write_bytes(&mut buf);
                     connection.send_queue.push_back(buf.freeze());
 
@@ -197,9 +193,9 @@ pub(crate) fn handshake_polling_system(
 
                     // Update reliability
                     handshake.reliability.ack_seq(header.sequence);
-                    handshake.reliability.ack_bits(
+                    let _ = handshake.reliability.ack_bits(
                         packet.reliability_ack,
-                        todo!(),
+                        rel_bitfield_16_to_128(packet.reliability_bits),
                         2,
                     );
 
@@ -211,13 +207,13 @@ pub(crate) fn handshake_polling_system(
                 // Check if we need to send a packet
                 if timeout_check(connection.timings.last_sent, RESEND_TIMEOUT) {
                     let mut buf = BytesMut::with_capacity(38);
-                    let header = handshake.reliability.clone();
-                    HandshakePacketHeader { sequence: header.local_sequence }.write_bytes(&mut buf);
+                    let r_header = handshake.reliability.clone();
+                    HandshakePacketHeader { sequence: r_header.local_sequence }.write_bytes(&mut buf);
                     ServerHelloPacket {
                         transport: TRANSPORT_VERSION_DATA.clone(),
                         application: config.application_version.as_nvd(),
-                        reliability_ack: header.remote_sequence,
-                        reliability_bits: rel_bitfield_128_to_16(todo!()),
+                        reliability_ack: r_header.remote_sequence,
+                        reliability_bits: rel_bitfield_128_to_16(r_header.ack_memory.into_array()),
                     }.write_bytes(&mut buf);
                     connection.send_queue.push_back(buf.freeze());
                 }
@@ -299,15 +295,15 @@ fn send_close_packet(
     );
 }
 
-fn rel_bitfield_16_to_128(bitfield: u16) -> u128 {
+fn rel_bitfield_16_to_128(bitfield: u16) -> AckMemory {
     let a = bitfield.to_be_bytes();
     let mut b = [0u8; 16];
     b[0] = a[0]; b[1] = a[1];
-    u128::from_be_bytes(b)
+    AckMemory::from_array(b)
 }
 
-fn rel_bitfield_128_to_16(bitfield: u128) -> u16 {
-    let a = bitfield.to_be_bytes();
+#[inline]
+fn rel_bitfield_128_to_16(a: [u8; 16]) -> u16 {
     u16::from_be_bytes([a[0], a[1]])
 }
 
@@ -416,8 +412,7 @@ pub(crate) fn potential_new_peers_system(
         // We have to construct the reliability state from scratch
         let mut reliability = ReliabilityState::new();
         reliability.remote_sequence = header.sequence;
-        todo!();
-        // reliability.ack_memory |= 1u128 << 127;
+        reliability.ack_memory.set_high(127);
 
         let handshake = Handshaking {
             started: Instant::now(),
