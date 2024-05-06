@@ -76,10 +76,12 @@ impl Iterator for PacketReaderIter<'_> {
             self.current = Some(reader);
         };
 
-        let reader = self.current.as_mut().unwrap();
-
         // Run the parser function
-        Some(parse_frame(reader))
+        let reader = self.current.as_mut().unwrap();
+        let k = parse_frame(reader);
+        if reader.remaining() == 0 { self.current = None; }
+
+        return Some(k);
     }
 }
 
