@@ -120,7 +120,7 @@ pub(super) fn pack_naive(
         scr.put(frame.payload);
 
         #[cfg(debug_assertions)]
-        assert_eq!(scr.len() - previous_length, frame_size_estimate);
+        assert_eq!(scr.len() - previous_length - 1, frame_size_estimate);
 
         // Update the bin
         bin.is_reliable |= rel_frm;
