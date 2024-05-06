@@ -48,11 +48,18 @@ pub(crate) fn established_packet_reader_system(
                             let channel: ChannelId = frame.ident.unwrap().try_into().unwrap();
 
                             // Quickly check that the channel exists
-                            if !registry.channel_exists(channel) {
-                                todo!()
-                            }
+                            let channel_data = match registry.channel_config(channel) {
+                                Some(v) => v,
+                                None => {
+                                    // Channel doesn't exist
+                                    todo!();
+                                },
+                            };
 
                             // TODO: Ordering stuff
+                            if channel_data.ordered != OrderingGuarantee::Unordered {
+                                todo!()
+                            }
 
                             // Add to the incoming queue component
                             messages.push(channel, frame.payload);
