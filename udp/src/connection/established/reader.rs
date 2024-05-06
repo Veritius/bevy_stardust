@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 use bevy_stardust::prelude::*;
+use crate::connection::ordering::{OrderedMessage, OrderingManager};
 use crate::connection::packets::frames::FrameType;
 use crate::connection::packets::reader::{PacketReader, PacketReaderContext};
 use crate::connection::reliability::ReliablePackets;
@@ -15,11 +16,11 @@ pub(crate) fn established_packet_reader_system(
     connections.par_iter_mut().for_each(|(entity, mut connection, mut established, mut messages)| {
         // Hack to get around the borrow checker not letting you mutably borrow multiple fields from the same struct at the same time
         #[inline(always)]
-        fn split_borrow(established: &mut Established) -> (&mut ReliablePackets, &mut PacketReader) {
-            (&mut established.reliability, &mut established.reader)
+        fn split_borrow(established: &mut Established) -> (&mut ReliablePackets, &mut OrderingManager, &mut PacketReader) {
+            (&mut established.reliability, &mut established.orderings, &mut established.reader)
         }
 
-        let (reliability, reader) = split_borrow(&mut established);
+        let (reliability, orderings, reader) = split_borrow(&mut established);
 
         // Context object for the packet reader
         let context = PacketReaderContext {
@@ -56,13 +57,39 @@ pub(crate) fn established_packet_reader_system(
                                 },
                             };
 
-                            // TODO: Ordering stuff
-                            if channel_data.ordered != OrderingGuarantee::Unordered {
-                                todo!()
-                            }
+                            match channel_data.ordered != OrderingGuarantee::Unordered {
+                                // Case 1: Ordered message
+                                true => {
+                                    // Ensure that we have an ordering id to use
+                                    if frame.order.is_none() { todo!() }
+                                    let sequence = frame.order.unwrap();
 
-                            // Add to the incoming queue component
-                            messages.push(channel, frame.payload);
+                                    // Ordering state for this channel
+                                    let ordering = orderings.get(channel_data);
+
+                                    // Receive the ordered message on the reader
+                                    if let Some(message) = ordering.recv(OrderedMessage {
+                                        sequence,
+                                        payload: frame.payload,
+                                    }) {
+                                        // A frame being returned means we're up to date
+                                        messages.push(channel, message.payload);
+                                    } else {
+                                        // No frames being returned means we're not up to date
+                                        // but we can still check to see if anything has become available
+                                        if let Some(drain) = ordering.drain_available() {
+                                            for message in drain {
+                                                messages.push(channel, message.payload);
+                                            }
+                                        }
+                                    }
+                                },
+
+                                // Case 2: Unordered message
+                                false => {
+                                    messages.push(channel, frame.payload);
+                                },
+                            }
                         },
                     }
                 },

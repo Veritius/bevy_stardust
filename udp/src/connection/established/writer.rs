@@ -1,6 +1,7 @@
 use std::time::Instant;
 use bevy::prelude::*;
 use bevy_stardust::prelude::*;
+use crate::connection::ordering::OrderingManager;
 use crate::connection::packets::builder::{PacketBuilder, PacketBuilderContext};
 use crate::connection::packets::frames::{FrameFlags, FrameType, SendFrame};
 use crate::connection::reliability::ReliablePackets;
@@ -46,19 +47,39 @@ pub(crate) fn established_packet_writing_system(
                     .expect(&format!("Message sent on nonexistent channel {channel:?}"));
 
                 // Store some data about the channel so we don't repeat ourselves
+                let is_ordered = channel_data.ordered != OrderingGuarantee::Unordered;
                 let is_reliable = channel_data.reliable == ReliabilityGuarantee::Reliable;
-                let channel_ident: VarInt = Into::<u32>::into(channel).into();
+                let channel_varint: VarInt = Into::<u32>::into(channel).into();
 
                 // Create the flags for all frames
                 // This is fine since all messages are similar
                 let mut flags = FrameFlags::IDENTIFIED;
-                if channel_data.ordered != OrderingGuarantee::Unordered {
-                    // TODO
-                    // flags |= FrameFlags::ORDERED;
+                if is_ordered {
+                    flags |= FrameFlags::ORDERED;
                 }
+
+                // Hack to get around the borrow checker not letting you mutably borrow multiple fields from the same struct at the same time
+                #[inline(always)]
+                fn split_borrow(established: &mut Established) -> (&mut OrderingManager, &mut PacketBuilder) {
+                    (&mut established.orderings, &mut established.builder)
+                }
+
+                let (orderings, builder) = split_borrow(&mut established);
+
+                // Get a new ordering if necessary
+                let mut orderings = match is_ordered {
+                    true => Some(orderings.get(channel_data)),
+                    false => None,
+                };
 
                 // Iterate over all messages
                 for message in messages.iter().cloned() {
+                    // If the channel is ordered, give it an ordering sequence
+                    let order = match is_ordered {
+                        true => Some(orderings.as_mut().unwrap().advance()),
+                        false => None,
+                    };
+
                     // Construct the frame data
                     let frame = SendFrame {
                         priority: channel_data.priority,
@@ -66,13 +87,13 @@ pub(crate) fn established_packet_writing_system(
                         flags,
                         ftype: FrameType::Stardust,
                         reliable: is_reliable,
-                        order: None, // TODO
-                        ident: Some(channel_ident),
+                        order,
+                        ident: Some(channel_varint),
                         payload: message,
                     };
 
                     // Add it to the builder
-                    established.builder.put(frame);
+                    builder.put(frame);
                 }
             }
         }

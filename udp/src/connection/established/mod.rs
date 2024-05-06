@@ -6,7 +6,7 @@ use std::time::Duration;
 use bevy::prelude::*;
 use bevy_stardust::prelude::*;
 
-use super::{packets::{builder::PacketBuilder, frames::SendFrame, reader::PacketReader}, reliability::{ReliabilityState, ReliablePackets}};
+use super::{ordering::OrderingManager, packets::{builder::PacketBuilder, frames::SendFrame, reader::PacketReader}, reliability::{ReliabilityState, ReliablePackets}};
 pub(crate) use reader::established_packet_reader_system;
 pub(crate) use writer::established_packet_writing_system;
 pub(crate) use systems::established_timeout_system;
@@ -15,6 +15,7 @@ pub(crate) use systems::established_timeout_system;
 pub(crate) struct Established {
     reliable_timeout: Duration,
     reliability: ReliablePackets,
+    orderings: OrderingManager,
     errors: u32,
 
     reader: PacketReader,
@@ -29,6 +30,7 @@ impl Established {
         Self {
             reliable_timeout: Duration::from_millis(1000), // TODO: Make this a dynamic value based off RTT
             reliability: ReliablePackets::new(reliability.clone()),
+            orderings: OrderingManager::new(),
             errors: 0,
 
             reader: PacketReader::default(),

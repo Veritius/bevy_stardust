@@ -1,6 +1,33 @@
 use std::{cmp::Ordering, fmt::Debug};
+use bevy::utils::HashMap;
+use bevy_stardust::channels::{ChannelData, ChannelId, OrderingGuarantee};
 use bytes::Bytes;
 use crate::sequences::SequenceId;
+
+// Storage for ordered messages.
+pub(crate) struct OrderingManager {
+    stardust_messages: HashMap<ChannelId, OrderedMessages>,
+}
+
+impl OrderingManager {
+    pub fn new() -> Self {
+        Self {
+            stardust_messages: HashMap::default(),
+        }
+    }
+
+    pub fn get(&mut self, channel: &ChannelData) -> &mut OrderedMessages {
+        self.stardust_messages
+        .entry(channel.channel_id)
+        .or_insert_with(|| {
+            match channel.ordered {
+                OrderingGuarantee::Sequenced => OrderedMessages::sequenced(),
+                OrderingGuarantee::Ordered => OrderedMessages::ordered(),
+                OrderingGuarantee::Unordered => panic!("Can't make an OrderedMessages for an unordered channel"),
+            }
+        })
+    }
+}
 
 /// Ensures items are popped in order, regardless of insertion order.
 pub(crate) struct OrderedMessages {
