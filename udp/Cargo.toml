@@ -19,7 +19,6 @@ thread_local = "1.1.4" # matches bevy
 fastrand = "2"
 tracing = "0.1"
 anyhow = "1"
-split_borrow = { git = "https://github.com/Veritius/split_borrow" }
 
 [dev-dependencies]
 bevy_log = "0.13"

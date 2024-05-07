@@ -1,11 +1,8 @@
 use std::time::Instant;
 use bevy::prelude::*;
 use bevy_stardust::prelude::*;
-use split_borrow::split_borrow;
-use crate::connection::ordering::OrderingManager;
-use crate::connection::packets::builder::{PacketBuilder, PacketBuilderContext};
+use crate::connection::packets::builder::PacketBuilderContext;
 use crate::connection::packets::frames::{FrameFlags, FrameType, SendFrame};
-use crate::connection::reliability::ReliablePackets;
 use crate::plugin::PluginConfiguration;
 use crate::prelude::*;
 use crate::varint::VarInt;
@@ -59,10 +56,9 @@ pub(crate) fn established_packet_writing_system(
                     flags |= FrameFlags::ORDERED;
                 }
 
-                split_borrow!(Established established {
-                    let orderings: &mut OrderingManager = &mut inner.orderings;
-                    let builder: &mut PacketBuilder = &mut inner.builder;
-                });
+                let established = &mut *established;
+                let orderings = &mut established.orderings;
+                let builder = &mut established.builder;
 
                 // Get a new ordering if necessary
                 let mut orderings = match is_ordered {
@@ -99,10 +95,9 @@ pub(crate) fn established_packet_writing_system(
         // Setup scratch space for the packet builder
         let mut scratch = Vec::with_capacity(connection.mtu_limit);
 
-        split_borrow!(Established established {
-            let reliability: &mut ReliablePackets = &mut inner.reliability;
-            let builder: &mut PacketBuilder = &mut inner.builder;
-        });
+        let established = &mut *established;
+        let reliability = &mut established.reliability;
+        let builder = &mut established.builder;
 
         // Setup context for the builder
         let context = PacketBuilderContext {

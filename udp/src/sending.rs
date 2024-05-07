@@ -1,9 +1,7 @@
-use std::{io, collections::HashMap, net::{SocketAddr, UdpSocket}};
+use std::io;
 use bevy::prelude::*;
 use bevy_stardust::connections::NetworkPerformanceReduction;
-use bytes::Bytes;
-use split_borrow::split_borrow;
-use crate::{endpoint::ConnectionOwnershipToken, prelude::*};
+use crate::prelude::*;
 
 // Sends packets to UDP sockets
 pub(crate) fn io_sending_system(
@@ -21,12 +19,11 @@ pub(crate) fn io_sending_system(
         let span = tracing::trace_span!("Sending packets on endpoint", id=?endpoint_id);
         let _entered_span = span.enter();
 
-        split_borrow!(Endpoint endpoint {
-            let socket: &UdpSocket = &inner.udp_socket;
-            let connection_map: &HashMap<SocketAddr, ConnectionOwnershipToken> = &inner.connections;
-            let outgoing_pkts: &mut Vec<(SocketAddr, Bytes)> = &mut inner.outgoing_pkts;
-            let endpoint_statistics: &mut EndpointStatistics = &mut inner.statistics;
-        });
+        let endpoint = &mut *endpoint;
+        let socket = &endpoint.udp_socket;
+        let connection_map = &endpoint.connections;
+        let outgoing_pkts = &mut endpoint.outgoing_pkts;
+        let endpoint_statistics = &mut endpoint.statistics;
 
         // Send all packets that individual connections have queued
         for (_, token) in connection_map {
@@ -66,7 +63,7 @@ pub(crate) fn io_sending_system(
                     },
 
                     Err(err) => {
-                        on_send_failure(&mut endpoint, err);
+                        on_send_failure(endpoint, err);
                         return;
                     },
                 }
@@ -83,7 +80,7 @@ pub(crate) fn io_sending_system(
                 },
 
                 Err(err) => {
-                    on_send_failure(&mut endpoint, err);
+                    on_send_failure(endpoint, err);
                     return;
                 },
             }
