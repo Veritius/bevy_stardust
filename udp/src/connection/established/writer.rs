@@ -1,6 +1,7 @@
 use std::time::Instant;
 use bevy::prelude::*;
 use bevy_stardust::prelude::*;
+use split_borrow::split_borrow;
 use crate::connection::ordering::OrderingManager;
 use crate::connection::packets::builder::{PacketBuilder, PacketBuilderContext};
 use crate::connection::packets::frames::{FrameFlags, FrameType, SendFrame};
@@ -58,13 +59,10 @@ pub(crate) fn established_packet_writing_system(
                     flags |= FrameFlags::ORDERED;
                 }
 
-                // Hack to get around the borrow checker not letting you mutably borrow multiple fields from the same struct at the same time
-                #[inline(always)]
-                fn split_borrow(established: &mut Established) -> (&mut OrderingManager, &mut PacketBuilder) {
-                    (&mut established.orderings, &mut established.builder)
-                }
-
-                let (orderings, builder) = split_borrow(&mut established);
+                split_borrow!(Established established {
+                    let orderings: &mut OrderingManager = &mut inner.orderings;
+                    let builder: &mut PacketBuilder = &mut inner.builder;
+                });
 
                 // Get a new ordering if necessary
                 let mut orderings = match is_ordered {
@@ -101,13 +99,10 @@ pub(crate) fn established_packet_writing_system(
         // Setup scratch space for the packet builder
         let mut scratch = Vec::with_capacity(connection.mtu_limit);
 
-        // Hack to get around the borrow checker not letting you mutably borrow multiple fields from the same struct at the same time
-        #[inline(always)]
-        fn split_borrow(established: &mut Established) -> (&mut ReliablePackets, &mut PacketBuilder) {
-            (&mut established.reliability, &mut established.builder)
-        }
-
-        let (reliability, builder) = split_borrow(&mut established);
+        split_borrow!(Established established {
+            let reliability: &mut ReliablePackets = &mut inner.reliability;
+            let builder: &mut PacketBuilder = &mut inner.builder;
+        });
 
         // Setup context for the builder
         let context = PacketBuilderContext {

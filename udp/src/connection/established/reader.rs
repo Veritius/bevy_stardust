@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 use bevy_stardust::prelude::*;
+use split_borrow::split_borrow;
 use crate::connection::ordering::{OrderedMessage, OrderingManager};
 use crate::connection::packets::frames::FrameType;
 use crate::connection::packets::reader::{PacketReader, PacketReaderContext};
@@ -14,13 +15,11 @@ pub(crate) fn established_packet_reader_system(
     mut connections: Query<(Entity, &mut Connection, &mut Established, &mut NetworkMessages<Incoming>)>,
 ) {
     connections.par_iter_mut().for_each(|(entity, mut connection, mut established, mut messages)| {
-        // Hack to get around the borrow checker not letting you mutably borrow multiple fields from the same struct at the same time
-        #[inline(always)]
-        fn split_borrow(established: &mut Established) -> (&mut ReliablePackets, &mut OrderingManager, &mut PacketReader) {
-            (&mut established.reliability, &mut established.orderings, &mut established.reader)
-        }
-
-        let (reliability, orderings, reader) = split_borrow(&mut established);
+        split_borrow!(Established established {
+            let reliability: &mut ReliablePackets = &mut inner.reliability;
+            let orderings: &mut OrderingManager = &mut inner.orderings;
+            let reader: &mut PacketReader = &mut inner.reader;
+        });
 
         // Context object for the packet reader
         let context = PacketReaderContext {
