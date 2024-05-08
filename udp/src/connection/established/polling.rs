@@ -1,36 +1,26 @@
 use bevy::prelude::*;
 use bevy_stardust::prelude::*;
-use crate::connection::ordering::OrderedMessage;
-use crate::connection::packets::frames::FrameType;
-use crate::connection::packets::reader::PacketReaderContext;
-use crate::plugin::PluginConfiguration;
-use crate::prelude::*;
-use super::control::ErrorSeverity;
+use crate::{connection::{established::control::ErrorSeverity, ordering::OrderedMessage, packets::{frames::FrameType, reader::PacketReaderContext}}, plugin::PluginConfiguration, prelude::*};
 use super::Established;
 
-pub(crate) fn established_packet_reader_system(
-    registry: Res<ChannelRegistry>,
-    config: Res<PluginConfiguration>,
-    mut connections: Query<(Entity, &mut Connection, &mut Established, &mut NetworkMessages<Incoming>)>,
-) {
-    connections.par_iter_mut().for_each(|(entity, mut connection, mut established, mut messages)| {
-        // Reborrows because rustc wants them
-        let established = &mut *established;
-        let controller = &mut established.controller;
-        let reliability = &mut established.reliability;
-        let orderings = &mut established.orderings;
-        let reader = &mut established.reader;
-
+impl Established {
+    fn poll(
+        &mut self,
+        connection: &mut Connection,
+        mut messages: Mut<NetworkMessages<Incoming>>, // because change detection
+        registry: &ChannelRegistryInner,
+        config: &PluginConfiguration,
+    ) {
         // Context object for the packet reader
         let context = PacketReaderContext {
             queue: &mut connection.recv_queue,
             config: &config,
-            reliability,
+            reliability: &mut self.reliability,
         };
 
         // Iterate over all frames
         // This runs until there is no more data to parse
-        let mut iter = reader.iter(context);
+        let mut iter = self.reader.iter(context);
         'frames: loop {
             match iter.next() {
                 // Case 1: Another frame was read
@@ -39,7 +29,7 @@ pub(crate) fn established_packet_reader_system(
                         // Case 1.1: Connection control frame
                         FrameType::Control => {
                             // Unwrapping is ok since the parser checks for idents
-                            controller.recv_control_frame(
+                            self.controller.recv_control_frame(
                                 frame.ident.unwrap(),
                                 frame.payload,
                             );
@@ -68,7 +58,7 @@ pub(crate) fn established_packet_reader_system(
                                     let sequence = frame.order.unwrap();
 
                                     // Ordering state for this channel
-                                    let ordering = orderings.get(channel_data);
+                                    let ordering = self.orderings.get(channel_data);
 
                                     // Receive the ordered message on the reader
                                     if let Some(message) = ordering.recv(OrderedMessage {
@@ -101,10 +91,10 @@ pub(crate) fn established_packet_reader_system(
                 // This doesn't make us terminate
                 Some(Err(error)) => {
                     // All packet read errors are of 'major' severity to the controller.
-                    controller.track_error(ErrorSeverity::Major);
+                    self.controller.track_error(ErrorSeverity::Major);
 
                     // Trace log for debugging
-                    trace!("Error {error:?} while parsing packet from {entity:?}");
+                    trace!("Error {error:?} while parsing packet"); // TODO: more associated data
                 },
 
                 // Case 3: No more packets to read
@@ -114,5 +104,25 @@ pub(crate) fn established_packet_reader_system(
                 },
             }
         }
-    });
+    }
+}
+
+/// Runs [`poll`](Established::poll) on all [`Established`] entities.
+pub(crate) fn established_polling_system(
+    registry: Res<ChannelRegistry>,
+    config: Res<PluginConfiguration>,
+    mut connections: Query<(&mut Connection, &mut Established, &mut NetworkMessages<Incoming>)>,
+) {
+    connections.par_iter_mut().for_each(|(
+        mut connection,
+        mut established,
+        messages
+    )| {
+        established.poll(
+            &mut connection,
+            messages,
+            &registry,
+            &config
+        );
+    })
 }

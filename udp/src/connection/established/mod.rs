@@ -1,10 +1,10 @@
 mod control;
-mod reader;
+mod polling;
 mod systems;
 mod writer;
 
-pub(crate) use reader::established_packet_reader_system;
-pub(crate) use writer::established_packet_writing_system;
+pub(crate) use polling::established_polling_system;
+pub(crate) use writer::established_writing_system;
 pub(crate) use systems::established_timeout_system;
 
 use bevy::prelude::*;
