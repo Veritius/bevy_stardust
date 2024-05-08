@@ -5,6 +5,26 @@ use crate::plugin::PluginConfiguration;
 use crate::prelude::*;
 use super::Established;
 
+/// Runs [`poll`](Established::poll) on all [`Established`] entities.
+pub(crate) fn established_polling_system(
+    registry: Res<ChannelRegistry>,
+    config: Res<PluginConfiguration>,
+    mut connections: Query<(&mut Connection, &mut Established, &mut NetworkMessages<Incoming>)>,
+) {
+    connections.par_iter_mut().for_each(|(
+        mut connection,
+        mut established,
+        messages
+    )| {
+        established.poll(
+            &mut connection,
+            messages,
+            &registry,
+            &config
+        );
+    })
+}
+
 pub(crate) fn established_timeout_system(
     config: Res<PluginConfiguration>,
     mut connections: Query<(Entity, &mut Connection, &mut Established, Option<&mut NetworkPeerLifestage>)>,

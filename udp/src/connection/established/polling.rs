@@ -4,7 +4,7 @@ use crate::{connection::{ordering::OrderedMessage, packets::{frames::FrameType, 
 use super::Established;
 
 impl Established {
-    fn poll(
+    pub(super) fn poll(
         &mut self,
         connection: &mut Connection,
         mut messages: Mut<NetworkMessages<Incoming>>, // because change detection
@@ -102,24 +102,4 @@ impl Established {
             }
         }
     }
-}
-
-/// Runs [`poll`](Established::poll) on all [`Established`] entities.
-pub(crate) fn established_polling_system(
-    registry: Res<ChannelRegistry>,
-    config: Res<PluginConfiguration>,
-    mut connections: Query<(&mut Connection, &mut Established, &mut NetworkMessages<Incoming>)>,
-) {
-    connections.par_iter_mut().for_each(|(
-        mut connection,
-        mut established,
-        messages
-    )| {
-        established.poll(
-            &mut connection,
-            messages,
-            &registry,
-            &config
-        );
-    })
 }

@@ -2,9 +2,8 @@ mod polling;
 mod systems;
 mod writer;
 
-pub(crate) use polling::established_polling_system;
 pub(crate) use writer::established_writing_system;
-pub(crate) use systems::established_timeout_system;
+pub(crate) use systems::*;
 
 use bevy::prelude::*;
 use super::{ordering::OrderingManager, packets::{builder::PacketBuilder, reader::PacketReader}, reliability::{ReliabilityState, ReliablePackets}};
@@ -35,6 +34,9 @@ impl Established {
         }
     }
 
+    /// Melt the ice. This puts the peer on 'thinner ice',
+    /// which is basically a tracking mechanism that kicks
+    /// peers that make too many mistakes while connected.
     pub(crate) fn melt_ice(&mut self, amount: u16) {
         self.ice_thickness = self.ice_thickness.saturating_sub(amount);
     }
