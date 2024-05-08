@@ -39,6 +39,9 @@ pub(crate) fn io_receiving_system(
                             // SAFETY: This is fine because of ConnectionOwnershipToken's guarantees
                             let mut connection = unsafe { connections.get_unchecked(token.inner()).unwrap() };
 
+                            // Ignore packets from closed connections
+                            if connection.state() == ConnectionState::Closed { continue }
+
                             // Set last_recv in timings and update statistics
                             connection.timings.set_last_recv_now();
 
