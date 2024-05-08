@@ -147,6 +147,10 @@ impl VarInt {
             _ => unreachable!("bad varint"),
         }
     }
+
+    pub const fn from_u32(value: u32) -> Self {
+        Self(value as u64)
+    }
 }
 
 #[test]

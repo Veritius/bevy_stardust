@@ -14,6 +14,7 @@ pub(crate) fn established_packet_reader_system(
     mut connections: Query<(Entity, &mut Connection, &mut Established, &mut NetworkMessages<Incoming>)>,
 ) {
     connections.par_iter_mut().for_each(|(entity, mut connection, mut established, mut messages)| {
+        // Reborrows because rustc wants them
         let established = &mut *established;
         let controller = &mut established.controller;
         let reliability = &mut established.reliability;
