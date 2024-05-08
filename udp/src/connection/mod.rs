@@ -1,18 +1,15 @@
 pub mod statistics;
 
-mod established;
-mod handshake;
 mod ordering;
 mod packets;
 mod reliability;
+mod states;
 mod systems;
 mod timing;
 
-pub(crate) use handshake::{handshake_polling_system, potential_new_peers_system, OutgoingHandshake};
-pub(crate) use established::{established_polling_system, established_writing_system, established_timeout_system, established_closing_system};
 pub(crate) use systems::close_connections_system;
 
-use std::{collections::{BTreeMap, VecDeque}, net::SocketAddr, time::Instant};
+use std::{collections::{BTreeMap, VecDeque}, net::SocketAddr, ops::{Deref, DerefMut}, time::Instant};
 use bevy::prelude::*;
 use bytes::Bytes;
 use tracing::warn;
@@ -23,9 +20,25 @@ use self::{ordering::OrderingManager, packets::{builder::PacketBuilder, reader::
 pub const DEFAULT_MTU: usize = 1472;
 pub const DEFAULT_BUDGET: usize = 16384;
 
-/// An existing UDP connection.
+/// A UDP connection.
 #[derive(Component)]
 pub struct Connection {
+    inner: Box<ConnectionInner>,
+}
+
+impl Connection {
+    #[inline]
+    pub(crate) fn inner(&self) -> &ConnectionInner {
+        &self.inner
+    }
+
+    #[inline]
+    pub(crate) fn inner_mut(&mut self) -> &mut ConnectionInner {
+        &mut self.inner
+    }
+}
+
+pub(crate) struct ConnectionInner {
     mtu_limit: usize,
     budget_limit: usize,
     budget_count: usize,
@@ -52,7 +65,7 @@ pub struct Connection {
 }
 
 /// Functions for controlling the connection.
-impl Connection {
+impl ConnectionInner {
     fn new(
         owning_endpoint: Entity,
         remote_address: SocketAddr,
@@ -87,7 +100,7 @@ impl Connection {
 }
 
 /// Information and statistics about the connection.
-impl Connection {
+impl ConnectionInner {
     /// Returns the remote address of the connection.
     pub fn remote_address(&self) -> SocketAddr {
         self.remote_address.clone()
@@ -111,7 +124,7 @@ impl Connection {
 }
 
 /// Advanced configuration for power users.
-impl Connection {
+impl ConnectionInner {
     /// Sets the maximum transport units (packet size limit) of the connection.
     /// Currently, MTU is not detected, and this variable lets you change it manually.
     /// For most cases, the default ([`DEFAULT_MTU`]) is good enough.
@@ -137,7 +150,7 @@ impl Connection {
 
 // Logs a warning when a non-Closed connection is dropped
 // This happens with component removals and drops in scope
-impl Drop for Connection {
+impl Drop for ConnectionInner {
     fn drop(&mut self) {
         if self.state() != ConnectionState::Closed {
             warn!("Connection dropped while in the {:?} state", self.state());

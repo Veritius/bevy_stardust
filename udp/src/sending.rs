@@ -32,6 +32,9 @@ pub(crate) fn io_sending_system(
                 Ok(val) => val,
                 Err(_) => { continue; },
             } };
+
+            // Basically a dereference
+            let connection = connection.inner_mut();
         
             // Check if there's anything to send
             if connection.send_queue.len() == 0 { continue }

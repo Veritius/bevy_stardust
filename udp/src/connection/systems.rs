@@ -9,6 +9,7 @@ pub(crate) fn close_connections_system(
 ) {
     // This doesn't need to be in parallel.
     for (entity, connection) in connections.iter() {
+        let connection = connection.inner();
         if connection.state() == ConnectionState::Closed {
             // Despawn entity
             commands.entity(entity).despawn();

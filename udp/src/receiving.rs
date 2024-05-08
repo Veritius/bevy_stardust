@@ -38,6 +38,7 @@ pub(crate) fn io_receiving_system(
                         Some(token) => {
                             // SAFETY: This is fine because of ConnectionOwnershipToken's guarantees
                             let mut connection = unsafe { connections.get_unchecked(token.inner()).unwrap() };
+                            let connection = connection.inner_mut();
 
                             // Ignore packets from closed connections
                             if connection.state() == ConnectionState::Closed { continue }

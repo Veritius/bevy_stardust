@@ -1,7 +1,7 @@
 use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4, ToSocketAddrs};
 use anyhow::Result;
 use bevy::{prelude::*, ecs::{entity::Entities, system::SystemParam}};
-use crate::{connection::OutgoingHandshake, endpoint::{ConnectionOwnershipToken, Endpoint}};
+use crate::endpoint::{ConnectionOwnershipToken, Endpoint};
 
 /// A SystemParam that lets you create [`Endpoints`](Endpoint) and open outgoing [`Connections`](Connection).
 #[derive(SystemParam)]
@@ -78,16 +78,18 @@ impl UdpManager<'_, '_> {
         let address = resolve_address(address)?;
 
         // Spawn connection entity
-        let id = commands.spawn(OutgoingHandshake::new(endpoint_id, address)).id();
+        // let id = commands.spawn(OutgoingHandshake::new(endpoint_id, address)).id();
+        todo!();
 
         // SAFETY: Commands generates a unique ID concurrently, so this is fine.
-        let token = unsafe { ConnectionOwnershipToken::new(id) };
-        endpoint_ref.add_peer(address, token);
+        // let token = unsafe { ConnectionOwnershipToken::new(id) };
+        // endpoint_ref.add_peer(address, token);
 
         // Log connection creation
-        tracing::debug!("Trying to connect to address {address:?} using id {id:?} on endpoint {endpoint_id:?}");
+        // tracing::debug!("Trying to connect to address {address:?} using id {id:?} on endpoint {endpoint_id:?}");
 
-        Ok(id)
+        // Ok(id)
+        todo!()
     }
 
     /// Opens an endpoint and tries to connect to a remote peer from it.
