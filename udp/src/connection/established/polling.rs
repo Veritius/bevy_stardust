@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use bevy_stardust::prelude::*;
-use crate::{connection::{established::control::ErrorSeverity, ordering::OrderedMessage, packets::{frames::FrameType, reader::PacketReaderContext}}, plugin::PluginConfiguration, prelude::*};
+use crate::{connection::{ordering::OrderedMessage, packets::{frames::FrameType, reader::PacketReaderContext}}, plugin::PluginConfiguration, prelude::*};
 use super::Established;
 
 impl Established {
@@ -28,11 +28,7 @@ impl Established {
                     match frame.ftype {
                         // Case 1.1: Connection control frame
                         FrameType::Control => {
-                            // Unwrapping is ok since the parser checks for idents
-                            self.controller.recv_control_frame(
-                                frame.ident.unwrap(),
-                                frame.payload,
-                            );
+                            todo!()
                         },
 
                         // Case 1.2: Stardust message frame
@@ -90,8 +86,9 @@ impl Established {
                 // Case 2: Error while reading
                 // This doesn't make us terminate
                 Some(Err(error)) => {
-                    // All packet read errors are of 'major' severity to the controller.
-                    self.controller.track_error(ErrorSeverity::Major);
+                    // Record the error and put the peer on 'thinner ice' so to speak
+                    // We can't use `melt_ice` as it requires mutable access to the entire type
+                    self.ice_thickness = self.ice_thickness.saturating_sub(120);
 
                     // Trace log for debugging
                     trace!("Error {error:?} while parsing packet"); // TODO: more associated data

@@ -11,18 +11,14 @@ use super::Established;
 pub(crate) fn established_writing_system(
     registry: Res<ChannelRegistry>,
     config: Res<PluginConfiguration>,
-    mut connections: Query<(Entity, &mut Connection, &mut Established, &NetworkMessages<Outgoing>)>,
+    mut connections: Query<(&mut Connection, &mut Established, &NetworkMessages<Outgoing>)>,
 ) {
     // Iterate all peers in parallel
-    connections.par_iter_mut().for_each(|(entity, mut connection, mut established, messages)| {
+    connections.par_iter_mut().for_each(|(mut connection, mut established, messages)| {
         // Reborrows and stuff
         let established = &mut *established;
-        let controller = &mut established.controller;
         let orderings = &mut established.orderings;
         let builder = &mut established.builder;
-
-        // Let the controller push any new frames
-        controller.send_control_frame(builder);
 
         // Find out how many frames we need to send
         let mut frame_total = 0;
