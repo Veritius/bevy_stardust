@@ -9,13 +9,13 @@ mod timing;
 
 pub(crate) use systems::close_connections_system;
 
-use std::{collections::{BTreeMap, VecDeque}, net::SocketAddr, ops::{Deref, DerefMut}, time::Instant};
+use std::{collections::{BTreeMap, VecDeque}, net::SocketAddr, time::Instant};
 use bevy::prelude::*;
 use bytes::Bytes;
 use tracing::warn;
 use statistics::ConnectionStatistics;
 use timing::ConnectionTimings;
-use self::{ordering::OrderingManager, packets::{builder::PacketBuilder, reader::PacketReader}, reliability::{ReliabilityState, UnackedPacket}};
+use self::{ordering::OrderingManager, packets::{builder::PacketBuilder, reader::PacketReader}, reliability::ReliablePackets};
 
 pub const DEFAULT_MTU: usize = 1472;
 pub const DEFAULT_BUDGET: usize = 16384;
@@ -57,8 +57,7 @@ pub(crate) struct ConnectionInner {
     pub(crate) recv_queue: VecDeque<Bytes>,
 
     orderings: OrderingManager,
-    reliability: ReliabilityState,
-    unacked_packets: BTreeMap<u16, UnackedPacket>,
+    reliability: ReliablePackets,
 
     frame_builder: PacketBuilder,
     frame_parser: PacketReader,
@@ -90,8 +89,7 @@ impl ConnectionInner {
             recv_queue: VecDeque::with_capacity(32),
 
             orderings: OrderingManager::new(),
-            reliability: ReliabilityState::new(),
-            unacked_packets: BTreeMap::default(),
+            reliability: ReliablePackets::default(),
 
             frame_builder: PacketBuilder::default(),
             frame_parser: PacketReader::default(),

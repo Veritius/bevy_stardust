@@ -94,6 +94,12 @@ pub(crate) struct ReliablePackets {
     unacked: BTreeMap<u16, UnackedPacket>,
 }
 
+impl Default for ReliablePackets {
+    fn default() -> Self {
+        Self::new(ReliabilityState::new())
+    }
+}
+
 impl ReliablePackets {
     pub fn new(state: ReliabilityState) -> Self {
         Self {
