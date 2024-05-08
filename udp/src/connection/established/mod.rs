@@ -1,22 +1,22 @@
-mod systems;
+mod control;
 mod reader;
+mod systems;
 mod writer;
 
-use std::time::Duration;
-use bevy::prelude::*;
-use bevy_stardust::prelude::*;
-
-use super::{ordering::OrderingManager, packets::{builder::PacketBuilder, frames::SendFrame, reader::PacketReader}, reliability::{ReliabilityState, ReliablePackets}};
 pub(crate) use reader::established_packet_reader_system;
 pub(crate) use writer::established_packet_writing_system;
 pub(crate) use systems::established_timeout_system;
 
+use bevy::prelude::*;
+use self::control::Controller;
+use super::{ordering::OrderingManager, packets::{builder::PacketBuilder, frames::SendFrame, reader::PacketReader}, reliability::{ReliabilityState, ReliablePackets}};
+
 #[derive(Component)]
 pub(crate) struct Established {
-    reliable_timeout: Duration,
+    controller: Controller,
+
     reliability: ReliablePackets,
     orderings: OrderingManager,
-    errors: u32,
 
     reader: PacketReader,
     builder: PacketBuilder,
@@ -25,13 +25,12 @@ pub(crate) struct Established {
 impl Established {
     pub(in super::super) fn new(
         reliability: &ReliabilityState,
-        registry: &ChannelRegistryInner,
     ) -> Self {
         Self {
-            reliable_timeout: Duration::from_millis(1000), // TODO: Make this a dynamic value based off RTT
+            controller: Controller::default(),
+
             reliability: ReliablePackets::new(reliability.clone()),
             orderings: OrderingManager::new(),
-            errors: 0,
 
             reader: PacketReader::default(),
             builder: PacketBuilder::default(),

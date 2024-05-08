@@ -240,7 +240,6 @@ pub(crate) fn handshake_polling_system(
                         .remove::<Handshaking>()
                         .insert(Established::new(
                             &handshake.reliability,
-                            &registry,
                         ))
                         .insert(NetworkMessages::<Outgoing>::new())
                         .insert(NetworkMessages::<Incoming>::new())
