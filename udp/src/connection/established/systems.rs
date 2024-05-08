@@ -56,3 +56,18 @@ pub(crate) fn established_timeout_system(
         }
     });
 }
+
+pub(crate) fn established_closing_system(
+    mut events: EventReader<DisconnectPeerEvent>,
+    mut peers: Query<(&mut Connection, &mut Established)>,
+) {
+    for event in events.read() {
+        // Access the target (might fail, so we handle that)
+        let (mut connection, mut established) = match peers.get_mut(event.peer) {
+            Ok(v) => v,
+            Err(_) => { continue; },
+        };
+
+        todo!()
+    }
+}

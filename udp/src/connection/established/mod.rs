@@ -1,3 +1,4 @@
+mod control;
 mod polling;
 mod systems;
 mod writer;
@@ -6,7 +7,7 @@ pub(crate) use writer::established_writing_system;
 pub(crate) use systems::*;
 
 use bevy::prelude::*;
-use super::{ordering::OrderingManager, packets::{builder::PacketBuilder, reader::PacketReader}, reliability::{ReliabilityState, ReliablePackets}};
+use super::{ordering::OrderingManager, packets::{builder::PacketBuilder, frames::SendFrame, reader::PacketReader}, reliability::{ReliabilityState, ReliablePackets}};
 
 #[derive(Component)]
 pub(crate) struct Established {
@@ -32,6 +33,11 @@ impl Established {
 
             ice_thickness: u16::MAX,
         }
+    }
+
+    #[inline]
+    pub(crate) fn queue_frame_send(&mut self, frame: SendFrame) {
+        self.builder.put(frame);
     }
 
     /// Melt the ice. This puts the peer on 'thinner ice',

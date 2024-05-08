@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use bevy_stardust::prelude::*;
 use crate::{connection::{ordering::OrderedMessage, packets::{frames::FrameType, reader::PacketReaderContext}}, plugin::PluginConfiguration, prelude::*};
-use super::Established;
+use super::{control::*, Established};
 
 impl Established {
     pub(super) fn poll(
@@ -28,7 +28,16 @@ impl Established {
                     match frame.ftype {
                         // Case 1.1: Connection control frame
                         FrameType::Control => {
-                            todo!()
+                            // Unwrapping is fine since the parser checks it
+                            let ident = frame.ident.unwrap();
+
+                            // TODO: Figure out a better solution than this
+                            match ident {
+                                CTRL_ID_CLOSE => { connection.state = ConnectionState::Closed; },
+
+                                // Unrecognised identifier
+                                _ => { self.ice_thickness = self.ice_thickness.saturating_sub(400); }
+                            }
                         },
 
                         // Case 1.2: Stardust message frame

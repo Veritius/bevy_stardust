@@ -1,6 +1,5 @@
 pub mod statistics;
 
-mod closing;
 mod established;
 mod handshake;
 mod ordering;
@@ -10,7 +9,7 @@ mod systems;
 mod timing;
 
 pub(crate) use handshake::{handshake_polling_system, potential_new_peers_system, OutgoingHandshake};
-pub(crate) use established::{established_polling_system, established_writing_system, established_timeout_system};
+pub(crate) use established::{established_polling_system, established_writing_system, established_timeout_system, established_closing_system};
 pub(crate) use systems::close_connections_system;
 
 use std::{collections::VecDeque, net::SocketAddr, time::Instant};
