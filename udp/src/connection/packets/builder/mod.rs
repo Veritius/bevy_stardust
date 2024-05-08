@@ -105,7 +105,7 @@ impl PacketBuilder {
     }
 
     #[inline]
-    pub fn len(&self) -> usize {
+    pub fn unsent(&self) -> usize {
         self.queue.len()
     }
 }

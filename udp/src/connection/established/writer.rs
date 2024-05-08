@@ -15,11 +15,20 @@ pub(crate) fn established_packet_writing_system(
 ) {
     // Iterate all peers in parallel
     connections.par_iter_mut().for_each(|(entity, mut connection, mut established, messages)| {
+        // Reborrows and stuff
+        let established = &mut *established;
+        let controller = &mut established.controller;
+        let orderings = &mut established.orderings;
+        let builder = &mut established.builder;
+
+        // Let the controller push any new frames
+        controller.send_control_frame(builder);
+
         // Find out how many frames we need to send
         let mut frame_total = 0;
         let outgoing_count = messages.count();
         frame_total += outgoing_count;
-        frame_total += established.as_ref().builder.len();
+        frame_total += builder.unsent();
 
         // No frames, no work to do
         if frame_total == 0 { return; }
@@ -38,11 +47,6 @@ pub(crate) fn established_packet_writing_system(
 
         // Add all outgoing messages as frames
         if outgoing_count > 0 {
-            // Reborrows and stuff
-            let established = &mut *established;
-            let orderings = &mut established.orderings;
-            let builder = &mut established.builder;
-
             // Iterate over all channels
             for (channel, messages) in messages.iter() {
                 // Get channel data from the registry

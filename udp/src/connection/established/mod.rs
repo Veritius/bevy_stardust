@@ -9,7 +9,7 @@ pub(crate) use systems::established_timeout_system;
 
 use bevy::prelude::*;
 use self::control::Controller;
-use super::{ordering::OrderingManager, packets::{builder::PacketBuilder, frames::SendFrame, reader::PacketReader}, reliability::{ReliabilityState, ReliablePackets}};
+use super::{ordering::OrderingManager, packets::{builder::PacketBuilder, reader::PacketReader}, reliability::{ReliabilityState, ReliablePackets}};
 
 #[derive(Component)]
 pub(crate) struct Established {
@@ -35,9 +35,5 @@ impl Established {
             reader: PacketReader::default(),
             builder: PacketBuilder::default(),
         }
-    }
-
-    pub(super) fn queue_send_frame(&mut self, frame: SendFrame) {
-        self.builder.put(frame);
     }
 }

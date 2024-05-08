@@ -1,5 +1,4 @@
 use std::time::Instant;
-
 use bevy::prelude::*;
 use bevy_stardust::prelude::*;
 use crate::plugin::PluginConfiguration;

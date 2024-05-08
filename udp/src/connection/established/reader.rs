@@ -5,6 +5,7 @@ use crate::connection::packets::frames::FrameType;
 use crate::connection::packets::reader::PacketReaderContext;
 use crate::plugin::PluginConfiguration;
 use crate::prelude::*;
+use super::control::ErrorSeverity;
 use super::Established;
 
 pub(crate) fn established_packet_reader_system(
@@ -14,6 +15,7 @@ pub(crate) fn established_packet_reader_system(
 ) {
     connections.par_iter_mut().for_each(|(entity, mut connection, mut established, mut messages)| {
         let established = &mut *established;
+        let controller = &mut established.controller;
         let reliability = &mut established.reliability;
         let orderings = &mut established.orderings;
         let reader = &mut established.reader;
@@ -35,7 +37,11 @@ pub(crate) fn established_packet_reader_system(
                     match frame.ftype {
                         // Case 1.1: Connection control frame
                         FrameType::Control => {
-                            todo!()
+                            // Unwrapping is ok since the parser checks for idents
+                            controller.recv_control_frame(
+                                frame.ident.unwrap(),
+                                frame.payload,
+                            );
                         },
 
                         // Case 1.2: Stardust message frame
@@ -93,7 +99,11 @@ pub(crate) fn established_packet_reader_system(
                 // Case 2: Error while reading
                 // This doesn't make us terminate
                 Some(Err(error)) => {
-                    error!("Error: {error:?}");
+                    // All packet read errors are of 'major' severity to the controller.
+                    controller.track_error(ErrorSeverity::Major);
+
+                    // Trace log for debugging
+                    trace!("Error {error:?} while parsing packet from {entity:?}");
                 },
 
                 // Case 3: No more packets to read
