@@ -38,6 +38,11 @@ pub(crate) fn established_packet_writing_system(
 
         // Add all outgoing messages as frames
         if outgoing_count > 0 {
+            // Reborrows and stuff
+            let established = &mut *established;
+            let orderings = &mut established.orderings;
+            let builder = &mut established.builder;
+
             // Iterate over all channels
             for (channel, messages) in messages.iter() {
                 // Get channel data from the registry
@@ -55,10 +60,6 @@ pub(crate) fn established_packet_writing_system(
                 if is_ordered {
                     flags |= FrameFlags::ORDERED;
                 }
-
-                let established = &mut *established;
-                let orderings = &mut established.orderings;
-                let builder = &mut established.builder;
 
                 // Get a new ordering if necessary
                 let mut orderings = match is_ordered {
