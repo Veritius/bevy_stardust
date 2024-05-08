@@ -1,18 +1,17 @@
-use std::{cmp::Ordering, fmt::Debug};
-use bevy::utils::HashMap;
+use std::{cmp::Ordering, collections::BTreeMap, fmt::Debug};
 use bevy_stardust::channels::{ChannelData, ChannelId, OrderingGuarantee};
 use bytes::Bytes;
 use crate::sequences::SequenceId;
 
 // Storage for ordered messages.
 pub(crate) struct OrderingManager {
-    stardust_messages: HashMap<ChannelId, OrderedMessages>,
+    stardust_messages: BTreeMap<ChannelId, OrderedMessages>,
 }
 
 impl OrderingManager {
     pub fn new() -> Self {
         Self {
-            stardust_messages: HashMap::default(),
+            stardust_messages: BTreeMap::default(),
         }
     }
 
