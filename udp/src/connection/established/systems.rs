@@ -37,7 +37,7 @@ pub(crate) fn established_timeout_system(
         let timeout_dur = now.duration_since(last_recv);
         if timeout_dur > config.connection_timeout {
             // Update state information
-            connection.state = ConnectionState::Closed;
+            connection.connection_state = ConnectionState::Closed;
             if let Some(mut lifestage) = lifestage {
                 *lifestage = NetworkPeerLifestage::Closed;
             }

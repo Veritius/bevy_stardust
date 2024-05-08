@@ -12,12 +12,13 @@ pub(crate) use handshake::{handshake_polling_system, potential_new_peers_system,
 pub(crate) use established::{established_polling_system, established_writing_system, established_timeout_system, established_closing_system};
 pub(crate) use systems::close_connections_system;
 
-use std::{collections::VecDeque, net::SocketAddr, time::Instant};
+use std::{collections::{BTreeMap, VecDeque}, net::SocketAddr, time::Instant};
 use bevy::prelude::*;
 use bytes::Bytes;
 use tracing::warn;
 use statistics::ConnectionStatistics;
 use timing::ConnectionTimings;
+use self::{ordering::OrderingManager, packets::{builder::PacketBuilder, reader::PacketReader}, reliability::{ReliabilityState, UnackedPacket}};
 
 pub const DEFAULT_MTU: usize = 1472;
 pub const DEFAULT_BUDGET: usize = 16384;
@@ -31,15 +32,23 @@ pub struct Connection {
     budget_ltime: Instant,
 
     remote_address: SocketAddr,
-    state: ConnectionState,
-
-    pub(crate) send_queue: VecDeque<Bytes>,
-    pub(crate) recv_queue: VecDeque<Bytes>,
+    connection_state: ConnectionState,
+    ice_thickness: u16,
 
     pub(crate) owning_endpoint: Entity,
     pub(crate) direction: ConnectionDirection,
     pub(crate) timings: ConnectionTimings,
     pub(crate) statistics: ConnectionStatistics,
+
+    pub(crate) send_queue: VecDeque<Bytes>,
+    pub(crate) recv_queue: VecDeque<Bytes>,
+
+    orderings: OrderingManager,
+    reliability: ReliabilityState,
+    unacked_packets: BTreeMap<u16, UnackedPacket>,
+
+    frame_builder: PacketBuilder,
+    frame_parser: PacketReader,
 }
 
 /// Functions for controlling the connection.
@@ -56,16 +65,23 @@ impl Connection {
             budget_ltime: Instant::now(),
 
             remote_address,
-
-            state: ConnectionState::Handshaking,
-
-            send_queue: VecDeque::with_capacity(16),
-            recv_queue: VecDeque::with_capacity(32),
+            connection_state: ConnectionState::Handshaking,
+            ice_thickness: u16::MAX,
 
             owning_endpoint,
             direction,
             statistics: ConnectionStatistics::default(),
             timings: ConnectionTimings::new(None, None, None),
+
+            send_queue: VecDeque::with_capacity(16),
+            recv_queue: VecDeque::with_capacity(32),
+
+            orderings: OrderingManager::new(),
+            reliability: ReliabilityState::new(),
+            unacked_packets: BTreeMap::default(),
+
+            frame_builder: PacketBuilder::default(),
+            frame_parser: PacketReader::default(),
         }
     }
 }
@@ -85,7 +101,7 @@ impl Connection {
 
     /// Returns the [`ConnectionState`] of the connection.
     pub fn state(&self) -> ConnectionState {
-        self.state
+        self.connection_state
     }
 
     /// Returns statistics related to the Connection. See [`ConnectionStatistics`] for more.

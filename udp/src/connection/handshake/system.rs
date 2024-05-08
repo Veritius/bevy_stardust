@@ -254,7 +254,7 @@ pub(crate) fn handshake_polling_system(
             },
             HandshakeState::Failed(reason) => {
                 // Change state to Closed so it's despawned
-                connection.state = ConnectionState::Closed;
+                connection.connection_state = ConnectionState::Closed;
 
                 // Log failure
                 match connection.direction {

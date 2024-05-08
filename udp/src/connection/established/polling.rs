@@ -33,7 +33,7 @@ impl Established {
 
                             // TODO: Figure out a better solution than this
                             match ident {
-                                CTRL_ID_CLOSE => { connection.state = ConnectionState::Closed; },
+                                CTRL_ID_CLOSE => { connection.connection_state = ConnectionState::Closed; },
 
                                 // Unrecognised identifier
                                 _ => { self.ice_thickness = self.ice_thickness.saturating_sub(400); }
