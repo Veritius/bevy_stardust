@@ -1,6 +1,6 @@
-use super::Connection;
+use super::ConnectionInner;
 
-impl Connection {
+impl ConnectionInner {
     /// Ticks the connection, processing all input.
     pub(super) fn poll(&mut self) {
 
