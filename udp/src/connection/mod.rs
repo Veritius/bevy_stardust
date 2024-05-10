@@ -1,5 +1,6 @@
 pub mod statistics;
 
+mod handshake;
 mod ordering;
 mod packets;
 mod reliability;
