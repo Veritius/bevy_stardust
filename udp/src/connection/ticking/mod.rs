@@ -23,38 +23,37 @@ impl ConnectionInner {
                 });
 
                 // Loop over all frames
-                while let Some(frame) = frames.next() {
-                    match frame {
-                        // Case 1: Frame read
-                        Ok(frame) => {
-                            match frame.ftype {
-                                // Case 1.1: Connection control frame
-                                FrameType::Control => todo!(),
-                                // Case 1.2: Stardust message frame
-                                FrameType::Stardust => {
-                                    // TODO: Don't panic here, handle it somehow.
-                                    // TODO: This goes through two separate pointers to access the actual data, fix that.
-                                    let messages = context.messages.as_mut().unwrap();
+                while let Some(frame) = frames.next() { match frame {
+                    // Case 1: Frame read
+                    Ok(frame) => {
+                        match frame.ftype {
+                            // Case 1.1: Connection control frame
+                            FrameType::Control => todo!(),
 
-                                    // Pass the frame to a distinct function to not clutter this one
-                                    if let Err(error) = recv_stardust::recv_stardust_frame(
-                                        context.registry,
-                                        &mut self.orderings,
-                                        messages,
-                                        frame,
-                                    ) {
-                                        todo!()
-                                    }
-                                },
-                            }
-                        },
+                            // Case 1.2: Stardust message frame
+                            FrameType::Stardust => {
+                                // TODO: Don't panic here, handle it somehow.
+                                // TODO: This goes through two separate pointers to access the actual data, fix that.
+                                let messages = context.messages.as_mut().unwrap();
 
-                        // Case 2: An error occurred
-                        Err(error) => {
-                            todo!()
-                        },
-                    }
-                }
+                                // Pass the frame to a distinct function to not clutter this one
+                                if let Err(error) = recv_stardust::recv_stardust_frame(
+                                    context.registry,
+                                    &mut self.orderings,
+                                    messages,
+                                    frame,
+                                ) {
+                                    todo!()
+                                }
+                            },
+                        }
+                    },
+
+                    // Case 2: An error occurred
+                    Err(error) => {
+                        todo!()
+                    },
+                } }
             },
 
             ConnectionStateInner::Closing => {
