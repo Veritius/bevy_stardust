@@ -37,6 +37,8 @@ To begin, the Initiator sends an 'initiator hello' packet. This contains informa
 | `u32` | Application minor version  |
 | `u32` | Application major version  |
 
+The equivalent of this in TCP is the SYN packet sent by the client.
+
 #### Listener response
 In response, the Listener sends a 'listener response' packet. Like the 'initiator hello' packet, this contains reliability and version data. However, it also contains a [response](#response-codes) code, which informs the initiator whether or not the listener will continue with the handshake.
 
@@ -55,6 +57,8 @@ In response, the Listener sends a 'listener response' packet. Like the 'initiato
 
 If the response code signals that the handshake should continue, this is the end of the packet. However, if the response code signals an error or other rejection reason, this is where the handshake ends. The listener may also include a human-readable disconnection reason, which will take up the rest of the packet.
 
+The equivalent of this is in TCP is the SYN/ACK packet sent by the server.
+
 #### Initiator response
 Assuming the listener accepts the connection, the initiator will send the third and final packet in the handshake protocol. This is the 'initiator response' where there can be two outcomes: the connection becomes fully established, or the connection is terminated.
 
@@ -68,6 +72,8 @@ Assuming the listener accepts the connection, the initiator will send the third 
 If the initiator decides that the connection should be closed, such as reading the listener response and seeing an incompatible version value, it can terminate the connection here.
 
 If the initiator decides the connection should continue, it 'commits' and sends a 'continue' response code. At this point, we're done - the handshake is finished, and both peers transition into the established protocol.
+
+The equivalent of this in TCP is the SYN packet sent by the client.
 
 ### Handshake reliability
 All handshake packets are reliable and ordered. They not only establish reliability, but also track data to ensure missed packets are resent, and that packets are parsed in order.
