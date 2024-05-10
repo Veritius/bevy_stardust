@@ -147,7 +147,7 @@ fn parse_frame(
     // At the moment, all frame types require an associated ident
     // We check this here, but later on a better check must be added
     if ident.is_none() {
-        return Err(PacketReadError::InvalidFrameIdent);
+        return Err(PacketReadError::DefiedChannelExpectations);
     }
 
     // Get the frame channel ordering if present
@@ -189,4 +189,5 @@ pub(crate) enum PacketReadError {
     InvalidFrameType,
     InvalidFrameIdent,
     InvalidFrameLen,
+    DefiedChannelExpectations,
 }

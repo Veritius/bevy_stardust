@@ -1,9 +1,10 @@
 use bevy::prelude::*;
 use bevy_stardust::prelude::*;
-use crate::prelude::*;
+use crate::{plugin::PluginConfiguration, prelude::*};
 use super::ticking::*;
 
 pub(crate) fn connection_preupdate_ticking_system(
+    config: Res<PluginConfiguration>,
     registry: Res<ChannelRegistry>,
     mut connections: Query<(Entity, &mut Connection, Option<&mut NetworkMessages<Incoming>>)>,
 ) {
@@ -15,6 +16,7 @@ pub(crate) fn connection_preupdate_ticking_system(
 
         // Run tick function
         connection.inner_mut().tick_preupdate(PreUpdateTickData {
+            config: &config,
             registry: &registry,
             messages,
         });
@@ -22,6 +24,7 @@ pub(crate) fn connection_preupdate_ticking_system(
 }
 
 pub(crate) fn connection_postupdate_ticking_system(
+    config: Res<PluginConfiguration>,
     registry: Res<ChannelRegistry>,
     mut connections: Query<(Entity, &mut Connection, Option<Ref<NetworkMessages<Outgoing>>>)>,
 ) {
@@ -33,6 +36,7 @@ pub(crate) fn connection_postupdate_ticking_system(
 
         // Run tick function
         connection.inner_mut().tick_postupdate(PostUpdateTickData {
+            config: &config,
             registry: &registry,
             messages,
         });
