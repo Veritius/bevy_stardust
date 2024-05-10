@@ -1,16 +1,32 @@
 use bevy::prelude::*;
+use bevy_stardust::prelude::*;
 use crate::prelude::*;
+use super::ticking::*;
 
 pub(crate) fn connection_preupdate_ticking_system(
-
+    registry: Res<ChannelRegistry>,
+    mut connections: Query<(&mut Connection, Option<&mut NetworkMessages<Incoming>>)>,
 ) {
-
+    // Tick all connections in parallel
+    connections.par_iter_mut().for_each(|(mut connection, messages)| {
+        connection.inner_mut().tick_preupdate(PreUpdateTickData {
+            registry: &registry,
+            messages,
+        });
+    });
 }
 
 pub(crate) fn connection_postupdate_ticking_system(
-
+    registry: Res<ChannelRegistry>,
+    mut connections: Query<(&mut Connection, Option<Ref<NetworkMessages<Outgoing>>>)>,
 ) {
-
+    // Tick all connections in parallel
+    connections.par_iter_mut().for_each(|(mut connection, messages)| {
+        connection.inner_mut().tick_postupdate(PostUpdateTickData {
+            registry: &registry,
+            messages,
+        });
+    });
 }
 
 // TODO: Use change detection.
