@@ -71,11 +71,8 @@ impl Plugin for UdpTransportPlugin {
     fn build(&self, app: &mut App) {
         use crate::receiving::io_receiving_system;
         use crate::connection::{
-            // potential_new_peers_system,
-            // handshake_polling_system,
-            // established_polling_system,
-            // established_writing_system,
-            // established_timeout_system,
+            connection_preupdate_ticking_system,
+            connection_postupdate_ticking_system,
             close_connections_system,
         };
         use crate::endpoint::close_endpoints_system;
@@ -102,7 +99,7 @@ impl Plugin for UdpTransportPlugin {
         // Packet receiving system
         app.add_systems(PreUpdate, (
             io_receiving_system,
-            // established_polling_system,
+            connection_preupdate_ticking_system,
         ).chain().in_set(NetworkRead::Receive));
 
         // These systems can run at any time
@@ -113,8 +110,7 @@ impl Plugin for UdpTransportPlugin {
 
         // Packet transmitting systems
         app.add_systems(PostUpdate, (
-            // established_timeout_system,
-            // established_writing_system,
+            connection_postupdate_ticking_system,
             io_sending_system,
             close_connections_system,
             close_endpoints_system,

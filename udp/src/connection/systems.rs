@@ -1,6 +1,18 @@
 use bevy::prelude::*;
 use crate::prelude::*;
 
+pub(crate) fn connection_preupdate_ticking_system(
+
+) {
+
+}
+
+pub(crate) fn connection_postupdate_ticking_system(
+
+) {
+
+}
+
 // TODO: Use change detection.
 pub(crate) fn close_connections_system(
     mut commands: Commands,
