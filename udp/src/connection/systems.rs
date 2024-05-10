@@ -5,10 +5,15 @@ use super::ticking::*;
 
 pub(crate) fn connection_preupdate_ticking_system(
     registry: Res<ChannelRegistry>,
-    mut connections: Query<(&mut Connection, Option<&mut NetworkMessages<Incoming>>)>,
+    mut connections: Query<(Entity, &mut Connection, Option<&mut NetworkMessages<Incoming>>)>,
 ) {
     // Tick all connections in parallel
-    connections.par_iter_mut().for_each(|(mut connection, messages)| {
+    connections.par_iter_mut().for_each(|(entity, mut connection, messages)| {
+        // Tracing stuff
+        let trace_span = trace_span!("Running preupdate tick", peer=?entity);
+        let _entered = trace_span.entered();
+
+        // Run tick function
         connection.inner_mut().tick_preupdate(PreUpdateTickData {
             registry: &registry,
             messages,
@@ -18,10 +23,15 @@ pub(crate) fn connection_preupdate_ticking_system(
 
 pub(crate) fn connection_postupdate_ticking_system(
     registry: Res<ChannelRegistry>,
-    mut connections: Query<(&mut Connection, Option<Ref<NetworkMessages<Outgoing>>>)>,
+    mut connections: Query<(Entity, &mut Connection, Option<Ref<NetworkMessages<Outgoing>>>)>,
 ) {
     // Tick all connections in parallel
-    connections.par_iter_mut().for_each(|(mut connection, messages)| {
+    connections.par_iter_mut().for_each(|(entity, mut connection, messages)| {
+        // Tracing stuff
+        let trace_span = trace_span!("Running postupdate tick", peer=?entity);
+        let _entered = trace_span.entered();
+
+        // Run tick function
         connection.inner_mut().tick_postupdate(PostUpdateTickData {
             registry: &registry,
             messages,
