@@ -1,8 +1,10 @@
 mod naive;
 
+use std::collections::BTreeMap;
+
 use bytes::Bytes;
 use tracing::trace_span;
-use crate::{connection::reliability::ReliablePackets, plugin::PluginConfiguration};
+use crate::{connection::reliability::{ReliabilityState, UnackedPacket}, plugin::PluginConfiguration, sequences::SequenceId};
 use super::frames::{FrameQueue, FrameQueueIter, FrameQueueStats, SendFrame};
 
 /*
@@ -113,7 +115,8 @@ impl PacketBuilder {
 /// Static information about the application.
 pub(crate) struct PacketBuilderContext<'a> {
     pub config: &'a PluginConfiguration,
-    pub rel_state: &'a mut ReliablePackets,
+    pub rel_state: &'a mut ReliabilityState,
+    pub rel_packets: &'a mut BTreeMap<SequenceId, UnackedPacket>,
     pub scratch: &'a mut Vec<u8>,
 }
 

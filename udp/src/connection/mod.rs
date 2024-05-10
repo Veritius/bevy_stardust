@@ -13,13 +13,15 @@ pub use states::*;
 
 pub(crate) use systems::*;
 
-use std::{collections::VecDeque, net::SocketAddr, time::Instant};
+use std::{collections::{BTreeMap, VecDeque}, net::SocketAddr, time::Instant};
 use bevy::prelude::*;
 use bytes::Bytes;
 use tracing::warn;
 use statistics::ConnectionStatistics;
 use timing::ConnectionTimings;
-use self::{handshake::HandshakeStateMachine, ordering::OrderingManager, packets::{builder::PacketBuilder, reader::PacketReader}, reliability::ReliablePackets};
+use crate::sequences::SequenceId;
+
+use self::{handshake::HandshakeStateMachine, ordering::OrderingManager, packets::{builder::PacketBuilder, reader::PacketReader}, reliability::{ReliabilityState, UnackedPacket}};
 
 pub const DEFAULT_MTU: usize = 1472;
 pub const DEFAULT_BUDGET: usize = 16384;
@@ -57,7 +59,8 @@ pub(crate) struct ConnectionInner {
     pub(crate) recv_queue: VecDeque<Bytes>,
 
     orderings: OrderingManager,
-    reliability: ReliablePackets,
+    reliability: ReliabilityState,
+    unacked_pkts: BTreeMap<SequenceId, UnackedPacket>,
 
     frame_builder: PacketBuilder,
     frame_parser: PacketReader,
@@ -92,7 +95,8 @@ impl ConnectionInner {
             recv_queue: VecDeque::with_capacity(32),
 
             orderings: OrderingManager::new(),
-            reliability: ReliablePackets::default(),
+            reliability: ReliabilityState::new(),
+            unacked_pkts: BTreeMap::new(),
 
             frame_builder: PacketBuilder::default(),
             frame_parser: PacketReader::default(),

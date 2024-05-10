@@ -1,8 +1,8 @@
-use std::collections::VecDeque;
+use std::collections::{BTreeMap, VecDeque};
 use bytes::Bytes;
 use tracing::error;
 use unbytes::Reader;
-use crate::{connection::{packets::header::PacketHeaderFlags, reliability::{AckMemory, ReliablePackets}}, plugin::PluginConfiguration, sequences::SequenceId, varint::VarInt};
+use crate::{connection::{packets::header::PacketHeaderFlags, reliability::{AckMemory, ReliabilityState, UnackedPacket}}, plugin::PluginConfiguration, sequences::SequenceId, varint::VarInt};
 use super::frames::{FrameFlags, FrameType, RecvFrame};
 
 /// Parses incoming packets into an iterator of `Frame` objects.
@@ -26,7 +26,8 @@ impl PacketReader {
 pub(crate) struct PacketReaderContext<'a> {
     pub queue: &'a mut VecDeque<Bytes>,
     pub config: &'a PluginConfiguration,
-    pub reliability: &'a mut ReliablePackets,
+    pub reliability: &'a mut ReliabilityState,
+    pub rel_packets: &'a mut BTreeMap<SequenceId, UnackedPacket>,
 }
 
 /// Dropping this type may cause data loss.
@@ -112,7 +113,12 @@ fn parse_header(
         .map_err(|_| PacketReadError::UnexpectedEnd)?);
     let ack_bits = AckMemory::from_slice(reader.read_slice(ack_bits_len)
         .map_err(|_| PacketReadError::UnexpectedEnd)?).unwrap();
-    context.reliability.rec_ack(ack, ack_bits, ack_bits_len as u8);
+    let iter = context.reliability.rec_ack(ack, ack_bits, ack_bits_len as u8);
+
+    // An iterator is returned over all sequence IDs that have now been acked.
+    // This is used to remove (free) any unacked packets in storage.
+    // Since we don't want to return the iterator, we do this here instead.
+    iter.for_each(|i| { context.rel_packets.remove(&i); });
 
     return Ok(())
 }

@@ -1,5 +1,7 @@
+use std::time::Instant;
+
 use bytes::{Bytes, BufMut};
-use crate::{connection::packets::header::PacketHeaderFlags, varint::VarInt};
+use crate::{connection::{packets::header::PacketHeaderFlags, reliability::UnackedPacket}, varint::VarInt};
 use super::PackFnSharedCtx;
 
 /// The amount of space allocated for a frame header.
@@ -152,7 +154,7 @@ pub(super) fn pack_naive(
 
         // Get the current reliability state
         // If this is reliable, push a sequence id for this packet
-        let rel_hdr = ctx.context.rel_state.clone_state();
+        let rel_hdr = ctx.context.rel_state.clone();
         if bin.is_reliable {
             scr.put_u16(rel_hdr.local_sequence.0);
             ctx.context.rel_state.advance();
@@ -214,7 +216,10 @@ pub(super) fn pack_naive(
         if bin.is_reliable {
             // Excludes the header from the slice
             let payload = bytes.slice(hdr_len..);
-            ctx.context.rel_state.record(rel_hdr.local_sequence, payload);
+            ctx.context.rel_packets.insert(rel_hdr.local_sequence, UnackedPacket {
+                payload,
+                time: Instant::now(),
+            });
         }
 
         // Return the full bytes object

@@ -1,4 +1,4 @@
-use std::{cmp::Ordering, collections::BTreeMap, fmt::Debug, time::Instant};
+use std::{cmp::Ordering, fmt::Debug, time::Instant};
 use bytes::Bytes;
 use crate::sequences::*;
 
@@ -43,7 +43,7 @@ impl ReliabilityState {
     }
 
     /// Record a remote packet's acknowledgements.
-    pub fn ack_bits(
+    pub fn rec_ack(
         &mut self,
         ack: SequenceId,
         bitfield: AckMemory,
@@ -86,86 +86,6 @@ impl ReliabilityState {
             limit: (bitfield_bytes * 8),
             bitfield: bitfield.0,
         }
-    }
-}
-
-pub(crate) struct ReliablePackets {
-    state: ReliabilityState,
-    unacked: BTreeMap<u16, UnackedPacket>,
-}
-
-impl Default for ReliablePackets {
-    fn default() -> Self {
-        Self::new(ReliabilityState::new())
-    }
-}
-
-impl ReliablePackets {
-    pub fn new(state: ReliabilityState) -> Self {
-        Self {
-            unacked: BTreeMap::default(),
-            state,
-        }
-    }
-
-    #[inline]
-    pub fn advance(&mut self) {
-        self.state.advance()
-    }
-
-    pub fn record(&mut self, sequence: SequenceId, payload: Bytes) {
-        self.unacked.insert(sequence.into(), UnackedPacket {
-            payload,
-            time: Instant::now(),
-        });
-    }
-
-    pub fn clone_state(&self) -> ReliabilityState {
-        self.state.clone()
-    }
-
-    #[inline]
-    pub fn ack_seq(&mut self, seq: SequenceId) {
-        self.state.ack_seq(seq)
-    }
-
-    pub fn rec_ack(
-        &mut self,
-        ack: SequenceId,
-        bitfield: AckMemory,
-        bitfield_bytes: u8,
-    ) {
-        let iter = self.state.ack_bits(ack, bitfield, bitfield_bytes);
-        for seq in iter {
-            self.unacked.remove(&seq.into());
-        }
-    }
-
-    fn ack_state_testing_only(&mut self, state: ReliabilityState) {
-        self.ack_seq(state.local_sequence);
-        self.rec_ack(state.remote_sequence, state.ack_memory, 16);
-    }
-
-    pub fn drain_old<'a, Filter: Fn(Instant) -> bool + 'a>(&'a mut self, filter: Filter) -> impl Iterator<Item = UnackedPacket> + 'a {
-        // TODO: When btree_extract_if is stabilised, use that instead.
-        struct FilterTaker<'a, Filter>(&'a mut ReliablePackets, Filter);
-        impl<'a, Filter: Fn(Instant) -> bool> Iterator for FilterTaker<'a, Filter> {
-            type Item = UnackedPacket;
-        
-            fn next(&mut self) -> Option<Self::Item> {
-                // Try to find a key
-                let key = self.0.unacked.iter()
-                    .filter(|(_, v)| { (self.1)(v.time) })
-                    .map(|(k, _)| *k)
-                    .next()?;
-                
-                // Take the packet from the map and return it
-                return self.0.unacked.remove(&key);
-            }
-        }
-
-        // Return the iterator
-        return FilterTaker(self, filter);
     }
 }
 
@@ -213,86 +133,5 @@ impl Debug for AckMemory {
 #[derive(Debug)]
 pub(crate) struct UnackedPacket {
     pub payload: Bytes,
-    time: Instant,
-}
-
-#[test]
-fn conversation_test() {
-    static EMPTY: &[u8] = &[];
-
-    // An empty Bytes object to test with.
-    #[inline]
-    fn empty() -> Bytes {
-        Bytes::from_static(EMPTY)
-    }
-
-    // We can't use ReliabilityState::new() since it generates random values.
-    // This is our first side of the connection.
-    let mut alice = ReliablePackets::new(ReliabilityState {
-        local_sequence: SequenceId::new(1),
-        remote_sequence: SequenceId::new(0),
-        ack_memory: AckMemory::default(),
-    });
-
-    // This is our other side of the connection.
-    let mut bob = ReliablePackets::new(ReliabilityState {
-        local_sequence: SequenceId::new(1),
-        remote_sequence: SequenceId::new(0),
-        ack_memory: AckMemory::default(),
-    });
-
-    // Alice sends a message to Bob
-    alice.record(1.into(), empty());
-    let alice_header = alice.clone_state();
-    assert_eq!(alice_header.local_sequence, 1.into());
-    alice.advance();
-    assert_eq!(alice.clone_state().local_sequence, 2.into());
-
-    // Bob receives Alice's message
-    bob.ack_state_testing_only(alice_header);
-    assert_eq!(bob.clone_state().remote_sequence, 1.into());
-    assert_eq!(bob.clone_state().ack_memory.0, 0b0000_0001);
-
-    // Bob sends a message to Alice
-    bob.record(1.into(), empty());
-    let bob_header = bob.clone_state();
-    assert_eq!(bob_header.local_sequence, 1.into());
-    bob.advance();
-    assert_eq!(bob.clone_state().local_sequence, 2.into());
-
-    // Alice receives Bob's message
-    alice.ack_state_testing_only(bob_header);
-    assert_eq!(alice.clone_state().remote_sequence, 1.into());
-    assert_eq!(alice.clone_state().ack_memory.0, 0b0000_0001);
-
-    // Alice sends a message to Bob
-    // Bob does not receive this message
-    alice.record(1.into(), empty());
-    alice.advance();
-
-    // Alice sends another message to Bob
-    alice.record(2.into(), empty());
-    let alice_header = alice.clone_state();
-    alice.advance();
-
-    // Bob receives Alice's second message
-    bob.ack_state_testing_only(alice_header);
-    assert_eq!(bob.clone_state().remote_sequence, 3.into());
-    assert_eq!(bob.clone_state().ack_memory.0, 0b0000_0110);
-
-    // Bob sends a message to Alice
-    bob.record(2.into(), empty());
-    let bob_header = bob.clone_state();
-    assert_eq!(bob.clone_state().local_sequence, 2.into());
-    bob.advance();
-
-    // Alice receives Bob's message
-    alice.ack_state_testing_only(bob_header);
-    assert_eq!(alice.clone_state().remote_sequence, 2.into());
-    assert_eq!(alice.clone_state().ack_memory.0, 0b0000_0011);
-
-    // Alice should have one packet that needs retransmission
-    let mut lost_iter = alice.drain_old(|_| true);
-    assert!(lost_iter.next().is_some());
-    assert!(lost_iter.next().is_none());
+    pub time: Instant,
 }
