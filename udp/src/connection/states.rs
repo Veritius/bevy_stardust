@@ -13,3 +13,14 @@ pub(super) enum ConnectionStateInner {
     Closing,
     Closed,
 }
+
+impl ConnectionStateInner {
+    pub fn simplify(&self) -> ConnectionState {
+        match self {
+            ConnectionStateInner::Handshaking => ConnectionState::Handshaking,
+            ConnectionStateInner::Established => ConnectionState::Established,
+            ConnectionStateInner::Closing => ConnectionState::Closing,
+            ConnectionStateInner::Closed => ConnectionState::Closed,
+        }
+    }
+}

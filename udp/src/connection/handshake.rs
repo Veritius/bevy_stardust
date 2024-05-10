@@ -84,5 +84,3 @@ impl std::fmt::Display for HandshakeResponseCode {
         })
     }
 }
-
-impl std::error::Error for HandshakeResponseCode {}
