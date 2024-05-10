@@ -9,6 +9,8 @@ mod systems;
 mod ticking;
 mod timing;
 
+pub use states::*;
+
 pub(crate) use systems::*;
 
 use std::{collections::VecDeque, net::SocketAddr, time::Instant};
@@ -17,7 +19,7 @@ use bytes::Bytes;
 use tracing::warn;
 use statistics::ConnectionStatistics;
 use timing::ConnectionTimings;
-use self::{ordering::OrderingManager, packets::{builder::PacketBuilder, reader::PacketReader}, reliability::ReliablePackets};
+use self::{handshake::HandshakeStateMachine, ordering::OrderingManager, packets::{builder::PacketBuilder, reader::PacketReader}, reliability::ReliablePackets};
 
 pub const DEFAULT_MTU: usize = 1472;
 pub const DEFAULT_BUDGET: usize = 16384;
@@ -41,19 +43,15 @@ impl Connection {
 }
 
 pub(crate) struct ConnectionInner {
-    mtu_limit: usize,
-    budget_limit: usize,
-    budget_count: usize,
-    budget_ltime: Instant,
-
-    remote_address: SocketAddr,
-    connection_state: ConnectionState,
-    ice_thickness: u16,
+    state: ConnectionStateInner,
 
     pub(crate) owning_endpoint: Entity,
     pub(crate) direction: ConnectionDirection,
     pub(crate) timings: ConnectionTimings,
     pub(crate) statistics: ConnectionStatistics,
+
+    remote_address: SocketAddr,
+    ice_thickness: u16,
 
     pub(crate) send_queue: VecDeque<Bytes>,
     pub(crate) recv_queue: VecDeque<Bytes>,
@@ -63,6 +61,11 @@ pub(crate) struct ConnectionInner {
 
     frame_builder: PacketBuilder,
     frame_parser: PacketReader,
+
+    mtu_limit: usize,
+    budget_limit: usize,
+    budget_count: usize,
+    budget_ltime: Instant,
 }
 
 /// Functions for controlling the connection.
@@ -73,19 +76,17 @@ impl ConnectionInner {
         direction: ConnectionDirection,
     ) -> Self {
         Self {
-            mtu_limit: DEFAULT_MTU,
-            budget_limit: DEFAULT_BUDGET,
-            budget_count: DEFAULT_BUDGET,
-            budget_ltime: Instant::now(),
-
-            remote_address,
-            connection_state: ConnectionState::Handshaking,
-            ice_thickness: u16::MAX,
+            state: ConnectionStateInner::Handshaking {
+                machine: HandshakeStateMachine::default(),
+            },
 
             owning_endpoint,
             direction,
             statistics: ConnectionStatistics::default(),
             timings: ConnectionTimings::new(None, None, None),
+
+            remote_address,
+            ice_thickness: u16::MAX,
 
             send_queue: VecDeque::with_capacity(16),
             recv_queue: VecDeque::with_capacity(32),
@@ -95,6 +96,11 @@ impl ConnectionInner {
 
             frame_builder: PacketBuilder::default(),
             frame_parser: PacketReader::default(),
+
+            mtu_limit: DEFAULT_MTU,
+            budget_limit: DEFAULT_BUDGET,
+            budget_count: DEFAULT_BUDGET,
+            budget_ltime: Instant::now(),
         }
     }
 }
@@ -114,7 +120,7 @@ impl ConnectionInner {
 
     /// Returns the [`ConnectionState`] of the connection.
     pub fn state(&self) -> ConnectionState {
-        self.connection_state
+        self.state.simplify()
     }
 
     /// Returns statistics related to the Connection. See [`ConnectionStatistics`] for more.
@@ -166,22 +172,6 @@ pub enum ConnectionDirection {
 
     /// Acting as a server, talking to a client.
     Server,
-}
-
-/// The state of the connection.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Reflect)]
-pub enum ConnectionState {
-    /// The connection is in the process of being established.
-    Handshaking,
-
-    /// The connection is fully active and ready to communicate.
-    Connected,
-
-    /// The connection is closing and waiting for final data transfer to occur.
-    Closing,
-
-    /// The connection is closed and the entity will be despawned soon.
-    Closed,
 }
 
 #[derive(Event)]

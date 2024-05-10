@@ -1,11 +1,21 @@
+#[derive(Default)]
+pub(super) struct HandshakeStateMachine {
+    state: HandshakeStateInner,
+}
+
+#[derive(Default)]
+enum HandshakeStateInner {
+    #[default]
+    Uninitialised,
+    InitiatorHello,
+    ListenerResponse,
+    InitiatorResponse,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u16)]
 pub(super) enum HandshakeResponseCode {
     Continue = 0,
-
-    // This code is returned when we can't recognise the code they send.
-    // This should not be sent to a peer, that'd be weird.
-    Unknown = u16::MAX,
 
     Unspecified = 1,
     MalformedPacket = 2,
@@ -21,6 +31,10 @@ pub(super) enum HandshakeResponseCode {
 
     ServerNotListening = 10,
     ApplicationCloseEvent = 11,
+
+    // This code is returned when we can't recognise the code they send.
+    // This should not be sent to a peer, that'd be weird.
+    Unknown = u16::MAX,
 }
 
 impl HandshakeResponseCode {
@@ -65,7 +79,6 @@ impl std::fmt::Display for HandshakeResponseCode {
 
         f.write_str(match self {
             Continue => "no error",
-            Unknown => "unknown error code",
 
             MalformedPacket => "malformed packet",
             Unspecified => "no reason given",
@@ -81,6 +94,8 @@ impl std::fmt::Display for HandshakeResponseCode {
 
             ServerNotListening => "server not accepting connections",
             ApplicationCloseEvent => "close event sent during handshake",
+
+            Unknown => "unknown error code",
         })
     }
 }
