@@ -29,9 +29,10 @@ impl TryFrom<usize> for VarInt {
 
     #[inline]
     fn try_from(value: usize) -> Result<Self, Self::Error> {
-        // The pointer size is smaller than the maximum value on a 16 or 32 bit system
+        // The pointer size is smaller than the maximum value on a 32 bit system
         // which means this conversion won't ever cause any problems.
-        #[cfg(any(target_pointer_width="16", target_pointer_width="32"))]
+        // Also, Bevy doesn't support 16 bit systems, so we don't need to cover that.
+        #[cfg(target_pointer_width="32")]
         return Ok(Self(value as u64));
 
         // On 64-bit targets, we actually have to check.
