@@ -1,20 +1,6 @@
-#[derive(Default)]
-pub(super) struct HandshakeStateMachine {
-    state: HandshakeStateInner,
-}
-
-#[derive(Default)]
-enum HandshakeStateInner {
-    #[default]
-    Uninitialised,
-    InitiatorHello,
-    ListenerResponse,
-    InitiatorResponse,
-}
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u16)]
-pub(super) enum HandshakeResponseCode {
+pub(crate) enum HandshakeResponseCode {
     Continue = 0,
 
     Unspecified = 1,
@@ -35,15 +21,6 @@ pub(super) enum HandshakeResponseCode {
     // This code is returned when we can't recognise the code they send.
     // This should not be sent to a peer, that'd be weird.
     Unknown = u16::MAX,
-}
-
-impl HandshakeResponseCode {
-    pub fn should_respond_on_rejection(&self) -> bool {
-        match self {
-            Self::MalformedPacket => false,
-            _ => true,
-        }
-    }
 }
 
 impl From<u16> for HandshakeResponseCode {
