@@ -1,4 +1,5 @@
 mod codes;
+mod packets;
 
 pub(in crate::connection) use codes::HandshakeResponseCode;
 
