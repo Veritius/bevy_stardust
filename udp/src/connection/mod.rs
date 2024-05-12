@@ -80,7 +80,7 @@ impl ConnectionInner {
     ) -> Self {
         Self {
             state: ConnectionStateInner::Handshaking {
-                machine: HandshakeStateMachine::default(),
+                machine: HandshakeStateMachine::new(direction),
             },
 
             owning_endpoint,
