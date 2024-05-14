@@ -8,65 +8,67 @@ use super::*;
 impl ConnectionInner {
     /// Ticks the connection, parsing incoming data.
     pub(super) fn tick_preupdate(&mut self, mut context: PreUpdateTickData) {
-        match &mut self.state {
-            ConnectionStateInner::Handshaking { machine } => {
-                todo!()
-            },
+        todo!()
 
-            ConnectionStateInner::Established => {
-                // Iterator to parse all incoming packets
-                let mut frames = self.frame_parser.iter(PacketReaderContext {
-                    queue: &mut self.recv_queue,
-                    config: context.config,
-                    reliability: &mut self.reliability,
-                    rel_packets: &mut self.unacked_pkts,
-                });
+        // match &mut self.state {
+        //     ConnectionState::Handshaking => {
+        //         todo!()
+        //     },
 
-                // Loop over all frames
-                while let Some(frame) = frames.next() { match frame {
-                    // Case 1: Frame read
-                    Ok(frame) => {
-                        match frame.ftype {
-                            // Case 1.1: Connection control frame
-                            FrameType::Control => todo!(),
+        //     ConnectionState::Established => {
+        //         // Iterator to parse all incoming packets
+        //         let mut frames = self.frame_parser.iter(PacketReaderContext {
+        //             queue: &mut self.recv_queue,
+        //             config: context.config,
+        //             reliability: &mut self.reliability,
+        //             rel_packets: &mut self.unacked_pkts,
+        //         });
 
-                            // Case 1.2: Stardust message frame
-                            FrameType::Stardust => {
-                                // TODO: Don't panic here, handle it somehow.
-                                // TODO: This goes through two separate pointers to access the actual data, fix that.
-                                let messages = context.messages.as_mut().unwrap();
+        //         // Loop over all frames
+        //         while let Some(frame) = frames.next() { match frame {
+        //             // Case 1: Frame read
+        //             Ok(frame) => {
+        //                 match frame.ftype {
+        //                     // Case 1.1: Connection control frame
+        //                     FrameType::Control => todo!(),
 
-                                // Pass the frame to a distinct function to not clutter this one
-                                if let Err(error) = recv_stardust::recv_stardust_frame(
-                                    context.registry,
-                                    &mut self.orderings,
-                                    messages,
-                                    frame,
-                                ) {
-                                    todo!()
-                                }
-                            },
-                        }
-                    },
+        //                     // Case 1.2: Stardust message frame
+        //                     FrameType::Stardust => {
+        //                         // TODO: Don't panic here, handle it somehow.
+        //                         // TODO: This goes through two separate pointers to access the actual data, fix that.
+        //                         let messages = context.messages.as_mut().unwrap();
 
-                    // Case 2: An error occurred
-                    Err(error) => {
-                        todo!()
-                    },
-                } }
-            },
+        //                         // Pass the frame to a distinct function to not clutter this one
+        //                         if let Err(error) = recv_stardust::recv_stardust_frame(
+        //                             context.registry,
+        //                             &mut self.orderings,
+        //                             messages,
+        //                             frame,
+        //                         ) {
+        //                             todo!()
+        //                         }
+        //                     },
+        //                 }
+        //             },
 
-            ConnectionStateInner::Closing => {
-                todo!()
-            },
+        //             // Case 2: An error occurred
+        //             Err(error) => {
+        //                 todo!()
+        //             },
+        //         } }
+        //     },
 
-            ConnectionStateInner::Closed => {
-                /*
-                    The connection is closed, do nothing.
-                    What were you expecting?
-                */
-            },
-        }
+        //     ConnectionState::Closing => {
+        //         todo!()
+        //     },
+
+        //     ConnectionState::Closed => {
+        //         /*
+        //             The connection is closed, do nothing.
+        //             What were you expecting?
+        //         */
+        //     },
+        // }
     }
 
     /// Ticks the connection, queuing outgoing data.

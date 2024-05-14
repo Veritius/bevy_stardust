@@ -21,7 +21,7 @@ use statistics::ConnectionStatistics;
 use timing::ConnectionTimings;
 use crate::sequences::SequenceId;
 
-use self::{handshake::HandshakeStateMachine, ordering::OrderingManager, packets::{builder::PacketBuilder, reader::PacketReader}, reliability::{ReliabilityState, UnackedPacket}};
+use self::{handshake::HandshakeState, ordering::OrderingManager, packets::{builder::PacketBuilder, reader::PacketReader}, reliability::{ReliabilityState, UnackedPacket}};
 
 pub const DEFAULT_MTU: usize = 1472;
 pub const DEFAULT_BUDGET: usize = 16384;
@@ -45,7 +45,7 @@ impl Connection {
 }
 
 pub(crate) struct ConnectionInner {
-    state: ConnectionStateInner,
+    handshake: Option<HandshakeState>,
 
     pub(crate) owning_endpoint: Entity,
     pub(crate) direction: ConnectionDirection,
@@ -79,9 +79,7 @@ impl ConnectionInner {
         direction: ConnectionDirection,
     ) -> Self {
         Self {
-            state: ConnectionStateInner::Handshaking {
-                machine: HandshakeStateMachine::new(direction),
-            },
+            handshake: Some(HandshakeState::new(direction)),
 
             owning_endpoint,
             direction,
@@ -124,7 +122,7 @@ impl ConnectionInner {
 
     /// Returns the [`ConnectionState`] of the connection.
     pub fn state(&self) -> ConnectionState {
-        self.state.simplify()
+        todo!()
     }
 
     /// Returns statistics related to the Connection. See [`ConnectionStatistics`] for more.

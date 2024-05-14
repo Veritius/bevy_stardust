@@ -8,11 +8,11 @@ use std::collections::BTreeMap;
 use crate::{plugin::PluginConfiguration, sequences::SequenceId};
 use super::{reliability::*, ConnectionDirection};
 
-pub(super) struct HandshakeStateMachine {
+pub(super) struct HandshakeState {
     state: HandshakeStateInner,
 }
 
-impl HandshakeStateMachine {
+impl HandshakeState {
     pub fn new(direction: ConnectionDirection) -> Self {
         Self {
             state: match direction {
