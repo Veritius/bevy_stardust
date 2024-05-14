@@ -31,6 +31,20 @@ pub struct Connection {
 }
 
 impl Connection {
+    pub(crate) fn new(
+        owning_endpoint: Entity,
+        remote_address: SocketAddr,
+        direction: ConnectionDirection,
+    ) -> Self {
+        Self {
+            inner: ConnectionInner::new(
+                owning_endpoint,
+                remote_address,
+                direction
+            ),
+        }
+    }
+
     #[inline]
     pub(crate) fn inner(&self) -> &ConnectionInner {
         &self.inner
@@ -78,8 +92,8 @@ impl ConnectionInner {
         owning_endpoint: Entity,
         remote_address: SocketAddr,
         direction: ConnectionDirection,
-    ) -> Self {
-        Self {
+    ) -> Box<Self> {
+        Box::new(Self {
             handshake: Some(HandshakeState::new(direction)),
 
             owning_endpoint,
@@ -107,7 +121,7 @@ impl ConnectionInner {
             budget_limit: DEFAULT_BUDGET,
             budget_count: DEFAULT_BUDGET,
             budget_ltime: Instant::now(),
-        }
+        })
     }
 }
 
