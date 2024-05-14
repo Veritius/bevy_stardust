@@ -85,6 +85,7 @@ impl UdpManager<'_, '_> {
         )).id();
 
         // SAFETY: Commands generates a unique ID concurrently, so this is fine.
+        // TODO: This can probably be replaced by Bevy entity relations
         let token = unsafe { ConnectionOwnershipToken::new(id) };
         endpoint_ref.add_peer(address, token);
 
