@@ -1,6 +1,7 @@
 mod recv_stardust;
 
 use bevy_stardust::prelude::*;
+use ticking::handshake::HandshakeOutcome;
 use crate::plugin::PluginConfiguration;
 use self::packets::{frames::FrameType, reader::PacketReaderContext};
 use super::*;
@@ -8,67 +9,45 @@ use super::*;
 impl ConnectionInner {
     /// Ticks the connection, parsing incoming data.
     pub(super) fn tick_preupdate(&mut self, mut context: PreUpdateTickData) {
-        todo!()
+        if let Some(handshake) = &mut self.handshake {
+            while let Some(packet) = self.recv_queue.pop_front() {
+                let outcome = handshake.recv(
+                    packet,
+                    context.config,
+                    &mut self.reliability,
+                    &mut self.unacked_pkts
+                );
 
-        // match &mut self.state {
-        //     ConnectionState::Handshaking => {
-        //         todo!()
-        //     },
+                match outcome {
+                    None => {},
+                    Some(HandshakeOutcome::FinishedHandshake) => todo!(),
+                    Some(HandshakeOutcome::FailedHandshake) => todo!(),
+                }
+            }
+        }
 
-        //     ConnectionState::Established => {
-        //         // Iterator to parse all incoming packets
-        //         let mut frames = self.frame_parser.iter(PacketReaderContext {
-        //             queue: &mut self.recv_queue,
-        //             config: context.config,
-        //             reliability: &mut self.reliability,
-        //             rel_packets: &mut self.unacked_pkts,
-        //         });
+        // Iterator to parse all incoming packets
+        let mut frames = self.frame_parser.iter(PacketReaderContext {
+            queue: &mut self.recv_queue,
+            config: context.config,
+            reliability: &mut self.reliability,
+            rel_packets: &mut self.unacked_pkts
+        });
 
-        //         // Loop over all frames
-        //         while let Some(frame) = frames.next() { match frame {
-        //             // Case 1: Frame read
-        //             Ok(frame) => {
-        //                 match frame.ftype {
-        //                     // Case 1.1: Connection control frame
-        //                     FrameType::Control => todo!(),
-
-        //                     // Case 1.2: Stardust message frame
-        //                     FrameType::Stardust => {
-        //                         // TODO: Don't panic here, handle it somehow.
-        //                         // TODO: This goes through two separate pointers to access the actual data, fix that.
-        //                         let messages = context.messages.as_mut().unwrap();
-
-        //                         // Pass the frame to a distinct function to not clutter this one
-        //                         if let Err(error) = recv_stardust::recv_stardust_frame(
-        //                             context.registry,
-        //                             &mut self.orderings,
-        //                             messages,
-        //                             frame,
-        //                         ) {
-        //                             todo!()
-        //                         }
-        //                     },
-        //                 }
-        //             },
-
-        //             // Case 2: An error occurred
-        //             Err(error) => {
-        //                 todo!()
-        //             },
-        //         } }
-        //     },
-
-        //     ConnectionState::Closing => {
-        //         todo!()
-        //     },
-
-        //     ConnectionState::Closed => {
-        //         /*
-        //             The connection is closed, do nothing.
-        //             What were you expecting?
-        //         */
-        //     },
-        // }
+        // Read frames from the iterator until we run out
+        while let Some(frame) = frames.next() {
+            match frame {
+                Ok(frame) => {
+                    match frame.ftype {
+                        FrameType::Control => todo!(),
+                        FrameType::Stardust => todo!(),
+                    }
+                },
+                Err(error) => {
+                    todo!()
+                },
+            }
+        }
     }
 
     /// Ticks the connection, queuing outgoing data.

@@ -25,10 +25,10 @@ impl HandshakeState {
     pub fn recv(
         &mut self,
         packet: Bytes,
-        conifg: &PluginConfiguration,
+        config: &PluginConfiguration,
         reliability: &mut ReliabilityState,
         packets: &mut BTreeMap<SequenceId, UnackedPacket>,
-    ) -> HandshakeRecvOutcome {
+    ) -> Option<HandshakeOutcome> {
         match self.state {
             HandshakeStateInner::InitiatorHello => todo!(),
             HandshakeStateInner::ListenerResponse => todo!(),
@@ -44,7 +44,7 @@ enum HandshakeStateInner {
     InitiatorResponse,
 }
 
-pub(super) enum HandshakeRecvOutcome {
+pub(super) enum HandshakeOutcome {
     FinishedHandshake,
     FailedHandshake,
 }
