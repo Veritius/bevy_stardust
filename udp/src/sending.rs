@@ -1,4 +1,4 @@
-use std::io;
+use std::{io, time::Instant};
 use bevy::prelude::*;
 use bevy_stardust::connections::NetworkPerformanceReduction;
 use crate::prelude::*;
@@ -48,7 +48,7 @@ pub(crate) fn io_sending_system(
                     let roll = rng.f32();
                     if performance.packet_drop_chance < roll {
                         // Updating these values simulates a successful packet send
-                        connection.timings.set_last_sent_now();
+                        connection.last_sent = Some(Instant::now());
                         endpoint_statistics.record_packet_send(payload.len());
 
                         continue;
@@ -58,10 +58,8 @@ pub(crate) fn io_sending_system(
                 // Send the packet.
                 match socket.send_to(&payload, connection.remote_address()) {
                     Ok(_) => {
-                        // Set last_sent in timings
-                        connection.timings.set_last_sent_now();
-
-                        // Add to statistics counters
+                        // Update tracking information
+                        connection.last_sent = Some(Instant::now());
                         endpoint_statistics.record_packet_send(payload.len());
                     },
 

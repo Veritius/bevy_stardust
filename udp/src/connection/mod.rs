@@ -7,7 +7,6 @@ mod reliability;
 mod states;
 mod systems;
 mod ticking;
-mod timing;
 
 pub use states::*;
 
@@ -18,7 +17,6 @@ use bevy::prelude::*;
 use bytes::Bytes;
 use tracing::warn;
 use statistics::ConnectionStatistics;
-use timing::ConnectionTimings;
 use crate::sequences::SequenceId;
 
 use self::{handshake::HandshakeState, ordering::OrderingManager, packets::{builder::PacketBuilder, reader::PacketReader}, reliability::{ReliabilityState, UnackedPacket}};
@@ -49,7 +47,6 @@ pub(crate) struct ConnectionInner {
 
     pub(crate) owning_endpoint: Entity,
     pub(crate) direction: ConnectionDirection,
-    pub(crate) timings: ConnectionTimings,
     pub(crate) statistics: ConnectionStatistics,
 
     remote_address: SocketAddr,
@@ -57,6 +54,10 @@ pub(crate) struct ConnectionInner {
 
     pub(crate) send_queue: VecDeque<Bytes>,
     pub(crate) recv_queue: VecDeque<Bytes>,
+
+    pub(crate) opened: Instant,
+    pub(crate) last_sent: Option<Instant>,
+    pub(crate) last_recv: Option<Instant>,
 
     orderings: OrderingManager,
     reliability: ReliabilityState,
@@ -84,13 +85,16 @@ impl ConnectionInner {
             owning_endpoint,
             direction,
             statistics: ConnectionStatistics::default(),
-            timings: ConnectionTimings::new(None, None, None),
 
             remote_address,
             ice_thickness: u16::MAX,
 
             send_queue: VecDeque::with_capacity(16),
             recv_queue: VecDeque::with_capacity(32),
+
+            opened: Instant::now(),
+            last_recv: None,
+            last_sent: None,
 
             orderings: OrderingManager::new(),
             reliability: ReliabilityState::new(),
