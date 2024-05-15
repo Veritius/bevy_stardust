@@ -13,35 +13,33 @@ impl ConnectionStateMachine {
         shared: &mut ConnectionShared,
         context: PreUpdateTickData,
     ) {
-        'outer: loop {
-            match &mut self.inner {
-                MachineInner::Handshaking(handshake) => {
-                    while let Some(packet) = shared.recv_queue.pop_front() {
-                        let outcome = handshake.recv(
-                            packet,
-                            context.config,
-                            shared,
-                        );
+        match &mut self.inner {
+            MachineInner::Handshaking(handshake) => {
+                while let Some(packet) = shared.recv_queue.pop_front() {
+                    let outcome = handshake.recv(
+                        packet,
+                        context.config,
+                        shared,
+                    );
 
-                        match outcome {
-                            Some(HandshakeOutcome::FinishedHandshake) => {
-                                self.inner = MachineInner::Established;
-                                continue 'outer;
-                            },
-                            Some(HandshakeOutcome::FailedHandshake { reason }) => {
-                                self.inner = MachineInner::Closed;
-                                continue 'outer;
-                            },
-                            None => {},
-                        }
+                    match outcome {
+                        Some(HandshakeOutcome::FinishedHandshake) => {
+                            self.inner = MachineInner::Established;
+                            self.tick_preupdate(shared, context);
+                            return;
+                        },
+                        Some(HandshakeOutcome::FailedHandshake { reason }) => {
+                            self.inner = MachineInner::Closed;
+                            self.tick_preupdate(shared, context);
+                            return;
+                        },
+                        None => {},
                     }
-
-                    break 'outer;
-                },
-                MachineInner::Established => todo!(),
-                MachineInner::Closing => todo!(),
-                MachineInner::Closed => { break 'outer },
-            }
+                }
+            },
+            MachineInner::Established => todo!(),
+            MachineInner::Closing => todo!(),
+            MachineInner::Closed => { return },
         }
     }
 }

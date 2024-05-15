@@ -13,22 +13,18 @@ impl ConnectionStateMachine {
         shared: &mut ConnectionShared,
         context: PostUpdateTickData,
     ) {
-        'outer: loop {
-            match &mut self.inner {
-                MachineInner::Handshaking(machine) => {
-                    // Repeatedly call send until it returns None (nothing to send)
-                    // This acts very similarly to an iterator
-                    while let Some(bytes) = machine.send(context.config, shared) {
-                        shared.send_queue.push_back(bytes);
-                    }
+        match &mut self.inner {
+            MachineInner::Handshaking(machine) => {
+                // Repeatedly call send until it returns None (nothing to send)
+                // This acts very similarly to an iterator
+                while let Some(bytes) = machine.send(context.config, shared) {
+                    shared.send_queue.push_back(bytes);
+                }
+            },
 
-                    break 'outer;
-                },
-
-                MachineInner::Established => todo!(),
-                MachineInner::Closing => todo!(),
-                MachineInner::Closed => { break 'outer }
-            }
+            MachineInner::Established => todo!(),
+            MachineInner::Closing => todo!(),
+            MachineInner::Closed => {}
         }
     }
 }
