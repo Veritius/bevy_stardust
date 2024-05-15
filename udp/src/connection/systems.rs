@@ -1,7 +1,44 @@
+use std::collections::BTreeSet;
 use bevy::prelude::*;
 use bevy_stardust::prelude::*;
 use crate::{plugin::PluginConfiguration, prelude::*};
-use super::machine::*;
+use super::{machine::*, PotentialNewPeer};
+
+pub(crate) fn potential_new_peers_system(
+    mut commands: Commands,
+    mut events: EventReader<PotentialNewPeer>,
+    existing: Query<&Connection>,
+) {
+    // Map of all addresses we recognise
+    // TODO: Cache this value in a Local?
+    let mut known = existing.iter()
+    .map(|x| x.inner.shared.remote_address())
+    .collect::<BTreeSet<_>>();
+
+    // Read all events
+    for event in events.read() {
+        // Don't add peers we're already aware of
+        if known.contains(&event.address) { continue }
+
+        // Register our awareness of this peer
+        // This is necessary so bunched-up packets don't
+        // spawn multiple entities for the same real-world machine
+        known.insert(event.address);
+
+        // Create connection component
+        let mut comp = Connection::new(
+            event.endpoint,
+            event.address,
+            ConnectionDirection::Client,
+        );
+
+        // Put the payload into the receive queue of the connection
+        comp.inner_mut().shared.recv_queue.push_back(event.payload.clone());
+
+        // Insert connection into the world
+        commands.spawn(comp);
+    }
+}
 
 pub(crate) fn connection_preupdate_ticking_system(
     config: Res<PluginConfiguration>,

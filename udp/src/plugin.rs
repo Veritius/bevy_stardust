@@ -71,6 +71,7 @@ impl Plugin for UdpTransportPlugin {
     fn build(&self, app: &mut App) {
         use crate::receiving::io_receiving_system;
         use crate::connection::{
+            potential_new_peers_system,
             connection_preupdate_ticking_system,
             connection_postupdate_ticking_system,
             close_connections_system,
@@ -103,10 +104,9 @@ impl Plugin for UdpTransportPlugin {
         ).chain().in_set(NetworkRead::Receive));
 
         // These systems can run at any time
-        // app.add_systems(Update, (
-        //     potential_new_peers_system,
-        //     handshake_polling_system,
-        // ));
+        app.add_systems(Update, (
+            potential_new_peers_system,
+        ));
 
         // Packet transmitting systems
         app.add_systems(PostUpdate, (
