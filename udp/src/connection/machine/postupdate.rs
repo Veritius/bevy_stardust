@@ -1,5 +1,12 @@
 use super::*;
 
+/// Data used by [`tick_postupdate`](ConnectionInner::tick_postupdate)
+pub(in crate::connection) struct PostUpdateTickData<'a> {
+    pub config: &'a PluginConfiguration,
+    pub registry: &'a ChannelRegistryInner,
+    pub messages: Option<Ref<'a, NetworkMessages<Outgoing>>>,
+}
+
 impl ConnectionStateMachine {
     pub fn tick_postupdate(
         &mut self,

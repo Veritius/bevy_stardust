@@ -1,5 +1,12 @@
 use super::*;
 
+/// Data used by [`tick_preupdate`](ConnectionInner::tick_preupdate)
+pub(in crate::connection) struct PreUpdateTickData<'a> {
+    pub config: &'a PluginConfiguration,
+    pub registry: &'a ChannelRegistryInner,
+    pub messages: Option<Mut<'a, NetworkMessages<Incoming>>>,
+}
+
 impl ConnectionStateMachine {
     pub fn tick_preupdate(
         &mut self,
