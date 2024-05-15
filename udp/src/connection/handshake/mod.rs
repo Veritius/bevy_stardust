@@ -5,7 +5,7 @@ use std::time::{Duration, Instant};
 
 pub(in crate::connection) use codes::HandshakeResponseCode;
 
-use bytes::Bytes;
+use bytes::{BufMut, Bytes};
 use unbytes::Reader;
 use crate::{appdata::{NetworkVersionData, PeerVersionMismatch, BANNED_MINOR_VERSIONS, TRANSPORT_VERSION_DATA}, plugin::PluginConfiguration};
 use self::packets::*;
@@ -118,19 +118,6 @@ impl HandshakeStateMachine {
                 ) {
                     finish_handshake!(fail, reason);
                 }
-
-                // Send a packet in response
-                shared.reliability.advance();
-                let mut buf = Vec::with_capacity(6);
-                HandshakePacketHeader {
-                    seq_ident: shared.reliability.local_sequence.into(),
-                }.write(&mut buf);
-                InitiatorResponsePacket {
-                    acks: HandshakePacketAcks {
-                        ack_ident: shared.reliability.remote_sequence.into(),
-                        ack_memory: shared.reliability.ack_memory.into_u16(),
-                    },
-                }.write(&mut buf);
             },
 
             HandshakeStateInner::ListenerHello => {
@@ -153,13 +140,42 @@ impl HandshakeStateMachine {
                 ) {
                     finish_handshake!(fail, reason);
                 }
+            },
 
-                // Send a packet in response
-                shared.reliability.advance();
-                let mut buf = Vec::with_capacity(6);
-                HandshakePacketHeader {
-                    seq_ident: shared.reliability.local_sequence.into(),
+            #[cfg(debug_assertions)]
+            HandshakeStateInner::Finished => unreachable!(),
+        }
+
+        // Send a packet in response
+        shared.reliability.advance();
+        let len = match self.state {
+            HandshakeStateInner::InitiatorHello => 8,
+            HandshakeStateInner::ListenerHello => 38,
+
+            #[cfg(debug_assertions)]
+            HandshakeStateInner::Finished => todo!(),
+        };
+
+        let mut buf = Vec::with_capacity(len);
+
+        // Packets are always headed by this
+        HandshakePacketHeader {
+            seq_ident: shared.reliability.local_sequence.into(),
+        }.write(&mut buf);
+        buf.put_u16(HandshakeResponseCode::Continue as u16);
+
+        // The rest of the packet is dependent on state
+        match self.state {
+            HandshakeStateInner::InitiatorHello => {
+                InitiatorResponsePacket {
+                    acks: HandshakePacketAcks {
+                        ack_ident: shared.reliability.remote_sequence.into(),
+                        ack_memory: shared.reliability.ack_memory.into_u16(),
+                    },
                 }.write(&mut buf);
+            },
+
+            HandshakeStateInner::ListenerHello => {
                 ListenerHelloPacket {
                     tr_ver: TRANSPORT_VERSION_DATA.clone(),
                     app_ver: config.application_version.as_nvd(),
@@ -174,7 +190,63 @@ impl HandshakeStateMachine {
             HandshakeStateInner::Finished => unreachable!(),
         }
 
+        assert_eq!(len, buf.len());
+
         finish_handshake!(pass);
+    }
+
+    pub fn send(
+        &mut self,
+        config: &PluginConfiguration,
+        shared: &mut ConnectionShared,
+    ) -> Option<Bytes> {
+        // Check if we need to send a message at all
+        if self.last_sent.is_some_and(|v| v.elapsed() < RESEND_DELAY) {
+            return None;
+        }
+
+        let len = match self.state {
+            HandshakeStateInner::InitiatorHello => 36,
+            HandshakeStateInner::ListenerHello => 40,
+
+            #[cfg(debug_assertions)]
+            HandshakeStateInner::Finished => todo!(),
+        };
+
+        let mut buf = Vec::with_capacity(len);
+        
+        // Packets are always headed by this
+        HandshakePacketHeader {
+            seq_ident: shared.reliability.local_sequence.into(),
+        }.write(&mut buf);
+        buf.put_u16(HandshakeResponseCode::Continue as u16);
+
+        match self.state {
+            HandshakeStateInner::InitiatorHello => {
+                InitiatorHelloPacket {
+                    tr_ver: TRANSPORT_VERSION_DATA.clone(),
+                    app_ver: config.application_version.as_nvd(),
+                }.write(&mut buf);
+            },
+            HandshakeStateInner::ListenerHello => {
+                ListenerHelloPacket {
+                    tr_ver: TRANSPORT_VERSION_DATA.clone(),
+                    app_ver: config.application_version.as_nvd(),
+                    acks: HandshakePacketAcks {
+                        ack_ident: shared.reliability.remote_sequence.into(),
+                        ack_memory: shared.reliability.ack_memory.into_u16(),
+                    }
+                }.write(&mut buf);
+            },
+
+            #[cfg(debug_assertions)]
+            HandshakeStateInner::Finished => unreachable!(),
+        }
+
+        debug_assert_eq!(len, buf.len());
+
+        self.last_sent = Some(Instant::now());
+        return Some(Bytes::from(buf));
     }
 }
 
