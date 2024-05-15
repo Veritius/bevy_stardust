@@ -5,22 +5,15 @@ mod ordering;
 mod packets;
 mod reliability;
 mod shared;
-mod states;
 mod systems;
 mod ticking;
 
-pub use states::*;
-
 pub(crate) use systems::*;
 
-use std::{collections::{BTreeMap, VecDeque}, net::SocketAddr, time::Instant};
+use std::net::SocketAddr;
 use bevy::prelude::*;
 use bytes::Bytes;
-use tracing::warn;
-use statistics::ConnectionStatistics;
-use crate::sequences::SequenceId;
-
-use self::{handshake::HandshakeState, ordering::OrderingManager, packets::{builder::PacketBuilder, reader::PacketReader}, reliability::{ReliabilityState, UnackedPacket}, shared::ConnectionInner};
+use self::{handshake::HandshakeState, ordering::OrderingManager, shared::ConnectionInner};
 
 pub const DEFAULT_MTU: usize = 1472;
 pub const DEFAULT_BUDGET: usize = 16384;
@@ -59,6 +52,7 @@ impl Connection {
 
 /// Simple information getters for a connection.
 impl Connection {
+    /// Return the state of the connection.
     #[inline]
     pub fn state(&self) -> ConnectionState {
         self.inner.state()
@@ -114,6 +108,22 @@ impl ConnectionImpl {
     pub fn state(&self) -> ConnectionState {
         todo!()
     }
+}
+
+/// The state of the connection.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ConnectionState {
+    /// The connection is being established.
+    Handshaking,
+
+    /// The connection is fully established.
+    Established,
+
+    /// The connection is closing.
+    Closing,
+
+    /// The connection has closed.
+    Closed,
 }
 
 /// The direction of the connection.
