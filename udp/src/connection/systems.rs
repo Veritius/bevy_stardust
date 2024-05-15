@@ -30,7 +30,7 @@ pub(crate) fn potential_new_peers_system(
         let mut comp = Connection::new(
             event.endpoint,
             event.address,
-            ConnectionDirection::Client,
+            ConnectionDirection::Server,
         );
 
         // Put the payload into the receive queue of the connection
