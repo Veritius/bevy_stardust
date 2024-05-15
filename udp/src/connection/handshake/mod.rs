@@ -5,13 +5,13 @@ pub(in crate::connection) use codes::HandshakeResponseCode;
 
 use bytes::Bytes;
 use crate::plugin::PluginConfiguration;
-use super::{shared::ConnectionInner, ConnectionDirection};
+use super::{shared::ConnectionShared, ConnectionDirection};
 
-pub(super) struct HandshakeState {
+pub(super) struct HandshakeStateMachine {
     state: HandshakeStateInner,
 }
 
-impl HandshakeState {
+impl HandshakeStateMachine {
     pub fn new(direction: ConnectionDirection) -> Self {
         Self {
             state: match direction {
@@ -25,7 +25,7 @@ impl HandshakeState {
         &mut self,
         packet: Bytes,
         config: &PluginConfiguration,
-        shared: &mut ConnectionInner,
+        shared: &mut ConnectionShared,
     ) -> Option<HandshakeOutcome> {
         match self.state {
             HandshakeStateInner::InitiatorHello => todo!(),

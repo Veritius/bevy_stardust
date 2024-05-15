@@ -5,7 +5,7 @@ use crate::sequences::SequenceId;
 use super::{ordering::OrderingManager, packets::{builder::PacketBuilder, reader::PacketReader}, reliability::{ReliabilityState, UnackedPacket}, statistics::ConnectionStatistics, ConnectionDirection, DEFAULT_BUDGET, DEFAULT_MTU};
 
 /// Lifecycle-agnostic metadata for connections.
-pub(crate) struct ConnectionInner {
+pub(crate) struct ConnectionShared {
     owning_endpoint: Entity,
     direction: ConnectionDirection,
     statistics: ConnectionStatistics,
@@ -34,7 +34,7 @@ pub(crate) struct ConnectionInner {
 }
 
 /// Functions for controlling the connection.
-impl ConnectionInner {
+impl ConnectionShared {
     pub(super) fn new(
         owning_endpoint: Entity,
         remote_address: SocketAddr,
@@ -101,7 +101,7 @@ impl ConnectionInner {
 
 // Logs a warning when a non-Closed connection is dropped
 // This happens with component removals and drops in scope
-impl Drop for ConnectionInner {
+impl Drop for ConnectionShared {
     fn drop(&mut self) {
         if true { // TODO
             // warn!("Connection dropped while in the {:?} state", self.state());

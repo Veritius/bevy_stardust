@@ -1,19 +1,19 @@
 pub mod statistics;
 
 mod handshake;
+mod machine;
 mod ordering;
 mod packets;
 mod reliability;
 mod shared;
 mod systems;
-mod ticking;
 
 pub(crate) use systems::*;
 
 use std::net::SocketAddr;
 use bevy::prelude::*;
 use bytes::Bytes;
-use self::{handshake::HandshakeState, ordering::OrderingManager, shared::ConnectionInner};
+use self::{machine::ConnectionStateMachine, shared::ConnectionShared};
 
 pub const DEFAULT_MTU: usize = 1472;
 pub const DEFAULT_BUDGET: usize = 16384;
@@ -85,8 +85,8 @@ impl Connection {
 }
 
 pub(crate) struct ConnectionImpl {
-    pub shared: ConnectionInner,
-    handshake: Option<HandshakeState>,
+    pub shared: ConnectionShared,
+    machine: ConnectionStateMachine,
 }
 
 impl ConnectionImpl {
@@ -95,13 +95,15 @@ impl ConnectionImpl {
         remote_address: SocketAddr,
         direction: ConnectionDirection,
     ) -> Box<Self> {
+        let shared = ConnectionShared::new(
+            owning_endpoint,
+            remote_address,
+            direction,
+        );
+
         Box::new(Self {
-            shared: ConnectionInner::new(
-                owning_endpoint,
-                remote_address,
-                direction,
-            ),
-            handshake: Some(HandshakeState::new(direction)),
+            machine: ConnectionStateMachine::new(&shared),
+            shared,
         })
     }
 

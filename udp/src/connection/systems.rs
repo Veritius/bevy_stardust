@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use bevy_stardust::prelude::*;
 use crate::{plugin::PluginConfiguration, prelude::*};
-use super::ticking::*;
+use super::machine::*;
 
 pub(crate) fn connection_preupdate_ticking_system(
     config: Res<PluginConfiguration>,
@@ -15,7 +15,8 @@ pub(crate) fn connection_preupdate_ticking_system(
         let _entered = trace_span.entered();
 
         // Run tick function
-        connection.inner_mut().tick_preupdate(PreUpdateTickData {
+        let inner = connection.inner_mut();
+        inner.machine.tick_preupdate(&mut inner.shared, PreUpdateTickData {
             config: &config,
             registry: &registry,
             messages,
@@ -35,7 +36,8 @@ pub(crate) fn connection_postupdate_ticking_system(
         let _entered = trace_span.entered();
 
         // Run tick function
-        connection.inner_mut().tick_postupdate(PostUpdateTickData {
+        let inner = connection.inner_mut();
+        inner.machine.tick_postupdate(&mut inner.shared, PostUpdateTickData {
             config: &config,
             registry: &registry,
             messages,
