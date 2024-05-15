@@ -150,7 +150,7 @@ impl HandshakeStateMachine {
         shared.reliability.advance();
         let len = match self.state {
             HandshakeStateInner::InitiatorHello => 8,
-            HandshakeStateInner::ListenerHello => 38,
+            HandshakeStateInner::ListenerHello => 40,
 
             #[cfg(debug_assertions)]
             HandshakeStateInner::Finished => todo!(),
