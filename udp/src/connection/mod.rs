@@ -107,8 +107,9 @@ impl ConnectionImpl {
         })
     }
 
+    #[inline]
     pub fn state(&self) -> ConnectionState {
-        todo!()
+        self.machine.state()
     }
 }
 
