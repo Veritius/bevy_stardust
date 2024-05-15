@@ -37,8 +37,8 @@ To begin, the Initiator sends an 'initiator hello' packet. This contains informa
 
 The equivalent of this in TCP is the SYN packet sent by the client.
 
-#### Listener response
-In response, the Listener sends a 'listener response' packet. Like the 'initiator hello' packet, this contains reliability and version data. However, it also contains a [response](#response-codes) code, which informs the initiator whether or not the listener will continue with the handshake.
+#### Listener hello
+In response, the Listener sends a 'listener hello' packet. Like the 'initiator hello' packet, this contains reliability and version data. However, it also contains a [response](#response-codes) code, which informs the initiator whether or not the listener will continue with the handshake.
 
 | Type  | Description                |
 | ----- | -------------------------- |
@@ -57,8 +57,8 @@ If the response code signals an error or other rejection reason (non-zero), this
 
 The equivalent of this is in TCP is the SYN/ACK packet sent by the server.
 
-#### Initiator response
-Assuming the listener accepts the connection, the initiator will send the third and final packet in the handshake protocol. This is the 'initiator response' where there can be two outcomes: the connection becomes fully established, or the connection is terminated.
+#### Initiator finish
+Assuming the listener accepts the connection, the initiator will send the third and final packet in the handshake protocol. This is the 'initiator finish' where there can be two outcomes: the connection becomes fully established, or the connection is terminated.
 
 | Type  | Description                |
 | ----- | -------------------------- |

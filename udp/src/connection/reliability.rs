@@ -113,6 +113,18 @@ impl AckMemory {
         self.0.to_be_bytes()
     }
 
+    pub fn into_u16(&self) -> u16 {
+        let a = self.into_array();
+        u16::from_be_bytes([a[0], a[1]])
+    }
+
+    pub fn from_u16(value: u16) -> Self {
+        let a = value.to_be_bytes();
+        let mut b = [0u8; 16];
+        b[0] = a[0]; b[1] = a[1];
+        Self(u128::from_be_bytes(b))
+    }
+
     #[inline]
     pub fn shift(&mut self, bits: u32) {
         self.0 = self.0.overflowing_shl(bits).0

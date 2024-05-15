@@ -21,7 +21,7 @@ pub(crate) struct NetworkVersionData {
 }
 
 impl NetworkVersionData {
-    pub(crate) fn from_bytes(reader: &mut Reader) -> Result<NetworkVersionData, EndOfInput> {
+    pub fn from_bytes(reader: &mut Reader) -> Result<NetworkVersionData, EndOfInput> {
         Ok(Self {
             ident: u64::from_be_bytes(reader.read_array::<8>()?),
             major: u32::from_be_bytes(reader.read_array::<4>()?),
@@ -29,7 +29,7 @@ impl NetworkVersionData {
         })
     }
 
-    pub(crate) fn to_bytes(&self) -> [u8; 16] {
+    pub fn to_bytes(&self) -> [u8; 16] {
         // Storage type
         let mut bytes = [0u8; 16];
 
@@ -41,6 +41,20 @@ impl NetworkVersionData {
         // Return value
         return bytes;
     }
+
+    pub fn check(&self, other: &Self, banlist: &[u32]) -> Result<(), PeerVersionMismatch> {
+        if self.ident != other.ident     { return Err(PeerVersionMismatch::BadIdent); }
+        if self.major != other.major     { return Err(PeerVersionMismatch::BadMajor); }
+        if self.minor != other.minor     { return Err(PeerVersionMismatch::BadMinor); }
+        if banlist.contains(&self.minor) { return Err(PeerVersionMismatch::BadMinor); }
+        return Ok(())
+    }
+}
+
+pub(crate) enum PeerVersionMismatch {
+    BadIdent,
+    BadMajor,
+    BadMinor,
 }
 
 #[test]

@@ -28,7 +28,7 @@ impl ConnectionStateMachine {
                                 self.inner = MachineInner::Established;
                                 continue 'outer;
                             },
-                            Some(HandshakeOutcome::FailedHandshake) => {
+                            Some(HandshakeOutcome::FailedHandshake { reason }) => {
                                 self.inner = MachineInner::Closed;
                                 continue 'outer;
                             },
