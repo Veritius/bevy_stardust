@@ -1,6 +1,8 @@
+use crate::prelude::ConnectionDirection;
+
 use super::*;
 
-/// Data used by [`tick_preupdate`](ConnectionInner::tick_preupdate)
+/// Data used by [`tick_preupdate`](ConnectionStateMachine::tick_preupdate)
 pub(in crate::connection) struct PreUpdateTickData<'a> {
     pub config: &'a PluginConfiguration,
     pub registry: &'a ChannelRegistryInner,
@@ -24,7 +26,9 @@ impl ConnectionStateMachine {
 
                     match outcome {
                         Some(HandshakeOutcome::FinishedHandshake) => {
-                            self.inner = MachineInner::Established;
+                            let mut swp = HandshakeStateMachine::new(ConnectionDirection::Client);
+                            std::mem::swap(&mut swp, handshake);
+                            self.inner = MachineInner::Established(EstablishedStateMachine::new(swp));
                             self.tick_preupdate(shared, context);
                             return;
                         },
@@ -37,8 +41,13 @@ impl ConnectionStateMachine {
                     }
                 }
             },
-            MachineInner::Established => todo!(),
+
+            MachineInner::Established(machine) => {
+                todo!()
+            },
+
             MachineInner::Closing => todo!(),
+
             MachineInner::Closed => { return },
         }
     }

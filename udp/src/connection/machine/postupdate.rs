@@ -1,6 +1,6 @@
 use super::*;
 
-/// Data used by [`tick_postupdate`](ConnectionInner::tick_postupdate)
+/// Data used by [`tick_postupdate`](ConnectionStateMachine::tick_postupdate)
 pub(in crate::connection) struct PostUpdateTickData<'a> {
     pub config: &'a PluginConfiguration,
     pub registry: &'a ChannelRegistryInner,
@@ -22,8 +22,12 @@ impl ConnectionStateMachine {
                 }
             },
 
-            MachineInner::Established => todo!(),
+            MachineInner::Established(machine) => {
+                todo!()
+            },
+
             MachineInner::Closing => todo!(),
+
             MachineInner::Closed => {}
         }
     }

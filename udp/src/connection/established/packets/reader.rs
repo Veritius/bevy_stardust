@@ -2,8 +2,8 @@ use std::collections::{BTreeMap, VecDeque};
 use bytes::Bytes;
 use tracing::error;
 use unbytes::Reader;
-use crate::{connection::{packets::header::PacketHeaderFlags, reliability::{AckMemory, ReliabilityState, UnackedPacket}}, plugin::PluginConfiguration, sequences::SequenceId, varint::VarInt};
-use super::frames::{FrameFlags, FrameType, RecvFrame};
+use crate::{connection::reliability::{AckMemory, ReliabilityState, UnackedPacket}, plugin::PluginConfiguration, sequences::SequenceId, varint::VarInt};
+use super::{frames::{FrameFlags, FrameType, RecvFrame}, header::PacketHeaderFlags};
 
 /// Parses incoming packets into an iterator of `Frame` objects.
 pub(crate) struct PacketReader {}

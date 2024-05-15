@@ -1,7 +1,7 @@
 use std::time::Instant;
 
 use bytes::{Bytes, BufMut};
-use crate::{connection::{packets::header::PacketHeaderFlags, reliability::UnackedPacket}, varint::VarInt};
+use crate::{connection::{established::packets::header::PacketHeaderFlags, reliability::UnackedPacket}, varint::VarInt};
 use super::PackFnSharedCtx;
 
 /// The amount of space allocated for a frame header.

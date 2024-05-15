@@ -7,7 +7,7 @@ pub(super) use preupdate::PreUpdateTickData;
 use bevy::prelude::*;
 use bevy_stardust::prelude::*;
 use crate::plugin::PluginConfiguration;
-use super::{handshake::{HandshakeOutcome, HandshakeStateMachine}, shared::ConnectionShared, ConnectionState};
+use super::{established::EstablishedStateMachine, handshake::{HandshakeOutcome, HandshakeStateMachine}, shared::ConnectionShared, ConnectionState};
 
 /// State machine for a connection.
 pub(super) struct ConnectionStateMachine {
@@ -24,7 +24,7 @@ impl ConnectionStateMachine {
     pub(super) fn state(&self) -> ConnectionState {
         match self.inner {
             MachineInner::Handshaking(_) => ConnectionState::Handshaking,
-            MachineInner::Established => ConnectionState::Established,
+            MachineInner::Established(_)=> ConnectionState::Established,
             MachineInner::Closing => ConnectionState::Closing,
             MachineInner::Closed => ConnectionState::Closed,
         }
@@ -33,7 +33,7 @@ impl ConnectionStateMachine {
 
 enum MachineInner {
     Handshaking(HandshakeStateMachine),
-    Established,
+    Established(EstablishedStateMachine),
     Closing,
     Closed,
 }

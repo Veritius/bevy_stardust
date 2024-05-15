@@ -1,8 +1,7 @@
 use std::{collections::{BTreeMap, VecDeque}, net::SocketAddr, time::Instant};
 use bevy::prelude::*;
 use bytes::Bytes;
-use crate::sequences::SequenceId;
-use super::{ordering::OrderingManager, packets::{builder::PacketBuilder, reader::PacketReader}, reliability::{ReliabilityState, UnackedPacket}, statistics::ConnectionStatistics, ConnectionDirection, DEFAULT_BUDGET, DEFAULT_MTU};
+use super::{reliability::ReliabilityState, statistics::ConnectionStatistics, ConnectionDirection, DEFAULT_BUDGET, DEFAULT_MTU};
 
 /// Lifecycle-agnostic metadata for connections.
 pub(crate) struct ConnectionShared {
@@ -18,12 +17,7 @@ pub(crate) struct ConnectionShared {
     pub(super) send_queue: VecDeque<Bytes>,
     pub(super) recv_queue: VecDeque<Bytes>,
 
-    pub(super) orderings: OrderingManager,
     pub(super) reliability: ReliabilityState,
-    pub(super) unacked_pkts: BTreeMap<SequenceId, UnackedPacket>,
-
-    pub(super) frame_builder: PacketBuilder,
-    pub(super) frame_parser: PacketReader,
 
     pub ice_thickness: u16,
 
@@ -53,12 +47,7 @@ impl ConnectionShared {
             send_queue: VecDeque::with_capacity(16),
             recv_queue: VecDeque::with_capacity(32),
 
-            orderings: OrderingManager::new(),
             reliability: ReliabilityState::new(),
-            unacked_pkts: BTreeMap::new(),
-
-            frame_builder: PacketBuilder::default(),
-            frame_parser: PacketReader::default(),
 
             ice_thickness: u16::MAX,
 
