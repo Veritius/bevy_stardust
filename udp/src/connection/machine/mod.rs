@@ -1,7 +1,10 @@
+mod postupdate;
+mod preupdate;
+
 use bevy::prelude::*;
 use bevy_stardust::prelude::*;
 use crate::plugin::PluginConfiguration;
-use super::{handshake::HandshakeStateMachine, shared::ConnectionShared};
+use super::{handshake::{HandshakeOutcome, HandshakeStateMachine}, shared::ConnectionShared};
 
 /// State machine for a connection.
 pub(super) struct ConnectionStateMachine {
@@ -13,22 +16,6 @@ impl ConnectionStateMachine {
         Self { 
             inner: MachineInner::Handshaking(HandshakeStateMachine::new(shared.direction()))
         }
-    }
-
-    pub fn tick_preupdate(
-        &mut self,
-        shared: &mut ConnectionShared,
-        context: PreUpdateTickData,
-    ) {
-        todo!()
-    }
-
-    pub fn tick_postupdate(
-        &mut self,
-        shared: &mut ConnectionShared,
-        context: PostUpdateTickData,
-    ) {
-        todo!()
     }
 }
 
@@ -49,4 +36,6 @@ pub(super) struct PostUpdateTickData<'a> {
 enum MachineInner {
     Handshaking(HandshakeStateMachine),
     Established,
+    Closing,
+    Closed,
 }
