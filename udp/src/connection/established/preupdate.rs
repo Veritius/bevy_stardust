@@ -29,6 +29,7 @@ impl EstablishedStateMachine {
                         FrameType::Stardust => {
                             match stardust::read_stardust_frame(
                                 frame,
+                                context.config,
                                 context.registry,
                                 &mut self.orderings,
                             ) {
