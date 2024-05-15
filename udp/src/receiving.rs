@@ -44,10 +44,7 @@ pub(crate) fn io_receiving_system(
                             if connection.state() == ConnectionState::Closed { continue }
 
                             // Set last_recv in timings and update statistics
-                            connection.last_recv = Some(Instant::now());
-
-                            // We append it to the queue for later processing
-                            connection.recv_queue.push_back(payload);
+                            connection.shared.push_recv(payload);
                         },
 
                         // We don't know this peer

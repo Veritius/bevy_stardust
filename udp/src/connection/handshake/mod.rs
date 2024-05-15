@@ -4,9 +4,8 @@ mod packets;
 pub(in crate::connection) use codes::HandshakeResponseCode;
 
 use bytes::Bytes;
-use std::collections::BTreeMap;
-use crate::{plugin::PluginConfiguration, sequences::SequenceId};
-use super::{reliability::*, ConnectionDirection};
+use crate::plugin::PluginConfiguration;
+use super::{shared::ConnectionInner, ConnectionDirection};
 
 pub(super) struct HandshakeState {
     state: HandshakeStateInner,
@@ -26,8 +25,7 @@ impl HandshakeState {
         &mut self,
         packet: Bytes,
         config: &PluginConfiguration,
-        reliability: &mut ReliabilityState,
-        packets: &mut BTreeMap<SequenceId, UnackedPacket>,
+        shared: &mut ConnectionInner,
     ) -> Option<HandshakeOutcome> {
         match self.state {
             HandshakeStateInner::InitiatorHello => todo!(),

@@ -4,6 +4,7 @@ mod handshake;
 mod ordering;
 mod packets;
 mod reliability;
+mod shared;
 mod states;
 mod systems;
 mod ticking;
@@ -19,7 +20,7 @@ use tracing::warn;
 use statistics::ConnectionStatistics;
 use crate::sequences::SequenceId;
 
-use self::{handshake::HandshakeState, ordering::OrderingManager, packets::{builder::PacketBuilder, reader::PacketReader}, reliability::{ReliabilityState, UnackedPacket}};
+use self::{handshake::HandshakeState, ordering::OrderingManager, packets::{builder::PacketBuilder, reader::PacketReader}, reliability::{ReliabilityState, UnackedPacket}, shared::ConnectionInner};
 
 pub const DEFAULT_MTU: usize = 1472;
 pub const DEFAULT_BUDGET: usize = 16384;
@@ -27,7 +28,7 @@ pub const DEFAULT_BUDGET: usize = 16384;
 /// A UDP connection.
 #[derive(Component)]
 pub struct Connection {
-    inner: Box<ConnectionInner>,
+    inner: Box<ConnectionImpl>,
 }
 
 impl Connection {
@@ -37,7 +38,7 @@ impl Connection {
         direction: ConnectionDirection,
     ) -> Self {
         Self {
-            inner: ConnectionInner::new(
+            inner: ConnectionImpl::new(
                 owning_endpoint,
                 remote_address,
                 direction
@@ -46,111 +47,26 @@ impl Connection {
     }
 
     #[inline]
-    pub(crate) fn inner(&self) -> &ConnectionInner {
+    pub(crate) fn inner(&self) -> &ConnectionImpl {
         &self.inner
     }
 
     #[inline]
-    pub(crate) fn inner_mut(&mut self) -> &mut ConnectionInner {
+    pub(crate) fn inner_mut(&mut self) -> &mut ConnectionImpl {
         &mut self.inner
     }
 }
 
-pub(crate) struct ConnectionInner {
-    handshake: Option<HandshakeState>,
-
-    pub(crate) owning_endpoint: Entity,
-    pub(crate) direction: ConnectionDirection,
-    pub(crate) statistics: ConnectionStatistics,
-
-    remote_address: SocketAddr,
-    ice_thickness: u16,
-
-    pub(crate) send_queue: VecDeque<Bytes>,
-    pub(crate) recv_queue: VecDeque<Bytes>,
-
-    pub(crate) opened: Instant,
-    pub(crate) last_sent: Option<Instant>,
-    pub(crate) last_recv: Option<Instant>,
-
-    orderings: OrderingManager,
-    reliability: ReliabilityState,
-    unacked_pkts: BTreeMap<SequenceId, UnackedPacket>,
-
-    frame_builder: PacketBuilder,
-    frame_parser: PacketReader,
-
-    mtu_limit: usize,
-    budget_limit: usize,
-    budget_count: usize,
-    budget_ltime: Instant,
-}
-
-/// Functions for controlling the connection.
-impl ConnectionInner {
-    fn new(
-        owning_endpoint: Entity,
-        remote_address: SocketAddr,
-        direction: ConnectionDirection,
-    ) -> Box<Self> {
-        Box::new(Self {
-            handshake: Some(HandshakeState::new(direction)),
-
-            owning_endpoint,
-            direction,
-            statistics: ConnectionStatistics::default(),
-
-            remote_address,
-            ice_thickness: u16::MAX,
-
-            send_queue: VecDeque::with_capacity(16),
-            recv_queue: VecDeque::with_capacity(32),
-
-            opened: Instant::now(),
-            last_recv: None,
-            last_sent: None,
-
-            orderings: OrderingManager::new(),
-            reliability: ReliabilityState::new(),
-            unacked_pkts: BTreeMap::new(),
-
-            frame_builder: PacketBuilder::default(),
-            frame_parser: PacketReader::default(),
-
-            mtu_limit: DEFAULT_MTU,
-            budget_limit: DEFAULT_BUDGET,
-            budget_count: DEFAULT_BUDGET,
-            budget_ltime: Instant::now(),
-        })
-    }
-}
-
-/// Information and statistics about the connection.
-impl ConnectionInner {
-    /// Returns the remote address of the connection.
-    pub fn remote_address(&self) -> SocketAddr {
-        self.remote_address.clone()
-    }
-
-    /// Returns the direction of the connection.
-    /// See the [`ConnectionDirection`] docs for more information.
-    pub fn direction(&self) -> ConnectionDirection {
-        self.direction.clone()
-    }
-
-    /// Returns the [`ConnectionState`] of the connection.
+/// Simple information getters for a connection.
+impl Connection {
+    #[inline]
     pub fn state(&self) -> ConnectionState {
-        todo!()
-    }
-
-    /// Returns statistics related to the Connection. See [`ConnectionStatistics`] for more.
-    pub fn statistics(&self) -> &ConnectionStatistics {
-        &self.statistics
+        self.inner.state()
     }
 }
 
 /// Advanced configuration for power users.
-impl ConnectionInner {
+impl Connection {
     /// Sets the maximum transport units (packet size limit) of the connection.
     /// Currently, MTU is not detected, and this variable lets you change it manually.
     /// For most cases, the default ([`DEFAULT_MTU`]) is good enough.
@@ -160,7 +76,7 @@ impl ConnectionInner {
     /// 
     /// When MTU detection is added, this function will be deprecated, and then removed.
     pub fn set_mtu(&mut self, mtu: usize) {
-        self.mtu_limit = mtu;
+        self.inner.shared.mtu_limit = mtu;
     }
 
     /// Sets the limit of the number of bytes that will be sent each **second.**
@@ -170,17 +86,33 @@ impl ConnectionInner {
     /// 
     /// When congestion control is added, this function will be deprecated, and then removed.
     pub fn set_budget(&mut self, budget: usize) {
-        self.budget_limit = budget;
+        self.inner.shared.budget_limit = budget;
     }
 }
 
-// Logs a warning when a non-Closed connection is dropped
-// This happens with component removals and drops in scope
-impl Drop for ConnectionInner {
-    fn drop(&mut self) {
-        if self.state() != ConnectionState::Closed {
-            warn!("Connection dropped while in the {:?} state", self.state());
-        }
+pub(crate) struct ConnectionImpl {
+    pub shared: ConnectionInner,
+    handshake: Option<HandshakeState>,
+}
+
+impl ConnectionImpl {
+    fn new(
+        owning_endpoint: Entity,
+        remote_address: SocketAddr,
+        direction: ConnectionDirection,
+    ) -> Box<Self> {
+        Box::new(Self {
+            shared: ConnectionInner::new(
+                owning_endpoint,
+                remote_address,
+                direction,
+            ),
+            handshake: Some(HandshakeState::new(direction)),
+        })
+    }
+
+    pub fn state(&self) -> ConnectionState {
+        todo!()
     }
 }
 

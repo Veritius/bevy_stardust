@@ -37,10 +37,10 @@ pub(crate) fn io_sending_system(
             let connection = connection.inner_mut();
         
             // Check if there's anything to send
-            if connection.send_queue.len() == 0 { continue }
+            if !connection.shared.any_send() { continue }
 
             // Send all packets queued in this peer
-            while let Some(payload) = connection.send_queue.pop_front() {
+            while let Some(payload) = connection.shared.pop_send() {
                 pkts_sent += 1; bytes_sent += payload.len() as u64;
 
                 // Randomly skip actually sending the packet
@@ -48,18 +48,16 @@ pub(crate) fn io_sending_system(
                     let roll = rng.f32();
                     if performance.packet_drop_chance < roll {
                         // Updating these values simulates a successful packet send
-                        connection.last_sent = Some(Instant::now());
+                        // Importantly, we don't actually send anything
                         endpoint_statistics.record_packet_send(payload.len());
-
                         continue;
                     }
                 }
 
                 // Send the packet.
-                match socket.send_to(&payload, connection.remote_address()) {
+                match socket.send_to(&payload, connection.shared.remote_address()) {
                     Ok(_) => {
                         // Update tracking information
-                        connection.last_sent = Some(Instant::now());
                         endpoint_statistics.record_packet_send(payload.len());
                     },
 

@@ -57,7 +57,7 @@ pub(crate) fn close_connections_system(
             commands.entity(entity).despawn();
 
             // Remove from the connection map
-            if let Ok(mut endpoint) = endpoints.get_mut(connection.owning_endpoint) {
+            if let Ok(mut endpoint) = endpoints.get_mut(connection.shared.owning_endpoint()) {
                 endpoint.remove_peer(entity);
             }
         }

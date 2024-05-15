@@ -6,16 +6,17 @@ use crate::plugin::PluginConfiguration;
 use self::packets::{frames::FrameType, reader::PacketReaderContext};
 use super::*;
 
-impl ConnectionInner {
+impl ConnectionImpl {
     /// Ticks the connection, parsing incoming data.
     pub(super) fn tick_preupdate(&mut self, mut context: PreUpdateTickData) {
+        let shared = &mut self.shared;
+
         if let Some(handshake) = &mut self.handshake {
-            while let Some(packet) = self.recv_queue.pop_front() {
+            while let Some(packet) = shared.recv_queue.pop_front() {
                 let outcome = handshake.recv(
                     packet,
                     context.config,
-                    &mut self.reliability,
-                    &mut self.unacked_pkts
+                    shared,
                 );
 
                 match outcome {
@@ -27,11 +28,11 @@ impl ConnectionInner {
         }
 
         // Iterator to parse all incoming packets
-        let mut frames = self.frame_parser.iter(PacketReaderContext {
-            queue: &mut self.recv_queue,
+        let mut frames = shared.frame_parser.iter(PacketReaderContext {
+            queue: &mut shared.recv_queue,
             config: context.config,
-            reliability: &mut self.reliability,
-            rel_packets: &mut self.unacked_pkts
+            reliability: &mut shared.reliability,
+            rel_packets: &mut shared.unacked_pkts
         });
 
         // Read frames from the iterator until we run out
