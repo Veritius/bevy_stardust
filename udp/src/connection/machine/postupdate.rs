@@ -21,6 +21,8 @@ impl ConnectionStateMachine {
                     while let Some(bytes) = machine.send(context.config, shared) {
                         shared.send_queue.push_back(bytes);
                     }
+
+                    break 'outer;
                 },
 
                 MachineInner::Established => todo!(),

@@ -35,6 +35,8 @@ impl ConnectionStateMachine {
                             None => {},
                         }
                     }
+
+                    break 'outer;
                 },
                 MachineInner::Established => todo!(),
                 MachineInner::Closing => todo!(),
