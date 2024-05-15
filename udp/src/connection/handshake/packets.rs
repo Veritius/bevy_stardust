@@ -2,25 +2,38 @@ use bytes::BufMut;
 use unbytes::{EndOfInput, Reader};
 use super::HandshakeResponseCode;
 
-pub(super) struct HandshakeRelData {
+pub(super) struct HandshakePacketHeader {
     pub seq_ident: u16,
-    pub ack_ident: u16,
-    pub ack_bits: u16,
 }
 
-impl HandshakeRelData {
+impl HandshakePacketHeader {
     pub fn read(reader: &mut Reader) -> Result<Self, EndOfInput> {
         Ok(Self {
             seq_ident: reader.read_u16()?,
-            ack_ident: reader.read_u16()?,
-            ack_bits: reader.read_u16()?,
         })
     }
 
     pub fn write(&self, writer: &mut impl BufMut) {
         writer.put_u16(self.seq_ident);
+    }
+}
+
+pub(super) struct HandshakePacketAcks {
+    pub ack_ident: u16,
+    pub ack_memory: u16,
+}
+
+impl HandshakePacketAcks {
+    pub fn read(reader: &mut Reader) -> Result<Self, EndOfInput> {
+        Ok(Self {
+            ack_ident: reader.read_u16()?,
+            ack_memory: reader.read_u16()?,
+        })
+    }
+
+    pub fn write(&self, writer: &mut impl BufMut) {
         writer.put_u16(self.ack_ident);
-        writer.put_u16(self.ack_bits);
+        writer.put_u16(self.ack_memory);
     }
 }
 
@@ -47,6 +60,7 @@ impl HandshakeVerData {
 }
 
 pub(super) struct InitiatorHelloPacket {
+    pub respcode: HandshakeResponseCode,
     pub tr_ver: HandshakeVerData,
     pub app_ver: HandshakeVerData,
 }
@@ -54,6 +68,7 @@ pub(super) struct InitiatorHelloPacket {
 impl InitiatorHelloPacket {
     pub fn read(reader: &mut Reader) -> Result<Self, EndOfInput> {
         Ok(Self {
+            respcode: reader.read_u16()?.into(),
             tr_ver: HandshakeVerData::read(reader)?,
             app_ver: HandshakeVerData::read(reader)?,
         })
@@ -66,41 +81,47 @@ impl InitiatorHelloPacket {
 }
 
 pub(super) struct ListenerResponsePacket {
+    pub respcode: HandshakeResponseCode,
     pub tr_ver: HandshakeVerData,
     pub app_ver: HandshakeVerData,
-    pub response: HandshakeResponseCode,
+    pub acks: HandshakePacketAcks,
 }
 
 impl ListenerResponsePacket {
     pub fn read(reader: &mut Reader) -> Result<Self, EndOfInput> {
         Ok(Self {
+            respcode: reader.read_u16()?.into(),
             tr_ver: HandshakeVerData::read(reader)?,
             app_ver: HandshakeVerData::read(reader)?,
-            response: reader.read_u16()?.into(),
+            acks: HandshakePacketAcks::read(reader)?,
         })
     }
 
     pub fn write(&self, writer: &mut impl BufMut) {
-        debug_assert_ne!(self.response, HandshakeResponseCode::Unknown);
+        debug_assert_ne!(self.respcode, HandshakeResponseCode::Unknown);
 
+        writer.put_u16(self.respcode as u16);
         self.tr_ver.write(writer);
         self.app_ver.write(writer);
-        writer.put_u16(self.response as u16);
+        self.acks.write(writer);
     }
 }
 
 pub(super) struct InitiatorResponsePacket {
-    pub response: HandshakeResponseCode,
+    pub respcode: HandshakeResponseCode,
+    pub acks: HandshakePacketAcks,
 }
 
 impl InitiatorResponsePacket {
     pub fn read(reader: &mut Reader) -> Result<Self, EndOfInput> {
         Ok(Self {
-            response: reader.read_u16()?.into(),
+            respcode: reader.read_u16()?.into(),
+            acks: HandshakePacketAcks::read(reader)?,
         })
     }
 
     pub fn write(&self, writer: &mut impl BufMut) {
-        writer.put_u16(self.response as u16);
+        writer.put_u16(self.respcode as u16);
+        self.acks.write(writer);
     }
 }

@@ -7,11 +7,9 @@ use super::{ordering::OrderingManager, packets::{builder::PacketBuilder, reader:
 /// Lifecycle-agnostic metadata for connections.
 pub(crate) struct ConnectionShared {
     owning_endpoint: Entity,
+    remote_address: SocketAddr,
     direction: ConnectionDirection,
     statistics: ConnectionStatistics,
-
-    remote_address: SocketAddr,
-    ice_thickness: u16,
 
     opened: Instant,
     last_sent: Option<Instant>,
@@ -26,6 +24,8 @@ pub(crate) struct ConnectionShared {
 
     pub(super) frame_builder: PacketBuilder,
     pub(super) frame_parser: PacketReader,
+
+    pub ice_thickness: u16,
 
     pub mtu_limit: usize,
     pub budget_limit: usize,
@@ -42,11 +42,9 @@ impl ConnectionShared {
     ) -> Self {
         Self {
             owning_endpoint,
+            remote_address,
             direction,
             statistics: ConnectionStatistics::default(),
-
-            remote_address,
-            ice_thickness: u16::MAX,
 
             opened: Instant::now(),
             last_recv: None,
@@ -61,6 +59,8 @@ impl ConnectionShared {
 
             frame_builder: PacketBuilder::default(),
             frame_parser: PacketReader::default(),
+
+            ice_thickness: u16::MAX,
 
             mtu_limit: DEFAULT_MTU,
             budget_limit: DEFAULT_BUDGET,

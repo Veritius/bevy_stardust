@@ -28,8 +28,6 @@ To begin, the Initiator sends an 'initiator hello' packet. This contains informa
 | Type  | Description                |
 | ----- | -------------------------- |
 | `u16` | Packet sequence identifier |
-| `u16` | Packet acknowledgement     |
-| `u16` | Packet ack bitfield        |
 | `u64` | Transport identifier       |
 | `u32` | Transport minor version    |
 | `u32` | Transport major version    |
@@ -45,17 +43,17 @@ In response, the Listener sends a 'listener response' packet. Like the 'initiato
 | Type  | Description                |
 | ----- | -------------------------- |
 | `u16` | Packet sequence identifier |
-| `u16` | Packet acknowledgement     |
-| `u16` | Packet ack bitfield        |
+| `u16` | Response code              |
 | `u64` | Transport identifier       |
 | `u32` | Transport minor version    |
 | `u32` | Transport major version    |
 | `u64` | Application identifier     |
 | `u32` | Application minor version  |
 | `u32` | Application major version  |
-| `u16` | Response code              |
+| `u16` | Packet acknowledgement     |
+| `u16` | Packet ack bitfield        |
 
-If the response code signals that the handshake should continue, this is the end of the packet. However, if the response code signals an error or other rejection reason, this is where the handshake ends. The listener may also include a human-readable disconnection reason, which will take up the rest of the packet.
+If the response code signals an error or other rejection reason (non-zero), this is where the handshake ends. The listener may also include a human-readable disconnection reason, which will take up the rest of the packet.
 
 The equivalent of this is in TCP is the SYN/ACK packet sent by the server.
 
@@ -65,9 +63,9 @@ Assuming the listener accepts the connection, the initiator will send the third 
 | Type  | Description                |
 | ----- | -------------------------- |
 | `u16` | Packet sequence identifier |
+| `u16` | Response code              |
 | `u16` | Packet acknowledgement     |
 | `u16` | Packet ack bitfield        |
-| `u16` | Response code              |
 
 If the initiator decides that the connection should be closed, such as reading the listener response and seeing an incompatible version value, it can terminate the connection here.
 
@@ -75,18 +73,9 @@ If the initiator decides the connection should continue, it 'commits' and sends 
 
 The equivalent of this in TCP is the SYN packet sent by the client.
 
-### Handshake reliability
-All handshake packets are reliable and ordered. They not only establish reliability, but also track data to ensure missed packets are resent, and that packets are parsed in order.
-
-Reliability in the handshake protocol behaves slightly differently. Since all packets are ordered themselves, and don't contain individually-ordered [frames](#frames), the packet sequence is used as an ordering value. This means that when resending a packet a peer thinks has been dropped, the **same** sequence value will be used, rather than a new one.
-
-This is necessary because of why handshake reliability exists - mostly just to ensure that handshake packets are read in the correct order. Since handshake packets are expected to be exchanged in a known, sequential order, we really want to read them in that order.
-
-To this end, all handshake packets, no matter what, are always prefixed with a special reliability header. This header has an ack bitfield of exactly two bytes, unlike the established protocol which can be any length.
-
-Each peer, upon receiving a packet, will buffer them in memory, releasing them in the order of their sequence IDs. If a peer is still in the handshake after 30 seconds, they're disconnected without notice and blocked temporarily, to reduce the potential of using this mechanism as an attack vector.
-
 ### Response codes
+The following response codes will be the same for all minor versions of this crate, to ensure compatibility and good error messages.
+
 | Int  | Description                            |
 | ---- | -------------------------------------- |
 | `0`  | No error, continue                     |
@@ -96,6 +85,10 @@ Each peer, upon receiving a packet, will buffer them in memory, releasing them i
 | `4`  | Incompatible transport layer           |
 | `5`  | Incompatible transport major version   |
 | `6`  | Incompatible transport minor version   |
+
+These response codes may or may not change across a crate version, but if they do, they'll be marked as a breaking change.
+| Int  | Description                            |
+| ---- | -------------------------------------- |
 | `7`  | Incompatible application identifier    |
 | `8`  | Incompatible application major version |
 | `9`  | Incompatible application minor version |

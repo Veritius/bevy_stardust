@@ -1,6 +1,8 @@
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u16)]
 pub(crate) enum HandshakeResponseCode {
+    // Values from here to the next comment cannot be changed.
+
     Continue = 0,
 
     Unspecified = 1,
@@ -10,6 +12,8 @@ pub(crate) enum HandshakeResponseCode {
     IncompatibleTransportIdentifier = 4,
     IncompatibleTransportMajorVersion = 5,
     IncompatibleTransportMinorVersion = 6,
+
+    // Values beyond this point can be changed freely.
 
     IncompatibleApplicationIdentifier = 7,
     IncompatibleApplicationMajorVersion = 8,
