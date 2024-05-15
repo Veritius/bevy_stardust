@@ -1,5 +1,3 @@
-use bevy_stardust::channels::ChannelId;
-
 use self::packets::{frames::FrameType, reader::PacketReaderContext};
 use super::*;
 
@@ -7,8 +5,13 @@ impl EstablishedStateMachine {
     pub fn tick_preupdate(
         &mut self,
         shared: &mut ConnectionShared,
-        context: PreUpdateTickData,
+        mut context: PreUpdateTickData,
     ) {
+        // Message storage thing. It should exist by this point, so we can unwrap.
+        // Note: further derefs trigger change detection, which is why the type signature
+        // of this variable is the rather odd &mut Mut<NetworkMessages<Incoming>>
+        let messages = context.messages.as_mut().unwrap();
+
         // Iterator that reads frames inside packets
         let mut parser = self.frame_parser.iter(PacketReaderContext {
             queue: &mut shared.recv_queue,
@@ -23,7 +26,21 @@ impl EstablishedStateMachine {
                 Ok(frame) => {
                     match frame.ftype {
                         FrameType::Control => todo!(),
-                        FrameType::Stardust => todo!(),
+                        FrameType::Stardust => {
+                            match stardust::read_stardust_frame(
+                                frame,
+                                context.registry,
+                                &mut self.orderings,
+                            ) {
+                                Ok((channel, payload)) => {
+                                    // Add to the message to the queue
+                                    messages.push(channel, payload);
+                                },
+                                Err(_) => {
+                                    todo!()
+                                },
+                            }
+                        },
                     }
                 },
                 Err(err) => {

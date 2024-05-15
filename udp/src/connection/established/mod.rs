@@ -2,6 +2,7 @@ mod ordering;
 mod packets;
 mod postupdate;
 mod preupdate;
+mod stardust;
 
 use std::collections::BTreeMap;
 use crate::sequences::SequenceId;
