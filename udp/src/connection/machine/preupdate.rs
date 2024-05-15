@@ -43,7 +43,7 @@ impl ConnectionStateMachine {
             },
 
             MachineInner::Established(machine) => {
-                todo!()
+                machine.tick_preupdate(shared, context);
             },
 
             MachineInner::Closing => todo!(),

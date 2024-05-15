@@ -1,5 +1,7 @@
 mod ordering;
 mod packets;
+mod postupdate;
+mod preupdate;
 
 use std::collections::BTreeMap;
 use crate::sequences::SequenceId;
@@ -23,21 +25,5 @@ impl EstablishedStateMachine {
             frame_builder: PacketBuilder::default(),
             frame_parser: PacketReader::default(),
         }
-    }
-
-    pub fn tick_preupdate(
-        &mut self,
-        shared: &mut ConnectionShared,
-        context: PreUpdateTickData,
-    ) {
-
-    }
-
-    pub fn tick_postupdate(
-        &mut self,
-        shared: &mut ConnectionShared,
-        context: PostUpdateTickData,
-    ) {
-
     }
 }
