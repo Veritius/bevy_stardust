@@ -37,7 +37,13 @@ pub(crate) fn potential_new_peers_system(
         comp.inner_mut().shared.recv_queue.push_back(event.payload.clone());
 
         // Insert connection into the world
-        let entity = commands.spawn(comp).id();
+        let entity = commands.spawn((
+            comp,
+            NetworkPeer::new(),
+            NetworkPeerLifestage::Handshaking,
+            NetworkPeerAddress(event.address),
+            NetworkSecurity::Unauthenticated,
+        )).id();
 
         // Register the new connection to the endpoint
         match endpoints.get_mut(event.endpoint) {
@@ -72,6 +78,30 @@ pub(crate) fn connection_preupdate_ticking_system(
             messages,
         });
     });
+}
+
+pub(crate) fn connection_inner_events_system(
+    mut commands: Commands,
+    mut connections: Query<(Entity, &mut Connection, Option<&mut NetworkPeerLifestage>)>
+) {
+    for (entity, mut connection, mut lifestage) in connections.iter_mut() {
+        while let Some(event) = connection.inner_mut().machine.pop_event() {
+            match event {
+                ConnectionEvent::BecameEstablished => {
+                    // Add network components
+                    commands.entity(entity).insert((
+                        NetworkMessages::<Incoming>::new(),
+                        NetworkMessages::<Outgoing>::new(),
+                    ));
+
+                    // Update lifestage
+                    if let Some(ref mut lifestage) = lifestage {
+                        **lifestage = NetworkPeerLifestage::Established;
+                    }
+                },
+            }
+        }
+    }
 }
 
 pub(crate) fn connection_postupdate_ticking_system(

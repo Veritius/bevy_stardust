@@ -29,12 +29,11 @@ impl ConnectionStateMachine {
                             let mut swp = HandshakeStateMachine::new(ConnectionDirection::Client);
                             std::mem::swap(&mut swp, handshake);
                             self.inner = MachineInner::Established(EstablishedStateMachine::new(swp));
-                            self.tick_preupdate(shared, context);
+                            self.events.push_back(ConnectionEvent::BecameEstablished);
                             return;
                         },
                         Some(HandshakeOutcome::FailedHandshake { reason }) => {
                             self.inner = MachineInner::Closed;
-                            self.tick_preupdate(shared, context);
                             return;
                         },
                         None => {},

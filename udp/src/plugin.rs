@@ -73,6 +73,7 @@ impl Plugin for UdpTransportPlugin {
         use crate::connection::{
             potential_new_peers_system,
             connection_preupdate_ticking_system,
+            connection_inner_events_system,
             connection_postupdate_ticking_system,
             close_connections_system,
         };
@@ -106,6 +107,7 @@ impl Plugin for UdpTransportPlugin {
         // These systems can run at any time
         app.add_systems(Update, (
             potential_new_peers_system,
+            connection_inner_events_system,
         ));
 
         // Packet transmitting systems
