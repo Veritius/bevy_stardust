@@ -1,12 +1,13 @@
 use std::collections::BTreeSet;
 use bevy::prelude::*;
 use bevy_stardust::prelude::*;
-use crate::{plugin::PluginConfiguration, prelude::*};
+use crate::{endpoint::ConnectionOwnershipToken, plugin::PluginConfiguration, prelude::*};
 use super::{machine::*, PotentialNewPeer};
 
 pub(crate) fn potential_new_peers_system(
     mut commands: Commands,
     mut events: EventReader<PotentialNewPeer>,
+    mut endpoints: Query<&mut Endpoint>,
     existing: Query<&Connection>,
 ) {
     // Map of all addresses we recognise
@@ -36,7 +37,19 @@ pub(crate) fn potential_new_peers_system(
         comp.inner_mut().shared.recv_queue.push_back(event.payload.clone());
 
         // Insert connection into the world
-        commands.spawn(comp);
+        let entity = commands.spawn(comp).id();
+
+        // Register the new connection to the endpoint
+        match endpoints.get_mut(event.endpoint) {
+            Ok(mut endpoint) => {
+                // SAFETY: Spawn on Commands generates a new entity ID concurrently
+                let token = unsafe { ConnectionOwnershipToken::new(entity) };
+                endpoint.connections.insert(event.address, token);
+            },
+            Err(_) => {
+                warn!("Endpoint {:?} was despawned, but a peer was about to connect to it.", event.endpoint);
+            },
+        };
     }
 }
 
