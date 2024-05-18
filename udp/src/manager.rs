@@ -1,6 +1,7 @@
 use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4, ToSocketAddrs};
 use anyhow::Result;
 use bevy::{prelude::*, ecs::{entity::Entities, system::SystemParam}};
+use bevy_stardust::prelude::*;
 use crate::{endpoint::{ConnectionOwnershipToken, Endpoint}, prelude::{Connection, ConnectionDirection}};
 
 /// A SystemParam that lets you create [`Endpoints`](Endpoint) and open outgoing [`Connections`](Connection).
@@ -77,11 +78,20 @@ impl UdpManager<'_, '_> {
         // Resolve address
         let address = resolve_address(address)?;
 
-        // Spawn connection entity
-        let id = commands.spawn(Connection::new(
+        // Connection component
+        let comp = Connection::new(
             endpoint_id,
             address,
             ConnectionDirection::Client
+        );
+
+        // Spawn connection entity
+        let id = commands.spawn((
+            comp,
+            NetworkPeer::new(),
+            NetworkPeerLifestage::Handshaking,
+            NetworkPeerAddress(address),
+            NetworkSecurity::Unauthenticated,
         )).id();
 
         // SAFETY: Commands generates a unique ID concurrently, so this is fine.
