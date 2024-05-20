@@ -29,17 +29,10 @@ pub(crate) fn established_writing_system(
         // No frames, no work to do
         if frame_total == 0 { return; }
 
-        // Some timing information
-        let con_proc_start = Instant::now();
-
-        {
-            // Update the connection budget
-            // This is in its own scope so we don't clutter things with variables
-            let secs_since_last = connection.budget_ltime.duration_since(con_proc_start).as_secs_f64();
-            let change_in_bytes = (secs_since_last * connection.budget_limit as f64) as usize;
-            connection.budget_count += change_in_bytes;
-            connection.budget_ltime = con_proc_start;
-        }
+        // Congestion control and timing stuff
+        let start = Instant::now();
+        let mtu = connection.congestion.get_mtu();
+        let budget = connection.congestion.get_budget(start);
 
         // Add all outgoing messages as frames
         if outgoing_count > 0 {
@@ -78,7 +71,7 @@ pub(crate) fn established_writing_system(
                     // Construct the frame data
                     let frame = SendFrame {
                         priority: channel_data.priority,
-                        time: con_proc_start,
+                        time: start,
                         flags,
                         ftype: FrameType::Stardust,
                         reliable: is_reliable,
@@ -94,7 +87,7 @@ pub(crate) fn established_writing_system(
         }
 
         // Setup scratch space for the packet builder
-        let mut scratch = Vec::with_capacity(connection.mtu_limit);
+        let mut scratch = Vec::with_capacity(mtu);
 
         let established = &mut *established;
         let reliability = &mut established.reliability;
@@ -109,14 +102,20 @@ pub(crate) fn established_writing_system(
 
         // Run the packet builder
         let mut frames = builder.run(
-            connection.budget_count,
-            connection.mtu_limit,
+            budget,
+            mtu,
             context
         );
 
         // Place the generated frames into the send queue
+        let mut consumed: usize = 0;
         for frame in frames.drain(..) {
+            consumed += frame.len();
             connection.send_queue.push_back(frame);
         }
+
+        // Update congestion control
+        debug_assert!(consumed <= budget);
+        connection.congestion.consume_budget(consumed);
     });
 }

@@ -1,5 +1,6 @@
 pub mod statistics;
 
+mod congestion;
 mod established;
 mod handshake;
 mod ordering;
@@ -12,24 +13,18 @@ pub(crate) use handshake::{handshake_polling_system, potential_new_peers_system,
 pub(crate) use established::{established_polling_system, established_writing_system, established_timeout_system, established_closing_system};
 pub(crate) use systems::close_connections_system;
 
-use std::{collections::VecDeque, net::SocketAddr, time::Instant};
+use std::{collections::VecDeque, net::SocketAddr};
 use bevy::prelude::*;
 use bytes::Bytes;
 use tracing::warn;
 use statistics::ConnectionStatistics;
 use timing::ConnectionTimings;
-
-pub const DEFAULT_MTU: usize = 1472;
-pub const DEFAULT_BUDGET: usize = 16384;
+use self::congestion::Congestion;
 
 /// An existing UDP connection.
 #[derive(Component)]
 pub struct Connection {
-    mtu_limit: usize,
-    budget_limit: usize,
-    budget_count: usize,
-    budget_ltime: Instant,
-
+    congestion: Congestion,
     remote_address: SocketAddr,
     state: ConnectionState,
 
@@ -50,13 +45,8 @@ impl Connection {
         direction: ConnectionDirection,
     ) -> Self {
         Self {
-            mtu_limit: DEFAULT_MTU,
-            budget_limit: DEFAULT_BUDGET,
-            budget_count: DEFAULT_BUDGET,
-            budget_ltime: Instant::now(),
-
+            congestion: Congestion::default(),
             remote_address,
-
             state: ConnectionState::Handshaking,
 
             send_queue: VecDeque::with_capacity(16),
@@ -98,24 +88,24 @@ impl Connection {
 impl Connection {
     /// Sets the maximum transport units (packet size limit) of the connection.
     /// Currently, MTU is not detected, and this variable lets you change it manually.
-    /// For most cases, the default ([`DEFAULT_MTU`]) is good enough.
+    /// For most cases, the default is good enough.
     /// 
     /// MTUs that are too high will cause data loss, and MTUs that are too low will be inefficient.
     /// Note that the average MTU a user will have is probably `1472`, the Ethernet link layer limit.
     /// 
     /// When MTU detection is added, this function will be deprecated, and then removed.
     pub fn set_mtu(&mut self, mtu: usize) {
-        self.mtu_limit = mtu;
+        self.congestion.set_usr_mtu(mtu);
     }
 
     /// Sets the limit of the number of bytes that will be sent each **second.**
-    /// For most cases, the default ([`DEFAULT_BUDGET`]) is good enough.
+    /// For most cases, the default is good enough.
     /// However, if the connection is running through loopback, it can be
     /// safely set to [`usize::MAX`] for better testing performance.
     /// 
     /// When congestion control is added, this function will be deprecated, and then removed.
     pub fn set_budget(&mut self, budget: usize) {
-        self.budget_limit = budget;
+        self.congestion.set_usr_budget(budget);
     }
 }
 
