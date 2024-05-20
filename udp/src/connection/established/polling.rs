@@ -3,24 +3,31 @@ use bevy_stardust::prelude::*;
 use crate::{connection::{ordering::OrderedMessage, packets::{frames::FrameType, reader::PacketReaderContext}}, plugin::PluginConfiguration, prelude::*};
 use super::{control::*, Established};
 
-impl Established {
-    pub(super) fn poll(
-        &mut self,
-        connection: &mut Connection,
-        mut messages: Mut<NetworkMessages<Incoming>>, // because change detection
-        registry: &ChannelRegistryInner,
-        config: &PluginConfiguration,
-    ) {
+/// Runs [`poll`](Established::poll) on all [`Established`] entities.
+pub(crate) fn established_polling_system(
+    registry: Res<ChannelRegistry>,
+    config: Res<PluginConfiguration>,
+    mut connections: Query<(&mut Connection, &mut Established, &mut NetworkMessages<Incoming>)>,
+) {
+    connections.par_iter_mut().for_each(|(
+        mut connection,
+        mut established,
+        mut messages
+    )| {
+        // Reborrow stuff to please borrowck
+        let connection = &mut *connection;
+        let established = &mut *established;
+
         // Context object for the packet reader
         let context = PacketReaderContext {
             queue: &mut connection.recv_queue,
             config: &config,
-            reliability: &mut self.reliability,
+            reliability: &mut established.reliability,
         };
 
         // Iterate over all frames
         // This runs until there is no more data to parse
-        let mut iter = self.reader.iter(context);
+        let mut iter = established.reader.iter(context);
         'frames: loop {
             match iter.next() {
                 // Case 1: Another frame was read
@@ -33,10 +40,10 @@ impl Established {
 
                             // TODO: Figure out a better solution than this
                             match ident {
-                                CTRL_ID_CLOSE => { connection.is_closing = true; },
+                                CTRL_ID_CLOSE => { todo!() },
 
                                 // Unrecognised identifier
-                                _ => { self.ice_thickness = self.ice_thickness.saturating_sub(400); }
+                                _ => { established.ice_thickness = established.ice_thickness.saturating_sub(400); }
                             }
                         },
 
@@ -63,7 +70,7 @@ impl Established {
                                     let sequence = frame.order.unwrap();
 
                                     // Ordering state for this channel
-                                    let ordering = self.orderings.get(channel_data);
+                                    let ordering = established.orderings.get(channel_data);
 
                                     // Receive the ordered message on the reader
                                     if let Some(message) = ordering.recv(OrderedMessage {
@@ -96,8 +103,7 @@ impl Established {
                 // This doesn't make us terminate
                 Some(Err(error)) => {
                     // Record the error and put the peer on 'thinner ice' so to speak
-                    // We can't use `melt_ice` as it requires mutable access to the entire type
-                    self.ice_thickness = self.ice_thickness.saturating_sub(120);
+                    established.ice_thickness = established.ice_thickness.saturating_sub(120);
 
                     // Trace log for debugging
                     trace!("Error {error:?} while parsing packet"); // TODO: more associated data
@@ -110,5 +116,5 @@ impl Established {
                 },
             }
         }
-    }
+    });
 }

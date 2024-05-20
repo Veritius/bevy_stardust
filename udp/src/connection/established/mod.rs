@@ -1,13 +1,12 @@
 mod control;
 mod polling;
-mod systems;
 mod writer;
 
+pub(crate) use polling::established_polling_system;
 pub(crate) use writer::established_writing_system;
-pub(crate) use systems::*;
 
 use bevy::prelude::*;
-use super::{ordering::OrderingManager, packets::{builder::PacketBuilder, frames::SendFrame, reader::PacketReader}, reliability::{ReliabilityState, ReliablePackets}};
+use super::{ordering::OrderingManager, packets::{builder::PacketBuilder, reader::PacketReader}, reliability::{ReliabilityState, ReliablePackets}};
 
 #[derive(Component)]
 pub(crate) struct Established {
@@ -33,17 +32,5 @@ impl Established {
 
             ice_thickness: u16::MAX,
         }
-    }
-
-    #[inline]
-    pub(crate) fn queue_frame_send(&mut self, frame: SendFrame) {
-        self.builder.put(frame);
-    }
-
-    /// Melt the ice. This puts the peer on 'thinner ice',
-    /// which is basically a tracking mechanism that kicks
-    /// peers that make too many mistakes while connected.
-    pub(crate) fn melt_ice(&mut self, amount: u16) {
-        self.ice_thickness = self.ice_thickness.saturating_sub(amount);
     }
 }

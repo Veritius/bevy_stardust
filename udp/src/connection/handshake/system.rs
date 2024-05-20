@@ -9,8 +9,7 @@ use crate::{
         BANNED_MINOR_VERSIONS,
         TRANSPORT_VERSION_DATA
     }, connection::{
-        established::Established,
-        handshake::{
+        established::Established, handshake::{
             packets::{
                 ClientHelloPacket,
                 ClosingPacket,
@@ -19,10 +18,7 @@ use crate::{
                 HandshakeParsingResponse
             },
             HandshakeState
-        },
-        reliability::{AckMemory, ReliabilityState},
-        Connection,
-        PotentialNewPeer
+        }, reliability::{AckMemory, ReliabilityState}, Closing, Connection, PotentialNewPeer
     }, endpoint::ConnectionOwnershipToken, plugin::PluginConfiguration, prelude::*
 };
 use super::{codes::HandshakeResponseCode, packets::{ClientFinalisePacket, ServerHelloPacket}, HandshakeFailureReason};
@@ -34,10 +30,10 @@ pub(crate) fn handshake_polling_system(
     registry: Res<ChannelRegistry>,
     config: Res<PluginConfiguration>,
     commands: ParallelCommands,
-    mut connections: Query<(Entity, &mut Connection, &mut Handshaking, &mut NetworkPeerLifestage)>,
+    mut connections: Query<(Entity, &mut Connection, &mut Handshaking)>,
 ) {
     // Iterate connections in parallel
-    connections.par_iter_mut().for_each(|(entity, mut connection, mut handshake, mut lifestage)| {
+    connections.par_iter_mut().for_each(|(entity, mut connection, mut handshake)| {
         'outer: { match &handshake.state {
             // Sending ClientHelloPackets to the remote peer and waiting for a ServerHelloPacket
             HandshakeState::ClientHello => {
@@ -253,8 +249,7 @@ pub(crate) fn handshake_polling_system(
                 }
             },
             HandshakeState::Failed(reason) => {
-                // Change state to Closed so it's despawned
-                *lifestage = NetworkPeerLifestage::Closed;
+                todo!();
 
                 // Log failure
                 match connection.direction {

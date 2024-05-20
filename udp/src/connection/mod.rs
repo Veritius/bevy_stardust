@@ -1,5 +1,6 @@
 pub mod statistics;
 
+mod closing;
 mod congestion;
 mod established;
 mod handshake;
@@ -10,13 +11,13 @@ mod systems;
 mod timing;
 
 pub(crate) use handshake::{handshake_polling_system, potential_new_peers_system, OutgoingHandshake};
-pub(crate) use established::{established_polling_system, established_writing_system, established_timeout_system, established_closing_system};
+pub(crate) use established::{established_polling_system, established_writing_system};
 pub(crate) use systems::close_connections_system;
+pub(crate) use closing::Closing;
 
 use std::{collections::VecDeque, net::SocketAddr};
 use bevy::prelude::*;
 use bytes::Bytes;
-use tracing::warn;
 use statistics::ConnectionStatistics;
 use timing::ConnectionTimings;
 use self::congestion::Congestion;
@@ -34,10 +35,6 @@ pub struct Connection {
     pub(crate) direction: ConnectionDirection,
     pub(crate) timings: ConnectionTimings,
     pub(crate) statistics: ConnectionStatistics,
-
-    is_closing: bool,
-    close_reason: Option<Bytes>,
-    fully_closed: bool,
 }
 
 /// Functions for controlling the connection.
@@ -58,10 +55,6 @@ impl Connection {
             direction,
             statistics: ConnectionStatistics::default(),
             timings: ConnectionTimings::new(None, None, None),
-
-            is_closing: false,
-            close_reason: None,
-            fully_closed: false,
         }
     }
 }
@@ -107,16 +100,6 @@ impl Connection {
     /// When congestion control is added, this function will be deprecated, and then removed.
     pub fn set_budget(&mut self, budget: usize) {
         self.congestion.set_usr_budget(budget);
-    }
-}
-
-// Logs a warning when a non-closed connection is dropped
-// This happens with component removals and drops in scope
-impl Drop for Connection {
-    fn drop(&mut self) {
-        if !self.fully_closed {
-            warn!("Connection was dropped while not fully closed");
-        }
     }
 }
 

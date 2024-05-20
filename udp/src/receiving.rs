@@ -1,13 +1,12 @@
 use std::{io, sync::Mutex};
 use bevy::prelude::*;
-use bevy_stardust::connections::NetworkPeerLifestage;
 use bytes::Bytes;
-use crate::{connection::PotentialNewPeer, prelude::*};
+use crate::{connection::{Closing, PotentialNewPeer}, prelude::*};
 
 // Receives packets from UDP sockets
 pub(crate) fn io_receiving_system(
     mut endpoints: Query<(Entity, &mut Endpoint)>,
-    connections: Query<(&mut Connection, &NetworkPeerLifestage)>,
+    connections: Query<(&mut Connection, Option<&Closing>)>,
     mut new_peers: EventWriter<PotentialNewPeer>,
 ) {
     // Wrap the new peers eventwriter in a mutex
@@ -38,10 +37,10 @@ pub(crate) fn io_receiving_system(
                         // We know this peer
                         Some(token) => {
                             // SAFETY: This is fine because of ConnectionOwnershipToken's guarantees
-                            let (mut connection, lifestage) = unsafe { connections.get_unchecked(token.inner()).unwrap() };
+                            let (mut connection, closing) = unsafe { connections.get_unchecked(token.inner()).unwrap() };
 
                             // Ignore packets from closed connections
-                            if *lifestage == NetworkPeerLifestage::Closed { continue }
+                            if closing.is_some_and(|v| v.is_finished()) { continue; }
 
                             // Set last_recv in timings and update statistics
                             connection.timings.set_last_recv_now();
