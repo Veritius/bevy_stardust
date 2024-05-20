@@ -24,8 +24,8 @@ use self::congestion::Congestion;
 /// An existing UDP connection.
 #[derive(Component)]
 pub struct Connection {
-    congestion: Congestion,
     remote_address: SocketAddr,
+    congestion: Congestion,
     state: ConnectionState,
 
     pub(crate) send_queue: VecDeque<Bytes>,
@@ -45,8 +45,8 @@ impl Connection {
         direction: ConnectionDirection,
     ) -> Self {
         Self {
-            congestion: Congestion::default(),
             remote_address,
+            congestion: Congestion::default(),
             state: ConnectionState::Handshaking,
 
             send_queue: VecDeque::with_capacity(16),
