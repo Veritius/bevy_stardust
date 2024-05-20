@@ -18,7 +18,7 @@ use crate::{
                 HandshakeParsingResponse
             },
             HandshakeState
-        }, reliability::{AckMemory, ReliabilityState}, Connection, PotentialNewPeer
+        }, reliability::{AckMemory, ReliabilityState}, Closing, Connection, PotentialNewPeer
     }, endpoint::ConnectionOwnershipToken, plugin::PluginConfiguration, prelude::*
 };
 use super::{codes::HandshakeResponseCode, packets::{ClientFinalisePacket, ServerHelloPacket}, HandshakeFailureReason};

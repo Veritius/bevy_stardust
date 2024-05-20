@@ -1,5 +1,6 @@
 pub mod statistics;
 
+mod closing;
 mod congestion;
 mod established;
 mod handshake;
@@ -12,6 +13,7 @@ mod timing;
 pub(crate) use handshake::{handshake_polling_system, potential_new_peers_system, OutgoingHandshake};
 pub(crate) use established::{established_polling_system, established_writing_system};
 pub(crate) use systems::close_connections_system;
+pub(crate) use closing::Closing;
 
 use std::{collections::VecDeque, net::SocketAddr};
 use bevy::prelude::*;

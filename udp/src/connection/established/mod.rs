@@ -1,4 +1,3 @@
-mod closing;
 mod control;
 mod polling;
 mod writer;
