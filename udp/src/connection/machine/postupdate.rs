@@ -26,8 +26,6 @@ impl ConnectionStateMachine {
                 machine.tick_postupdate(shared, context);
             },
 
-            MachineInner::Closing => todo!(),
-
             MachineInner::Closed => {}
         }
     }

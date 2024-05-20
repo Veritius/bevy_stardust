@@ -30,7 +30,6 @@ impl ConnectionStateMachine {
         match self.inner {
             MachineInner::Handshaking(_) => ConnectionState::Handshaking,
             MachineInner::Established(_)=> ConnectionState::Established,
-            MachineInner::Closing => ConnectionState::Closing,
             MachineInner::Closed => ConnectionState::Closed,
         }
     }
@@ -44,6 +43,5 @@ impl ConnectionStateMachine {
 enum MachineInner {
     Handshaking(HandshakeStateMachine),
     Established(EstablishedStateMachine),
-    Closing,
     Closed,
 }
