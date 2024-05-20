@@ -2,9 +2,98 @@
 This is a document laying out the protocol works, mostly how packets appear on the wire. It's not hard and fast, and not definitely static - anything can change, just please update this document to improve your changes. This is also somewhat a record of why certain design choices were made.
 
 ## Handshake
-The handshake is a three-step handshake, similar to TCP, but with additional user-defined data. The two peers are named the **Initiator** (the peer trying to join) and the **Listener** (the peer waiting for clients).
+**UNFINISHED**
 
-TODO
+The handshake is effectively a completely different protocol only run at the start of the connection, to establish the information necessary to proceed with the regular protocol.
+
+The handshake is the only part of the protocol that is guaranteed to remain the same between crate minor versions. Steps are taken to ensure that a peer with an outdated version is detected and correctly informed of why their connection is being closed.
+
+### Versioning data
+This is done by including three values, sent by each peer in the handshake: the identifier, major version, and minor version. Note this has nothing to do with semantic versioning, and is **only** used in the handshake to ensure the peers are compatible with eachother.
+
+The identifier is a static value unique to the crate, that is used to say what crate is being used to communicate. This simply checks that the same crate is being used to communicate. Since this crate can be forked, forks can change their identifier to signal incompatibility with other crates.
+
+The major version is a value that tracks breaking changes to the post-handshake protocol, or the handshake protocol itself, since it is read first. This way, the overall protocol isn't locked into one design, and can be improved over time.
+
+The minor version is a value that tracks non-breaking changes to the post-handshake protocol. The minor version is incremented every time this crate changes, and is also used to reject peers using a version of the crate with known issues.
+
+These three values are hard-coded for the crate, but are also provided by the application at setup. This allows the exact same flexibility of updates to be applied to the application, while also preventing older, incompatible versions from connecting.
+
+### Three-way handshake
+The handshake occurs in three packets, very similarly to how TCP works, except over UDP. To explain this transaction, we'll call our two parties the **Initiator** and the **Listener**. The Initiator is the peer trying to join a multiplayer game, and the Listener is the peer listening for new connections for that game. Note that their roles become irrelevant once the handshake finishes.
+
+#### Initiator hello
+To begin, the Initiator sends an 'initiator hello' packet. This contains information like [reliability](#reliability) state, and [version](#versioning-data) data. Sending this packet implicitly says that the sender wants to create a virtual connection.
+
+| Type  | Description                |
+| ----- | -------------------------- |
+| `u16` | Packet sequence identifier |
+| `u64` | Transport identifier       |
+| `u32` | Transport minor version    |
+| `u32` | Transport major version    |
+| `u64` | Application identifier     |
+| `u32` | Application minor version  |
+| `u32` | Application major version  |
+
+The equivalent of this in TCP is the SYN packet sent by the client.
+
+#### Listener hello
+In response, the Listener sends a 'listener hello' packet. Like the 'initiator hello' packet, this contains reliability and version data. However, it also contains a [response](#response-codes) code, which informs the initiator whether or not the listener will continue with the handshake.
+
+| Type  | Description                |
+| ----- | -------------------------- |
+| `u16` | Packet sequence identifier |
+| `u16` | Response code              |
+| `u64` | Transport identifier       |
+| `u32` | Transport minor version    |
+| `u32` | Transport major version    |
+| `u64` | Application identifier     |
+| `u32` | Application minor version  |
+| `u32` | Application major version  |
+| `u16` | Packet acknowledgement     |
+| `u16` | Packet ack bitfield        |
+
+If the response code signals an error or other rejection reason (non-zero), this is where the handshake ends. The listener may also include a human-readable disconnection reason, which will take up the rest of the packet.
+
+The equivalent of this is in TCP is the SYN/ACK packet sent by the server.
+
+#### Initiator finish
+Assuming the listener accepts the connection, the initiator will send the third and final packet in the handshake protocol. This is the 'initiator finish' where there can be two outcomes: the connection becomes fully established, or the connection is terminated.
+
+| Type  | Description                |
+| ----- | -------------------------- |
+| `u16` | Packet sequence identifier |
+| `u16` | Response code              |
+| `u16` | Packet acknowledgement     |
+| `u16` | Packet ack bitfield        |
+
+If the initiator decides that the connection should be closed, such as reading the listener response and seeing an incompatible version value, it can terminate the connection here.
+
+If the initiator decides the connection should continue, it 'commits' and sends a 'continue' response code. At this point, we're done - the handshake is finished, and both peers transition into the established protocol.
+
+The equivalent of this in TCP is the SYN packet sent by the client.
+
+### Response codes
+The following response codes will be the same for all minor versions of this crate, to ensure compatibility and good error messages.
+
+| Int  | Description                            |
+| ---- | -------------------------------------- |
+| `0`  | No error, continue                     |
+| `1`  | Unspecified error                      |
+| `2`  | Malformed packet                       |
+| `3`  | Invalid response code                  |
+| `4`  | Incompatible transport layer           |
+| `5`  | Incompatible transport major version   |
+| `6`  | Incompatible transport minor version   |
+
+These response codes may or may not change across a crate version, but if they do, they'll be marked as a breaking change.
+| Int  | Description                            |
+| ---- | -------------------------------------- |
+| `7`  | Incompatible application identifier    |
+| `8`  | Incompatible application major version |
+| `9`  | Incompatible application minor version |
+| `10` | Listener not accepting new connections |
+| `11` | Connection terminated by application   |
 
 ## Established
 ### Header
