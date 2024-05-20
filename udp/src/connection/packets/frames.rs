@@ -1,6 +1,5 @@
 use std::{cmp::Ordering, ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign}, time::Instant};
 use bytes::Bytes;
-use tracing::trace_span;
 use crate::{sequences::SequenceId, varint::VarInt};
 
 #[derive(Debug, Clone)]

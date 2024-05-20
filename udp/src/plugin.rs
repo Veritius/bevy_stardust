@@ -75,7 +75,7 @@ impl Plugin for UdpTransportPlugin {
             handshake_polling_system,
             established_polling_system,
             established_writing_system,
-            close_connections_system,
+            closing_component_system,
         };
         use crate::endpoint::close_endpoints_system;
         use crate::sending::io_sending_system;
@@ -114,7 +114,7 @@ impl Plugin for UdpTransportPlugin {
         app.add_systems(PostUpdate, (
             established_writing_system,
             io_sending_system,
-            close_connections_system,
+            closing_component_system,
             close_endpoints_system,
         ).chain().in_set(NetworkWrite::Send));
 

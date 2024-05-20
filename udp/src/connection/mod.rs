@@ -7,13 +7,11 @@ mod handshake;
 mod ordering;
 mod packets;
 mod reliability;
-mod systems;
 mod timing;
 
-pub(crate) use handshake::{handshake_polling_system, potential_new_peers_system, OutgoingHandshake};
+pub(crate) use closing::closing_component_system;
 pub(crate) use established::{established_polling_system, established_writing_system};
-pub(crate) use systems::close_connections_system;
-pub(crate) use closing::Closing;
+pub(crate) use handshake::{handshake_polling_system, potential_new_peers_system, OutgoingHandshake};
 
 use std::{collections::VecDeque, net::SocketAddr};
 use bevy::prelude::*;

@@ -1,6 +1,9 @@
 use std::time::{Duration, Instant};
 use bevy::prelude::*;
+use bevy_stardust::connections::PeerDisconnectedEvent;
 use bytes::Bytes;
+use crate::prelude::Endpoint;
+use super::Connection;
 
 #[derive(Component)]
 pub(crate) struct Closing {
@@ -42,8 +45,36 @@ impl Closing {
     pub fn set_finished(&mut self) {
         self.finished = true;
     }
+}
 
-    pub fn is_finished(&self) -> bool {
-        self.finished
+pub(crate) fn closing_component_system(
+    mut commands: Commands,
+    mut events: EventWriter<PeerDisconnectedEvent>,
+    mut closing: Query<(Entity, &Connection, &mut Closing)>,
+    mut endpoints: Query<&mut Endpoint>,
+) {
+    for (entity, connnection, mut closing) in closing.iter_mut() {
+        if closing.started.elapsed() >= closing.timeout {
+            closing.finished = true;
+        }
+
+        if closing.finished {
+            if closing.informed && !closing.inform {
+                todo!()
+            }
+
+            commands.entity(entity).despawn();
+            events.send(PeerDisconnectedEvent {
+                peer: entity,
+                reason: closing.reason.clone(),
+            });
+
+            let mut endpoint = match endpoints.get_mut(connnection.owning_endpoint) {
+                Ok(e) => e,
+                Err(_) => { todo!() },
+            };
+
+            endpoint.connections.remove(&connnection.remote_address);
+        }
     }
 }
