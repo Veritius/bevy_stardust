@@ -9,7 +9,7 @@ use crate::{
         BANNED_MINOR_VERSIONS,
         TRANSPORT_VERSION_DATA
     }, connection::{
-        established::Established, handshake::{
+        closing::Closing, established::Established, handshake::{
             packets::{
                 ClientHelloPacket,
                 ClosingPacket,
@@ -249,7 +249,27 @@ pub(crate) fn handshake_polling_system(
                 }
             },
             HandshakeState::Failed(reason) => {
-                todo!();
+                let mut closing = match reason {
+                    HandshakeFailureReason::TimedOut => {
+                        Closing::new(None, false)
+                    },
+                    HandshakeFailureReason::WeRejected { code, message } => {
+                        debug_assert_ne!(*code, HandshakeResponseCode::Continue);
+                        debug_assert_ne!(*code, HandshakeResponseCode::Unknown);
+                        Closing::new(message.clone(), true)
+                    },
+                    HandshakeFailureReason::TheyRejected { code: _, message: _ } => {
+                        Closing::new(None, false)
+                    },
+                };
+
+                closing.set_finished();
+                closing.set_informed();
+
+                commands.command_scope(|mut commands| {
+                    commands.entity(entity)
+                        .insert(closing);
+                });
 
                 // Log failure
                 match connection.direction {
