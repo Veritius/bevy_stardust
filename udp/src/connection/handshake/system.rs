@@ -248,7 +248,9 @@ pub(crate) fn handshake_polling_system(
                     ConnectionDirection::Server => tracing::debug!("Remote peer {entity:?} ({}) connected", connection.remote_address),
                 }
             },
+
             HandshakeState::Failed(reason) => {
+                // Create closing component
                 let mut closing = match reason {
                     HandshakeFailureReason::TimedOut => {
                         Closing::new(None, false)
@@ -256,16 +258,15 @@ pub(crate) fn handshake_polling_system(
                     HandshakeFailureReason::WeRejected { code, message } => {
                         debug_assert_ne!(*code, HandshakeResponseCode::Continue);
                         debug_assert_ne!(*code, HandshakeResponseCode::Unknown);
-                        Closing::new(message.clone(), true)
+                        Closing::new(message.clone(), false)
                     },
                     HandshakeFailureReason::TheyRejected { code: _, message: _ } => {
                         Closing::new(None, false)
                     },
                 };
 
+                // Set to closed
                 closing.set_finished();
-                closing.set_informed();
-
                 commands.command_scope(|mut commands| {
                     commands.entity(entity)
                         .insert(closing);

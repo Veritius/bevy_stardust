@@ -59,8 +59,8 @@ pub(crate) fn closing_component_system(
         }
 
         if closing.finished {
-            if closing.informed && !closing.inform {
-                todo!()
+            if closing.inform && !closing.informed {
+                error!("{entity:?} didn't inform remote peer before closing");
             }
 
             commands.entity(entity).despawn();
