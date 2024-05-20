@@ -22,5 +22,5 @@ pub mod prelude {
     pub use appdata::ApplicationNetworkVersion;
     pub use manager::{UdpManager, Unspecified};
     pub use endpoint::{Endpoint, EndpointState, statistics::EndpointStatistics};
-    pub use connection::{Connection, ConnectionDirection, ConnectionState, statistics::ConnectionStatistics};
+    pub use connection::{Connection, ConnectionDirection, statistics::ConnectionStatistics};
 }

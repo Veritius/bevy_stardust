@@ -27,9 +27,9 @@ pub(crate) fn established_polling_system(
 
 pub(crate) fn established_timeout_system(
     config: Res<PluginConfiguration>,
-    mut connections: Query<(Entity, &mut Connection, &mut Established, Option<&mut NetworkPeerLifestage>)>,
+    mut connections: Query<(Entity, &mut Connection, &mut Established, &mut NetworkPeerLifestage)>,
 ) {
-    connections.par_iter_mut().for_each(|(entity, mut connection, mut established, lifestage)| {
+    connections.par_iter_mut().for_each(|(entity, mut connection, mut established, mut lifestage)| {
         let now = Instant::now();
         let last_recv = if let Some(last_recv) = connection.timings.last_recv { last_recv } else { connection.timings.started };
 
@@ -37,10 +37,10 @@ pub(crate) fn established_timeout_system(
         let timeout_dur = now.duration_since(last_recv);
         if timeout_dur > config.connection_timeout {
             // Update state information
-            connection.state = ConnectionState::Closed;
-            if let Some(mut lifestage) = lifestage {
-                *lifestage = NetworkPeerLifestage::Closed;
-            }
+            connection.is_closing = false;
+            connection.close_reason = None;
+            connection.fully_closed = true;
+            *lifestage = NetworkPeerLifestage::Closed;
 
             // Log the disconnection
             tracing::debug!("Connection {entity:?} timed out after {} seconds", timeout_dur.as_secs());

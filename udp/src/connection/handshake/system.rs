@@ -34,10 +34,10 @@ pub(crate) fn handshake_polling_system(
     registry: Res<ChannelRegistry>,
     config: Res<PluginConfiguration>,
     commands: ParallelCommands,
-    mut connections: Query<(Entity, &mut Connection, &mut Handshaking)>,
+    mut connections: Query<(Entity, &mut Connection, &mut Handshaking, &mut NetworkPeerLifestage)>,
 ) {
     // Iterate connections in parallel
-    connections.par_iter_mut().for_each(|(entity, mut connection, mut handshake)| {
+    connections.par_iter_mut().for_each(|(entity, mut connection, mut handshake, mut lifestage)| {
         'outer: { match &handshake.state {
             // Sending ClientHelloPackets to the remote peer and waiting for a ServerHelloPacket
             HandshakeState::ClientHello => {
@@ -254,7 +254,7 @@ pub(crate) fn handshake_polling_system(
             },
             HandshakeState::Failed(reason) => {
                 // Change state to Closed so it's despawned
-                connection.state = ConnectionState::Closed;
+                *lifestage = NetworkPeerLifestage::Closed;
 
                 // Log failure
                 match connection.direction {

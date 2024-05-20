@@ -26,7 +26,6 @@ use self::congestion::Congestion;
 pub struct Connection {
     remote_address: SocketAddr,
     congestion: Congestion,
-    state: ConnectionState,
 
     pub(crate) send_queue: VecDeque<Bytes>,
     pub(crate) recv_queue: VecDeque<Bytes>,
@@ -35,6 +34,10 @@ pub struct Connection {
     pub(crate) direction: ConnectionDirection,
     pub(crate) timings: ConnectionTimings,
     pub(crate) statistics: ConnectionStatistics,
+
+    is_closing: bool,
+    close_reason: Option<Bytes>,
+    fully_closed: bool,
 }
 
 /// Functions for controlling the connection.
@@ -47,7 +50,6 @@ impl Connection {
         Self {
             remote_address,
             congestion: Congestion::default(),
-            state: ConnectionState::Handshaking,
 
             send_queue: VecDeque::with_capacity(16),
             recv_queue: VecDeque::with_capacity(32),
@@ -56,6 +58,10 @@ impl Connection {
             direction,
             statistics: ConnectionStatistics::default(),
             timings: ConnectionTimings::new(None, None, None),
+
+            is_closing: false,
+            close_reason: None,
+            fully_closed: false,
         }
     }
 }
@@ -71,11 +77,6 @@ impl Connection {
     /// See the [`ConnectionDirection`] docs for more information.
     pub fn direction(&self) -> ConnectionDirection {
         self.direction.clone()
-    }
-
-    /// Returns the [`ConnectionState`] of the connection.
-    pub fn state(&self) -> ConnectionState {
-        self.state
     }
 
     /// Returns statistics related to the Connection. See [`ConnectionStatistics`] for more.
@@ -109,12 +110,12 @@ impl Connection {
     }
 }
 
-// Logs a warning when a non-Closed connection is dropped
+// Logs a warning when a non-closed connection is dropped
 // This happens with component removals and drops in scope
 impl Drop for Connection {
     fn drop(&mut self) {
-        if self.state() != ConnectionState::Closed {
-            warn!("Connection dropped while in the {:?} state", self.state());
+        if !self.fully_closed {
+            warn!("Connection was dropped while not fully closed");
         }
     }
 }
@@ -127,22 +128,6 @@ pub enum ConnectionDirection {
 
     /// Acting as a server, talking to a client.
     Server,
-}
-
-/// The state of the connection.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Reflect)]
-pub enum ConnectionState {
-    /// The connection is in the process of being established.
-    Handshaking,
-
-    /// The connection is fully active and ready to communicate.
-    Connected,
-
-    /// The connection is closing and waiting for final data transfer to occur.
-    Closing,
-
-    /// The connection is closed and the entity will be despawned soon.
-    Closed,
 }
 
 #[derive(Event)]
