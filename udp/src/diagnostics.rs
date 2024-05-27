@@ -3,7 +3,7 @@
 #![allow(missing_docs)]
 
 use bevy::{prelude::*, diagnostic::*};
-use crate::{prelude::*, sending::io_sending_system};
+use crate::{prelude::*, schedule::PostUpdateSet};
 
 /// Adds diagnostics about [`Endpoint`]s.
 pub struct EndpointDiagnosticsPlugin;
@@ -28,7 +28,7 @@ impl Plugin for EndpointDiagnosticsPlugin {
         app.register_diagnostic(Diagnostic::new(Self::BYTES_RECV_COUNT));
 
         app.add_systems(PostUpdate, endpoint_diagnostics_system
-            .after(io_sending_system));
+            .in_set(PostUpdateSet::UpdateStatistics));
     }
 }
 
@@ -74,7 +74,7 @@ impl Plugin for ConnectionDiagnosticsPlugin {
             .with_smoothing_factor(0.0));
 
         app.add_systems(PostUpdate, connection_diagnostics_system
-            .after(io_sending_system));
+            .in_set(PostUpdateSet::UpdateStatistics));
     }
 }
 

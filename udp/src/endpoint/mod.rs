@@ -1,6 +1,8 @@
+mod receiving;
+mod sending;
 mod systems;
+
 pub(crate) mod statistics;
-pub(crate) use systems::*;
 
 use std::{collections::HashMap, net::{SocketAddr, UdpSocket}};
 use anyhow::Result;
@@ -8,6 +10,18 @@ use bevy::prelude::*;
 use bytes::Bytes;
 use tracing::warn;
 use statistics::EndpointStatistics;
+use crate::schedule::*;
+
+pub(crate) fn add_system(app: &mut App) {
+    app.add_systems(PreUpdate, receiving::io_receiving_system
+        .in_set(PreUpdateSet::PacketRead));
+
+    app.add_systems(PostUpdate, sending::io_sending_system
+        .in_set(PostUpdateSet::PacketSend));
+
+    app.add_systems(PostUpdate, systems::close_endpoints_system
+        .in_set(PostUpdateSet::CloseEndpoints));
+}
 
 /// An endpoint, which is used for I/O.
 /// 

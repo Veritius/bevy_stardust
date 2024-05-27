@@ -87,6 +87,8 @@ impl Plugin for UdpTransportPlugin {
         assert!(self.reliable_bitfield_length < 16,
             "The length of reliable bitfields cannot exceed 16");
 
+        app.add_event::<PotentialNewPeer>();
+
         app.configure_sets(PreUpdate, PreUpdateSet::PacketRead
             .before(PreUpdateSet::TickEstablished)
             .before(PreUpdateSet::HandleUnknown)
@@ -100,16 +102,8 @@ impl Plugin for UdpTransportPlugin {
             .before(PostUpdateSet::UpdateStatistics)
         );
 
-        app.add_systems(PreUpdate, crate::receiving::io_receiving_system
-            .in_set(PreUpdateSet::PacketRead));
-
-        app.add_systems(PostUpdate, crate::sending::io_sending_system
-            .in_set(PostUpdateSet::PacketSend));
-
-        app.add_systems(PostUpdate, crate::endpoint::close_endpoints_system
-            .in_set(PostUpdateSet::CloseEndpoints));
-
-        app.add_event::<PotentialNewPeer>();
+        crate::endpoint::add_system(app);
+        crate::connection::add_systems(app);
 
         // Add application context resource
         app.insert_resource(PluginConfiguration {
