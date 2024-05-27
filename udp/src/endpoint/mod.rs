@@ -32,19 +32,19 @@ pub(crate) fn add_system(app: &mut App) {
 #[reflect(from_reflect = false)]
 pub struct Endpoint {
     #[reflect(ignore)]
-    pub(crate) udp_socket: UdpSocket,
+    udp_socket: UdpSocket,
 
     #[reflect(ignore)]
-    pub(crate) connections: HashMap<SocketAddr, ConnectionOwnershipToken>,
+    connections: HashMap<SocketAddr, ConnectionOwnershipToken>,
 
     // Outgoing packets that aren't attached to a peer.
     #[reflect(ignore)]
-    pub(crate) outgoing_pkts: Vec<(SocketAddr, Bytes)>,
+    outgoing_pkts: Vec<(SocketAddr, Bytes)>,
 
     pub(crate) statistics: EndpointStatistics,
-    pub(crate) state: EndpointState,
+    state: EndpointState,
 
-    pub(crate) has_ever_had_peer: bool,
+    has_ever_had_peer: bool,
 
     /// Whether or not to accept new incoming connections on this endpoint.
     pub listening: bool,
@@ -97,6 +97,10 @@ impl Endpoint {
         } else {
             return None;
         }
+    }
+
+    pub(crate) fn peer_map(&self) -> &HashMap<SocketAddr, ConnectionOwnershipToken> {
+        &self.connections
     }
 
     /// Marks the endpoint for closure.

@@ -74,7 +74,7 @@ pub(crate) fn closing_component_system(
                 Err(_) => { todo!() },
             };
 
-            endpoint.connections.remove(&connnection.remote_address);
+            endpoint.remove_peer(entity);
         }
     }
 }
