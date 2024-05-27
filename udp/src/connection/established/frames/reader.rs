@@ -127,9 +127,10 @@ fn parse_frame(
         .into();
 
     // Parse the frame header type
-    let ftype = reader.read_u8()
-        .map_err(|_| PacketReadError::UnexpectedEnd)?;
-    let ftype = FrameType::try_from(ftype)
+    let ftype: FrameType = reader
+        .read_u8()
+        .map_err(|_| PacketReadError::UnexpectedEnd)?
+        .try_into()
         .map_err(|_| PacketReadError::InvalidFrameType)?;
 
     // Get the frame channel id if present
