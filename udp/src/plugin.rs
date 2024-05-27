@@ -1,7 +1,7 @@
 use std::time::Duration;
 use bevy::prelude::*;
 use bevy_stardust::prelude::*;
-use crate::{appdata::ApplicationNetworkVersion, connection::PotentialNewPeer};
+use crate::{appdata::ApplicationNetworkVersion, connection::PotentialNewPeer, schedule::*};
 
 /// The UDP transport plugin.
 /// 
@@ -69,17 +69,6 @@ impl UdpTransportPlugin {
 
 impl Plugin for UdpTransportPlugin {
     fn build(&self, app: &mut App) {
-        use crate::receiving::io_receiving_system;
-        use crate::connection::{
-            potential_new_peers_system,
-            handshake_polling_system,
-            established_polling_system,
-            established_writing_system,
-            closing_component_system,
-        };
-        use crate::endpoint::close_endpoints_system;
-        use crate::sending::io_sending_system;
-
         // Check if the Stardust plugin is added
         if !app.is_plugin_added::<StardustPlugin>() {
             panic!("StardustPlugin muaest be added before UdpTransportPlugin");
@@ -98,31 +87,27 @@ impl Plugin for UdpTransportPlugin {
         assert!(self.reliable_bitfield_length < 16,
             "The length of reliable bitfields cannot exceed 16");
 
-        // Packet receiving system
-        app.add_systems(PreUpdate, (
-            io_receiving_system,
-            established_polling_system,
-        ).chain().in_set(NetworkRead::Receive));
+        app.configure_sets(PreUpdate, PreUpdateSet::PacketRead
+            .before(PreUpdateSet::TickEstablished)
+            .before(PreUpdateSet::HandleUnknown)
+        );
 
-        // These systems can run at any time
-        app.add_systems(Update, (
-            potential_new_peers_system,
-            handshake_polling_system,
-        ));
+        app.configure_sets(PostUpdate, PostUpdateSet::PacketSend
+            .after(PostUpdateSet::FramePacking)
+            .after(PostUpdateSet::HandshakeSend)
+            .before(PostUpdateSet::CloseEndpoints)
+            .before(PostUpdateSet::CloseConnections)
+            .before(PostUpdateSet::UpdateStatistics)
+        );
 
-        // Packet transmitting systems
-        app.add_systems(PostUpdate, (
-            established_writing_system,
-            io_sending_system,
-            closing_component_system,
-            close_endpoints_system,
-        ).chain().in_set(NetworkWrite::Send));
+        app.add_systems(PreUpdate, crate::receiving::io_receiving_system
+            .in_set(PreUpdateSet::PacketRead));
 
-        // Reset tick statistics at the end of the tick
-        app.add_systems(Last, (
-            crate::connection::statistics::reset_connection_statistics_system,
-            crate::endpoint::statistics::reset_endpoint_statistics_system,
-        ));
+        app.add_systems(PostUpdate, crate::sending::io_sending_system
+            .in_set(PostUpdateSet::PacketSend));
+
+        app.add_systems(PostUpdate, crate::endpoint::close_endpoints_system
+            .in_set(PostUpdateSet::CloseEndpoints));
 
         app.add_event::<PotentialNewPeer>();
 
