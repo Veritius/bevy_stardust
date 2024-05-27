@@ -1,5 +1,5 @@
 mod control;
-mod packets;
+mod frames;
 mod polling;
 mod writer;
 
@@ -8,14 +8,14 @@ pub(crate) use writer::established_writing_system;
 
 use bevy::prelude::*;
 use super::{ordering::OrderingManager, reliability::{ReliabilityState, ReliablePackets}};
-use packets::{builder::PacketBuilder, reader::PacketReader};
+use frames::{builder::PacketBuilder, reader::PacketParser};
 
 #[derive(Component)]
 pub(crate) struct Established {
     reliability: ReliablePackets,
     orderings: OrderingManager,
 
-    reader: PacketReader,
+    reader: PacketParser,
     builder: PacketBuilder,
 
     ice_thickness: u16,
@@ -29,7 +29,7 @@ impl Established {
             reliability: ReliablePackets::new(reliability.clone()),
             orderings: OrderingManager::new(),
 
-            reader: PacketReader::default(),
+            reader: PacketParser::default(),
             builder: PacketBuilder::default(),
 
             ice_thickness: u16::MAX,

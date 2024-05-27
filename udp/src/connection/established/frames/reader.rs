@@ -7,9 +7,9 @@ use super::header::PacketHeaderFlags;
 use super::frames::{FrameFlags, FrameType, RecvFrame};
 
 /// Parses incoming packets into an iterator of `Frame` objects.
-pub(crate) struct PacketReader {}
+pub(crate) struct PacketParser {}
 
-impl Default for PacketReader {
+impl Default for PacketParser {
     fn default() -> Self {
         Self {
 
@@ -17,7 +17,7 @@ impl Default for PacketReader {
     }
 }
 
-impl PacketReader {
+impl PacketParser {
     #[must_use]
     pub fn iter<'a>(&'a mut self, context: PacketReaderContext<'a>) -> PacketReaderIter<'a> {
         PacketReaderIter { inner: self, current: None, context }
@@ -33,7 +33,7 @@ pub(crate) struct PacketReaderContext<'a> {
 /// Dropping this type may cause data loss.
 /// Use [`is_safe_to_drop`](Self::is_safe_to_drop) to check if you can drop this without data loss.
 pub(crate) struct PacketReaderIter<'a> {
-    inner: &'a mut PacketReader,
+    inner: &'a mut PacketParser,
     current: Option<Reader>,
     context: PacketReaderContext<'a>,
 }

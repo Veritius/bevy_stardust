@@ -1,8 +1,8 @@
 use std::time::Instant;
 use bevy::prelude::*;
 use bevy_stardust::prelude::*;
-use super::packets::builder::PacketBuilderContext;
-use super::packets::frames::{FrameFlags, FrameType, SendFrame};
+use super::frames::builder::PacketBuilderContext;
+use super::frames::frames::{FrameFlags, FrameType, SendFrame};
 use crate::plugin::PluginConfiguration;
 use crate::prelude::*;
 use crate::varint::VarInt;

@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use bevy_stardust::prelude::*;
 use crate::{connection::ordering::OrderedMessage, plugin::PluginConfiguration, prelude::*};
-use super::{control::*, packets::{frames::FrameType, reader::PacketReaderContext}, Established};
+use super::{control::*, frames::{frames::FrameType, reader::PacketReaderContext}, Established};
 
 /// Runs [`poll`](Established::poll) on all [`Established`] entities.
 pub(crate) fn established_polling_system(
