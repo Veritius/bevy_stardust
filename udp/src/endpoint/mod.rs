@@ -39,7 +39,7 @@ pub struct Endpoint {
 
     // Outgoing packets that aren't attached to a peer.
     #[reflect(ignore)]
-    outgoing_pkts: Vec<(SocketAddr, Bytes)>,
+    pub(crate) outgoing_pkts: Vec<(SocketAddr, Bytes)>,
 
     pub(crate) statistics: EndpointStatistics,
     state: EndpointState,
