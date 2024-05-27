@@ -5,7 +5,6 @@ mod congestion;
 mod established;
 mod handshake;
 mod ordering;
-mod packets;
 mod reliability;
 mod timing;
 

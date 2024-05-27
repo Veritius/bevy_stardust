@@ -1,5 +1,6 @@
 use bytes::{Bytes, BufMut};
-use crate::{connection::packets::header::PacketHeaderFlags, varint::VarInt};
+use crate::varint::VarInt;
+use super::super::header::PacketHeaderFlags;
 use super::PackFnSharedCtx;
 
 /// The amount of space allocated for a frame header.

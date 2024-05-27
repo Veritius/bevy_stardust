@@ -2,7 +2,8 @@ use std::collections::VecDeque;
 use bytes::Bytes;
 use tracing::error;
 use unbytes::Reader;
-use crate::{connection::{packets::header::PacketHeaderFlags, reliability::{AckMemory, ReliablePackets}}, plugin::PluginConfiguration, sequences::SequenceId, varint::VarInt};
+use crate::{connection::reliability::{AckMemory, ReliablePackets}, plugin::PluginConfiguration, sequences::SequenceId, varint::VarInt};
+use super::header::PacketHeaderFlags;
 use super::frames::{FrameFlags, FrameType, RecvFrame};
 
 /// Parses incoming packets into an iterator of `Frame` objects.

@@ -1,4 +1,5 @@
 mod control;
+mod packets;
 mod polling;
 mod writer;
 
@@ -6,7 +7,8 @@ pub(crate) use polling::established_polling_system;
 pub(crate) use writer::established_writing_system;
 
 use bevy::prelude::*;
-use super::{ordering::OrderingManager, packets::{builder::PacketBuilder, reader::PacketReader}, reliability::{ReliabilityState, ReliablePackets}};
+use super::{ordering::OrderingManager, reliability::{ReliabilityState, ReliablePackets}};
+use packets::{builder::PacketBuilder, reader::PacketReader};
 
 #[derive(Component)]
 pub(crate) struct Established {
