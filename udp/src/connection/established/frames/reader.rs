@@ -139,31 +139,12 @@ fn parse_frame(
             .map_err(|_| PacketReadError::InvalidFrameIdent)?),
     };
 
-    // At the moment, all frame types require an associated ident
-    // We check this here, but later on a better check must be added
-    if ident.is_none() {
-        return Err(PacketReadError::InvalidFrameIdent);
-    }
-
     // Get the frame channel ordering if present
     let order = match flags.any_high(FrameFlags::ORDERED) {
         false => None,
         true => Some(reader.read_u16()
             .map_err(|_| PacketReadError::UnexpectedEnd)?.into()),
     };
-
-    // There are extra constraints for Stardust messages
-    if ftype == FrameType::Stardust {
-        match ident {
-            // Stardust messages only have 2^32 possible channels
-            Some(x) if u64::from(x) > u32::MAX as u64 => {
-                return Err(PacketReadError::InvalidFrameIdent);
-            },
-
-            // All checks passed, do nothing.
-            _ => {},
-        }
-    }
 
     // Read the length of the packet
     let len: usize = VarInt::read(reader)
