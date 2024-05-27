@@ -7,6 +7,7 @@ mod endpoint;
 mod manager;
 mod plugin;
 mod receiving;
+mod schedule;
 mod sending;
 mod sequences;
 mod varint;
