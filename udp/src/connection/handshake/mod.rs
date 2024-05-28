@@ -10,7 +10,6 @@ use crate::prelude::*;
 use super::reliability::ReliabilityState;
 
 #[derive(Component)]
-#[component(storage = "SparseSet")]
 pub(crate) struct Handshaking {
     started: Instant,
     reliability: ReliabilityState,
