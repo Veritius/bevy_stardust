@@ -6,9 +6,9 @@ mod initiatorhello;
 mod listenerhello;
 mod terminated;
 
-use bytes::Bytes;
 pub(crate) use system::handshake_polling_system;
 
+use bytes::Bytes;
 use bevy_stardust::connections::NetworkPeer;
 use std::{net::SocketAddr, time::Instant};
 use bevy::prelude::*;
@@ -57,7 +57,7 @@ impl OutgoingHandshakeBundle {
             connection: Connection::new(
                 owning_endpoint,
                 remote_address, 
-                ConnectionDirection::Client,
+                ConnectionDirection::Initiator,
             ),
             handshake: Handshaking {
                 started: Instant::now(),

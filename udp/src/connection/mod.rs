@@ -8,7 +8,7 @@ mod ordering;
 mod reliability;
 mod timing;
 
-use std::{collections::VecDeque, net::SocketAddr};
+use std::{collections::VecDeque, net::SocketAddr, ops::Neg};
 use bevy::prelude::*;
 use bytes::Bytes;
 use statistics::ConnectionStatistics;
@@ -106,10 +106,21 @@ impl Connection {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Reflect)]
 pub enum ConnectionDirection {
     /// Acting as a client, listening to a server.
-    Client,
+    Initiator,
 
     /// Acting as a server, talking to a client.
-    Server,
+    Listener,
+}
+
+impl Neg for ConnectionDirection {
+    type Output = Self;
+
+    fn neg(self) -> Self::Output {
+        match self {
+            ConnectionDirection::Initiator => ConnectionDirection::Listener,
+            ConnectionDirection::Listener => ConnectionDirection::Initiator,
+        }
+    }
 }
 
 #[derive(Event)]
