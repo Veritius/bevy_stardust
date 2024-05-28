@@ -1,9 +1,9 @@
 //! "Peers" aka other computers over the network.
 
-use std::{net::SocketAddr, time::Instant};
+use std::{net::SocketAddr, sync::Mutex, time::Instant};
 use bevy::prelude::*;
 
-/// An active connection to a remote peer.
+/// An active connection to a remote peer, as well as additional 
 /// 
 /// The term 'peer' is used interchangeably for any kind of connection to another instance of the application.
 /// If you're writing a star-topology system, you can treat these as servers and clients.
@@ -32,6 +32,9 @@ pub struct NetworkPeer {
     /// Round-trip time estimate, in milliseconds.
     /// `None`  means an estimate is not available.
     pub ping: Option<u32>,
+
+    #[reflect(ignore)] // doesn't implement TypePath
+    budget: Mutex<u32>, // TODO: Could an AtomicU32 be used here?
 }
 
 impl NetworkPeer {
@@ -41,7 +44,36 @@ impl NetworkPeer {
             joined: Instant::now(),
             quality: None,
             ping: None,
+            budget: Mutex::new(0),
         }
+    }
+
+    /// Set the budget to a certain value.
+    /// This should be done by transport layers.
+    /// If you want to use a certain amount of the budget, use [`sub_budget`][sub_budget].
+    /// 
+    /// [sub_budget]: Self::sub_budget
+    pub fn set_budget(&mut self, value: u32) {
+        *(self.budget.get_mut().unwrap()) = value;
+    }
+
+    /// Try to use `amt` bytes from the budget.
+    /// This uses atomic operations, and should be used sparingly.
+    /// 
+    /// If the budget has the requested amount, it's subtracted and `true` is returned.
+    /// Otherwise, `false` is returned and the budget is left unchanged.
+    /// Below is an example table of how this works.
+    /// 
+    /// | Initial value | Change | Result  | New value |
+    /// |---------------|--------|---------|-----------|
+    /// | 256           | 32     | `true`  | 224       |
+    /// | 256           | 256    | `true`  | 0         |
+    /// | 256           | 512    | `false` | 256       |
+    pub fn sub_budget(&self, amt: u32) -> bool {
+        let mut lock = self.budget.lock().unwrap();
+        if amt > *lock { return false; }
+        *lock -= amt;
+        return true;
     }
 }
 
