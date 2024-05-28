@@ -69,9 +69,9 @@ impl std::fmt::Display for HandshakeResponseCode {
         use HandshakeResponseCode::*;
 
         f.write_str(match self {
-            Continue => "no error",
-
             Unknown => "unknown error code",
+
+            Continue => "no error",
 
             MalformedPacket => "malformed packet",
             Unspecified => "no reason given",
