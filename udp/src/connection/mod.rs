@@ -15,6 +15,8 @@ use statistics::ConnectionStatistics;
 use timing::ConnectionTimings;
 use self::congestion::Congestion;
 
+pub(crate) use handshake::OutgoingHandshakeBundle;
+
 pub(crate) fn add_systems(app: &mut App) {
 
 }
