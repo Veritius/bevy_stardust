@@ -38,7 +38,7 @@ trait IntermediateState {
     type Next;
 
     fn recv_packet(&mut self, shared: &mut HandshakeShared, bytes: Bytes) -> bool;
-    fn transition(self, shared: &HandshakeShared,) -> Result<Self::Next, Terminated>;
+    fn transition(self, shared: &HandshakeShared) -> Result<Self::Next, Terminated>;
 }
 
 #[derive(Bundle)]
