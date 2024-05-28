@@ -1,14 +1,14 @@
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u16)]
 pub(super) enum HandshakeResponseCode {
+    // This code is returned when we can't recognise the code they send.
+    // This should not be sent to a peer, that'd be weird.
+    Unknown = u16::MAX,
+
     // The following values should not be changed.
     // They are used for good error responses in older versions.
 
     Continue = 0,
-
-    // This code is returned when we can't recognise the code they send.
-    // This should not be sent to a peer, that'd be weird.
-    Unknown = u16::MAX,
 
     Unspecified = 1,
     MalformedPacket = 2,
@@ -70,6 +70,7 @@ impl std::fmt::Display for HandshakeResponseCode {
 
         f.write_str(match self {
             Continue => "no error",
+
             Unknown => "unknown error code",
 
             MalformedPacket => "malformed packet",
