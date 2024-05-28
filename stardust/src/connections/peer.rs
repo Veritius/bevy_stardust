@@ -30,9 +30,8 @@ pub struct NetworkPeer {
     pub quality: Option<f32>,
 
     /// Round-trip time estimate, in milliseconds.
-    pub ping: u32,
-
-    disconnect_requested: bool,
+    /// `None`  means an estimate is not available.
+    pub ping: Option<u32>,
 }
 
 impl NetworkPeer {
@@ -41,21 +40,8 @@ impl NetworkPeer {
         Self {
             joined: Instant::now(),
             quality: None,
-            ping: 0,
-            disconnect_requested: false,
+            ping: None,
         }
-    }
-
-    /// Signals to the transport layer to disconnect the peer.
-    /// This operation cannot be undone.
-    pub fn disconnect(&mut self) {
-        self.disconnect_requested = true
-    }
-
-    /// Returns `true` if [`disconnect`] has been used.
-    /// This is intended for use by transport layers, and you should use [`NetworkPeerLifestage`] instead.
-    pub fn disconnect_requested(&self) -> bool {
-        self.disconnect_requested
     }
 }
 
