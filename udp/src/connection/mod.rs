@@ -8,8 +8,6 @@ mod ordering;
 mod reliability;
 mod timing;
 
-pub(crate) use handshake::OutgoingHandshake;
-
 use std::{collections::VecDeque, net::SocketAddr};
 use bevy::prelude::*;
 use bytes::Bytes;
