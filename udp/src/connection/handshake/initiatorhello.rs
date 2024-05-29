@@ -16,11 +16,15 @@ impl InitiatorHello {
 impl Transition for InitiatorHello {
     type Next = Completed;
 
-    fn recv_packet(&mut self, shared: &mut HandshakeShared, bytes: Bytes) -> bool {
+    fn recv_packet(&mut self, shared: &mut HandshakeShared, bytes: Reader) -> bool {
         todo!()
     }
 
     fn poll_send(&mut self, shared: &mut HandshakeShared) -> Option<Bytes> {
+        todo!()
+    }
+
+    fn wants_transition(&self, shared: &HandshakeShared) -> bool {
         todo!()
     }
 

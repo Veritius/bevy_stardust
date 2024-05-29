@@ -1,4 +1,5 @@
 mod codes;
+mod parse;
 mod system;
 
 mod finished;
@@ -10,6 +11,7 @@ pub(crate) use system::handshake_polling_system;
 
 use bytes::Bytes;
 use bevy_stardust::connections::NetworkPeer;
+use unbytes::Reader;
 use std::{net::SocketAddr, time::Instant};
 use bevy::prelude::*;
 use crate::prelude::*;
@@ -30,15 +32,23 @@ struct HandshakeShared {
 enum HandshakeState {
     InitiatorHello(InitiatorHello),
     ListenerHello(ListenerHello),
-    Finished(Completed),
+    Completed(Completed),
     Terminated(Terminated),
 }
 
 trait Transition {
     type Next;
 
-    fn recv_packet(&mut self, shared: &mut HandshakeShared, bytes: Bytes) -> bool;
+    #[must_use]
+    fn recv_packet(&mut self, shared: &mut HandshakeShared, reader: Reader) -> bool;
+
+    #[must_use]
     fn poll_send(&mut self, shared: &mut HandshakeShared) -> Option<Bytes>;
+
+    #[must_use]
+    fn wants_transition(&self, shared: &HandshakeShared) -> bool;
+
+    #[must_use]
     fn transition(self, shared: &HandshakeShared) -> Result<Self::Next, Terminated>;
 }
 
