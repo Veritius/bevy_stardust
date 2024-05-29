@@ -13,10 +13,14 @@ impl InitiatorHello {
     }
 }
 
-impl IntermediateState for InitiatorHello {
+impl Transition for InitiatorHello {
     type Next = Completed;
 
     fn recv_packet(&mut self, shared: &mut HandshakeShared, bytes: Bytes) -> bool {
+        todo!()
+    }
+
+    fn poll_send(&mut self, shared: &mut HandshakeShared) -> Option<Bytes> {
         todo!()
     }
 

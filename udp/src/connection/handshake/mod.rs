@@ -34,10 +34,11 @@ enum HandshakeState {
     Terminated(Terminated),
 }
 
-trait IntermediateState {
+trait Transition {
     type Next;
 
     fn recv_packet(&mut self, shared: &mut HandshakeShared, bytes: Bytes) -> bool;
+    fn poll_send(&mut self, shared: &mut HandshakeShared) -> Option<Bytes>;
     fn transition(self, shared: &HandshakeShared) -> Result<Self::Next, Terminated>;
 }
 
