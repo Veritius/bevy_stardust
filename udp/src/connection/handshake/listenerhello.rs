@@ -5,6 +5,14 @@ pub(super) struct ListenerHello {
     p: ()
 }
 
+impl ListenerHello {
+    pub fn new() -> Self {
+        Self {
+            p: ()
+        }
+    }
+}
+
 impl IntermediateState for ListenerHello {
     type Next = Completed;
 
