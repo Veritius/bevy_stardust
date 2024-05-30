@@ -2,10 +2,10 @@ use unbytes::*;
 use crate::sequences::SequenceId;
 use super::Handshaking;
 
-fn parse_header(
+pub(super) fn parse_header(
     this: &mut Handshaking,
-    mut reader: Reader,
-) -> Result<Reader, ParseError> {
+    reader: &mut Reader,
+) -> Result<(), ParseError> {
     // Read the packet sequence identifier
     let seq: SequenceId = reader.read_u16()?.into();
 
@@ -14,10 +14,10 @@ fn parse_header(
         return Err(ParseError::Outdated);
     }
 
-    return Ok(reader);
+    return Ok(());
 }
 
-enum ParseError {
+pub(super) enum ParseError {
     EndOfInput(EndOfInput),
     Outdated,
 }
