@@ -3,7 +3,6 @@ pub mod statistics;
 mod closing;
 mod congestion;
 mod established;
-mod handshake;
 mod ordering;
 mod reliability;
 mod timing;
@@ -14,8 +13,6 @@ use bytes::Bytes;
 use statistics::ConnectionStatistics;
 use timing::ConnectionTimings;
 use self::congestion::Congestion;
-
-pub(crate) use handshake::OutgoingHandshakeBundle;
 
 pub(crate) fn add_systems(app: &mut App) {
 

@@ -33,7 +33,12 @@ pub(crate) fn established_polling_system(
                 // Case 1: Another frame was read
                 Some(Ok(frame)) => {
                     match frame.ftype {
-                        // Case 1.1: Connection control frame
+                        // Case 1.1: Handshake frame
+                        FrameType::Handshake => {
+                            todo!()
+                        },
+
+                        // Case 2.1: Connection control frame
                         FrameType::Control => {
                             // Unwrapping is fine since the parser checks it
                             let ident = frame.ident.unwrap();
@@ -47,7 +52,7 @@ pub(crate) fn established_polling_system(
                             }
                         },
 
-                        // Case 1.2: Stardust message frame
+                        // Case 3.2: Stardust message frame
                         FrameType::Stardust => {
                             // Unwrapping is ok since the presence of ident is checked in the parser
                             // It's also checked to be within 2^32 (max channel ids) so we can unwrap there too

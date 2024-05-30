@@ -124,6 +124,7 @@ fn frame_ord_test() {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum FrameType {
+    Handshake,
     Control,
     Stardust,
 }
@@ -133,8 +134,9 @@ impl TryFrom<u8> for FrameType {
     
     fn try_from(value: u8) -> Result<Self, Self::Error> {
         match value {
-            0 => Ok(Self::Control),
-            1 => Ok(Self::Stardust),
+            0 => Ok(Self::Handshake),
+            1 => Ok(Self::Control),
+            2 => Ok(Self::Stardust),
             _ => Err(value),
         }
     }
@@ -143,8 +145,9 @@ impl TryFrom<u8> for FrameType {
 impl From<FrameType> for u8 {
     fn from(value: FrameType) -> Self {
         match value {
-            FrameType::Control => 0,
-            FrameType::Stardust => 1,
+            FrameType::Handshake => 0,
+            FrameType::Control => 1,
+            FrameType::Stardust => 2,
         }
     }
 }
