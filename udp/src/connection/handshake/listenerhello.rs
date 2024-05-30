@@ -16,19 +16,11 @@ impl ListenerHello {
 impl Transition for ListenerHello {
     type Next = Completed;
 
-    fn recv_packet(&mut self, shared: &mut HandshakeShared, bytes: Reader) {
+    fn recv_packet(mut self, shared: &mut HandshakeShared, reader: &mut Reader) -> TransitionOutcome<Self> {
         todo!()
     }
 
     fn poll_send(&mut self, shared: &mut HandshakeShared) -> Option<Bytes> {
-        todo!()
-    }
-
-    fn wants_transition(&self, shared: &HandshakeShared) -> bool {
-        todo!()
-    }
-
-    fn perform_transition(self, shared: &HandshakeShared) -> Result<Self::Next, Terminated> {
         todo!()
     }
 }

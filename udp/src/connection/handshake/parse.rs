@@ -1,65 +1,6 @@
-use std::mem::swap;
-
 use unbytes::*;
-use crate::{connection::handshake::HandshakeShared, sequences::SequenceId};
-use super::{HandshakeState, Handshaking, Transition};
-
-impl Handshaking {
-    pub(super) fn recv_packet(&mut self, reader: Reader) {
-        let reader = match parse_header(self, reader) {
-            Ok(v) => v,
-            Err(err) => {
-                todo!()
-            },
-        };
-
-        let mut state = HandshakeState::Swapping;
-        swap(&mut self.state, &mut state);
-
-        #[inline]
-        fn state_recv_packet<T: Transition>(
-            reader: Reader,
-            shared: &mut HandshakeShared,
-            mut state: T,
-            same: impl Fn(T) -> HandshakeState,
-            next: impl Fn(T::Next) -> HandshakeState,
-        ) -> HandshakeState {
-            state.recv_packet(shared, reader);
-            if state.wants_transition(shared) {
-                match state.perform_transition(&shared) {
-                    Ok(state) => next(state),
-                    Err(state) => HandshakeState::Terminated(state),
-                }
-            } else {
-                same(state)
-            }
-        }
-
-        state = match state {
-            HandshakeState::InitiatorHello(state) => {
-                state_recv_packet(reader, &mut self.shared, state,
-                    |state| HandshakeState::InitiatorHello(state),
-                    |state| HandshakeState::Completed(state),
-                )
-            },
-
-            HandshakeState::ListenerHello(state) => {
-                state_recv_packet(reader, &mut self.shared, state,
-                    |state| HandshakeState::ListenerHello(state),
-                    |state| HandshakeState::Completed(state),
-                )
-            }
-
-            HandshakeState::Completed(_) => state,
-            HandshakeState::Terminated(_) => state,
-
-            HandshakeState::Swapping => unreachable!(),
-        };
-
-        swap(&mut self.state, &mut state);
-        drop(state);
-    }
-}
+use crate::sequences::SequenceId;
+use super::Handshaking;
 
 fn parse_header(
     this: &mut Handshaking,

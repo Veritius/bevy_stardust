@@ -39,19 +39,20 @@ enum HandshakeState {
     Swapping,
 }
 
-trait Transition {
+trait Transition: Sized {
     type Next;
 
-    fn recv_packet(&mut self, shared: &mut HandshakeShared, reader: Reader);
+    #[must_use]
+    fn recv_packet(self, shared: &mut HandshakeShared, reader: &mut Reader) -> TransitionOutcome<Self>;
 
     #[must_use]
     fn poll_send(&mut self, shared: &mut HandshakeShared) -> Option<Bytes>;
+}
 
-    #[must_use]
-    fn wants_transition(&self, shared: &HandshakeShared) -> bool;
-
-    #[must_use]
-    fn perform_transition(self, shared: &HandshakeShared) -> Result<Self::Next, Terminated>;
+enum TransitionOutcome<T: Transition> {
+    None(T),
+    Next(T::Next),
+    Fail(Terminated),
 }
 
 #[derive(Bundle)]

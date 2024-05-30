@@ -14,7 +14,7 @@ pub(crate) fn handshake_polling_system(
     connections.par_iter_mut().for_each(|(entity, mut connection, mut handshake)| {
         // Read packets from the receive queue into the handshaking component
         while let Some(packet) = connection.recv_queue.pop_front() {
-            handshake.recv_packet(Reader::new(packet));
+            // handshake.recv_packet(Reader::new(packet));
         }
     });
 }   
