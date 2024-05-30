@@ -2,7 +2,7 @@ pub mod statistics;
 
 mod closing;
 mod congestion;
-mod established;
+mod frames;
 mod ordering;
 mod reliability;
 mod timing;
@@ -12,7 +12,7 @@ use bevy::prelude::*;
 use bytes::Bytes;
 use statistics::ConnectionStatistics;
 use timing::ConnectionTimings;
-use self::congestion::Congestion;
+use self::{congestion::Congestion, frames::{builder::PacketBuilder, reader::PacketParser}, ordering::OrderingManager, reliability::{ReliabilityState, ReliablePackets}};
 
 pub(crate) fn add_systems(app: &mut App) {
 
@@ -23,6 +23,12 @@ pub(crate) fn add_systems(app: &mut App) {
 pub struct Connection {
     remote_address: SocketAddr,
     congestion: Congestion,
+
+    reliability: ReliablePackets,
+    orderings: OrderingManager,
+
+    reader: PacketParser,
+    builder: PacketBuilder,
 
     pub(crate) send_queue: VecDeque<Bytes>,
     pub(crate) recv_queue: VecDeque<Bytes>,
@@ -35,7 +41,7 @@ pub struct Connection {
 
 /// Functions for controlling the connection.
 impl Connection {
-    fn new(
+    fn new_outgoing(
         owning_endpoint: Entity,
         remote_address: SocketAddr,
         direction: ConnectionDirection,
@@ -43,6 +49,12 @@ impl Connection {
         Self {
             remote_address,
             congestion: Congestion::default(),
+
+            reliability: ReliablePackets::new(ReliabilityState::new()),
+            orderings: OrderingManager::new(),
+
+            reader: PacketParser::default(),
+            builder: PacketBuilder::default(),
 
             send_queue: VecDeque::with_capacity(16),
             recv_queue: VecDeque::with_capacity(32),
