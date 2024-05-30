@@ -2,13 +2,13 @@ use bytes::Bytes;
 use super::*;
 
 pub(super) struct InitiatorHello {
-    p: ()
+    _hidden: ()
 }
 
 impl InitiatorHello {
     pub fn new() -> Self {
         Self {
-            p: ()
+            _hidden: ()
         }
     }
 }

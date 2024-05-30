@@ -2,13 +2,13 @@ use bytes::Bytes;
 use super::*;
 
 pub(super) struct ListenerHello {
-    p: ()
+    _hidden: ()
 }
 
 impl ListenerHello {
     pub fn new() -> Self {
         Self {
-            p: ()
+            _hidden: ()
         }
     }
 }

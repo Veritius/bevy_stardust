@@ -1,3 +1,3 @@
 pub(super) struct Completed {
-    p: ()
+    _hidden: ()
 }
