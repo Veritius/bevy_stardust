@@ -34,13 +34,15 @@ enum HandshakeState {
     ListenerHello(ListenerHello),
     Completed(Completed),
     Terminated(Terminated),
+
+    // Used for various ownership-related stuff
+    Swapping,
 }
 
 trait Transition {
     type Next;
 
-    #[must_use]
-    fn recv_packet(&mut self, shared: &mut HandshakeShared, reader: Reader) -> bool;
+    fn recv_packet(&mut self, shared: &mut HandshakeShared, reader: Reader);
 
     #[must_use]
     fn poll_send(&mut self, shared: &mut HandshakeShared) -> Option<Bytes>;
@@ -49,7 +51,7 @@ trait Transition {
     fn wants_transition(&self, shared: &HandshakeShared) -> bool;
 
     #[must_use]
-    fn transition(self, shared: &HandshakeShared) -> Result<Self::Next, Terminated>;
+    fn perform_transition(self, shared: &HandshakeShared) -> Result<Self::Next, Terminated>;
 }
 
 #[derive(Bundle)]

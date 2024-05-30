@@ -16,7 +16,7 @@ impl InitiatorHello {
 impl Transition for InitiatorHello {
     type Next = Completed;
 
-    fn recv_packet(&mut self, shared: &mut HandshakeShared, bytes: Reader) -> bool {
+    fn recv_packet(&mut self, shared: &mut HandshakeShared, bytes: Reader) {
         todo!()
     }
 
@@ -28,7 +28,7 @@ impl Transition for InitiatorHello {
         todo!()
     }
 
-    fn transition(self, shared: &HandshakeShared) -> Result<Self::Next, Terminated> {
+    fn perform_transition(self, shared: &HandshakeShared) -> Result<Self::Next, Terminated> {
         todo!()
     }
 }

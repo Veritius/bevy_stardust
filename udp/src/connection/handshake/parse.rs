@@ -1,5 +1,7 @@
+use std::mem::swap;
+
 use unbytes::*;
-use crate::sequences::SequenceId;
+use crate::{connection::handshake::HandshakeShared, sequences::SequenceId};
 use super::{HandshakeState, Handshaking, Transition};
 
 impl Handshaking {
@@ -11,18 +13,51 @@ impl Handshaking {
             },
         };
 
-        match &mut self.state {
+        let mut state = HandshakeState::Swapping;
+        swap(&mut self.state, &mut state);
+
+        #[inline]
+        fn state_recv_packet<T: Transition>(
+            reader: Reader,
+            shared: &mut HandshakeShared,
+            mut state: T,
+            same: impl Fn(T) -> HandshakeState,
+            next: impl Fn(T::Next) -> HandshakeState,
+        ) -> HandshakeState {
+            state.recv_packet(shared, reader);
+            if state.wants_transition(shared) {
+                match state.perform_transition(&shared) {
+                    Ok(state) => next(state),
+                    Err(state) => HandshakeState::Terminated(state),
+                }
+            } else {
+                same(state)
+            }
+        }
+
+        state = match state {
             HandshakeState::InitiatorHello(state) => {
-                todo!()
+                state_recv_packet(reader, &mut self.shared, state,
+                    |state| HandshakeState::InitiatorHello(state),
+                    |state| HandshakeState::Completed(state),
+                )
             },
 
             HandshakeState::ListenerHello(state) => {
-                todo!()
-            },
+                state_recv_packet(reader, &mut self.shared, state,
+                    |state| HandshakeState::ListenerHello(state),
+                    |state| HandshakeState::Completed(state),
+                )
+            }
 
-            HandshakeState::Completed(state) => todo!(),
-            HandshakeState::Terminated(state) => todo!(),
-        }
+            HandshakeState::Completed(_) => state,
+            HandshakeState::Terminated(_) => state,
+
+            HandshakeState::Swapping => unreachable!(),
+        };
+
+        swap(&mut self.state, &mut state);
+        drop(state);
     }
 }
 
