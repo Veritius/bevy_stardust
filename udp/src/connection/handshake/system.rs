@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use bevy_stardust::prelude::*;
 use unbytes::Reader;
 use crate::plugin::PluginConfiguration;
-use self::{codes::HandshakeResponseCode, parse::parse_header, terminated::TerminationReason};
+use self::{codes::HandshakeResponseCode, parse::parse_header, terminated::{TerminationOrigin, TerminationReason}};
 
 use super::*;
 
@@ -24,7 +24,7 @@ pub(crate) fn handshake_polling_system(
             if let Err(error) = parse_header(&mut handshake, &mut reader) {
                 handshake.state = HandshakeState::Terminated(Terminated::from(TerminationReason {
                     code: HandshakeResponseCode::MalformedPacket,
-                    origin: connection.direction(),
+                    origin: TerminationOrigin::Local,
                 }));
             }
 

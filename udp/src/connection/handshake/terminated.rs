@@ -1,4 +1,4 @@
-use super::{codes::HandshakeResponseCode, ConnectionDirection};
+use super::codes::HandshakeResponseCode;
 
 #[derive(Debug)]
 #[repr(transparent)]
@@ -22,5 +22,11 @@ impl From<TerminationReason> for Terminated {
 #[derive(Debug, Clone)]
 pub(super) struct TerminationReason {
     pub code: HandshakeResponseCode,
-    pub origin: ConnectionDirection,
+    pub origin: TerminationOrigin,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(super) enum TerminationOrigin {
+    Local,
+    Remote,
 }

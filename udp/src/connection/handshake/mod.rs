@@ -3,8 +3,7 @@ mod parse;
 mod system;
 
 mod finished;
-mod initiatorhello;
-mod listenerhello;
+mod hello;
 mod terminated;
 
 pub(crate) use system::handshake_polling_system;
@@ -15,7 +14,7 @@ use unbytes::Reader;
 use std::{net::SocketAddr, time::Instant};
 use bevy::prelude::*;
 use crate::prelude::*;
-use self::{finished::Completed, initiatorhello::InitiatorHello, listenerhello::ListenerHello, terminated::Terminated};
+use self::{finished::Completed, hello::{InitiatorHello, ListenerHello}, terminated::{Terminated, TerminationReason}};
 use super::reliability::ReliabilityState;
 
 #[derive(Component)]
@@ -53,6 +52,12 @@ enum TransitionOutcome<T: Transition> {
     None(T),
     Next(T::Next),
     Fail(Terminated),
+}
+
+impl<T: Transition> TransitionOutcome<T> {
+    pub fn terminated(val: TerminationReason) -> Self {
+        Self::Fail(Terminated::from(val))
+    }
 }
 
 #[derive(Bundle)]
