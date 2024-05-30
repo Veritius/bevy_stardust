@@ -1,11 +1,7 @@
-use std::mem::swap;
-
 use bevy::prelude::*;
 use bevy_stardust::prelude::*;
 use unbytes::Reader;
 use crate::plugin::PluginConfiguration;
-use self::{codes::HandshakeResponseCode, parse::parse_header, terminated::{TerminationOrigin, TerminationReason}};
-
 use super::*;
 
 pub(crate) fn handshake_polling_system(
@@ -20,36 +16,13 @@ pub(crate) fn handshake_polling_system(
         while let Some(packet) = connection.recv_queue.pop_front() {
             let mut reader = Reader::new(packet);
 
-            // Try to parse the packet header
-            if let Err(error) = parse_header(&mut handshake, &mut reader) {
-                handshake.state = HandshakeState::Terminated(Terminated::from(TerminationReason {
-                    code: HandshakeResponseCode::MalformedPacket,
-                    origin: TerminationOrigin::Local,
-                }));
-            }
+            // // Read the packet sequence identifier
+            // let seq: SequenceId = reader.read_u16()?.into();
 
-            let mut state = HandshakeState::Swapping;
-            swap(&mut handshake.state, &mut state);
-
-            state = match state {
-                HandshakeState::InitiatorHello(state) => match state.recv_packet(&mut handshake.shared, &mut reader) {
-                    TransitionOutcome::None(state) => HandshakeState::InitiatorHello(state),
-                    TransitionOutcome::Next(state) => HandshakeState::Completed(state),
-                    TransitionOutcome::Fail(state) => HandshakeState::Terminated(state),
-                },
-
-                HandshakeState::ListenerHello(state) => match state.recv_packet(&mut handshake.shared, &mut reader) {
-                    TransitionOutcome::None(state) => HandshakeState::ListenerHello(state),
-                    TransitionOutcome::Next(state) => HandshakeState::Completed(state),
-                    TransitionOutcome::Fail(state) => HandshakeState::Terminated(state),
-                },
-
-                HandshakeState::Completed(_) => state,
-                HandshakeState::Terminated(_) => state,
-                HandshakeState::Swapping => panic!(),
-            };
-
-            swap(&mut handshake.state, &mut state);
+            // // If the packet is too old ignore it
+            // if seq <= this.shared.reliability.remote_sequence {
+            //     return Err(ParseError::Outdated);
+            // }
         }
     });
 }   

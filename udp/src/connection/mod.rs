@@ -31,7 +31,6 @@ pub struct Connection {
     pub(crate) recv_queue: VecDeque<Bytes>,
 
     pub(crate) owning_endpoint: Entity,
-    pub(crate) direction: ConnectionDirection,
     pub(crate) timings: ConnectionTimings,
     pub(crate) statistics: ConnectionStatistics,
 }
@@ -41,7 +40,6 @@ impl Connection {
     fn new(
         owning_endpoint: Entity,
         remote_address: SocketAddr,
-        direction: ConnectionDirection,
     ) -> Self {
         Self {
             remote_address,
@@ -51,7 +49,6 @@ impl Connection {
             recv_queue: VecDeque::with_capacity(32),
 
             owning_endpoint,
-            direction,
             statistics: ConnectionStatistics::default(),
             timings: ConnectionTimings::new(None, None, None),
         }
@@ -63,12 +60,6 @@ impl Connection {
     /// Returns the remote address of the connection.
     pub fn remote_address(&self) -> SocketAddr {
         self.remote_address.clone()
-    }
-
-    /// Returns the direction of the connection.
-    /// See the [`ConnectionDirection`] docs for more information.
-    pub fn direction(&self) -> ConnectionDirection {
-        self.direction.clone()
     }
 
     /// Returns statistics related to the Connection. See [`ConnectionStatistics`] for more.
@@ -99,27 +90,6 @@ impl Connection {
     /// When congestion control is added, this function will be deprecated, and then removed.
     pub fn set_budget(&mut self, budget: usize) {
         self.congestion.set_usr_budget(budget);
-    }
-}
-
-/// The direction of the connection.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Reflect)]
-pub enum ConnectionDirection {
-    /// Acting as a client, listening to a server.
-    Initiator,
-
-    /// Acting as a server, talking to a client.
-    Listener,
-}
-
-impl Neg for ConnectionDirection {
-    type Output = Self;
-
-    fn neg(self) -> Self::Output {
-        match self {
-            ConnectionDirection::Initiator => ConnectionDirection::Listener,
-            ConnectionDirection::Listener => ConnectionDirection::Initiator,
-        }
     }
 }
 

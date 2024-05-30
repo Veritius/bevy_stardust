@@ -1,63 +1,27 @@
 mod codes;
-mod parse;
 mod system;
 
-mod finished;
-mod hello;
-mod terminated;
 
 pub(crate) use system::handshake_polling_system;
 
-use bytes::Bytes;
 use bevy_stardust::connections::NetworkPeer;
-use unbytes::Reader;
 use std::{net::SocketAddr, time::Instant};
 use bevy::prelude::*;
 use crate::prelude::*;
-use self::{finished::Completed, hello::{InitiatorHello, ListenerHello}, terminated::{Terminated, TerminationReason}};
 use super::reliability::ReliabilityState;
 
 #[derive(Component)]
 pub(crate) struct Handshaking {
-    started: Instant,
     state: HandshakeState,
-    shared: HandshakeShared,
-}
-
-struct HandshakeShared {
+    started: Instant,
+    direction: Direction,
     reliability: ReliabilityState,
 }
 
 enum HandshakeState {
-    InitiatorHello(InitiatorHello),
-    ListenerHello(ListenerHello),
-    Completed(Completed),
-    Terminated(Terminated),
-
-    // Used for various ownership-related stuff
-    Swapping,
-}
-
-trait Transition: Sized {
-    type Next;
-
-    #[must_use]
-    fn recv_packet(self, shared: &mut HandshakeShared, reader: &mut Reader) -> TransitionOutcome<Self>;
-
-    #[must_use]
-    fn poll_send(&mut self, shared: &mut HandshakeShared) -> Option<Bytes>;
-}
-
-enum TransitionOutcome<T: Transition> {
-    None(T),
-    Next(T::Next),
-    Fail(Terminated),
-}
-
-impl<T: Transition> TransitionOutcome<T> {
-    pub fn terminated(val: TerminationReason) -> Self {
-        Self::Fail(Terminated::from(val))
-    }
+    Hello,
+    Completed,
+    Terminated,
 }
 
 #[derive(Bundle)]
@@ -76,16 +40,20 @@ impl OutgoingHandshakeBundle {
             connection: Connection::new(
                 owning_endpoint,
                 remote_address, 
-                ConnectionDirection::Initiator,
             ),
             handshake: Handshaking {
+                state: HandshakeState::Hello,
                 started: Instant::now(),
-                state: HandshakeState::InitiatorHello(InitiatorHello::new()),
-                shared: HandshakeShared {
-                    reliability: ReliabilityState::new(),
-                },
+                direction: Direction::Listener,
+                reliability: ReliabilityState::new(),
             },
             peercomp: NetworkPeer::new(),
         }
     }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Direction {
+    Initiator,
+    Listener,
 }
