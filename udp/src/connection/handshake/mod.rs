@@ -1,7 +1,6 @@
 mod codes;
 mod system;
 
-
 pub(crate) use system::handshake_polling_system;
 
 use bevy_stardust::connections::NetworkPeer;
