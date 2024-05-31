@@ -31,7 +31,7 @@ pub(crate) fn handshake_polling_system(
                 Ok(())
             })().is_err() { continue };
 
-            match (handshake.state, handshake.direction) {
+            match (handshake.state.clone(), handshake.direction) {
                 (HandshakeState::Hello, Direction::Initiator) => {
                     let message = match ListenerHello::recv(&mut reader) {
                         Ok(m) => m,
@@ -40,7 +40,10 @@ pub(crate) fn handshake_polling_system(
 
                     match message {
                         ListenerHello::Rejected(rejection) => {
-                            todo!()
+                            handshake.terminate(
+                                rejection.code,
+                                Some(rejection.message),
+                            );
                         },
 
                         ListenerHello::Accepted {
@@ -60,7 +63,10 @@ pub(crate) fn handshake_polling_system(
 
                     match message {
                         InitiatorFinish::Rejected(rejection) => {
-                            todo!()
+                            handshake.terminate(
+                                rejection.code,
+                                Some(rejection.message),
+                            );
                         },
 
                         InitiatorFinish::Accepted {
@@ -71,7 +77,7 @@ pub(crate) fn handshake_polling_system(
                 },
 
                 (HandshakeState::Completed, _) => todo!(),
-                (HandshakeState::Terminated, _) => todo!(),
+                (HandshakeState::Terminated(_), _) => todo!(),
             }
         }
     });

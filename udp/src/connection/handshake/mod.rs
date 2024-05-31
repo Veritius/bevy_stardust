@@ -2,12 +2,14 @@ mod codes;
 mod messages;
 mod system;
 
+use bytes::Bytes;
 pub(crate) use system::handshake_polling_system;
 
 use bevy_stardust::connections::NetworkPeer;
 use std::{net::SocketAddr, time::Instant};
 use bevy::prelude::*;
 use crate::prelude::*;
+use self::codes::HandshakeResponseCode;
 use super::reliability::ReliabilityState;
 
 #[derive(Component)]
@@ -19,11 +21,27 @@ pub(crate) struct Handshaking {
     reliability: ReliabilityState,
 }
 
-#[derive(Clone, Copy)]
+impl Handshaking {
+    fn terminate(
+        &mut self,
+        code: HandshakeResponseCode,
+        reason: Option<Bytes>
+    ) {
+        self.state = HandshakeState::Terminated(Termination { code, reason });
+    }
+}
+
+#[derive(Clone)]
 enum HandshakeState {
     Hello,
     Completed,
-    Terminated,
+    Terminated(Termination),
+}
+
+#[derive(Clone)]
+struct Termination {
+    pub code: HandshakeResponseCode,
+    pub reason: Option<Bytes>,
 }
 
 #[derive(Bundle)]
