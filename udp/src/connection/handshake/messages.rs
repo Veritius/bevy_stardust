@@ -141,11 +141,15 @@ impl HandshakeMessage for InitiatorFinish {
 }
 
 fn ack_mem_to_u16(mem: AckMemory) -> u16 {
-    todo!()
+    let b = mem.into_array();
+    u16::from_be_bytes([b[0], b[1]])
 }
 
 fn u16_to_ack_mem(val: u16) -> AckMemory {
-    todo!()
+    let mut b = [0u8; 16];
+    let k = val.to_be_bytes();
+    [b[0], b[1]] = [k[0], k[1]];
+    AckMemory::from_array(b)
 }
 
 #[derive(Debug)]
