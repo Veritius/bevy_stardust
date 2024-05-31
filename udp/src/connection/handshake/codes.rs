@@ -28,15 +28,6 @@ pub(super) enum HandshakeResponseCode {
     ApplicationCloseEvent = 11,
 }
 
-impl HandshakeResponseCode {
-    pub fn should_respond_on_rejection(&self) -> bool {
-        match self {
-            Self::MalformedPacket => false,
-            _ => true,
-        }
-    }
-}
-
 impl From<u16> for HandshakeResponseCode {
     fn from(value: u16) -> Self {
         use HandshakeResponseCode::*;
