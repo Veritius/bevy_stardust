@@ -18,6 +18,7 @@ pub(crate) struct Handshaking {
     reliability: ReliabilityState,
 }
 
+#[derive(Clone, Copy)]
 enum HandshakeState {
     Hello,
     Completed,
