@@ -2,35 +2,51 @@ mod codes;
 mod messages;
 mod system;
 
+use bytes::Bytes;
+use bevy_stardust::connections::NetworkPeer;
+use std::{net::SocketAddr, time::{Duration, Instant}};
+use bevy::prelude::*;
+use crate::prelude::*;
+use self::codes::HandshakeResponseCode;
+use super::reliability::ReliabilityState;
+
 pub(super) use system::{
     handshake_polling_system,
     handshake_sending_system,
 };
 
-use bytes::Bytes;
-use bevy_stardust::connections::NetworkPeer;
-use std::{net::SocketAddr, time::Instant};
-use bevy::prelude::*;
-use crate::prelude::*;
-use self::codes::HandshakeResponseCode;
-use super::reliability::ReliabilityState;
+const RESEND_TIMEOUT: Duration = Duration::from_millis(500);
 
 #[derive(Component)]
 pub(crate) struct Handshaking {
     state: HandshakeState,
     started: Instant,
     last_sent: Option<Instant>,
+    scflag: bool,
     direction: Direction,
     reliability: ReliabilityState,
 }
 
 impl Handshaking {
+    fn change_state(
+        &mut self,
+        state: HandshakeState,
+    ) {
+        self.state = state;
+        self.scflag = true;
+    }
+
+    fn record_send(&mut self) {
+        self.last_sent = Some(Instant::now());
+        self.scflag = false;
+    }
+
     fn terminate(
         &mut self,
         code: HandshakeResponseCode,
         reason: Option<Bytes>
     ) {
-        self.state = HandshakeState::Terminated(Termination { code, reason });
+        self.change_state(HandshakeState::Terminated(Termination { code, reason }));
     }
 }
 
@@ -68,6 +84,7 @@ impl OutgoingHandshakeBundle {
                 state: HandshakeState::Hello,
                 started: Instant::now(),
                 last_sent: None,
+                scflag: false,
                 direction: Direction::Listener,
                 reliability: ReliabilityState::new(),
             },

@@ -55,7 +55,7 @@ pub(in crate::connection) fn handshake_polling_system(
                             }
 
                             let _ = handshake.reliability.ack_bits(ack_seq, ack_bits, 2);
-                            handshake.state = HandshakeState::Completed;
+                            handshake.change_state(HandshakeState::Completed);
                             break;
                         }
                     }
@@ -78,7 +78,7 @@ pub(in crate::connection) fn handshake_polling_system(
                             ack_bits,
                         } => {
                             let _ = handshake.reliability.ack_bits(ack_seq, ack_bits, 2);
-                            handshake.state = HandshakeState::Completed;
+                            handshake.change_state(HandshakeState::Completed);
                             break;
                         },
                     }
@@ -95,8 +95,49 @@ pub(in crate::connection) fn handshake_polling_system(
 pub(in crate::connection) fn handshake_sending_system(
     config: Res<PluginConfiguration>,
     mut connections: Query<(Entity, &mut Connection, &mut Handshaking)>,
+    commands: ParallelCommands,
 ) {
-    todo!()
+    // Iterate connections in parallel
+    connections.par_iter_mut().for_each(|(entity, mut connection, mut handshake)| {
+        // Calculate whether a message needs to be sent
+        let send_due = {
+            let resend = match handshake.last_sent {
+                Some(v) => { v.elapsed() >= RESEND_TIMEOUT } ,
+                None => true,
+            };
+
+            match (handshake.scflag, resend) {
+                (true, _) => true,
+                (_, v) => v,
+            }
+        };
+
+        // If nothing is due to send, return
+        if !send_due { return }
+
+        // Scratch space for our messaging
+        let mut buf: Vec<u8> = Vec::with_capacity(32);
+
+        match (handshake.state.clone(), handshake.direction) {
+            (HandshakeState::Hello, Direction::Initiator) => {
+                todo!()
+            },
+
+            (HandshakeState::Hello, Direction::Listener) => {
+                todo!()
+            },
+
+            (HandshakeState::Completed, Direction::Initiator) => {
+                todo!()
+            },
+
+            (HandshakeState::Completed, Direction::Listener) => {
+                todo!()
+            },
+
+            (HandshakeState::Terminated(_), _) => todo!(),
+        }
+    });
 }
 
 fn version_pair_check(
