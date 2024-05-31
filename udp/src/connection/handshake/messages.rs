@@ -2,7 +2,7 @@ use std::fmt::Debug;
 use anyhow::bail;
 use bytes::{BufMut, Bytes};
 use unbytes::{EndOfInput, Reader};
-use crate::sequences::SequenceId;
+use crate::{connection::reliability::AckMemory, sequences::SequenceId};
 use super::{codes::HandshakeResponseCode, AppVersion};
 
 static NOT_ENOUGH_SPACE: &str = "Not enough space in buffer";
@@ -42,7 +42,7 @@ pub(super) enum ListenerHello {
         tpt_ver: AppVersion,
         app_ver: AppVersion,
         ack_seq: SequenceId,
-        ack_bits: u16,
+        ack_bits: AckMemory,
     },
 }
 
@@ -61,7 +61,7 @@ impl HandshakeMessage for ListenerHello {
             tpt_ver: AppVersion::from_bytes(reader)?,
             app_ver: AppVersion::from_bytes(reader)?,
             ack_seq: SequenceId::from(reader.read_u16()?),
-            ack_bits: reader.read_u16()?,
+            ack_bits: u16_to_ack_mem(reader.read_u16()?),
         });
     }
 
@@ -83,7 +83,7 @@ impl HandshakeMessage for ListenerHello {
                 b.put(&tpt_ver.to_bytes()[..]);
                 b.put(&app_ver.to_bytes()[..]);
                 b.put_u16(ack_seq.0);
-                b.put_u16(*ack_bits);
+                b.put_u16(ack_mem_to_u16(*ack_bits));
 
                 return Ok(length);
             },
@@ -97,7 +97,7 @@ pub(super) enum InitiatorFinish {
 
     Accepted {
         ack_seq: SequenceId,
-        ack_bits: u16,
+        ack_bits: AckMemory,
     },
 }
 
@@ -114,7 +114,7 @@ impl HandshakeMessage for InitiatorFinish {
 
         return Ok(Self::Accepted {
             ack_seq: SequenceId::from(reader.read_u16()?),
-            ack_bits: reader.read_u16()?,
+            ack_bits: u16_to_ack_mem(reader.read_u16()?),
         });
     }
 
@@ -132,12 +132,20 @@ impl HandshakeMessage for InitiatorFinish {
                 if b.remaining_mut() < length { bail!(NOT_ENOUGH_SPACE); }
 
                 b.put_u16(ack_seq.0);
-                b.put_u16(*ack_bits);
+                b.put_u16(ack_mem_to_u16(*ack_bits));
 
                 return Ok(length);
             },
         }
     }
+}
+
+fn ack_mem_to_u16(mem: AckMemory) -> u16 {
+    todo!()
+}
+
+fn u16_to_ack_mem(val: u16) -> AckMemory {
+    todo!()
 }
 
 #[derive(Debug)]

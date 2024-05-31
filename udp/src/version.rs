@@ -57,6 +57,25 @@ impl AppVersion {
         // Return value
         return bytes;
     }
+
+    pub fn compare(
+        &self,
+        other: &Self,
+        banlist: DeniedMinorVersions,
+    ) -> Result<(), IncompatibilityReason> {
+        use IncompatibilityReason::*;
+        if self.ident != other.ident { return Err(MismatchedIdentifier); }
+        if self.major != other.minor { return Err(MismatchedMajorVersion); }
+        if banlist.contains(&other.minor) { return Err(DeniedMinorVersion); }
+        return Ok(());
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum IncompatibilityReason {
+    MismatchedIdentifier,
+    MismatchedMajorVersion,
+    DeniedMinorVersion,
 }
 
 #[test]
