@@ -1,14 +1,11 @@
 use bevy::prelude::*;
-use bevy_stardust::prelude::*;
 use unbytes::Reader;
 use crate::{plugin::PluginConfiguration, sequences::SequenceId, version::{BANNED_MINOR_VERSIONS, TRANSPORT_VERSION_DATA}};
 use self::messages::*;
 use super::*;
 
-pub(crate) fn handshake_polling_system(
-    registry: Res<ChannelRegistry>,
+pub(in crate::connection) fn handshake_polling_system(
     config: Res<PluginConfiguration>,
-    commands: ParallelCommands,
     mut connections: Query<(Entity, &mut Connection, &mut Handshaking)>,
 ) {
     // Iterate connections in parallel
@@ -93,7 +90,14 @@ pub(crate) fn handshake_polling_system(
             }
         }
     });
-}   
+} 
+
+pub(in crate::connection) fn handshake_sending_system(
+    config: Res<PluginConfiguration>,
+    mut connections: Query<(Entity, &mut Connection, &mut Handshaking)>,
+) {
+    todo!()
+}
 
 fn version_pair_check(
     tpt_ver: AppVersion,

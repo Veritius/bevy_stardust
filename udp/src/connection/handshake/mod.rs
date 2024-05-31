@@ -2,9 +2,12 @@ mod codes;
 mod messages;
 mod system;
 
-use bytes::Bytes;
-pub(crate) use system::handshake_polling_system;
+pub(super) use system::{
+    handshake_polling_system,
+    handshake_sending_system,
+};
 
+use bytes::Bytes;
 use bevy_stardust::connections::NetworkPeer;
 use std::{net::SocketAddr, time::Instant};
 use bevy::prelude::*;
