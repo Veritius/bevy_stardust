@@ -2,6 +2,7 @@ use bevy::prelude::*;
 use bevy_stardust::prelude::*;
 use unbytes::Reader;
 use crate::{plugin::PluginConfiguration, sequences::SequenceId};
+use self::messages::*;
 use super::*;
 
 pub(crate) fn handshake_polling_system(
@@ -31,8 +32,43 @@ pub(crate) fn handshake_polling_system(
             })().is_err() { continue };
 
             match (handshake.state, handshake.direction) {
-                (HandshakeState::Hello, Direction::Initiator) => todo!(),
-                (HandshakeState::Hello, Direction::Listener) => todo!(),
+                (HandshakeState::Hello, Direction::Initiator) => {
+                    let message = match ListenerHello::recv(&mut reader) {
+                        Ok(m) => m,
+                        Err(_) => continue,
+                    };
+
+                    match message {
+                        ListenerHello::Rejected(rejection) => {
+                            todo!()
+                        },
+
+                        ListenerHello::Accepted {
+                            tpt_ver,
+                            app_ver,
+                            ack_seq,
+                            ack_bits,
+                        } => todo!(),
+                    }
+                },
+
+                (HandshakeState::Hello, Direction::Listener) => {
+                    let message = match InitiatorFinish::recv(&mut reader) {
+                        Ok(m) => m,
+                        Err(_) => continue,
+                    };
+
+                    match message {
+                        InitiatorFinish::Rejected(rejection) => {
+                            todo!()
+                        },
+
+                        InitiatorFinish::Accepted {
+                            ack_seq,
+                            ack_bits,
+                        } => todo!(),
+                    }
+                },
 
                 (HandshakeState::Completed, _) => todo!(),
                 (HandshakeState::Terminated, _) => todo!(),

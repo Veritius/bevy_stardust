@@ -8,7 +8,7 @@ mod ordering;
 mod reliability;
 mod timing;
 
-use std::{collections::VecDeque, net::SocketAddr, ops::Neg};
+use std::{collections::VecDeque, net::SocketAddr};
 use bevy::prelude::*;
 use bytes::Bytes;
 use statistics::ConnectionStatistics;

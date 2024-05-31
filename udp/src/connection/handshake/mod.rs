@@ -14,6 +14,7 @@ use super::reliability::ReliabilityState;
 pub(crate) struct Handshaking {
     state: HandshakeState,
     started: Instant,
+    last_sent: Option<Instant>,
     direction: Direction,
     reliability: ReliabilityState,
 }
@@ -45,6 +46,7 @@ impl OutgoingHandshakeBundle {
             handshake: Handshaking {
                 state: HandshakeState::Hello,
                 started: Instant::now(),
+                last_sent: None,
                 direction: Direction::Listener,
                 reliability: ReliabilityState::new(),
             },
