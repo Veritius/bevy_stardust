@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use bytes::BufMut;
 use unbytes::Reader;
 use crate::{plugin::PluginConfiguration, sequences::SequenceId, version::{BANNED_MINOR_VERSIONS, TRANSPORT_VERSION_DATA}};
 use self::messages::*;
@@ -55,6 +56,7 @@ pub(in crate::connection) fn handshake_polling_system(
                             }
 
                             let _ = handshake.reliability.ack_bits(ack_seq, ack_bits, 2);
+                            handshake.reliability.advance();
                             handshake.change_state(HandshakeState::Completed);
                             break;
                         }
@@ -78,6 +80,7 @@ pub(in crate::connection) fn handshake_polling_system(
                             ack_bits,
                         } => {
                             let _ = handshake.reliability.ack_bits(ack_seq, ack_bits, 2);
+                            handshake.reliability.advance();
                             handshake.change_state(HandshakeState::Completed);
                             break;
                         },
@@ -118,25 +121,47 @@ pub(in crate::connection) fn handshake_sending_system(
         // Scratch space for our messaging
         let mut buf: Vec<u8> = Vec::with_capacity(32);
 
+        // Frames are always prefixed with a sequence id
+        buf.put_u16(handshake.reliability.local_sequence.into());
+
         match (handshake.state.clone(), handshake.direction) {
             (HandshakeState::Hello, Direction::Initiator) => {
-                todo!()
+                InitiatorHello {
+                    tpt_ver: TRANSPORT_VERSION_DATA.clone(),
+                    app_ver: config.application_version.clone(),
+                }.send(&mut buf).unwrap();
             },
 
             (HandshakeState::Hello, Direction::Listener) => {
-                todo!()
+                ListenerHello::Accepted {
+                    tpt_ver: TRANSPORT_VERSION_DATA.clone(),
+                    app_ver: config.application_version.clone(),
+                    ack_seq: handshake.reliability.remote_sequence,
+                    ack_bits: handshake.reliability.ack_memory,
+                }.send(&mut buf).unwrap();
             },
 
             (HandshakeState::Completed, Direction::Initiator) => {
-                todo!()
+                InitiatorFinish::Accepted {
+                    ack_seq: handshake.reliability.remote_sequence,
+                    ack_bits: handshake.reliability.ack_memory,
+                }.send(&mut buf).unwrap();
             },
 
-            (HandshakeState::Completed, Direction::Listener) => {
-                todo!()
-            },
+            (HandshakeState::Completed, Direction::Listener) => {},
 
-            (HandshakeState::Terminated(_), _) => todo!(),
+            (HandshakeState::Terminated(termination), _) => {
+                buf.put_u16(termination.code as u16);
+
+                if let Some(reason) = termination.reason {
+                    buf.reserve(reason.len());
+                    buf.put(&reason[..]);
+                }
+            },
         }
+
+        connection.send_queue.push_back(Bytes::from(buf));
+        handshake.last_sent = Some(Instant::now());
     });
 }
 
