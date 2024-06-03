@@ -23,7 +23,7 @@ pub(crate) struct Established {
 
 impl Established {
     pub(in super::super) fn new(
-        reliability: &ReliabilityState,
+        reliability: ReliabilityState,
     ) -> Self {
         Self {
             reliability: ReliablePackets::new(reliability.clone()),

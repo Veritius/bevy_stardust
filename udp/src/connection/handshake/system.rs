@@ -1,8 +1,8 @@
 use bevy::{prelude::*, utils::hashbrown::HashSet};
-use bevy_stardust::connections::{NetworkPeerAddress, NetworkPeerLifestage, NetworkSecurity};
+use bevy_stardust::connections::{NetworkPeerAddress, NetworkPeerLifestage, NetworkSecurity, PeerSendBudget};
 use bytes::BufMut;
 use unbytes::Reader;
-use crate::{connection::PotentialNewPeer, endpoint::ConnectionOwnershipToken, plugin::PluginConfiguration, sequences::SequenceId, version::{BANNED_MINOR_VERSIONS, TRANSPORT_VERSION_DATA}};
+use crate::{connection::{established::Established, PotentialNewPeer}, endpoint::ConnectionOwnershipToken, plugin::PluginConfiguration, sequences::SequenceId, version::{BANNED_MINOR_VERSIONS, TRANSPORT_VERSION_DATA}};
 use self::messages::*;
 use super::*;
 
@@ -53,6 +53,7 @@ pub(in crate::connection) fn potential_incoming_system(
                 reliability,
             },
             NetworkPeer::new(),
+            PeerSendBudget::new(0),
             NetworkPeerLifestage::Handshaking,
             NetworkPeerAddress(event.address),
             NetworkSecurity::Unauthenticated,
@@ -241,23 +242,42 @@ pub(in crate::connection) fn handshake_sending_system(
     });
 }
 
-pub(in crate::connection) fn handshake_closing_system(
+pub(in crate::connection) fn handshake_confirm_system(
     mut commands: Commands,
     mut endpoints: Query<&mut Endpoint>,
     mut connections: Query<(Entity, &Connection, &Handshaking, Option<&mut NetworkPeerLifestage>)>,
 ) {
     for (entity, connection, handshake, lifestage) in connections.iter_mut() {
-        if let HandshakeState::Terminated(termination) = &handshake.state {
-            debug!("Peer {entity:?} failed handshake: {}", termination.code);
-            commands.entity(entity).despawn();
-            
-            if let Some(mut lifestage) = lifestage {
-                *lifestage = NetworkPeerLifestage::Closed;
-            }
+        match &handshake.state {
+            HandshakeState::Completed => {
+                info!("Peer {entity:?} successfully connected");
 
-            if let Ok(mut endpoint) = endpoints.get_mut(connection.owning_endpoint) {
-                endpoint.remove_peer(entity);
-            }
+                commands
+                .entity(entity)
+                .remove::<Handshaking>()
+                .insert((
+                    Established::new(handshake.reliability.clone()),
+                ));
+
+                if let Some(mut lifestage) = lifestage {
+                    *lifestage = NetworkPeerLifestage::Established;
+                }
+            },
+
+            HandshakeState::Terminated(termination) => {
+                debug!("Peer {entity:?} failed handshake: {}", termination.code);
+                commands.entity(entity).despawn();
+                
+                if let Some(mut lifestage) = lifestage {
+                    *lifestage = NetworkPeerLifestage::Closed;
+                }
+
+                if let Ok(mut endpoint) = endpoints.get_mut(connection.owning_endpoint) {
+                    endpoint.remove_peer(entity);
+                }
+            },
+
+            _ => {},
         }
     }
 }
