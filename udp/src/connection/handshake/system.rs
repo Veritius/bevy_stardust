@@ -59,6 +59,7 @@ pub(in crate::connection) fn potential_incoming_system(
         )).id();
 
         // SAFETY: We can guarantee this peer is only added once here since we check earlier
+        debug!("Started handshake with new peer ({:?}) with id {id:?}", event.address);
         let token = unsafe { ConnectionOwnershipToken::new(id) };
         endpoint.add_peer(event.address, token);
     }
@@ -248,7 +249,7 @@ pub(in crate::connection) fn handshake_closing_system(
 ) {
     for (entity, connection, handshake, lifestage) in connections.iter_mut() {
         if let HandshakeState::Terminated(termination) = &handshake.state {
-            debug!("{entity:?} failed handshake: {}", termination.code);
+            debug!("Peer {entity:?} failed handshake: {}", termination.code);
             commands.entity(entity).despawn();
             
             if let Some(mut lifestage) = lifestage {
