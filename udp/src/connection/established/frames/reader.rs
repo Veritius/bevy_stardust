@@ -101,7 +101,7 @@ fn parse_header(
         .map_err(|_| PacketReadError::UnexpectedEnd)?);
 
     // If the packet is flagged reliable, it has a sequence id
-    if flags.any_high(PacketHeaderFlags::RELIABLE) {
+    if flags & PacketHeaderFlags::RELIABLE > 0 {
         let seq = SequenceId(reader.read_u16()
             .map_err(|_| PacketReadError::UnexpectedEnd)?);
         context.reliability.ack_seq(seq);
