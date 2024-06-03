@@ -1,5 +1,6 @@
 pub mod statistics;
 
+mod closing;
 mod congestion;
 mod established;
 mod handshake;
@@ -10,6 +11,7 @@ mod timing;
 use std::{collections::VecDeque, net::SocketAddr};
 use bevy::prelude::*;
 use bytes::Bytes;
+use closing::ClosingManager;
 use statistics::ConnectionStatistics;
 use timing::ConnectionTimings;
 use crate::schedule::*;
@@ -32,6 +34,7 @@ pub(crate) fn add_systems(app: &mut App) {
 pub struct Connection {
     remote_address: SocketAddr,
     congestion: Congestion,
+    closing: ClosingManager,
 
     pub(crate) send_queue: VecDeque<Bytes>,
     pub(crate) recv_queue: VecDeque<Bytes>,
@@ -50,6 +53,7 @@ impl Connection {
         Self {
             remote_address,
             congestion: Congestion::default(),
+            closing: ClosingManager::default(),
 
             send_queue: VecDeque::with_capacity(16),
             recv_queue: VecDeque::with_capacity(32),
@@ -71,6 +75,23 @@ impl Connection {
     /// Returns statistics related to the Connection. See [`ConnectionStatistics`] for more.
     pub fn statistics(&self) -> &ConnectionStatistics {
         &self.statistics
+    }
+}
+
+/// Connection management utilities.
+impl Connection {
+    /// Begins to close the connection.
+    /// Does nothing if the connection is already closing.
+    pub fn close(&mut self, reason: Option<Bytes>) {
+        self.closing.start_close(closing::Origin::Local, reason);
+    }
+
+    /// Terminates the connection immediately, dropping in-flight information.
+    /// This **will** result in data loss and should be used sparingly.
+    /// Consider using [`close`](Self::close) instead.
+    pub fn terminate(&mut self, reason: Option<Bytes>) {
+        self.closing.start_close(closing::Origin::Local, reason);
+        self.closing.finish_close();
     }
 }
 
