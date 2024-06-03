@@ -1,5 +1,4 @@
 use crate::varint::VarInt;
-use super::frames::frames::RecvFrame;
 
 pub(super) enum ControlFrameIdent {
     BeginClose,
