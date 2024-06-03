@@ -3,17 +3,25 @@ use crate::prelude::*;
 use super::*;
 
 pub(in crate::connection) fn established_closing_system(
-    mut connections: Query<(Entity, &Connection, &Established, Option<&mut NetworkPeerLifestage>)>,
+    mut connections: Query<(Entity, &mut Connection, Option<&mut NetworkPeerLifestage>), With<Established>>,
     mut endpoints: Query<&mut Endpoint>,
     mut commands: Commands,
-    mut events: EventWriter<PeerDisconnectedEvent>,
+    mut start_events: EventReader<DisconnectPeerEvent>,
+    mut fin_events: EventWriter<PeerDisconnectedEvent>,
 ) {
-    for (entity, connection, established, lifestage) in connections.iter_mut() {
+    for event in start_events.read() {
+        if let Ok((_entity, mut connection, _lifestage)) = connections.get_mut(event.peer) {
+            connection.closing.begin_local_close(event.reason.clone());
+            if event.force { connection.closing.finish_close(); }
+        }
+    }
+
+    for (entity, connection, lifestage) in connections.iter_mut() {
         if connection.closing.is_closed() {
             info!("Connection {entity:?} closed");
             commands.entity(entity).despawn();
 
-            events.send(PeerDisconnectedEvent {
+            fin_events.send(PeerDisconnectedEvent {
                 peer: entity,
                 reason: connection.closing.reason(),
             });
