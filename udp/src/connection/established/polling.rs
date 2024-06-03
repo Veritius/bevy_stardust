@@ -20,33 +20,20 @@ pub(crate) fn established_polling_system(
         // Some checks to avoid unnecessary work
         if connection.recv_queue.is_empty() { return }
 
-        // Local variables that store fields we swap out
-        let mut recv_queue = VecDeque::new();
-        let mut reliability = ReliablePackets::new(ReliabilityState::new());
-        let mut reader = PacketParser::default();
-
-        // Macro to ensure we swap everything back exactly the same
-        macro_rules! do_swap {
-            () => {
-                swap(&mut connection.recv_queue, &mut recv_queue);
-                swap(&mut established.reliability, &mut reliability);
-                swap(&mut established.reader, &mut reader);
-            };
-        }
-
-        // Swaps to allow us to mutably borrow fields
-        do_swap!();
+        // Reborrows to please the borrow checker
+        let mut connection = &mut *connection;
+        let mut established = &mut *established;
 
         // Context object for the packet reader
         let context = PacketReaderContext {
-            queue: &mut recv_queue,
+            queue: &mut connection.recv_queue,
             config: &config,
-            reliability: &mut reliability,
+            reliability: &mut established.reliability,
         };
 
         // Iterate over all frames
         // This runs until there is no more data to parse
-        let mut iter = reader.iter(context);
+        let mut iter = established.reader.iter(context);
         'frames: loop {
             match iter.next() {
                 // Case 1: Another frame was read
@@ -55,15 +42,11 @@ pub(crate) fn established_polling_system(
                         // Case 1.1: Connection control frame
                         FrameType::Control => handle_control_frame(
                             frame,
-                            &mut connection,
-                            &mut established,
                         ),
 
                         // Case 1.2: Stardust message frame
                         FrameType::Stardust => handle_stardust_frame(
                             frame,
-                            &mut connection,
-                            &mut established,
                             &registry,
                         ),
                     }
@@ -86,25 +69,17 @@ pub(crate) fn established_polling_system(
                 },
             }
         }
-
-        // Swap everything back
-        drop(iter);
-        do_swap!();
     });
 }
 
 fn handle_control_frame(
     frame: RecvFrame,
-    connection: &mut Connection,
-    established: &mut Established,
 ) {
     todo!()
 }
 
 fn handle_stardust_frame(
     frame: RecvFrame,
-    connection: &mut Connection,
-    established: &mut Established,
     channels: &ChannelRegistryInner,
 ) {
     todo!()
