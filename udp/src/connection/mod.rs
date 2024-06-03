@@ -1,6 +1,5 @@
 pub mod statistics;
 
-mod closing;
 mod congestion;
 mod established;
 mod handshake;
