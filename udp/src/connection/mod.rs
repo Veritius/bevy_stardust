@@ -1,5 +1,6 @@
 pub mod statistics;
 
+mod closing;
 mod congestion;
 mod established;
 mod handshake;
@@ -13,7 +14,7 @@ use bytes::Bytes;
 use statistics::ConnectionStatistics;
 use timing::ConnectionTimings;
 use crate::schedule::*;
-use self::congestion::Congestion;
+use self::{closing::CloseRequest, congestion::Congestion};
 
 pub(crate) use handshake::OutgoingHandshakeBundle;
 
@@ -32,6 +33,7 @@ pub(crate) fn add_systems(app: &mut App) {
 pub struct Connection {
     remote_address: SocketAddr,
     congestion: Congestion,
+    closing: CloseRequest,
 
     pub(crate) send_queue: VecDeque<Bytes>,
     pub(crate) recv_queue: VecDeque<Bytes>,
@@ -50,6 +52,7 @@ impl Connection {
         Self {
             remote_address,
             congestion: Congestion::default(),
+            closing: CloseRequest::new(),
 
             send_queue: VecDeque::with_capacity(16),
             recv_queue: VecDeque::with_capacity(32),
@@ -71,6 +74,22 @@ impl Connection {
     /// Returns statistics related to the Connection. See [`ConnectionStatistics`] for more.
     pub fn statistics(&self) -> &ConnectionStatistics {
         &self.statistics
+    }
+}
+
+/// Connection management functions.
+impl Connection {
+    /// Begin to close the connection.
+    /// This is not immediate and some time will be taken to ensure any outstanding data is sent.
+    pub fn close(&mut self, reason: Option<Bytes>) {
+        self.closing.begin_close(reason);
+    }
+
+    /// Close the connection instantly.
+    /// This almost definitely will cause data loss, and will appear like a timeout occurred.
+    pub fn close_hard(&mut self) {
+        self.close(None);
+        self.closing.finish_close();
     }
 }
 
