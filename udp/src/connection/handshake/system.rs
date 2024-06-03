@@ -49,7 +49,7 @@ pub(in crate::connection) fn potential_incoming_system(
                 started: Instant::now(),
                 last_sent: None,
                 scflag: true,
-                direction: Direction::Initiator,
+                direction: Direction::Listener,
                 reliability,
             },
             NetworkPeer::new(),
