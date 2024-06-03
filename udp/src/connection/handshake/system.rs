@@ -1,5 +1,5 @@
 use bevy::{prelude::*, utils::hashbrown::HashSet};
-use bevy_stardust::connections::{NetworkPeerAddress, NetworkPeerLifestage, NetworkSecurity, PeerSendBudget};
+use bevy_stardust::prelude::*;
 use bytes::BufMut;
 use unbytes::Reader;
 use crate::{connection::{established::Established, PotentialNewPeer}, endpoint::ConnectionOwnershipToken, plugin::PluginConfiguration, sequences::SequenceId, version::{BANNED_MINOR_VERSIONS, TRANSPORT_VERSION_DATA}};
@@ -257,6 +257,8 @@ pub(in crate::connection) fn handshake_confirm_system(
                 .remove::<Handshaking>()
                 .insert((
                     Established::new(handshake.reliability.clone()),
+                    NetworkMessages::<Incoming>::new(),
+                    NetworkMessages::<Outgoing>::new(),
                 ));
 
                 if let Some(mut lifestage) = lifestage {
