@@ -201,7 +201,6 @@ pub(in crate::connection) fn handshake_sending_system(
 
         match (handshake.state.clone(), handshake.direction) {
             (HandshakeState::Hello, Direction::Initiator) => {
-                buf.put_u16(HandshakeResponseCode::Continue as u16);
                 InitiatorHello {
                     tpt_ver: TRANSPORT_VERSION_DATA.clone(),
                     app_ver: config.application_version.clone(),
