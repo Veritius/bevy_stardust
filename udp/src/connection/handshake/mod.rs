@@ -86,7 +86,7 @@ impl OutgoingHandshakeBundle {
                 started: Instant::now(),
                 last_sent: None,
                 scflag: false,
-                direction: Direction::Listener,
+                direction: Direction::Initiator,
                 reliability: ReliabilityState::new(),
             },
             peercomp: NetworkPeer::new(),
