@@ -1,9 +1,9 @@
 //! "Peers" aka other computers over the network.
 
-use std::time::Instant;
+use std::{net::SocketAddr, sync::Mutex, time::Instant};
 use bevy::prelude::*;
 
-/// An active connection to a remote peer.
+/// An active connection to a remote peer, as well as additional 
 /// 
 /// The term 'peer' is used interchangeably for any kind of connection to another instance of the application.
 /// If you're writing a star-topology system, you can treat these as servers and clients.
@@ -13,10 +13,11 @@ use bevy::prelude::*;
 /// Instead, it should be managed by transport layer plugins.
 /// 
 /// Entities with this component may also have the following components:
-/// - [`NetworkMessages`](crate::messages::NetworkMessages), relating to messages
-/// - [`NetworkPeerUid`], relating to persistent data
-/// - [`NetworkPeerLifestage`], relating to connection state
-/// - [`NetworkSecurity`](super::security::NetworkSecurity), relating to encryption
+/// - [`NetworkMessages`](crate::messages::NetworkMessages), relating to messages.
+/// - [`NetworkPeerAddress`], relating to IP address data.
+/// - [`NetworkPeerUid`], relating to persistent data.
+/// - [`NetworkPeerLifestage`], relating to connection state.
+/// - [`NetworkSecurity`](super::security::NetworkSecurity), relating to encryption.
 #[derive(Debug, Component, Reflect)]
 #[reflect(Debug, Component)]
 pub struct NetworkPeer {
@@ -29,9 +30,8 @@ pub struct NetworkPeer {
     pub quality: Option<f32>,
 
     /// Round-trip time estimate, in milliseconds.
-    pub ping: u32,
-
-    disconnect_requested: bool,
+    /// `None`  means an estimate is not available.
+    pub ping: Option<u32>,
 }
 
 impl NetworkPeer {
@@ -40,21 +40,8 @@ impl NetworkPeer {
         Self {
             joined: Instant::now(),
             quality: None,
-            ping: 0,
-            disconnect_requested: false,
+            ping: None,
         }
-    }
-
-    /// Signals to the transport layer to disconnect the peer.
-    /// This operation cannot be undone.
-    pub fn disconnect(&mut self) {
-        self.disconnect_requested = true
-    }
-
-    /// Returns `true` if [`disconnect`] has been used.
-    /// This is intended for use by transport layers, and you should use [`NetworkPeerLifestage`] instead.
-    pub fn disconnect_requested(&self) -> bool {
-        self.disconnect_requested
     }
 }
 
@@ -83,6 +70,10 @@ pub enum NetworkPeerLifestage {
     /// The connection is closed, and the entity will soon be despawned automatically.
     Closed,
 }
+
+/// The IP address of a network peer, if it has one.
+#[derive(Component, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct NetworkPeerAddress(pub SocketAddr);
 
 /// A unique identifier for a [`NetworkPeer`], to store persistent data across multiple connections.
 /// This component should only be constructed by the app developer, but can be read by any plugins.
