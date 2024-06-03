@@ -73,23 +73,28 @@ pub(in crate::connection) fn handshake_polling_system(
         // Read packets from the receive queue into the handshaking component
         while let Some(packet) = connection.recv_queue.pop_front() {
             let mut reader = Reader::new(packet);
+            if reader.remaining() < 4 { continue }
 
-            // this is a hideous workaround to use the ? operator
-            // TODO: Replace when try_trait_v2 stabilises
-            if (|| {
-                // Read the packet sequence identifier
-                let seq: SequenceId = reader.read_u16().map_err(|_| ())?.into();
+            // Read the packet sequence identifier
+            let seq: SequenceId = reader.read_u16().unwrap().into();
 
-                // If the packet is too old ignore it
-                if seq <= handshake.reliability.remote_sequence {
-                    return Err(());
-                }
-
-                Ok(())
-            })().is_err() { continue };
+            // Special checks for different packets
+            // Some packets require different handling of their sequence id
+            match (handshake.state.clone(), handshake.direction) {
+                (HandshakeState::Hello, Direction::Initiator) => {},
+                _ => {
+                    // If the packet is too old ignore it
+                    if seq <= handshake.reliability.remote_sequence {
+                        continue
+                    }
+                },
+            }
 
             match (handshake.state.clone(), handshake.direction) {
                 (HandshakeState::Hello, Direction::Initiator) => {
+                    // Update the sequence value
+                    handshake.reliability.remote_sequence = seq;
+
                     let message = match ListenerHello::recv(&mut reader) {
                         Ok(m) => m,
                         Err(_) => continue,
@@ -114,7 +119,6 @@ pub(in crate::connection) fn handshake_polling_system(
                                 break;
                             }
 
-                            handshake.reliability.remote_sequence = ack_seq;
                             let _ = handshake.reliability.ack_bits(ack_seq, ack_bits, 2);
                             handshake.reliability.advance();
                             handshake.change_state(HandshakeState::Completed);
@@ -153,7 +157,7 @@ pub(in crate::connection) fn handshake_polling_system(
             }
         }
     });
-} 
+}
 
 pub(in crate::connection) fn handshake_sending_system(
     config: Res<PluginConfiguration>,
