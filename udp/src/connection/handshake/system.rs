@@ -194,7 +194,7 @@ pub(in crate::connection) fn handshake_sending_system(
         if !send_due { return }
 
         // Scratch space for our messaging
-        let mut buf: Vec<u8> = Vec::with_capacity(32);
+        let mut buf: Vec<u8> = Vec::with_capacity(64);
 
         // Frames are always prefixed with a sequence id
         buf.put_u16(handshake.reliability.local_sequence.into());
