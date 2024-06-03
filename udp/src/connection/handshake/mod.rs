@@ -14,9 +14,11 @@ pub(super) use system::{
     potential_incoming_system,
     handshake_polling_system,
     handshake_sending_system,
+    handshake_closing_system,
 };
 
 const RESEND_TIMEOUT: Duration = Duration::from_millis(500);
+const HANDSHAKE_TIMEOUT: Duration = Duration::from_secs(15);
 
 #[derive(Component)]
 pub(crate) struct Handshaking {

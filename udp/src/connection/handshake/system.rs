@@ -156,13 +156,23 @@ pub(in crate::connection) fn handshake_polling_system(
                 (HandshakeState::Terminated(_), _) => {},
             }
         }
+
+        // Timeout check
+        let timed_out = handshake.started.elapsed() > HANDSHAKE_TIMEOUT;
+        match (timed_out, handshake.state.clone()) {
+            (true, HandshakeState::Completed) => {},
+            (true, HandshakeState::Terminated(_)) => {},
+            (true, _) => {
+                handshake.terminate(HandshakeResponseCode::Unspecified, None);
+            },
+            (false, _) => {},
+        }
     });
 }
 
 pub(in crate::connection) fn handshake_sending_system(
     config: Res<PluginConfiguration>,
     mut connections: Query<(Entity, &mut Connection, &mut Handshaking)>,
-    commands: ParallelCommands,
 ) {
     // Iterate connections in parallel
     connections.par_iter_mut().for_each(|(entity, mut connection, mut handshake)| {
@@ -227,6 +237,27 @@ pub(in crate::connection) fn handshake_sending_system(
         connection.send_queue.push_back(Bytes::from(buf));
         handshake.last_sent = Some(Instant::now());
     });
+}
+
+pub(in crate::connection) fn handshake_closing_system(
+    mut commands: Commands,
+    mut endpoints: Query<&mut Endpoint>,
+    mut connections: Query<(Entity, &Connection, &Handshaking, Option<&mut NetworkPeerLifestage>)>,
+) {
+    for (entity, connection, handshake, lifestage) in connections.iter_mut() {
+        if let HandshakeState::Terminated(termination) = &handshake.state {
+            debug!("{entity:?} failed handshake: {}", termination.code);
+            commands.entity(entity).despawn();
+            
+            if let Some(mut lifestage) = lifestage {
+                *lifestage = NetworkPeerLifestage::Closed;
+            }
+
+            if let Ok(mut endpoint) = endpoints.get_mut(connection.owning_endpoint) {
+                endpoint.remove_peer(entity);
+            }
+        }
+    }
 }
 
 fn version_pair_check(
