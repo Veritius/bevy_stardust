@@ -1,101 +1,71 @@
+use std::{collections::VecDeque, mem::swap};
+
 use bevy::prelude::*;
 use bevy_stardust::prelude::*;
-use crate::{connection::ordering::OrderedMessage, plugin::PluginConfiguration, prelude::*};
-use super::{control::*, frames::{frames::FrameType, reader::PacketReaderContext}, Established};
+use crate::{connection::reliability::{ReliabilityState, ReliablePackets}, plugin::PluginConfiguration, prelude::*};
+use super::{frames::{frames::{FrameType, RecvFrame}, reader::{PacketParser, PacketReaderContext}}, Established};
 
 /// Runs [`poll`](Established::poll) on all [`Established`] entities.
 pub(crate) fn established_polling_system(
     registry: Res<ChannelRegistry>,
     config: Res<PluginConfiguration>,
-    mut connections: Query<(&mut Connection, &mut Established, &mut NetworkMessages<Incoming>)>,
+    mut connections: Query<(Entity, &mut Connection, &mut Established, &mut NetworkMessages<Incoming>)>,
 ) {
     connections.par_iter_mut().for_each(|(
+        entity,
         mut connection,
         mut established,
         mut messages
     )| {
-        // Reborrow stuff to please borrowck
-        let connection = &mut *connection;
-        let established = &mut *established;
+        // Some checks to avoid unnecessary work
+        if connection.recv_queue.is_empty() { return }
+
+        // Local variables that store fields we swap out
+        let mut recv_queue = VecDeque::new();
+        let mut reliability = ReliablePackets::new(ReliabilityState::new());
+        let mut reader = PacketParser::default();
+
+        // Macro to ensure we swap everything back exactly the same
+        macro_rules! do_swap {
+            () => {
+                swap(&mut connection.recv_queue, &mut recv_queue);
+                swap(&mut established.reliability, &mut reliability);
+                swap(&mut established.reader, &mut reader);
+            };
+        }
+
+        // Swaps to allow us to mutably borrow fields
+        do_swap!();
 
         // Context object for the packet reader
         let context = PacketReaderContext {
-            queue: &mut connection.recv_queue,
+            queue: &mut recv_queue,
             config: &config,
-            reliability: &mut established.reliability,
+            reliability: &mut reliability,
         };
 
         // Iterate over all frames
         // This runs until there is no more data to parse
-        let mut iter = established.reader.iter(context);
+        let mut iter = reader.iter(context);
         'frames: loop {
             match iter.next() {
                 // Case 1: Another frame was read
                 Some(Ok(frame)) => {
                     match frame.ftype {
                         // Case 1.1: Connection control frame
-                        FrameType::Control => {
-                            // Unwrapping is fine since the parser checks it
-                            let ident = frame.ident.unwrap();
-
-                            // TODO: Figure out a better solution than this
-                            match ident {
-                                CTRL_ID_CLOSE => { todo!() },
-
-                                // Unrecognised identifier
-                                _ => { established.ice_thickness = established.ice_thickness.saturating_sub(400); }
-                            }
-                        },
+                        FrameType::Control => handle_control_frame(
+                            frame,
+                            &mut connection,
+                            &mut established,
+                        ),
 
                         // Case 1.2: Stardust message frame
-                        FrameType::Stardust => {
-                            // Unwrapping is ok since the presence of ident is checked in the parser
-                            // It's also checked to be within 2^32 (max channel ids) so we can unwrap there too
-                            let channel: ChannelId = frame.ident.unwrap().try_into().unwrap();
-
-                            // Quickly check that the channel exists
-                            let channel_data = match registry.channel_config(channel) {
-                                Some(v) => v,
-                                None => {
-                                    // Channel doesn't exist
-                                    todo!();
-                                },
-                            };
-
-                            match channel_data.ordered != OrderingGuarantee::Unordered {
-                                // Case 1.2.1: Ordered message
-                                true => {
-                                    // Ensure that we have an ordering id to use
-                                    if frame.order.is_none() { todo!() }
-                                    let sequence = frame.order.unwrap();
-
-                                    // Ordering state for this channel
-                                    let ordering = established.orderings.get(channel_data);
-
-                                    // Receive the ordered message on the reader
-                                    if let Some(message) = ordering.recv(OrderedMessage {
-                                        sequence,
-                                        payload: frame.payload,
-                                    }) {
-                                        // A frame being returned means we're up to date
-                                        messages.push(channel, message.payload);
-                                    } else {
-                                        // No frames being returned means we're not up to date
-                                        // but we can still check to see if anything has become available
-                                        if let Some(drain) = ordering.drain_available() {
-                                            for message in drain {
-                                                messages.push(channel, message.payload);
-                                            }
-                                        }
-                                    }
-                                },
-
-                                // Case 1.2.2: Unordered message
-                                false => {
-                                    messages.push(channel, frame.payload);
-                                },
-                            }
-                        },
+                        FrameType::Stardust => handle_stardust_frame(
+                            frame,
+                            &mut connection,
+                            &mut established,
+                            &registry,
+                        ),
                     }
                 },
 
@@ -116,5 +86,26 @@ pub(crate) fn established_polling_system(
                 },
             }
         }
+
+        // Swap everything back
+        drop(iter);
+        do_swap!();
     });
+}
+
+fn handle_control_frame(
+    frame: RecvFrame,
+    connection: &mut Connection,
+    established: &mut Established,
+) {
+    todo!()
+}
+
+fn handle_stardust_frame(
+    frame: RecvFrame,
+    connection: &mut Connection,
+    established: &mut Established,
+    channels: &ChannelRegistryInner,
+) {
+    todo!()
 }
