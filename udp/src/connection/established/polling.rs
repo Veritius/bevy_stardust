@@ -1,9 +1,7 @@
-use std::{collections::VecDeque, mem::swap};
-
 use bevy::prelude::*;
 use bevy_stardust::prelude::*;
-use crate::{connection::reliability::{ReliabilityState, ReliablePackets}, plugin::PluginConfiguration, prelude::*};
-use super::{frames::{frames::{FrameType, RecvFrame}, reader::{PacketParser, PacketReaderContext}}, Established};
+use crate::{plugin::PluginConfiguration, prelude::*};
+use super::{frames::{frames::{FrameType, RecvFrame}, reader::PacketReaderContext}, Established};
 
 /// Runs [`poll`](Established::poll) on all [`Established`] entities.
 pub(crate) fn established_polling_system(
@@ -21,8 +19,8 @@ pub(crate) fn established_polling_system(
         if connection.recv_queue.is_empty() { return }
 
         // Reborrows to please the borrow checker
-        let mut connection = &mut *connection;
-        let mut established = &mut *established;
+        let connection = &mut *connection;
+        let established = &mut *established;
 
         // Context object for the packet reader
         let context = PacketReaderContext {
