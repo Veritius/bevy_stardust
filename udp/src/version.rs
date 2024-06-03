@@ -65,7 +65,7 @@ impl AppVersion {
     ) -> Result<(), IncompatibilityReason> {
         use IncompatibilityReason::*;
         if self.ident != other.ident { return Err(MismatchedIdentifier); }
-        if self.major != other.minor { return Err(MismatchedMajorVersion); }
+        if self.major != other.major { return Err(MismatchedMajorVersion); }
         if banlist.contains(&other.minor) { return Err(DeniedMinorVersion); }
         return Ok(());
     }
