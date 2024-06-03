@@ -15,7 +15,13 @@ impl CloseRequest {
         }
     }
 
-    pub fn begin_close(&mut self, reason: Option<Bytes>) {
+    pub fn begin_local_close(&mut self, reason: Option<Bytes>) {
+        if self.closing { return }
+        self.closing = true;
+        self.reason = reason;
+    }
+
+    pub fn begin_remote_close(&mut self, reason: Option<Bytes>) {
         if self.closing { return }
         self.closing = true;
         self.reason = reason;

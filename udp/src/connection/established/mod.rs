@@ -20,7 +20,6 @@ pub(crate) struct Established {
     reader: PacketParser,
     builder: PacketBuilder,
 
-    state: EstablishedState,
     ice_thickness: u16,
 }
 
@@ -35,15 +34,7 @@ impl Established {
             reader: PacketParser::default(),
             builder: PacketBuilder::default(),
 
-            state: EstablishedState::Open,
             ice_thickness: u16::MAX,
         }
     }
-}
-
-#[derive(Debug, PartialEq, Eq)]
-enum EstablishedState {
-    Open,
-    Closing,
-    Closed,
 }

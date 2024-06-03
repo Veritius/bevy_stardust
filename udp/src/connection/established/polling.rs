@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use bevy_stardust::prelude::*;
 use smallvec::SmallVec;
-use crate::{connection::{established::{control::ControlFrameIdent, EstablishedState}, ordering::OrderingManager}, plugin::PluginConfiguration, prelude::*};
+use crate::{connection::{established::control::ControlFrameIdent, ordering::OrderingManager}, plugin::PluginConfiguration, prelude::*};
 use super::{frames::{frames::{FrameType, RecvFrame}, reader::PacketReaderContext}, Established};
 
 pub(in crate::connection) fn established_reading_system(
@@ -13,7 +13,7 @@ pub(in crate::connection) fn established_reading_system(
         entity,
         mut connection,
         mut established,
-        mut messages
+        mut messages,
     )| {
         // Some checks to avoid unnecessary work
         if connection.recv_queue.is_empty() { return }
@@ -85,20 +85,8 @@ pub(in crate::connection) fn established_reading_system(
 
             use ControlFrameIdent::*;
             match ControlFrameIdent::try_from(ident) {
-                Ok(BeginClose) => {
-                    match established.state {
-                        EstablishedState::Open => {
-                            established.state = EstablishedState::Closing;
-                        },
-
-                        _ => {}, // Do nothing - already closing
-                    }
-                },
-
-                Ok(FullyClose) => {
-                    established.state = EstablishedState::Closed;
-                },
-
+                Ok(BeginClose) => connection.closing.begin_remote_close(Some(frame.payload)),
+                Ok(FullyClose) => connection.closing.finish_close(),
                 Err(_) => { continue; },
             }
         }

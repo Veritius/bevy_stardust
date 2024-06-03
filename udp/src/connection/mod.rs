@@ -82,7 +82,7 @@ impl Connection {
     /// Begin to close the connection.
     /// This is not immediate and some time will be taken to ensure any outstanding data is sent.
     pub fn close(&mut self, reason: Option<Bytes>) {
-        self.closing.begin_close(reason);
+        self.closing.begin_local_close(reason);
     }
 
     /// Close the connection instantly.
