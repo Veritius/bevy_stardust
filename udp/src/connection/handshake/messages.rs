@@ -51,10 +51,7 @@ impl HandshakeMessage for ListenerHello {
         let code: HandshakeResponseCode = reader.read_u16()?.into();
 
         if code != HandshakeResponseCode::Continue {
-            return Ok(Self::Rejected(Rejection {
-                code,
-                message: reader.subreader(reader.remaining()).unwrap().read_to_end(),
-            }));
+            return Ok(Self::Rejected(Rejection { code, message: Bytes::new() }));
         }
 
         return Ok(Self::Accepted {
@@ -106,10 +103,7 @@ impl HandshakeMessage for InitiatorFinish {
         let code: HandshakeResponseCode = reader.read_u16()?.into();
 
         if code != HandshakeResponseCode::Continue {
-            return Ok(Self::Rejected(Rejection {
-                code,
-                message: reader.subreader(reader.remaining()).unwrap().read_to_end(),
-            }));
+            return Ok(Self::Rejected(Rejection { code, message: Bytes::new() }));
         }
 
         return Ok(Self::Accepted {
