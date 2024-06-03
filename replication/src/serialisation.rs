@@ -6,6 +6,7 @@ use anyhow::Result;
 /// Function pointers for serialisation and deserialisation for `T`.
 /// 
 /// For a given `T`, the output of `serialise` put into `deserialise` must result in an identical `T`.
+/// If debug assertions are enabled, this can be checked with the [`verify`](Self::verify) method.
 pub struct SerialisationFunctions<T> {
     /// Function to serialise `T`.
     pub serialise: fn(&T) -> Result<Bytes>,
@@ -41,5 +42,16 @@ mod serde_impls {
                 deserialise: |bytes| bincode::deserialize::<T>(&bytes).map_err(|e| e.into()),
             }
         }
+    }
+}
+
+#[cfg(debug_assertions)]
+impl<T> SerialisationFunctions<T> {
+    /// Testing utility for verifying the requirements of `SerializationFunctions`.
+    /// This function is only available with debug assertions enabled.
+    pub fn verify(&self, input: &T) where T: std::fmt::Debug + PartialEq {
+        let bytes = (self.serialise)(input).unwrap();
+        let output = (self.deserialise)(bytes).unwrap();
+        assert_eq!(input, &output);
     }
 }
