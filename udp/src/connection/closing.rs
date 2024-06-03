@@ -40,7 +40,7 @@ impl ClosingManager {
     }
 
     pub fn inform(&mut self, call: impl FnOnce()) {
-        if self.informed { return }
+        if !self.closing || self.informed { return }
         self.informed = true;
         call()
     }
