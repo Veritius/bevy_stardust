@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use bevy_stardust::prelude::*;
-use crate::{plugin::PluginConfiguration, prelude::*};
+use crate::{connection::ordering::OrderingManager, plugin::PluginConfiguration, prelude::*};
 use super::{frames::{frames::{FrameType, RecvFrame}, reader::PacketReaderContext}, Established};
 
 /// Runs [`poll`](Established::poll) on all [`Established`] entities.
@@ -38,15 +38,28 @@ pub(crate) fn established_polling_system(
                 Some(Ok(frame)) => {
                     match frame.ftype {
                         // Case 1.1: Connection control frame
-                        FrameType::Control => handle_control_frame(
+                        FrameType::Control => match handle_control_frame(
                             frame,
-                        ),
+                        ) {
+                            Ok(_) => {},
+
+                            Err(amt) => {
+                                established.ice_thickness = established.ice_thickness.saturating_sub(amt);
+                            },
+                        },
 
                         // Case 1.2: Stardust message frame
-                        FrameType::Stardust => handle_stardust_frame(
+                        FrameType::Stardust => match handle_stardust_frame(
                             frame,
                             &registry,
-                        ),
+                            &mut established.orderings,
+                        ) {
+                            Ok((channel, payload)) => messages.push(channel, payload),
+
+                            Err(amt) => {
+                                established.ice_thickness = established.ice_thickness.saturating_sub(amt);
+                            },
+                        },
                     }
                 },
 
@@ -72,13 +85,22 @@ pub(crate) fn established_polling_system(
 
 fn handle_control_frame(
     frame: RecvFrame,
-) {
+) -> Result<(), u16> {
     todo!()
 }
 
 fn handle_stardust_frame(
     frame: RecvFrame,
-    channels: &ChannelRegistryInner,
-) {
-    todo!()
+    registry: &ChannelRegistryInner,
+    orderings: &mut OrderingManager,
+) -> Result<(ChannelId, Bytes), u16> {
+    let varint = frame.ident.ok_or(256u16)?;
+    let integer: u32 = varint.try_into().map_err(|_| 128u16)?;
+    let channel: ChannelId = ChannelId::from(integer);
+
+    let channel_data = registry.channel_config(channel).ok_or(256u16)?;
+
+    // TODO: Handle orderings
+
+    return Ok((channel, frame.payload));
 }
