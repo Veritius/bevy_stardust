@@ -1,12 +1,10 @@
 mod control;
 mod frames;
 mod polling;
-mod systems;
 mod writer;
 
 pub(super) use polling::established_reading_system;
 pub(super) use writer::established_writing_system;
-pub(super) use systems::established_closing_system;
 
 use bevy::prelude::*;
 use super::{ordering::OrderingManager, reliability::{ReliabilityState, ReliablePackets}};

@@ -178,17 +178,6 @@ pub(in crate::connection) fn handshake_sending_system(
 ) {
     // Iterate connections in parallel
     connections.par_iter_mut().for_each(|(entity, mut connection, mut handshake)| {
-        // Change state if a close is ordered
-        // This is done here so closes can be used in Update
-        // and peers will not be confirmed if a close is ordered
-        if connection.closing.is_closing() {
-            handshake.terminate(
-                HandshakeResponseCode::ApplicationCloseEvent,
-                connection.closing.reason(),
-            );
-            handshake.reliability.advance();
-        }
-
         // Calculate whether a message needs to be sent
         let send_due = {
             let resend = match handshake.last_sent {
