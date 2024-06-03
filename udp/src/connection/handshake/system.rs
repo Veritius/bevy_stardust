@@ -1,9 +1,68 @@
-use bevy::prelude::*;
+use bevy::{prelude::*, utils::hashbrown::HashSet};
+use bevy_stardust::connections::{NetworkPeerAddress, NetworkPeerLifestage, NetworkSecurity};
 use bytes::BufMut;
 use unbytes::Reader;
-use crate::{plugin::PluginConfiguration, sequences::SequenceId, version::{BANNED_MINOR_VERSIONS, TRANSPORT_VERSION_DATA}};
+use crate::{connection::PotentialNewPeer, endpoint::ConnectionOwnershipToken, plugin::PluginConfiguration, sequences::SequenceId, version::{BANNED_MINOR_VERSIONS, TRANSPORT_VERSION_DATA}};
 use self::messages::*;
 use super::*;
+
+pub(in crate::connection) fn potential_incoming_system(
+    config: Res<PluginConfiguration>,
+    mut commands: Commands,
+    mut endpoints: Query<&mut Endpoint>,
+    mut events: EventReader<PotentialNewPeer>,
+) {
+    let mut already_heard = HashSet::new();
+    for event in events.read() {
+        // Simple checks to verify validity of message
+        // Prevents bunched-up handshake packets from adding multiple connection entities
+        // If multiple connection entities are added, UB will occur due to data races
+        if event.payload.len() < 34 { continue }
+        if already_heard.contains(&event.address) { continue; }
+        already_heard.insert(event.address);
+
+        // Parse their message. We can unwrap since we checked length before.
+        let mut reader = Reader::new(event.payload.clone());
+        let seq_idt: SequenceId = reader.read_u16().unwrap().into();
+        let hello = InitiatorHello::recv(&mut reader).unwrap();
+
+        // Get the endpoint that sent this event
+        let mut endpoint = endpoints.get_mut(event.endpoint).unwrap();
+
+        // Check if their version is valid, if not, reject them
+        if let Err(code) = version_pair_check(hello.tpt_ver, hello.app_ver, &config) {
+            let mut buf = Vec::with_capacity(2);
+            Rejection { code, message: Bytes::new() }.send(&mut buf).unwrap();
+            endpoint.outgoing_pkts.push((event.address, Bytes::from(buf)));
+            continue;
+        }
+
+        // Set up reliability
+        let mut reliability = ReliabilityState::new();
+        reliability.remote_sequence = seq_idt;
+
+        // Add the connection entity
+        let id = commands.spawn((
+            Connection::new(event.endpoint, event.address),
+            Handshaking {
+                state: HandshakeState::Hello,
+                started: Instant::now(),
+                last_sent: None,
+                scflag: true,
+                direction: Direction::Initiator,
+                reliability,
+            },
+            NetworkPeer::new(),
+            NetworkPeerLifestage::Handshaking,
+            NetworkPeerAddress(event.address),
+            NetworkSecurity::Unauthenticated,
+        )).id();
+
+        // SAFETY: We can guarantee this peer is only added once here since we check earlier
+        let token = unsafe { ConnectionOwnershipToken::new(id) };
+        endpoint.add_peer(event.address, token);
+    }
+}
 
 pub(in crate::connection) fn handshake_polling_system(
     config: Res<PluginConfiguration>,
