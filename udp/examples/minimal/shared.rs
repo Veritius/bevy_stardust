@@ -35,9 +35,9 @@ pub fn setup_app() -> App {
     app.add_plugins(UdpTransportPlugin::balanced(AppVersion {
         // These values are irrelevant since the minimal example never interfaces with an older version of itself.
         // If you're making a real app, read the NetworkVersionData documentation to understand the purpose of this.
-        ident: 0x0,
-        major: 0x0,
-        minor: 0x0,
+        ident: 0x4AB448A3AA560E6B,
+        major: 0x4C604148,
+        minor: 0x9B0BC4C3,
     }, &[]));
 
     app.add_systems(Update, send_and_recv_system);
