@@ -1,10 +1,10 @@
 use bevy::prelude::*;
 use bevy_stardust::prelude::*;
-use crate::{connection::ordering::OrderingManager, plugin::PluginConfiguration, prelude::*};
-use super::{control::handle_control_frame, frames::{frames::{FrameType, RecvFrame}, reader::PacketReaderContext}, Established};
+use smallvec::SmallVec;
+use crate::{connection::{established::{control::ControlFrameIdent, EstablishedState}, ordering::OrderingManager}, plugin::PluginConfiguration, prelude::*};
+use super::{frames::{frames::{FrameType, RecvFrame}, reader::PacketReaderContext}, Established};
 
-/// Runs [`poll`](Established::poll) on all [`Established`] entities.
-pub(crate) fn established_polling_system(
+pub(in crate::connection) fn established_reading_system(
     registry: Res<ChannelRegistry>,
     config: Res<PluginConfiguration>,
     mut connections: Query<(Entity, &mut Connection, &mut Established, &mut NetworkMessages<Incoming>)>,
@@ -29,6 +29,9 @@ pub(crate) fn established_polling_system(
             reliability: &mut established.reliability,
         };
 
+        // Storage for control frames, so we can iterate later on
+        let mut control_frames: SmallVec<[RecvFrame; 2]> = SmallVec::new();
+
         // Iterate over all frames
         // This runs until there is no more data to parse
         let mut iter = established.reader.iter(context);
@@ -38,15 +41,7 @@ pub(crate) fn established_polling_system(
                 Some(Ok(frame)) => {
                     match frame.ftype {
                         // Case 1.1: Connection control frame
-                        FrameType::Control => match handle_control_frame(
-                            frame,
-                        ) {
-                            Ok(_) => {},
-
-                            Err(amt) => {
-                                established.ice_thickness = established.ice_thickness.saturating_sub(amt);
-                            },
-                        },
+                        FrameType::Control => control_frames.push(frame),
 
                         // Case 1.2: Stardust message frame
                         FrameType::Stardust => match handle_stardust_frame(
@@ -78,6 +73,33 @@ pub(crate) fn established_polling_system(
                 None => {
                     break 'frames;
                 },
+            }
+        }
+
+        // Drain the control frames from the vec and handle them
+        for frame in control_frames.drain(..) {
+            let ident = match frame.ident {
+                Some(ident) => ident,
+                None => { continue },
+            };
+
+            use ControlFrameIdent::*;
+            match ControlFrameIdent::try_from(ident) {
+                Ok(BeginClose) => {
+                    match established.state {
+                        EstablishedState::Open => {
+                            established.state = EstablishedState::Closing;
+                        },
+
+                        _ => {}, // Do nothing - already closing
+                    }
+                },
+
+                Ok(FullyClose) => {
+                    established.state = EstablishedState::Closed;
+                },
+
+                Err(_) => { continue; },
             }
         }
     });

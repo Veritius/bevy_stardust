@@ -8,7 +8,7 @@ use crate::prelude::*;
 use crate::varint::VarInt;
 use super::Established;
 
-pub(crate) fn established_writing_system(
+pub(in crate::connection) fn established_writing_system(
     registry: Res<ChannelRegistry>,
     config: Res<PluginConfiguration>,
     mut connections: Query<(&mut Connection, &mut Established, &NetworkMessages<Outgoing>)>,

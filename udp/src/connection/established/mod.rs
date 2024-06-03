@@ -1,10 +1,12 @@
 mod control;
 mod frames;
 mod polling;
+mod systems;
 mod writer;
 
-pub(crate) use polling::established_polling_system;
-pub(crate) use writer::established_writing_system;
+pub(super) use polling::established_reading_system;
+pub(super) use writer::established_writing_system;
+pub(super) use systems::established_closing_system;
 
 use bevy::prelude::*;
 use super::{ordering::OrderingManager, reliability::{ReliabilityState, ReliablePackets}};
@@ -18,6 +20,7 @@ pub(crate) struct Established {
     reader: PacketParser,
     builder: PacketBuilder,
 
+    state: EstablishedState,
     ice_thickness: u16,
 }
 
@@ -32,7 +35,15 @@ impl Established {
             reader: PacketParser::default(),
             builder: PacketBuilder::default(),
 
+            state: EstablishedState::Open,
             ice_thickness: u16::MAX,
         }
     }
+}
+
+#[derive(Debug, PartialEq, Eq)]
+enum EstablishedState {
+    Open,
+    Closing,
+    Closed,
 }

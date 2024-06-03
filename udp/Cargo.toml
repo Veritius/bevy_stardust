@@ -16,6 +16,7 @@ bevy_stardust = { version = "0.6", path = "../stardust", default-features = fals
 bytes = "1.5.0"
 unbytes = { version = "0.3", features = ["std"] } # matches bytes
 thread_local = "1.1.4" # matches bevy
+smallvec = "1.11.1"
 fastrand = "2"
 tracing = "0.1"
 anyhow = "1"

@@ -23,7 +23,7 @@ pub(crate) fn add_systems(app: &mut App) {
     app.add_systems(PostUpdate, handshake::handshake_sending_system.in_set(PostUpdateSet::HandshakeSend));
     app.add_systems(PostUpdate, handshake::handshake_confirm_system.in_set(PostUpdateSet::CloseConnections));
 
-    app.add_systems(PreUpdate, established::established_polling_system.in_set(PreUpdateSet::TickEstablished));
+    app.add_systems(PreUpdate, established::established_reading_system.in_set(PreUpdateSet::TickEstablished));
     app.add_systems(PostUpdate, established::established_writing_system.in_set(PostUpdateSet::FramePacking));
 }
 
