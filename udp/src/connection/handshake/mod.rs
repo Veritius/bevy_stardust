@@ -11,6 +11,7 @@ use self::codes::HandshakeResponseCode;
 use super::reliability::ReliabilityState;
 
 pub(super) use system::{
+    potential_incoming_system,
     handshake_polling_system,
     handshake_sending_system,
 };

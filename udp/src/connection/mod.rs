@@ -13,12 +13,15 @@ use bevy::prelude::*;
 use bytes::Bytes;
 use statistics::ConnectionStatistics;
 use timing::ConnectionTimings;
+use crate::schedule::*;
 use self::congestion::Congestion;
 
 pub(crate) use handshake::OutgoingHandshakeBundle;
 
 pub(crate) fn add_systems(app: &mut App) {
-
+    app.add_systems(PreUpdate, handshake::potential_incoming_system.in_set(PreUpdateSet::HandleUnknown));
+    app.add_systems(Update, handshake::handshake_polling_system.in_set(UpdateSet::TickHandshaking));
+    app.add_systems(PostUpdate, handshake::handshake_sending_system.in_set(PostUpdateSet::HandshakeSend));
 }
 
 /// An existing UDP connection.
