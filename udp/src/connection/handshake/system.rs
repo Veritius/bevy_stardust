@@ -77,6 +77,12 @@ pub(in crate::connection) fn handshake_polling_system(
             // this is a hideous workaround to use the ? operator
             // TODO: Replace when try_trait_v2 stabilises
             if (|| {
+                // Don't run this check in this specific case
+                match (handshake.state.clone(), handshake.direction) {
+                    (HandshakeState::Hello, Direction::Initiator) => return Ok(()),
+                    _ => {},
+                }
+
                 // Read the packet sequence identifier
                 let seq: SequenceId = reader.read_u16().map_err(|_| ())?.into();
 
@@ -114,6 +120,7 @@ pub(in crate::connection) fn handshake_polling_system(
                                 break;
                             }
 
+                            handshake.reliability.remote_sequence = ack_seq;
                             let _ = handshake.reliability.ack_bits(ack_seq, ack_bits, 2);
                             handshake.reliability.advance();
                             handshake.change_state(HandshakeState::Completed);
