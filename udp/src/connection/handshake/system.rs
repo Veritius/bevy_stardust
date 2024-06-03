@@ -200,6 +200,7 @@ pub(in crate::connection) fn handshake_sending_system(
 
         match (handshake.state.clone(), handshake.direction) {
             (HandshakeState::Hello, Direction::Initiator) => {
+                buf.put_u16(HandshakeResponseCode::Continue as u16);
                 InitiatorHello {
                     tpt_ver: TRANSPORT_VERSION_DATA.clone(),
                     app_ver: config.application_version.clone(),
@@ -207,6 +208,7 @@ pub(in crate::connection) fn handshake_sending_system(
             },
 
             (HandshakeState::Hello, Direction::Listener) => {
+                buf.put_u16(HandshakeResponseCode::Continue as u16);
                 ListenerHello::Accepted {
                     tpt_ver: TRANSPORT_VERSION_DATA.clone(),
                     app_ver: config.application_version.clone(),
@@ -216,6 +218,7 @@ pub(in crate::connection) fn handshake_sending_system(
             },
 
             (HandshakeState::Completed, Direction::Initiator) => {
+                buf.put_u16(HandshakeResponseCode::Continue as u16);
                 InitiatorFinish::Accepted {
                     ack_seq: handshake.reliability.remote_sequence,
                     ack_bits: handshake.reliability.ack_memory,
@@ -226,7 +229,6 @@ pub(in crate::connection) fn handshake_sending_system(
 
             (HandshakeState::Terminated(termination), _) => {
                 buf.put_u16(termination.code as u16);
-
                 if let Some(reason) = termination.reason {
                     buf.reserve(reason.len());
                     buf.put(&reason[..]);
