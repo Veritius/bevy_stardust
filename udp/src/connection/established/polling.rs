@@ -1,8 +1,8 @@
 use bevy::prelude::*;
 use bevy_stardust::prelude::*;
 use smallvec::SmallVec;
-use crate::{connection::{established::control::ControlFrameIdent, ordering::OrderingManager}, plugin::PluginConfiguration, prelude::*};
-use super::{frames::{frames::{FrameType, RecvFrame}, reader::PacketReaderContext}, Established};
+use crate::{connection::ordering::OrderingManager, plugin::PluginConfiguration, prelude::*};
+use super::{control::{ControlFrame, ControlFrameIdent}, frames::{frames::{FrameType, RecvFrame}, reader::PacketReaderContext}, Established};
 
 pub(in crate::connection) fn established_reading_system(
     registry: Res<ChannelRegistry>,
@@ -29,9 +29,6 @@ pub(in crate::connection) fn established_reading_system(
             reliability: &mut established.reliability,
         };
 
-        // Storage for control frames, so we can iterate later on
-        let mut control_frames: SmallVec<[RecvFrame; 2]> = SmallVec::new();
-
         // Iterate over all frames
         // This runs until there is no more data to parse
         let mut iter = established.reader.iter(context);
@@ -41,7 +38,27 @@ pub(in crate::connection) fn established_reading_system(
                 Some(Ok(frame)) => {
                     match frame.ftype {
                         // Case 1.1: Connection control frame
-                        FrameType::Control => control_frames.push(frame),
+                        FrameType::Control => {
+                            // All control frames have an identifying value
+                            if frame.ident.is_none() {
+                                established.ice_thickness = established.ice_thickness.saturating_sub(512);
+                                continue;
+                            }
+
+                            // Push the control frame to the queue
+                            let ident = frame.ident.unwrap();
+                            established.cframes.push(ControlFrame {
+                                payload: frame.payload,
+                                ident: match ControlFrameIdent::try_from(ident) {
+                                    Ok(f) => f,
+                                    Err(_) => {
+                                        // Control frame had an invalid ident
+                                        established.ice_thickness = established.ice_thickness.saturating_sub(512);
+                                        continue;
+                                    },
+                                },
+                            })
+                        },
 
                         // Case 1.2: Stardust message frame
                         FrameType::Stardust => match handle_stardust_frame(
@@ -73,21 +90,6 @@ pub(in crate::connection) fn established_reading_system(
                 None => {
                     break 'frames;
                 },
-            }
-        }
-
-        // Drain the control frames from the vec and handle them
-        for frame in control_frames.drain(..) {
-            let ident = match frame.ident {
-                Some(ident) => ident,
-                None => { continue },
-            };
-
-            use ControlFrameIdent::*;
-            match ControlFrameIdent::try_from(ident) {
-                Ok(BeginClose) => todo!(),
-                Ok(FullyClose) => todo!(),
-                Err(_) => { continue; },
             }
         }
     });

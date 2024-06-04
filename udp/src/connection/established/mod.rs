@@ -4,6 +4,7 @@ mod frames;
 mod polling;
 mod writer;
 
+use control::ControlFrame;
 pub(super) use polling::established_reading_system;
 pub(super) use writer::established_writing_system;
 pub(super) use closing::{
@@ -24,6 +25,7 @@ pub(crate) struct Established {
 
     reader: PacketParser,
     builder: PacketBuilder,
+    cframes: Vec<ControlFrame>,
 
     ice_thickness: u16,
 }
@@ -38,6 +40,7 @@ impl Established {
 
             reader: PacketParser::default(),
             builder: PacketBuilder::default(),
+            cframes: Vec::with_capacity(8),
 
             ice_thickness: u16::MAX,
         }
