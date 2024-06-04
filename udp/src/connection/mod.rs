@@ -30,7 +30,6 @@ pub(crate) fn add_systems(app: &mut App) {
     app.add_systems(PreUpdate, established::established_reading_system.in_set(PreUpdateSet::TickEstablished));
 
     app.add_systems(PostUpdate, established::established_close_events_system);
-    app.add_systems(PostUpdate, established::established_close_frames_system.before(established::established_writing_system));
     app.add_systems(PostUpdate, established::established_writing_system.in_set(PostUpdateSet::FramePacking));
     app.add_systems(PostUpdate, established::established_close_despawn_system.in_set(PostUpdateSet::CloseConnections));
 }

@@ -1,30 +1,29 @@
-use std::time::Duration;
+use std::time::Instant;
 use bevy::ecs::entity::EntityHashSet;
 use bevy_stardust::prelude::*;
+use control::ControlFrameIdent;
+use frames::frames::{FrameFlags, FrameType, SendFrame};
 use crate::prelude::*;
 use super::*;
 
-#[derive(Debug, Component)]
+#[derive(Debug)]
 pub(in crate::connection) struct Closing {
     finished: bool,
     informed: bool,
     origin: CloseOrigin,
     reason: Option<Bytes>,
-    timeout: Duration,
 }
 
 impl Closing {
     pub(super) fn new(
         origin: CloseOrigin,
         reason: Option<Bytes>,
-        timeout: Duration,
     ) -> Self {
         Self {
             finished: false,
             informed: false,
             origin,
             reason,
-            timeout,
         }
     }
 }
@@ -41,7 +40,6 @@ pub(in crate::connection) struct DisconnectEstablishedPeerEvent {
 }
 
 pub(in crate::connection) fn established_close_events_system(
-    mut commands: Commands,
     mut transport_events: EventReader<DisconnectEstablishedPeerEvent>,
     mut stardust_events: EventReader<DisconnectPeerEvent>,
     mut connections: Query<(Entity, &mut Established, Option<&mut NetworkPeerLifestage>), With<Connection>>,
@@ -55,23 +53,26 @@ pub(in crate::connection) fn established_close_events_system(
         // The error case means that the entity is a network peer we don't control
         // Or, the peer entity was spuriously deleted without going through the right steps
         if let Ok((entity, mut established, lifestage)) = connections.get_mut(event.peer) {
-            commands.entity(entity).insert(Closing::new(
-                CloseOrigin::Local,
-                event.reason.clone(),
-                Duration::from_secs(5),
-            ));
+            if established.closing.is_some() { continue } // Already closing
+            debug!("Closing connection with {entity:?}");
+
+            established.closing = Some(Closing::new(CloseOrigin::Local, event.reason.clone()));
+            established.builder.put(SendFrame {
+                priority: u32::MAX,
+                time: Instant::now(),
+                flags: FrameFlags::IDENTIFIED,
+                ftype: FrameType::Control,
+                reliable: true,
+                order: None,
+                ident: Some(ControlFrameIdent::BeginClose.into()),
+                payload: Bytes::new(),
+            });
 
             if let Some(mut lifestage) = lifestage {
                 *lifestage = NetworkPeerLifestage::Closing;
             }
         }
     }
-}
-
-pub(in crate::connection) fn established_close_frames_system(
-    mut connections: Query<(Entity, &mut Established, &mut Closing)>,
-) {
-
 }
 
 pub(in crate::connection) fn established_close_despawn_system(
