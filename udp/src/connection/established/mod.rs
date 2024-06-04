@@ -1,12 +1,16 @@
+mod closing;
 mod control;
 mod frames;
 mod polling;
-mod systems;
 mod writer;
 
-pub(super) use systems::established_events_system;
 pub(super) use polling::established_reading_system;
 pub(super) use writer::established_writing_system;
+pub(super) use closing::{
+    established_close_events_system,
+    established_close_frames_system,
+    established_close_despawn_system,
+};
 
 use bevy::prelude::*;
 use super::{ordering::OrderingManager, reliability::{ReliabilityState, ReliablePackets}};
@@ -20,6 +24,7 @@ pub(crate) struct Established {
     reader: PacketParser,
     builder: PacketBuilder,
 
+    closing: bool,
     ice_thickness: u16,
 }
 
@@ -34,6 +39,7 @@ impl Established {
             reader: PacketParser::default(),
             builder: PacketBuilder::default(),
 
+            closing: false,
             ice_thickness: u16::MAX,
         }
     }
