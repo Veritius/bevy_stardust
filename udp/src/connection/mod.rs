@@ -20,6 +20,7 @@ pub(crate) use handshake::OutgoingHandshakeBundle;
 pub(crate) fn add_systems(app: &mut App) {
     app.add_systems(PreUpdate, handshake::potential_incoming_system.in_set(PreUpdateSet::HandleUnknown));
     app.add_systems(Update, handshake::handshake_polling_system.in_set(UpdateSet::TickHandshaking));
+    app.add_systems(PostUpdate, handshake::handshake_events_system.before(handshake::handshake_sending_system));
     app.add_systems(PostUpdate, handshake::handshake_sending_system.in_set(PostUpdateSet::HandshakeSend));
     app.add_systems(PostUpdate, handshake::handshake_confirm_system.in_set(PostUpdateSet::CloseConnections));
 

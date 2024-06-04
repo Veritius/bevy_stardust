@@ -172,6 +172,30 @@ pub(in crate::connection) fn handshake_polling_system(
     });
 }
 
+pub(in crate::connection) fn handshake_events_system(
+    mut events: EventReader<DisconnectPeerEvent>,
+    mut connections: Query<(&mut Handshaking, Option<&mut NetworkPeerLifestage>), With<Connection>>,
+) {
+    for event in events.read() {
+        // The error case means that the entity is a network peer we don't yet control
+        if let Ok((mut handshaking, lifestage)) = connections.get_mut(event.peer) {
+            match handshaking.state {
+                HandshakeState::Terminated(_) => {}, // Do nothing, already closing
+                _ => {
+                    handshaking.state = HandshakeState::Terminated(Termination {
+                        code: HandshakeResponseCode::ApplicationCloseEvent,
+                        reason: event.reason.clone(),
+                    });
+
+                    if let Some(mut lifestage) = lifestage {
+                        *lifestage = NetworkPeerLifestage::Closing;
+                    }
+                },
+            }
+        }
+    }
+}
+
 pub(in crate::connection) fn handshake_sending_system(
     config: Res<PluginConfiguration>,
     mut connections: Query<(Entity, &mut Connection, &mut Handshaking)>,

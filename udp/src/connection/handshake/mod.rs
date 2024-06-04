@@ -13,6 +13,7 @@ use super::reliability::ReliabilityState;
 pub(super) use system::{
     potential_incoming_system,
     handshake_polling_system,
+    handshake_events_system,
     handshake_sending_system,
     handshake_confirm_system,
 };
