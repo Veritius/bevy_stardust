@@ -60,6 +60,10 @@ pub(in crate::connection) fn established_close_events_system(
                 event.reason.clone(),
                 Duration::from_secs(5),
             ));
+
+            if let Some(mut lifestage) = lifestage {
+                *lifestage = NetworkPeerLifestage::Closing;
+            }
         }
     }
 }
