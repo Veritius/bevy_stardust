@@ -7,6 +7,7 @@ mod writer;
 pub(super) use polling::established_reading_system;
 pub(super) use writer::established_writing_system;
 pub(super) use closing::{
+    DisconnectEstablishedPeerEvent,
     established_close_events_system,
     established_close_frames_system,
     established_close_despawn_system,
@@ -24,7 +25,6 @@ pub(crate) struct Established {
     reader: PacketParser,
     builder: PacketBuilder,
 
-    closing: bool,
     ice_thickness: u16,
 }
 
@@ -39,7 +39,6 @@ impl Established {
             reader: PacketParser::default(),
             builder: PacketBuilder::default(),
 
-            closing: false,
             ice_thickness: u16::MAX,
         }
     }

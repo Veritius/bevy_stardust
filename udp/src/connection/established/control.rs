@@ -1,4 +1,10 @@
+use bytes::Bytes;
 use crate::varint::VarInt;
+
+pub(super) struct ControlFrame {
+    pub ident: ControlFrameIdent,
+    pub payload: Bytes
+}
 
 pub(super) enum ControlFrameIdent {
     BeginClose,
