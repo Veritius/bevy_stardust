@@ -177,7 +177,7 @@ pub(in crate::connection) fn handshake_events_system(
     mut connections: Query<(&mut Handshaking, Option<&mut NetworkPeerLifestage>), With<Connection>>,
 ) {
     for event in events.read() {
-        // The error case means that the entity is a network peer we don't yet control
+        // The error case means that the entity is a network peer we don't control
         if let Ok((mut handshaking, lifestage)) = connections.get_mut(event.peer) {
             match handshaking.state {
                 HandshakeState::Terminated(_) => {}, // Do nothing, already closing
