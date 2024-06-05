@@ -28,23 +28,17 @@ pub(crate) fn add_system(app: &mut App) {
 /// Removing this component will not inform clients, and they will eventually time out.
 /// Any information from the client that hasn't been received will never be received.
 /// Instead of removing this component, consider using the [`close`](Self::close) method.
-#[derive(Component, Reflect)]
-#[reflect(from_reflect = false)]
+#[derive(Component)]
 pub struct Endpoint {
-    #[reflect(ignore)]
     udp_socket: UdpSocket,
-
-    #[reflect(ignore)]
     connections: HashMap<SocketAddr, ConnectionOwnershipToken>,
 
-    // Outgoing packets that aren't attached to a peer.
-    #[reflect(ignore)]
-    pub(crate) outgoing_pkts: Vec<(SocketAddr, Bytes)>,
-
-    pub(crate) statistics: EndpointStatistics,
     state: EndpointState,
-
     has_ever_had_peer: bool,
+
+    // Outgoing packets that aren't attached to a peer.
+    pub(crate) outgoing_pkts: Vec<(SocketAddr, Bytes)>,
+    pub(crate) statistics: EndpointStatistics,
 
     /// Whether or not to accept new incoming connections on this endpoint.
     pub listening: bool,
