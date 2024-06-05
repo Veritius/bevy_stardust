@@ -8,10 +8,10 @@ use super::*;
 
 #[derive(Debug)]
 pub(in crate::connection) struct Closing {
-    finished: bool,
-    informed: bool,
-    origin: CloseOrigin,
-    reason: Option<Bytes>,
+    pub finished: bool,
+    pub informed: bool,
+    pub origin: CloseOrigin,
+    pub reason: Option<Bytes>,
 }
 
 impl Closing {
@@ -76,7 +76,29 @@ pub(in crate::connection) fn established_close_events_system(
 }
 
 pub(in crate::connection) fn established_close_despawn_system(
-
+    mut commands: Commands,
+    mut connections: Query<(Entity, &Established, Option<&mut NetworkPeerLifestage>)>,
+    mut events: EventWriter<PeerDisconnectedEvent>,
 ) {
+    for (peer, established, lifestage) in connections.iter_mut() {
+        let reason = match &established.closing {
+            Some(r) => {
+                if !r.finished { continue }
+                r.reason.clone()
+            },
+            None => { continue },
+        };
 
+        // At this point, we know they're finished
+
+        info!("Peer {peer:?} disconnected");
+
+        commands.entity(peer).despawn();
+
+        if let Some(mut lifestage) = lifestage {
+            *lifestage = NetworkPeerLifestage::Closed;
+        }
+
+        events.send(PeerDisconnectedEvent { peer, reason });
+    }
 }
