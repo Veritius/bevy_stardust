@@ -1,20 +1,25 @@
+use std::time::Instant;
 use bevy::prelude::*;
 use bevy_stardust::prelude::*;
-use crate::{connection::{ordering::OrderedMessage, packets::{frames::FrameType, reader::PacketReaderContext}}, plugin::PluginConfiguration, prelude::*};
-use super::{control::*, Established};
+use smallvec::SmallVec;
+use crate::{connection::{established::{closing::{CloseOrigin, Closing}, control::ControlFrameIdent, frames::frames::{FrameFlags, SendFrame}}, ordering::OrderingManager}, plugin::PluginConfiguration, prelude::*};
+use super::{frames::{frames::{FrameType, RecvFrame}, reader::PacketReaderContext}, Established};
 
-/// Runs [`poll`](Established::poll) on all [`Established`] entities.
-pub(crate) fn established_polling_system(
+pub(in crate::connection) fn established_reading_system(
     registry: Res<ChannelRegistry>,
     config: Res<PluginConfiguration>,
-    mut connections: Query<(&mut Connection, &mut Established, &mut NetworkMessages<Incoming>)>,
+    mut connections: Query<(Entity, &mut Connection, &mut Established, &mut NetworkMessages<Incoming>)>,
 ) {
     connections.par_iter_mut().for_each(|(
+        entity,
         mut connection,
         mut established,
-        mut messages
+        mut messages,
     )| {
-        // Reborrow stuff to please borrowck
+        // Some checks to avoid unnecessary work
+        if connection.recv_queue.is_empty() { return }
+
+        // Reborrows to please the borrow checker
         let connection = &mut *connection;
         let established = &mut *established;
 
@@ -25,6 +30,9 @@ pub(crate) fn established_polling_system(
             reliability: &mut established.reliability,
         };
 
+        // Storage for control frames, so we can iterate later on
+        let mut control_frames: SmallVec<[RecvFrame; 2]> = SmallVec::new();
+
         // Iterate over all frames
         // This runs until there is no more data to parse
         let mut iter = established.reader.iter(context);
@@ -34,67 +42,19 @@ pub(crate) fn established_polling_system(
                 Some(Ok(frame)) => {
                     match frame.ftype {
                         // Case 1.1: Connection control frame
-                        FrameType::Control => {
-                            // Unwrapping is fine since the parser checks it
-                            let ident = frame.ident.unwrap();
-
-                            // TODO: Figure out a better solution than this
-                            match ident {
-                                CTRL_ID_CLOSE => { todo!() },
-
-                                // Unrecognised identifier
-                                _ => { established.ice_thickness = established.ice_thickness.saturating_sub(400); }
-                            }
-                        },
+                        FrameType::Control => control_frames.push(frame),
 
                         // Case 1.2: Stardust message frame
-                        FrameType::Stardust => {
-                            // Unwrapping is ok since the presence of ident is checked in the parser
-                            // It's also checked to be within 2^32 (max channel ids) so we can unwrap there too
-                            let channel: ChannelId = frame.ident.unwrap().try_into().unwrap();
+                        FrameType::Stardust => match handle_stardust_frame(
+                            frame,
+                            &registry,
+                            &mut established.orderings,
+                        ) {
+                            Ok((channel, payload)) => messages.push(channel, payload),
 
-                            // Quickly check that the channel exists
-                            let channel_data = match registry.channel_config(channel) {
-                                Some(v) => v,
-                                None => {
-                                    // Channel doesn't exist
-                                    todo!();
-                                },
-                            };
-
-                            match channel_data.ordered != OrderingGuarantee::Unordered {
-                                // Case 1.2.1: Ordered message
-                                true => {
-                                    // Ensure that we have an ordering id to use
-                                    if frame.order.is_none() { todo!() }
-                                    let sequence = frame.order.unwrap();
-
-                                    // Ordering state for this channel
-                                    let ordering = established.orderings.get(channel_data);
-
-                                    // Receive the ordered message on the reader
-                                    if let Some(message) = ordering.recv(OrderedMessage {
-                                        sequence,
-                                        payload: frame.payload,
-                                    }) {
-                                        // A frame being returned means we're up to date
-                                        messages.push(channel, message.payload);
-                                    } else {
-                                        // No frames being returned means we're not up to date
-                                        // but we can still check to see if anything has become available
-                                        if let Some(drain) = ordering.drain_available() {
-                                            for message in drain {
-                                                messages.push(channel, message.payload);
-                                            }
-                                        }
-                                    }
-                                },
-
-                                // Case 1.2.2: Unordered message
-                                false => {
-                                    messages.push(channel, frame.payload);
-                                },
-                            }
+                            Err(amt) => {
+                                established.ice_thickness = established.ice_thickness.saturating_sub(amt);
+                            },
                         },
                     }
                 },
@@ -116,5 +76,85 @@ pub(crate) fn established_polling_system(
                 },
             }
         }
+
+        // Drain the control frames from the vec and handle them
+        // TODO: Write a better handling system for control frames
+        for frame in control_frames.drain(..) {
+            let ident = match frame.ident {
+                Some(ident) => ident,
+                None => { continue },
+            };
+
+            use ControlFrameIdent::*;
+            match ControlFrameIdent::try_from(ident) {
+                Ok(BeginClose) => {
+                    match &mut established.closing {
+                        Some(closing) => {
+                            // Set to informed
+                            closing.informed = true;
+                        },
+
+                        None => {
+                            // Set the peer to closing
+                            established.closing = Some(Closing {
+                                finished: false,
+                                informed: true,
+                                origin: CloseOrigin::Remote,
+                                reason: match frame.payload.len() {
+                                    0 => None,
+                                    _ => Some(frame.payload),
+                                }
+                            });
+                        },
+                    }
+
+                    established.builder.put(SendFrame {
+                        priority: u32::MAX,
+                        time: Instant::now(),
+                        flags: FrameFlags::IDENTIFIED,
+                        ftype: FrameType::Control,
+                        reliable: false,
+                        order: None,
+                        ident: Some(ControlFrameIdent::FullyClose.into()),
+                        payload: Bytes::new(),
+                    });
+                },
+
+                Ok(FullyClose) => {
+                    match &mut established.closing {
+                        Some(closing) => {
+                            closing.finished = true;
+                        },
+
+                        None => {
+                            established.closing = Some(Closing {
+                                finished: true,
+                                informed: true,
+                                origin: CloseOrigin::Remote,
+                                reason: None,
+                            });
+                        }
+                    }
+                },
+
+                Err(_) => { continue; },
+            }
+        }
     });
+}
+
+fn handle_stardust_frame(
+    frame: RecvFrame,
+    registry: &ChannelRegistryInner,
+    orderings: &mut OrderingManager,
+) -> Result<(ChannelId, Bytes), u16> {
+    let varint = frame.ident.ok_or(256u16)?;
+    let integer: u32 = varint.try_into().map_err(|_| 128u16)?;
+    let channel: ChannelId = ChannelId::from(integer);
+
+    let channel_data = registry.channel_config(channel).ok_or(256u16)?;
+
+    // TODO: Handle orderings
+
+    return Ok((channel, frame.payload));
 }

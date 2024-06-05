@@ -1,7 +1,7 @@
 use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4, ToSocketAddrs};
-use anyhow::Result;
+use anyhow::{Context, Result};
 use bevy::{prelude::*, ecs::{entity::Entities, system::SystemParam}};
-use crate::{connection::OutgoingHandshake, endpoint::{ConnectionOwnershipToken, Endpoint}};
+use crate::{connection::OutgoingHandshakeBundle, endpoint::{ConnectionOwnershipToken, Endpoint}};
 
 /// A SystemParam that lets you create [`Endpoints`](Endpoint) and open outgoing [`Connections`](Connection).
 #[derive(SystemParam)]
@@ -42,7 +42,8 @@ impl UdpManager<'_, '_> {
         address: impl ToSocketAddrs,
     ) -> Result<Endpoint> {
         // Resolve address and create endpoint
-        let endpoint = Endpoint::bind(resolve_address(address)?)?;
+        let endpoint = Endpoint::bind(resolve_address(address)?)
+            .context("Failed to create a new Endpoint")?;
         let address = endpoint.address();
 
         // Log endpoint creation
@@ -58,7 +59,8 @@ impl UdpManager<'_, '_> {
         address: impl ToSocketAddrs,
         endpoint: Entity,
     ) -> Result<Entity> {
-        let mut endpoint_ref = self.endpoints.get_mut(endpoint)?;
+        let mut endpoint_ref = self.endpoints.get_mut(endpoint)
+            .context("Endpoint wasn't available to query. Maybe it was still in a command buffer.")?;
 
         Self::open_connection_inner(
             &mut self.commands,
@@ -78,7 +80,7 @@ impl UdpManager<'_, '_> {
         let address = resolve_address(address)?;
 
         // Spawn connection entity
-        let id = commands.spawn(OutgoingHandshake::new(endpoint_id, address)).id();
+        let id = commands.spawn(OutgoingHandshakeBundle::new(endpoint_id, address)).id();
 
         // SAFETY: Commands generates a unique ID concurrently, so this is fine.
         let token = unsafe { ConnectionOwnershipToken::new(id) };

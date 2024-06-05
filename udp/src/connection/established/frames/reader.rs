@@ -2,13 +2,14 @@ use std::collections::VecDeque;
 use bytes::Bytes;
 use tracing::error;
 use unbytes::Reader;
-use crate::{connection::{packets::header::PacketHeaderFlags, reliability::{AckMemory, ReliablePackets}}, plugin::PluginConfiguration, sequences::SequenceId, varint::VarInt};
+use crate::{connection::reliability::{AckMemory, ReliablePackets}, plugin::PluginConfiguration, sequences::SequenceId, varint::VarInt};
+use super::flags::PacketHeaderFlags;
 use super::frames::{FrameFlags, FrameType, RecvFrame};
 
 /// Parses incoming packets into an iterator of `Frame` objects.
-pub(crate) struct PacketReader {}
+pub(crate) struct PacketParser {}
 
-impl Default for PacketReader {
+impl Default for PacketParser {
     fn default() -> Self {
         Self {
 
@@ -16,7 +17,7 @@ impl Default for PacketReader {
     }
 }
 
-impl PacketReader {
+impl PacketParser {
     #[must_use]
     pub fn iter<'a>(&'a mut self, context: PacketReaderContext<'a>) -> PacketReaderIter<'a> {
         PacketReaderIter { inner: self, current: None, context }
@@ -32,7 +33,7 @@ pub(crate) struct PacketReaderContext<'a> {
 /// Dropping this type may cause data loss.
 /// Use [`is_safe_to_drop`](Self::is_safe_to_drop) to check if you can drop this without data loss.
 pub(crate) struct PacketReaderIter<'a> {
-    inner: &'a mut PacketReader,
+    inner: &'a mut PacketParser,
     current: Option<Reader>,
     context: PacketReaderContext<'a>,
 }
@@ -100,7 +101,7 @@ fn parse_header(
         .map_err(|_| PacketReadError::UnexpectedEnd)?);
 
     // If the packet is flagged reliable, it has a sequence id
-    if flags.any_high(PacketHeaderFlags::RELIABLE) {
+    if flags & PacketHeaderFlags::RELIABLE > 0 {
         let seq = SequenceId(reader.read_u16()
             .map_err(|_| PacketReadError::UnexpectedEnd)?);
         context.reliability.ack_seq(seq);
@@ -126,9 +127,10 @@ fn parse_frame(
         .into();
 
     // Parse the frame header type
-    let ftype = reader.read_u8()
-        .map_err(|_| PacketReadError::UnexpectedEnd)?;
-    let ftype = FrameType::try_from(ftype)
+    let ftype: FrameType = reader
+        .read_u8()
+        .map_err(|_| PacketReadError::UnexpectedEnd)?
+        .try_into()
         .map_err(|_| PacketReadError::InvalidFrameType)?;
 
     // Get the frame channel id if present
@@ -138,31 +140,12 @@ fn parse_frame(
             .map_err(|_| PacketReadError::InvalidFrameIdent)?),
     };
 
-    // At the moment, all frame types require an associated ident
-    // We check this here, but later on a better check must be added
-    if ident.is_none() {
-        return Err(PacketReadError::InvalidFrameIdent);
-    }
-
     // Get the frame channel ordering if present
     let order = match flags.any_high(FrameFlags::ORDERED) {
         false => None,
         true => Some(reader.read_u16()
             .map_err(|_| PacketReadError::UnexpectedEnd)?.into()),
     };
-
-    // There are extra constraints for Stardust messages
-    if ftype == FrameType::Stardust {
-        match ident {
-            // Stardust messages only have 2^32 possible channels
-            Some(x) if u64::from(x) > u32::MAX as u64 => {
-                return Err(PacketReadError::InvalidFrameIdent);
-            },
-
-            // All checks passed, do nothing.
-            _ => {},
-        }
-    }
 
     // Read the length of the packet
     let len: usize = VarInt::read(reader)

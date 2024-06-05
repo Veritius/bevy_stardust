@@ -1,6 +1,8 @@
+mod receiving;
+mod sending;
 mod systems;
+
 pub(crate) mod statistics;
-pub(crate) use systems::*;
 
 use std::{collections::HashMap, net::{SocketAddr, UdpSocket}};
 use anyhow::Result;
@@ -8,6 +10,18 @@ use bevy::prelude::*;
 use bytes::Bytes;
 use tracing::warn;
 use statistics::EndpointStatistics;
+use crate::schedule::*;
+
+pub(crate) fn add_system(app: &mut App) {
+    app.add_systems(PreUpdate, receiving::io_receiving_system
+        .in_set(PreUpdateSet::PacketRead));
+
+    app.add_systems(PostUpdate, sending::io_sending_system
+        .in_set(PostUpdateSet::PacketSend));
+
+    app.add_systems(PostUpdate, systems::close_endpoints_system
+        .in_set(PostUpdateSet::CloseEndpoints));
+}
 
 /// An endpoint, which is used for I/O.
 /// 
@@ -18,19 +32,19 @@ use statistics::EndpointStatistics;
 #[reflect(from_reflect = false)]
 pub struct Endpoint {
     #[reflect(ignore)]
-    pub(crate) udp_socket: UdpSocket,
+    udp_socket: UdpSocket,
 
     #[reflect(ignore)]
-    pub(crate) connections: HashMap<SocketAddr, ConnectionOwnershipToken>,
+    connections: HashMap<SocketAddr, ConnectionOwnershipToken>,
 
     // Outgoing packets that aren't attached to a peer.
     #[reflect(ignore)]
     pub(crate) outgoing_pkts: Vec<(SocketAddr, Bytes)>,
 
     pub(crate) statistics: EndpointStatistics,
-    pub(crate) state: EndpointState,
+    state: EndpointState,
 
-    pub(crate) has_ever_had_peer: bool,
+    has_ever_had_peer: bool,
 
     /// Whether or not to accept new incoming connections on this endpoint.
     pub listening: bool,
@@ -83,6 +97,10 @@ impl Endpoint {
         } else {
             return None;
         }
+    }
+
+    pub(crate) fn peer_map(&self) -> &HashMap<SocketAddr, ConnectionOwnershipToken> {
+        &self.connections
     }
 
     /// Marks the endpoint for closure.

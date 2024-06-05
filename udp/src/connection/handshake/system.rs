@@ -1,526 +1,338 @@
-use std::{collections::{HashMap, VecDeque}, net::SocketAddr, time::{Duration, Instant}};
-use bevy::{ecs::entity::Entities, prelude::*};
+use bevy::{prelude::*, utils::hashbrown::HashSet};
 use bevy_stardust::prelude::*;
-use bytes::{Bytes, BytesMut};
+use bytes::BufMut;
 use unbytes::Reader;
-use crate::{
-    appdata::{
-        NetworkVersionData,
-        BANNED_MINOR_VERSIONS,
-        TRANSPORT_VERSION_DATA
-    }, connection::{
-        closing::Closing, established::Established, handshake::{
-            packets::{
-                ClientHelloPacket,
-                ClosingPacket,
-                HandshakePacket,
-                HandshakePacketHeader,
-                HandshakeParsingResponse
-            },
-            HandshakeState
-        }, reliability::{AckMemory, ReliabilityState}, Connection, PotentialNewPeer
-    }, endpoint::ConnectionOwnershipToken, plugin::PluginConfiguration, prelude::*
-};
-use super::{codes::HandshakeResponseCode, packets::{ClientFinalisePacket, ServerHelloPacket}, HandshakeFailureReason};
-use super::Handshaking;
+use crate::{connection::{established::Established, PotentialNewPeer}, endpoint::ConnectionOwnershipToken, plugin::PluginConfiguration, sequences::SequenceId, version::{BANNED_MINOR_VERSIONS, TRANSPORT_VERSION_DATA}};
+use self::messages::*;
+use super::*;
 
-const RESEND_TIMEOUT: Duration = Duration::from_secs(1);
-
-pub(crate) fn handshake_polling_system(
-    registry: Res<ChannelRegistry>,
+pub(in crate::connection) fn potential_incoming_system(
     config: Res<PluginConfiguration>,
-    commands: ParallelCommands,
+    mut commands: Commands,
+    mut endpoints: Query<&mut Endpoint>,
+    mut events: EventReader<PotentialNewPeer>,
+) {
+    let mut already_heard = HashSet::new();
+    for event in events.read() {
+        // Simple checks to verify validity of message
+        // Prevents bunched-up handshake packets from adding multiple connection entities
+        // If multiple connection entities are added, UB will occur due to data races
+        if event.payload.len() < 34 { continue }
+        if already_heard.contains(&event.address) { continue; }
+        already_heard.insert(event.address);
+
+        // Parse their message. We can unwrap since we checked length before.
+        let mut reader = Reader::new(event.payload.clone());
+        let seq_idt: SequenceId = reader.read_u16().unwrap().into();
+        let hello = InitiatorHello::recv(&mut reader).unwrap();
+
+        // Get the endpoint that sent this event
+        let mut endpoint = endpoints.get_mut(event.endpoint).unwrap();
+
+        // Check if their version is valid, if not, reject them
+        if let Err(code) = version_pair_check(hello.tpt_ver, hello.app_ver, &config) {
+            let mut buf = Vec::with_capacity(2);
+            Rejection { code, message: Bytes::new() }.send(&mut buf).unwrap();
+            endpoint.outgoing_pkts.push((event.address, Bytes::from(buf)));
+            continue;
+        }
+
+        // Set up reliability
+        let mut reliability = ReliabilityState::new();
+        reliability.remote_sequence = seq_idt;
+
+        // Add the connection entity
+        let id = commands.spawn((
+            Connection::new(event.endpoint, event.address),
+            Handshaking {
+                state: HandshakeState::Hello,
+                started: Instant::now(),
+                last_sent: None,
+                scflag: true,
+                direction: Direction::Listener,
+                reliability,
+            },
+            NetworkPeer::new(),
+            PeerSendBudget::new(0),
+            NetworkPeerLifestage::Handshaking,
+            NetworkPeerAddress(event.address),
+            NetworkSecurity::Unauthenticated,
+        )).id();
+
+        // SAFETY: We can guarantee this peer is only added once here since we check earlier
+        debug!("Started handshake with new peer ({:?}) with id {id:?}", event.address);
+        let token = unsafe { ConnectionOwnershipToken::new(id) };
+        endpoint.add_peer(event.address, token);
+    }
+}
+
+pub(in crate::connection) fn handshake_polling_system(
+    config: Res<PluginConfiguration>,
     mut connections: Query<(Entity, &mut Connection, &mut Handshaking)>,
 ) {
     // Iterate connections in parallel
     connections.par_iter_mut().for_each(|(entity, mut connection, mut handshake)| {
-        'outer: { match &handshake.state {
-            // Sending ClientHelloPackets to the remote peer and waiting for a ServerHelloPacket
-            HandshakeState::ClientHello => {
-                // Read any incoming packets
-                while let Some(packet) = connection.recv_queue.pop_front() {
-                    let mut reader = Reader::new(packet);
+        // Read packets from the receive queue into the handshaking component
+        while let Some(packet) = connection.recv_queue.pop_front() {
+            let mut reader = Reader::new(packet);
+            if reader.remaining() < 4 { continue }
 
-                    // Try to read the header before anything else
-                    let header = match HandshakePacketHeader::from_bytes(&mut reader) {
-                        Ok(val) => val,
-                        Err(_) => { continue; }, // Couldn't parse header, ignore this packet.
-                    };
+            // Read the packet sequence identifier
+            let seq: SequenceId = reader.read_u16().unwrap().into();
 
-                    // Check if this is an old packet, ignore if so
-                    if header.sequence.0 <= handshake.reliability.remote_sequence.0 {
-                        tracing::trace!("Ignored outdated packet: seq_id {}, remote {}", header.sequence, handshake.reliability.remote_sequence);
-                        continue;
+            // Special checks for different packets
+            // Some packets require different handling of their sequence id
+            match (handshake.state.clone(), handshake.direction) {
+                (HandshakeState::Hello, Direction::Initiator) => {},
+                _ => {
+                    // If the packet is too old ignore it
+                    if seq <= handshake.reliability.remote_sequence {
+                        continue
                     }
+                },
+            }
 
-                    // Try to parse the packet as a ServerHelloPacket, the next packet in the sequence
-                    let packet = match ServerHelloPacket::from_bytes(&mut reader) {
-                        HandshakeParsingResponse::Continue(val) => val,
-                        HandshakeParsingResponse::WeRejected(code) => {
-                            // Set handshake state to failed
-                            handshake.state = HandshakeFailureReason::WeRejected { code, message: None }.into();
+            match (handshake.state.clone(), handshake.direction) {
+                (HandshakeState::Hello, Direction::Initiator) => {
+                    // Update the sequence value
+                    handshake.reliability.remote_sequence = seq;
 
-                            // Check if we ought to send a response packet
-                            if !code.should_respond_on_rejection() { break; }
-
-                            // Send a packet informing them of our denial
-                            send_close_packet(&mut connection.send_queue, &mut handshake.reliability, code, None);
-
-                            // We're done
-                            break 'outer;
-                        },
-                        HandshakeParsingResponse::TheyRejected(code) => {
-                            // Read any additional data as a message
-                            let message = reader.read_to_end();
-                            let message = match message.len() {
-                                0 => None,
-                                _ => Some(message),
-                            };
-
-                            // Set handshake state to failed
-                            handshake.state = HandshakeFailureReason::TheyRejected { code, message }.into();
-
-                            // We're done
-                            break 'outer;
-                        },
+                    let message = match ListenerHello::recv(&mut reader) {
+                        Ok(m) => m,
+                        Err(_) => continue,
                     };
 
-                    // Update reliability
-                    handshake.reliability.ack_seq(header.sequence);
-                    let _ = handshake.reliability.ack_bits(
-                        packet.reliability_ack,
-                        rel_bitfield_16_to_128(packet.reliability_bits),
-                        2
-                    );
+                    match message {
+                        ListenerHello::Rejected(rejection) => {
+                            handshake.terminate(
+                                rejection.code,
+                                Some(rejection.message),
+                            ); break;
+                        },
 
-                    // Check transport and application versions
-                    for (us, them, banlist, is_app) in [
-                        (&TRANSPORT_VERSION_DATA, &packet.transport, BANNED_MINOR_VERSIONS, false),
-                        (&config.application_version.as_nvd(), &packet.application, config.application_version.banlist, true),
-                    ] {
-                        // Check the transport version
-                        match check_identity_match(us, them, banlist, is_app) {
-                            Ok(_) => {},
-                            Err(code) => {
-                                // Set handshake state to failed
-                                handshake.state = HandshakeFailureReason::WeRejected { code, message: None }.into();
-
-                                // Send a packet informing them of our denial
-                                send_close_packet(&mut connection.send_queue, &mut handshake.reliability, code, None);
-
-                                // We're done
-                                break 'outer;
+                        ListenerHello::Accepted {
+                            tpt_ver,
+                            app_ver,
+                            ack_seq,
+                            ack_bits,
+                        } => {
+                            if let Err(code) = version_pair_check(tpt_ver, app_ver, &config) {
+                                handshake.terminate(code, None);
+                                break;
                             }
+
+                            let _ = handshake.reliability.ack_bits(ack_seq, ack_bits, 2);
+                            handshake.reliability.advance();
+                            handshake.change_state(HandshakeState::Completed);
+                            break;
                         }
                     }
+                },
 
-                    // Respond with a ClientFinalisePacket
-                    handshake.reliability.advance();
-                    let r_header = handshake.reliability.clone();
-                    let mut buf = BytesMut::with_capacity(6);
-                    HandshakePacketHeader { sequence: r_header.local_sequence }.write_bytes(&mut buf);
-                    ClientFinalisePacket {
-                        reliability_ack: r_header.remote_sequence,
-                        reliability_bits: rel_bitfield_128_to_16(r_header.ack_memory.into_array()),
-                    }.write_bytes(&mut buf);
-                    connection.send_queue.push_back(buf.freeze());
-
-                    // Mark as finalised
-                    handshake.state = HandshakeState::Finished;
-                    break;
-                }
-
-                // Check if we need to send a packet
-                if timeout_check(connection.timings.last_sent, RESEND_TIMEOUT) {
-                    let mut buf = BytesMut::with_capacity(36);
-                    let header = handshake.reliability.clone();
-                    HandshakePacketHeader { sequence: header.local_sequence }.write_bytes(&mut buf);
-                    ClientHelloPacket {
-                        transport: TRANSPORT_VERSION_DATA.clone(),
-                        application: config.application_version.as_nvd(),
-                    }.write_bytes(&mut buf);
-                    connection.send_queue.push_back(buf.freeze());
-                }
-            }
-
-            // Sending ServerHelloPackets to the remote peer and waiting for a ClientFinalisePacket
-            HandshakeState::ServerHello => {
-                // Read any incoming packets
-                while let Some(packet) = connection.recv_queue.pop_front() {
-                    let mut reader = Reader::new(packet);
-
-                    // Try to read the header before anything else
-                    let header = match HandshakePacketHeader::from_bytes(&mut reader) {
-                        Ok(val) => val,
-                        Err(_) => { continue; }, // Couldn't parse header, ignore this packet.
+                (HandshakeState::Hello, Direction::Listener) => {
+                    let message = match InitiatorFinish::recv(&mut reader) {
+                        Ok(m) => m,
+                        Err(_) => continue,
                     };
 
-                    // Check if this is an old packet, ignore if so
-                    if header.sequence.0 <= handshake.reliability.remote_sequence.0 {
-                        tracing::trace!("Ignored outdated packet: seq_id {}, remote {}", header.sequence, handshake.reliability.remote_sequence);
-                        continue;
-                    }
-
-                    // Try to parse the packet as a ClientFinalisePacket, the next packet in the sequence
-                    let packet = match ClientFinalisePacket::from_bytes(&mut reader) {
-                        HandshakeParsingResponse::Continue(val) => val,
-                        HandshakeParsingResponse::WeRejected(code) => {
-                            // Set handshake state to failed
-                            handshake.state = HandshakeFailureReason::WeRejected { code, message: None }.into();
-
-                            // We're done here
-                            break 'outer;
+                    match message {
+                        InitiatorFinish::Rejected(rejection) => {
+                            handshake.terminate(rejection.code, Some(rejection.message));
+                            break;
                         },
-                        HandshakeParsingResponse::TheyRejected(code) => {
-                            // Read any additional data as a message
-                            let message = reader.read_to_end();
-                            let message = match message.len() {
-                                0 => None,
-                                _ => Some(message),
-                            };
 
-                            // Set handshake state to failed
-                            handshake.state = HandshakeFailureReason::TheyRejected { code, message }.into();
+                        InitiatorFinish::Accepted {
+                            ack_seq,
+                            ack_bits,
+                        } => {
+                            let _ = handshake.reliability.ack_bits(ack_seq, ack_bits, 2);
+                            handshake.reliability.advance();
+                            handshake.change_state(HandshakeState::Completed);
+                            break;
+                        },
+                    }
+                },
 
-                            // We're done here
-                            break 'outer;
-                        }
-                    };
-
-                    // Update reliability
-                    handshake.reliability.ack_seq(header.sequence);
-                    let _ = handshake.reliability.ack_bits(
-                        packet.reliability_ack,
-                        rel_bitfield_16_to_128(packet.reliability_bits),
-                        2,
-                    );
-
-                    // Mark as finalised
-                    handshake.state = HandshakeState::Finished;
-                    break;
-                }
-
-                // Check if we need to send a packet
-                if timeout_check(connection.timings.last_sent, RESEND_TIMEOUT) {
-                    let mut buf = BytesMut::with_capacity(38);
-                    let r_header = handshake.reliability.clone();
-                    HandshakePacketHeader { sequence: r_header.local_sequence }.write_bytes(&mut buf);
-                    ServerHelloPacket {
-                        transport: TRANSPORT_VERSION_DATA.clone(),
-                        application: config.application_version.as_nvd(),
-                        reliability_ack: r_header.remote_sequence,
-                        reliability_bits: rel_bitfield_128_to_16(r_header.ack_memory.into_array()),
-                    }.write_bytes(&mut buf);
-                    connection.send_queue.push_back(buf.freeze());
-                }
-            },
-
-            // Do nothing, other systems handle this
-            HandshakeState::Finished | HandshakeState::Failed(_) => {}
-        }
-
-        // Time out the connection if it takes too long
-        if !handshake.state.is_end() {
-            if Instant::now().saturating_duration_since(handshake.started) > config.attempt_timeout {
-                handshake.state = HandshakeFailureReason::TimedOut.into();
+                // Do nothing.
+                (HandshakeState::Completed, _) => {},
+                (HandshakeState::Terminated(_), _) => {},
             }
         }
 
-        // Apply modifications based on state
-        // We do this again after reading packets because state can change
-        match &handshake.state {
-            HandshakeState::Finished => {
-                // Defer some mutations
-                commands.command_scope(|mut commands| {
-                    commands.entity(entity)
-                        .remove::<Handshaking>()
-                        .insert(Established::new(
-                            &handshake.reliability,
-                        ))
-                        .insert(NetworkMessages::<Outgoing>::new())
-                        .insert(NetworkMessages::<Incoming>::new())
-                        .insert(NetworkPeerLifestage::Established);
-                });
-
-                // Log success
-                match connection.direction {
-                    ConnectionDirection::Client => tracing::debug!("Successfully connected to {entity:?} ({})", connection.remote_address),
-                    ConnectionDirection::Server => tracing::debug!("Remote peer {entity:?} ({}) connected", connection.remote_address),
-                }
+        // Timeout check
+        let timed_out = handshake.started.elapsed() > HANDSHAKE_TIMEOUT;
+        match (timed_out, handshake.state.clone()) {
+            (true, HandshakeState::Completed) => {},
+            (true, HandshakeState::Terminated(_)) => {},
+            (true, _) => {
+                handshake.terminate(HandshakeResponseCode::Unspecified, None);
             },
-
-            HandshakeState::Failed(reason) => {
-                // Create closing component
-                let mut closing = match reason {
-                    HandshakeFailureReason::TimedOut => {
-                        Closing::new(None, false)
-                    },
-                    HandshakeFailureReason::WeRejected { code, message } => {
-                        debug_assert_ne!(*code, HandshakeResponseCode::Continue);
-                        debug_assert_ne!(*code, HandshakeResponseCode::Unknown);
-                        Closing::new(message.clone(), false)
-                    },
-                    HandshakeFailureReason::TheyRejected { code: _, message: _ } => {
-                        Closing::new(None, false)
-                    },
-                };
-
-                // Set to closed
-                closing.set_finished();
-                commands.command_scope(|mut commands| {
-                    commands.entity(entity)
-                        .insert(closing);
-                });
-
-                // Log failure
-                match connection.direction {
-                    ConnectionDirection::Client => tracing::debug!("Handshake with {entity:?} ({}) failed: {reason}", connection.remote_address),
-                    ConnectionDirection::Server => tracing::debug!("Remote peer {entity:?} ({}) failed: {reason}", connection.remote_address),
-                }
-            },
-            _ => {}, // Do nothing
+            (false, _) => {},
         }
-    }});
+    });
 }
 
-fn timeout_check(
-    last_sent: Option<Instant>,
-    timeout: Duration,
-) -> bool {
-    if last_sent.is_none() { return true }
-    if Instant::now().saturating_duration_since(last_sent.unwrap()) > timeout { return true }
-    return false
-}
-
-fn send_close_packet(
-    packet_queue: &mut VecDeque<Bytes>,
-    reliability: &mut ReliabilityState,
-    reason: HandshakeResponseCode,
-    additional: Option<Bytes>,
+pub(in crate::connection) fn handshake_events_system(
+    mut events: EventReader<DisconnectPeerEvent>,
+    mut connections: Query<(&mut Handshaking, Option<&mut NetworkPeerLifestage>), With<Connection>>,
 ) {
-    // Send a packet informing them of our denial
-    reliability.advance();
-    let r_header = reliability.clone();
-    packet_queue.push_back(
-        closing_packet(&ClosingPacket {
-            header: HandshakePacketHeader { sequence: r_header.local_sequence },
-            reason,
-            additional,
-        })
-    );
-}
+    for event in events.read() {
+        // The error case means that the entity is a network peer we don't control
+        if let Ok((mut handshaking, lifestage)) = connections.get_mut(event.peer) {
+            match handshaking.state {
+                HandshakeState::Terminated(_) => {}, // Do nothing, already closing
+                _ => {
+                    handshaking.state = HandshakeState::Terminated(Termination {
+                        code: HandshakeResponseCode::ApplicationCloseEvent,
+                        reason: event.reason.clone(),
+                    });
 
-fn rel_bitfield_16_to_128(bitfield: u16) -> AckMemory {
-    let a = bitfield.to_be_bytes();
-    let mut b = [0u8; 16];
-    b[0] = a[0]; b[1] = a[1];
-    AckMemory::from_array(b)
-}
-
-#[inline]
-fn rel_bitfield_128_to_16(a: [u8; 16]) -> u16 {
-    u16::from_be_bytes([a[0], a[1]])
-}
-
-pub(crate) fn potential_new_peers_system(
-    mut events: EventReader<PotentialNewPeer>,
-    config: Res<PluginConfiguration>,
-    entities: &Entities,
-    mut commands: Commands,
-    mut endpoints: Query<&mut Endpoint>,
-) {
-    let mut pending: HashMap<SocketAddr, Box<(Entity, Connection, Handshaking)>> = HashMap::new();
-    let mut ev_iter = events.read();
-    'outer: while let Some(event) = ev_iter.next() {
-        // There is the potential of bunched-up packet arrivals, so we push them to the queue just in case.
-        if let Some(item) = pending.get_mut(&event.address) {
-            item.1.send_queue.push_back(event.payload.clone());
-            continue;
-        }
-
-        // Useful things we'll be using
-        let mut reader = Reader::new(event.payload.clone());
-        let mut endpoint = match endpoints.get_mut(event.endpoint) {
-            Ok(val) => val,
-            Err(_) => { continue; },
-        };
-
-        // Try to read the header before anything else
-        let header = match HandshakePacketHeader::from_bytes(&mut reader) {
-            Ok(val) => val,
-            Err(_) => { continue 'outer; }, // Couldn't parse header, ignore this packet.
-        };
-
-        // Try to parse the UDP packet as a ClientHelloPacket struct
-        let packet = match ClientHelloPacket::from_bytes(&mut reader) {
-            HandshakeParsingResponse::Continue(val) => val,
-            HandshakeParsingResponse::WeRejected(code) => {
-                // Log the disconnect
-                let args = format!("Received and rejected connection attempt from {}: {code}", event.address);
-                match code {
-                    HandshakeResponseCode::Unspecified | HandshakeResponseCode::MalformedPacket => { tracing::debug!(args); },
-                    _ => { tracing::debug!(args); },
-                };
-
-                // Check if the failure code ought to be sent to them
-                // This somewhat avoids sending a packet to a peer that won't understand it
-                if !code.should_respond_on_rejection() { continue }
-
-                // Push response packet to queue
-                endpoint.outgoing_pkts.push((event.address, closing_packet(&ClosingPacket {
-                    header: HandshakePacketHeader { sequence: fastrand::u16(..).into() },
-                    reason: code,
-                    additional: None,
-                })));
-
-                // We're done
-                continue;
-            },
-            HandshakeParsingResponse::TheyRejected(_) => { continue; }, // Do nothing.
-        };
-
-        // Check transport and application versions
-        for (us, them, banlist, is_app) in [
-            (&TRANSPORT_VERSION_DATA, &packet.transport, BANNED_MINOR_VERSIONS, false),
-            (&config.application_version.as_nvd(), &packet.application, config.application_version.banlist, true),
-        ] {
-            // Check the transport version
-            match check_identity_match(us, them, banlist, is_app) {
-                Ok(_) => {},
-                Err(code) => {
-                    // Push response packet to queue
-                    endpoint.outgoing_pkts.push((event.address, closing_packet(&ClosingPacket {
-                        header: HandshakePacketHeader { sequence: fastrand::u16(..).into() },
-                        reason: code,
-                        additional: None,
-                    })));
-
-                    // We're done
-                    continue 'outer;
+                    if let Some(mut lifestage) = lifestage {
+                        *lifestage = NetworkPeerLifestage::Closing;
+                    }
                 },
             }
         }
+    }
+}
 
-        // Check if the endpoint is listening
-        // We do this now because version checks are more important disconnect reasons
-        if !endpoint.listening {
-            // Inform them of their rejection
-            endpoint.outgoing_pkts.push((event.address, closing_packet(&ClosingPacket {
-                header: HandshakePacketHeader { sequence: fastrand::u16(..).into() },
-                reason: HandshakeResponseCode::ServerNotListening,
-                additional: None,
-            })));
+pub(in crate::connection) fn handshake_sending_system(
+    config: Res<PluginConfiguration>,
+    mut connections: Query<(Entity, &mut Connection, &mut Handshaking)>,
+) {
+    // Iterate connections in parallel
+    connections.par_iter_mut().for_each(|(entity, mut connection, mut handshake)| {
+        // Calculate whether a message needs to be sent
+        let send_due = {
+            let resend = match handshake.last_sent {
+                Some(v) => { v.elapsed() >= RESEND_TIMEOUT } ,
+                None => true,
+            };
 
-            // We're done
-            continue 'outer;
-        }
-
-        // By this point the peer has passed all checks for their initial ClientHello packet
-        // We now just have to create the relevant components and add them to the pending map
-
-        let connection = Connection::new(
-            event.endpoint,
-            event.address,
-            ConnectionDirection::Server,
-        );
-
-        // We have to construct the reliability state from scratch
-        let mut reliability = ReliabilityState::new();
-        reliability.remote_sequence = header.sequence;
-        reliability.ack_memory.set_high(127);
-
-        let handshake = Handshaking {
-            started: Instant::now(),
-            state: HandshakeState::ServerHello,
-            reliability,
+            match (handshake.scflag, resend) {
+                (true, _) => true,
+                (_, v) => v,
+            }
         };
 
-        // Finally, add it to the map
-        pending.insert(event.address, Box::new((event.endpoint, connection, handshake)));
-    }
+        // If nothing is due to send, return
+        if !send_due { return }
 
-    // Add the new peers as entities
-    let mut drain = pending.drain();
-    while let Some((address, comp_box)) = drain.next() {
-        // Get and reserve entity ids for the endpoint and connection respectively
-        let ept_id = comp_box.0.clone();
-        let ent_id = entities.reserve_entity();
+        // Scratch space for our messaging
+        let mut buf: Vec<u8> = Vec::with_capacity(64);
 
-        // Add to the endpoint connection map
-        // For a small point in time, this makes it so that the endpoint map owns
-        // an entity that doesn't actually exist in the world. This should be fine.
-        match endpoints.get_mut(ept_id) {
-            Ok(mut val) => {
-                // SAFETY: The hashmap only stores one connection per address, so this is fine.
-                val.add_peer(address, unsafe { ConnectionOwnershipToken::new(ent_id) })
+        // Frames are always prefixed with a sequence id
+        buf.put_u16(handshake.reliability.local_sequence.into());
+
+        match (handshake.state.clone(), handshake.direction) {
+            (HandshakeState::Hello, Direction::Initiator) => {
+                InitiatorHello {
+                    tpt_ver: TRANSPORT_VERSION_DATA.clone(),
+                    app_ver: config.application_version.clone(),
+                }.send(&mut buf).unwrap();
             },
-            Err(_) => { continue; },
+
+            (HandshakeState::Hello, Direction::Listener) => {
+                buf.put_u16(HandshakeResponseCode::Continue as u16);
+                ListenerHello::Accepted {
+                    tpt_ver: TRANSPORT_VERSION_DATA.clone(),
+                    app_ver: config.application_version.clone(),
+                    ack_seq: handshake.reliability.remote_sequence,
+                    ack_bits: handshake.reliability.ack_memory,
+                }.send(&mut buf).unwrap();
+            },
+
+            (HandshakeState::Completed, Direction::Initiator) => {
+                buf.put_u16(HandshakeResponseCode::Continue as u16);
+                InitiatorFinish::Accepted {
+                    ack_seq: handshake.reliability.remote_sequence,
+                    ack_bits: handshake.reliability.ack_memory,
+                }.send(&mut buf).unwrap();
+            },
+
+            (HandshakeState::Completed, Direction::Listener) => {},
+
+            (HandshakeState::Terminated(termination), _) => {
+                buf.put_u16(termination.code as u16);
+                if let Some(reason) = termination.reason {
+                    buf.reserve(reason.len());
+                    buf.put(&reason[..]);
+                }
+            },
         }
 
-        // Defers the movement out of comp_box so we only do one memcpy instead of two
-        commands.add(move |world: &mut World| {
-            // I'm not sure if these semantics are necessary
-            let bx = comp_box;
-            let bx = *bx;
-
-            world
-                .get_or_spawn(ent_id)
-                .unwrap()
-                .insert(NetworkPeer::new())
-                .insert(NetworkPeerLifestage::Handshaking)
-                .insert((bx.1, bx.2));
-        });
-
-        // Log the new connection
-        tracing::debug!("Received join request from new connection {ent_id:?} on address {address}");
-    }
-}
-
-fn closing_packet(
-    packet: &ClosingPacket,
-) -> Bytes {
-    // Allocate exactly enough space for the packet
-    let mut buf = BytesMut::with_capacity(4 + match &packet.additional {
-        Some(v) => v.len(),
-        None => 0,
+        connection.send_queue.push_back(Bytes::from(buf));
+        handshake.last_sent = Some(Instant::now());
     });
-
-    // Write the packet to the buffer
-    packet.write_bytes(&mut buf);
-
-    // Make immutable and return
-    buf.freeze()
 }
 
-fn check_identity_match(
-    us: &NetworkVersionData,
-    them: &NetworkVersionData,
-    banlist: &[u32],
-    is_app: bool,
+pub(in crate::connection) fn handshake_confirm_system(
+    mut commands: Commands,
+    mut endpoints: Query<&mut Endpoint>,
+    mut connections: Query<(Entity, &Connection, &Handshaking, Option<&mut NetworkPeerLifestage>)>,
+) {
+    for (entity, connection, handshake, lifestage) in connections.iter_mut() {
+        match &handshake.state {
+            HandshakeState::Completed => {
+                info!("Peer {entity:?} successfully connected");
+
+                commands
+                .entity(entity)
+                .remove::<Handshaking>()
+                .insert((
+                    Established::new(handshake.reliability.clone()),
+                    NetworkMessages::<Incoming>::new(),
+                    NetworkMessages::<Outgoing>::new(),
+                ));
+
+                if let Some(mut lifestage) = lifestage {
+                    *lifestage = NetworkPeerLifestage::Established;
+                }
+            },
+
+            HandshakeState::Terminated(termination) => {
+                debug!("Peer {entity:?} failed handshake: {}", termination.code);
+                commands.entity(entity).despawn();
+                
+                if let Some(mut lifestage) = lifestage {
+                    *lifestage = NetworkPeerLifestage::Closed;
+                }
+
+                if let Ok(mut endpoint) = endpoints.get_mut(connection.owning_endpoint) {
+                    endpoint.remove_peer(entity);
+                }
+            },
+
+            _ => {},
+        }
+    }
+}
+
+fn version_pair_check(
+    tpt_ver: AppVersion,
+    app_ver: AppVersion,
+    config: &PluginConfiguration,
 ) -> Result<(), HandshakeResponseCode> {
-    // Check the identity value
-    if us.ident != them.ident {
-        return Err(match is_app {
-            true => HandshakeResponseCode::IncompatibleApplicationIdentifier,
-            false => HandshakeResponseCode::IncompatibleTransportIdentifier,
+    use HandshakeResponseCode::*;
+    use crate::version::IncompatibilityReason::*;
+
+    let tpt_chk = TRANSPORT_VERSION_DATA.compare(&tpt_ver, BANNED_MINOR_VERSIONS);
+    if let Err(reason) = tpt_chk {
+        return Err(match reason {
+            MismatchedIdentifier => IncompatibleTransportIdentifier,
+            MismatchedMajorVersion => IncompatibleApplicationMajorVersion,
+            DeniedMinorVersion => IncompatibleTransportMinorVersion,
         });
     }
 
-    // Check the major version
-    if us.major != them.major {
-        return Err(match is_app {
-            true => HandshakeResponseCode::IncompatibleApplicationMajorVersion,
-            false => HandshakeResponseCode::IncompatibleTransportMajorVersion,
+    let app_chk = config.application_version.compare(&app_ver, config.denied_minor_versions);
+    if let Err(reason) = app_chk {
+        return Err(match reason {
+            MismatchedIdentifier => IncompatibleApplicationIdentifier,
+            MismatchedMajorVersion => IncompatibleApplicationMajorVersion,
+            DeniedMinorVersion => IncompatibleApplicationMinorVersion,
         });
     }
 
-    // Check the minor version
-    if banlist.contains(&them.minor) {
-        return Err(match is_app {
-            true => HandshakeResponseCode::IncompatibleApplicationMinorVersion,
-            false => HandshakeResponseCode::IncompatibleTransportMinorVersion,
-        });
-    }
-
-    Ok(())
+    return Ok(());
 }

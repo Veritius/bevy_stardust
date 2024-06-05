@@ -1,14 +1,17 @@
 use std::time::Duration;
 use bevy::prelude::*;
 use bevy_stardust::prelude::*;
-use crate::{appdata::ApplicationNetworkVersion, connection::PotentialNewPeer, schedule::*};
+use crate::{connection::PotentialNewPeer, prelude::DeniedMinorVersions, schedule::*, version::AppVersion};
 
 /// The UDP transport plugin.
 /// 
 /// This must be added to the App *after* all channels are registered.
 pub struct UdpTransportPlugin {
-    /// See the [`ApplicationNetworkVersion`] documentation.
-    pub application_version: ApplicationNetworkVersion,
+    /// See the [`AppVersion`] documentation.
+    pub application_version: AppVersion,
+
+    /// See the [`DeniedMinorVersions`] documentation.
+    pub denied_minor_versions: DeniedMinorVersions,
 
     /// The amount of reliable packet channels that are used.
     /// 
@@ -37,9 +40,13 @@ pub struct UdpTransportPlugin {
 /// Different default configurations to optimise the plugin for various things.
 impl UdpTransportPlugin {
     /// Optimise configuration for balanced performance.
-    pub fn balanced(application_version: ApplicationNetworkVersion) -> Self {
+    pub fn balanced(
+        application_version: AppVersion,
+        denied_minor_versions: DeniedMinorVersions,
+    ) -> Self {
         Self {
             application_version,
+            denied_minor_versions,
             reliable_channel_count: 8,
             reliable_bitfield_length: 6,
             attempt_timeout: Duration::from_secs(10),
@@ -50,9 +57,12 @@ impl UdpTransportPlugin {
     }
 
     /// Optimise configuration for responsiveness. Useful for PvP shooters.
-    pub fn responsive(application_version: ApplicationNetworkVersion) -> Self {
+    pub fn responsive(
+        application_version: AppVersion,
+        denied_minor_versions: DeniedMinorVersions,
+    ) -> Self {
         // Use the balanced configuration as a baseline
-        let mut config = Self::balanced(application_version);
+        let mut config = Self::balanced(application_version, denied_minor_versions);
 
         // Shooters don't send as many reliable packets.
         config.reliable_bitfield_length = 4;
@@ -62,8 +72,11 @@ impl UdpTransportPlugin {
 
     /// Optimise configuration for efficiency. Useful for strategy games.
     #[inline]
-    pub fn efficient(application_version: ApplicationNetworkVersion) -> Self {
-        Self::balanced(application_version)
+    pub fn efficient(
+        application_version: AppVersion,
+        denied_minor_versions: DeniedMinorVersions,
+    ) -> Self {
+        Self::balanced(application_version, denied_minor_versions)
     }
 }
 
@@ -87,6 +100,8 @@ impl Plugin for UdpTransportPlugin {
         assert!(self.reliable_bitfield_length < 16,
             "The length of reliable bitfields cannot exceed 16");
 
+        app.add_event::<PotentialNewPeer>();
+
         app.configure_sets(PreUpdate, PreUpdateSet::PacketRead
             .before(PreUpdateSet::TickEstablished)
             .before(PreUpdateSet::HandleUnknown)
@@ -100,20 +115,13 @@ impl Plugin for UdpTransportPlugin {
             .before(PostUpdateSet::UpdateStatistics)
         );
 
-        app.add_systems(PreUpdate, crate::receiving::io_receiving_system
-            .in_set(PreUpdateSet::PacketRead));
-
-        app.add_systems(PostUpdate, crate::sending::io_sending_system
-            .in_set(PostUpdateSet::PacketSend));
-
-        app.add_systems(PostUpdate, crate::endpoint::close_endpoints_system
-            .in_set(PostUpdateSet::CloseEndpoints));
-
-        app.add_event::<PotentialNewPeer>();
+        crate::endpoint::add_system(app);
+        crate::connection::add_systems(app);
 
         // Add application context resource
         app.insert_resource(PluginConfiguration {
             application_version: self.application_version.clone(),
+            denied_minor_versions: self.denied_minor_versions,
             reliable_bitfield_length: self.reliable_bitfield_length as usize,
             attempt_timeout: self.attempt_timeout,
             connection_timeout: self.connection_timeout,
@@ -124,7 +132,8 @@ impl Plugin for UdpTransportPlugin {
 
 #[derive(Resource)]
 pub(crate) struct PluginConfiguration {
-    pub application_version: ApplicationNetworkVersion,
+    pub application_version: AppVersion,
+    pub denied_minor_versions: DeniedMinorVersions,
     pub reliable_bitfield_length: usize,
     pub attempt_timeout: Duration,
     pub connection_timeout: Duration,

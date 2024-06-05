@@ -163,7 +163,7 @@ impl ReliablePackets {
     }
 }
 
-#[derive(Default, Clone)]
+#[derive(Default, Clone, Copy)]
 pub struct AckMemory(u128);
 
 impl AckMemory {

@@ -1,82 +1,80 @@
 mod codes;
-mod impls;
-mod packets;
+mod messages;
 mod system;
 
-pub(crate) use system::{handshake_polling_system, potential_new_peers_system};
-
-use bevy_stardust::connections::NetworkPeer;
 use bytes::Bytes;
-use std::{net::SocketAddr, time::Instant};
+use bevy_stardust::connections::NetworkPeer;
+use std::{net::SocketAddr, time::{Duration, Instant}};
 use bevy::prelude::*;
 use crate::prelude::*;
+use self::codes::HandshakeResponseCode;
 use super::reliability::ReliabilityState;
-use codes::HandshakeResponseCode;
+
+pub(super) use system::{
+    potential_incoming_system,
+    handshake_polling_system,
+    handshake_events_system,
+    handshake_sending_system,
+    handshake_confirm_system,
+};
+
+const RESEND_TIMEOUT: Duration = Duration::from_millis(500);
+const HANDSHAKE_TIMEOUT: Duration = Duration::from_secs(15);
 
 #[derive(Component)]
-#[component(storage = "SparseSet")]
 pub(crate) struct Handshaking {
-    started: Instant,
     state: HandshakeState,
+    started: Instant,
+    last_sent: Option<Instant>,
+    scflag: bool,
+    direction: Direction,
     reliability: ReliabilityState,
 }
 
-#[derive(Debug)]
+impl Handshaking {
+    fn change_state(
+        &mut self,
+        state: HandshakeState,
+    ) {
+        self.state = state;
+        self.scflag = true;
+    }
+
+    fn record_send(&mut self) {
+        self.last_sent = Some(Instant::now());
+        self.scflag = false;
+    }
+
+    fn terminate(
+        &mut self,
+        code: HandshakeResponseCode,
+        reason: Option<Bytes>
+    ) {
+        self.change_state(HandshakeState::Terminated(Termination { code, reason }));
+    }
+}
+
+#[derive(Clone)]
 enum HandshakeState {
-    ClientHello,
-    ServerHello,
-    Finished,
-    Failed(HandshakeFailureReason),
+    Hello,
+    Completed,
+    Terminated(Termination),
 }
 
-impl HandshakeState {
-    pub fn is_end(&self) -> bool {
-        use HandshakeState::*;
-        match self {
-            Finished | Failed(_) => true,
-            _ => false,
-        }
-    }
-}
-
-impl From<HandshakeFailureReason> for HandshakeState {
-    fn from(value: HandshakeFailureReason) -> Self {
-        Self::Failed(value)
-    }
-}
-
-#[derive(Debug)]
-enum HandshakeFailureReason {
-    TimedOut,
-    WeRejected {
-        code: HandshakeResponseCode,
-        message: Option<Bytes>,
-    },
-    TheyRejected {
-        code: HandshakeResponseCode,
-        message: Option<Bytes>,
-    },
-}
-
-impl std::fmt::Display for HandshakeFailureReason {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        use HandshakeFailureReason::*;
-        match self {
-            TimedOut => f.write_str("timed out"),
-            WeRejected { code, message } => f.write_fmt(format_args!("we rejected remote peer: {code} ({message:?})")),
-            TheyRejected { code, message } => f.write_fmt(format_args!("rejected by remote peer: {code} ({message:?})")),
-        }
-    }
+#[derive(Clone)]
+struct Termination {
+    pub code: HandshakeResponseCode,
+    pub reason: Option<Bytes>,
 }
 
 #[derive(Bundle)]
-pub(crate) struct OutgoingHandshake {
+pub(crate) struct OutgoingHandshakeBundle {
     pub connection: Connection,
     handshake: Handshaking,
     peercomp: NetworkPeer,
 }
 
-impl OutgoingHandshake {
+impl OutgoingHandshakeBundle {
     pub fn new(
         owning_endpoint: Entity,
         remote_address: SocketAddr,
@@ -85,14 +83,22 @@ impl OutgoingHandshake {
             connection: Connection::new(
                 owning_endpoint,
                 remote_address, 
-                ConnectionDirection::Client,
             ),
             handshake: Handshaking {
+                state: HandshakeState::Hello,
                 started: Instant::now(),
-                state: HandshakeState::ClientHello,
+                last_sent: None,
+                scflag: false,
+                direction: Direction::Initiator,
                 reliability: ReliabilityState::new(),
             },
             peercomp: NetworkPeer::new(),
         }
     }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Direction {
+    Initiator,
+    Listener,
 }

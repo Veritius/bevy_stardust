@@ -40,6 +40,15 @@ impl TryFrom<usize> for VarInt {
     }
 }
 
+impl TryFrom<VarInt> for u32 {
+    type Error = ();
+
+    fn try_from(value: VarInt) -> Result<Self, Self::Error> {
+        if value.0 > 2u64.pow(32) { return Err(()) }
+        return Ok(value.0 as u32)
+    }
+}
+
 impl From<VarInt> for u64 {
     #[inline]
     fn from(value: VarInt) -> Self {
@@ -58,8 +67,8 @@ impl TryFrom<VarInt> for ChannelId {
     type Error = ();
 
     fn try_from(value: VarInt) -> Result<Self, Self::Error> {
-        if value.0 > 2u64.pow(32) { return Err(()); }
-        return Ok(ChannelId::from(value.0 as u32))
+        let k: u32 = value.try_into()?;
+        Ok(ChannelId::from(k))
     }
 }
 

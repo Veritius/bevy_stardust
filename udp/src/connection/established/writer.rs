@@ -1,14 +1,14 @@
 use std::time::Instant;
 use bevy::prelude::*;
 use bevy_stardust::prelude::*;
-use crate::connection::packets::builder::PacketBuilderContext;
-use crate::connection::packets::frames::{FrameFlags, FrameType, SendFrame};
+use super::frames::builder::PacketBuilderContext;
+use super::frames::frames::{FrameFlags, FrameType, SendFrame};
 use crate::plugin::PluginConfiguration;
 use crate::prelude::*;
 use crate::varint::VarInt;
 use super::Established;
 
-pub(crate) fn established_writing_system(
+pub(in crate::connection) fn established_writing_system(
     registry: Res<ChannelRegistry>,
     config: Res<PluginConfiguration>,
     mut connections: Query<(&mut Connection, &mut Established, &NetworkMessages<Outgoing>)>,

@@ -1,24 +1,41 @@
 pub mod statistics;
 
-mod closing;
 mod congestion;
 mod established;
 mod handshake;
 mod ordering;
-mod packets;
 mod reliability;
 mod timing;
-
-pub(crate) use closing::closing_component_system;
-pub(crate) use established::{established_polling_system, established_writing_system};
-pub(crate) use handshake::{handshake_polling_system, potential_new_peers_system, OutgoingHandshake};
 
 use std::{collections::VecDeque, net::SocketAddr};
 use bevy::prelude::*;
 use bytes::Bytes;
+use established::DisconnectEstablishedPeerEvent;
 use statistics::ConnectionStatistics;
 use timing::ConnectionTimings;
+use crate::schedule::*;
 use self::congestion::Congestion;
+
+pub(crate) use handshake::OutgoingHandshakeBundle;
+
+pub(crate) fn add_systems(app: &mut App) {
+    app.add_event::<DisconnectEstablishedPeerEvent>();
+
+    app.add_systems(PreUpdate, handshake::potential_incoming_system.in_set(PreUpdateSet::HandleUnknown));
+    app.add_systems(Update, handshake::handshake_polling_system.in_set(UpdateSet::TickHandshaking));
+    app.add_systems(PostUpdate, handshake::handshake_events_system.before(handshake::handshake_sending_system));
+    app.add_systems(PostUpdate, handshake::handshake_sending_system.in_set(PostUpdateSet::HandshakeSend));
+    app.add_systems(PostUpdate, handshake::handshake_confirm_system.in_set(PostUpdateSet::CloseConnections));
+
+    app.add_systems(PreUpdate, established::established_reading_system.in_set(PreUpdateSet::TickEstablished));
+
+    app.add_systems(PostUpdate, established::established_close_events_system);
+    app.add_systems(PostUpdate, established::established_closing_write_system
+        .after(established::established_close_events_system)
+        .before(established::established_writing_system));
+    app.add_systems(PostUpdate, established::established_writing_system.in_set(PostUpdateSet::FramePacking));
+    app.add_systems(PostUpdate, established::established_close_despawn_system.in_set(PostUpdateSet::CloseConnections));
+}
 
 /// An existing UDP connection.
 #[derive(Component)]
@@ -30,7 +47,6 @@ pub struct Connection {
     pub(crate) recv_queue: VecDeque<Bytes>,
 
     pub(crate) owning_endpoint: Entity,
-    pub(crate) direction: ConnectionDirection,
     pub(crate) timings: ConnectionTimings,
     pub(crate) statistics: ConnectionStatistics,
 }
@@ -40,7 +56,6 @@ impl Connection {
     fn new(
         owning_endpoint: Entity,
         remote_address: SocketAddr,
-        direction: ConnectionDirection,
     ) -> Self {
         Self {
             remote_address,
@@ -50,7 +65,6 @@ impl Connection {
             recv_queue: VecDeque::with_capacity(32),
 
             owning_endpoint,
-            direction,
             statistics: ConnectionStatistics::default(),
             timings: ConnectionTimings::new(None, None, None),
         }
@@ -62,12 +76,6 @@ impl Connection {
     /// Returns the remote address of the connection.
     pub fn remote_address(&self) -> SocketAddr {
         self.remote_address.clone()
-    }
-
-    /// Returns the direction of the connection.
-    /// See the [`ConnectionDirection`] docs for more information.
-    pub fn direction(&self) -> ConnectionDirection {
-        self.direction.clone()
     }
 
     /// Returns statistics related to the Connection. See [`ConnectionStatistics`] for more.
@@ -99,16 +107,6 @@ impl Connection {
     pub fn set_budget(&mut self, budget: usize) {
         self.congestion.set_usr_budget(budget);
     }
-}
-
-/// The direction of the connection.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Reflect)]
-pub enum ConnectionDirection {
-    /// Acting as a client, listening to a server.
-    Client,
-
-    /// Acting as a server, talking to a client.
-    Server,
 }
 
 #[derive(Event)]

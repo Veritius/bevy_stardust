@@ -155,8 +155,8 @@ pub(crate) struct FrameFlags(u8);
 impl FrameFlags {
     pub const EMPTY: Self = Self(0);
 
-    pub const ORDERED    : Self = Self(1 << 0);
-    pub const IDENTIFIED : Self = Self(1 << 1);
+    pub const IDENTIFIED : Self = Self(1 << 0);
+    pub const ORDERED    : Self = Self(1 << 1);
 
     #[inline]
     pub fn any_high(&self, mask: FrameFlags) -> bool {
