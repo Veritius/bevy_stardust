@@ -93,19 +93,16 @@ impl Endpoint {
         }
     }
 
-    pub(crate) fn peer_map(&self) -> &HashMap<SocketAddr, ConnectionOwnershipToken> {
-        &self.connections
+    /// Returns an iterator over all peers currently connected to this endpoint.
+    pub fn peers(&self) -> impl Iterator<Item = Entity> + '_ {
+        self.connections.values().map(|v| v.inner())
     }
 
     /// Marks the endpoint for closure.
-    /// This will inform all clients of the disconnection along with the `reason` if present,
-    /// and waits for data exchange to stop. This is the best solution for most use cases.
-    /// 
-    /// If `hard` is set to `true`, the endpoint will be closed as soon as possible.
-    /// A message will be sent to inform clients but nothing will be done to ensure its arrival.
-    /// Messages from the client that haven't been received will never be received.
-    pub fn close(&mut self, hard: bool, reason: Option<Bytes>) {
-        todo!()
+    /// This will immediately disconnect all peers attached to it with no reason.
+    /// If you want to provide a reason, disconnect peers individually.
+    pub fn close(&mut self) {
+        self.state = EndpointState::Closed;
     }
 }
 
@@ -149,8 +146,6 @@ impl Drop for Endpoint {
 pub enum EndpointState {
     /// Working as normal.
     Active,
-    /// The endpoint is closing, and all connections are performing the disconnect handshake.
-    Closing,
     /// The endpoint is closed and will be despawned soon.
     Closed,
 }
