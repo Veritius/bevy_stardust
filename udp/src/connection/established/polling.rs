@@ -1,9 +1,7 @@
-use std::time::Instant;
 use bevy::prelude::*;
 use bevy_stardust::prelude::*;
-use smallvec::SmallVec;
-use crate::{connection::{established::{closing::{CloseOrigin, Closing}, control::ControlFrameIdent, frames::frames::{FrameFlags, SendFrame}}, ordering::OrderingManager}, plugin::PluginConfiguration, prelude::*};
-use super::{frames::{frames::{FrameType, RecvFrame}, reader::PacketReaderContext}, Established};
+use crate::{connection::{established::control::ControlFrameIdent, ordering::OrderingManager}, plugin::PluginConfiguration, prelude::*};
+use super::{control::ControlFrame, frames::{frames::{FrameType, RecvFrame}, reader::PacketReaderContext}, Established};
 
 pub(in crate::connection) fn established_reading_system(
     registry: Res<ChannelRegistry>,
@@ -30,9 +28,6 @@ pub(in crate::connection) fn established_reading_system(
             reliability: &mut established.reliability,
         };
 
-        // Storage for control frames, so we can iterate later on
-        let mut control_frames: SmallVec<[RecvFrame; 2]> = SmallVec::new();
-
         // Iterate over all frames
         // This runs until there is no more data to parse
         let mut iter = established.reader.iter(context);
@@ -42,7 +37,21 @@ pub(in crate::connection) fn established_reading_system(
                 Some(Ok(frame)) => {
                     match frame.ftype {
                         // Case 1.1: Connection control frame
-                        FrameType::Control => control_frames.push(frame),
+                        FrameType::Control => {
+                            if frame.ident.is_none() {
+                                established.ice_thickness = established.ice_thickness.saturating_sub(512);
+                            }
+        
+                            let ident = frame.ident.unwrap();
+                            if let Ok(ident) = ControlFrameIdent::try_from(ident) {
+                                established.control.push(ControlFrame {
+                                    ident,
+                                    payload: frame.payload,
+                                });
+                            } else {
+                                established.ice_thickness = established.ice_thickness.saturating_sub(512);
+                            }
+                        },
 
                         // Case 1.2: Stardust message frame
                         FrameType::Stardust => match handle_stardust_frame(
@@ -74,70 +83,6 @@ pub(in crate::connection) fn established_reading_system(
                 None => {
                     break 'frames;
                 },
-            }
-        }
-
-        // Drain the control frames from the vec and handle them
-        // TODO: Write a better handling system for control frames
-        for frame in control_frames.drain(..) {
-            let ident = match frame.ident {
-                Some(ident) => ident,
-                None => { continue },
-            };
-
-            use ControlFrameIdent::*;
-            match ControlFrameIdent::try_from(ident) {
-                Ok(BeginClose) => {
-                    match &mut established.closing {
-                        Some(closing) => {
-                            // Set to informed
-                            closing.informed = true;
-                        },
-
-                        None => {
-                            // Set the peer to closing
-                            established.closing = Some(Closing {
-                                finished: false,
-                                informed: true,
-                                origin: CloseOrigin::Remote,
-                                reason: match frame.payload.len() {
-                                    0 => None,
-                                    _ => Some(frame.payload),
-                                }
-                            });
-                        },
-                    }
-
-                    established.builder.put(SendFrame {
-                        priority: u32::MAX,
-                        time: Instant::now(),
-                        flags: FrameFlags::IDENTIFIED,
-                        ftype: FrameType::Control,
-                        reliable: false,
-                        order: None,
-                        ident: Some(ControlFrameIdent::FullyClose.into()),
-                        payload: Bytes::new(),
-                    });
-                },
-
-                Ok(FullyClose) => {
-                    match &mut established.closing {
-                        Some(closing) => {
-                            closing.finished = true;
-                        },
-
-                        None => {
-                            established.closing = Some(Closing {
-                                finished: true,
-                                informed: true,
-                                origin: CloseOrigin::Remote,
-                                reason: None,
-                            });
-                        }
-                    }
-                },
-
-                Err(_) => { continue; },
             }
         }
     });

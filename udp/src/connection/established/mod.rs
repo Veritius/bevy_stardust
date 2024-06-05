@@ -5,8 +5,12 @@ mod polling;
 mod writer;
 
 use closing::Closing;
+use control::ControlFrame;
+use smallvec::SmallVec;
+
 pub(super) use polling::established_reading_system;
 pub(super) use writer::established_writing_system;
+pub(super) use control::established_control_system;
 pub(super) use closing::{
     DisconnectEstablishedPeerEvent,
     established_close_events_system,
@@ -25,6 +29,7 @@ pub(crate) struct Established {
 
     reader: PacketParser,
     builder: PacketBuilder,
+    control: SmallVec<[ControlFrame; 2]>,
 
     closing: Option<Closing>,
     ice_thickness: u16,
@@ -40,6 +45,7 @@ impl Established {
 
             reader: PacketParser::default(),
             builder: PacketBuilder::default(),
+            control: SmallVec::new(),
 
             closing: None,
             ice_thickness: u16::MAX,
