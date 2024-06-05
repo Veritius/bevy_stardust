@@ -77,10 +77,11 @@ pub(in crate::connection) fn established_close_events_system(
 
 pub(in crate::connection) fn established_close_despawn_system(
     mut commands: Commands,
-    mut connections: Query<(Entity, &Established, Option<&mut NetworkPeerLifestage>)>,
+    mut connections: Query<(Entity, &Connection, &Established, Option<&mut NetworkPeerLifestage>)>,
+    mut endpoints: Query<&mut Endpoint>,
     mut events: EventWriter<PeerDisconnectedEvent>,
 ) {
-    for (peer, established, lifestage) in connections.iter_mut() {
+    for (peer, connection, established, lifestage) in connections.iter_mut() {
         let reason = match &established.closing {
             Some(r) => {
                 if !r.finished { continue }
@@ -94,6 +95,16 @@ pub(in crate::connection) fn established_close_despawn_system(
         info!("Peer {peer:?} disconnected");
 
         commands.entity(peer).despawn();
+
+        let endpoint = connection.owning_endpoint;
+        match endpoints.get_mut(endpoint) {
+            Ok(mut endpoint) => {
+                endpoint.remove_peer(peer);
+            },
+            Err(_) => {
+                error!("Tried to remove {peer:?} from {endpoint:?} but it wasn't in the map");
+            },
+        }
 
         if let Some(mut lifestage) = lifestage {
             *lifestage = NetworkPeerLifestage::Closed;
