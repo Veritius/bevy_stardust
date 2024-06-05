@@ -117,10 +117,8 @@ impl Plugin for UdpTransportPlugin {
             .before(PostUpdateSet::CloseEndpoints)
             .before(PostUpdateSet::CloseConnections)
             .before(PostUpdateSet::UpdateStatistics)
+            .in_set(NetworkWrite::Send)
         );
-
-        app.configure_sets(PostUpdate, PostUpdateSet::HandshakeSend
-            .in_set(NetworkWrite::Send));
 
         crate::endpoint::add_system(app);
         crate::connection::add_systems(app);
