@@ -75,6 +75,26 @@ pub(in crate::connection) fn established_close_events_system(
     }
 }
 
+pub(in crate::connection) fn established_closing_write_system(
+    mut connections: Query<&mut Established, With<Connection>>,
+) {
+    connections.par_iter_mut().for_each(|mut established| {
+        if let Some(closing) = &mut established.closing {
+            closing.informed = true;
+            established.builder.put(SendFrame {
+                priority: u32::MAX,
+                time: Instant::now(),
+                flags: FrameFlags::IDENTIFIED,
+                ftype: FrameType::Control,
+                reliable: false,
+                order: None,
+                ident: Some(ControlFrameIdent::FullyClose.into()),
+                payload: Bytes::new(),
+            });
+        }
+    });
+}
+
 pub(in crate::connection) fn established_close_despawn_system(
     mut commands: Commands,
     mut connections: Query<(Entity, &Connection, &Established, Option<&mut NetworkPeerLifestage>)>,

@@ -10,6 +10,7 @@ pub(super) use writer::established_writing_system;
 pub(super) use closing::{
     DisconnectEstablishedPeerEvent,
     established_close_events_system,
+    established_closing_write_system,
     established_close_despawn_system,
 };
 
