@@ -53,7 +53,6 @@ pub(in crate::connection) fn potential_incoming_system(
                 reliability,
             },
             NetworkPeer::new(),
-            PeerSendBudget::new(0),
             NetworkPeerLifestage::Handshaking,
             NetworkPeerAddress(event.address),
             NetworkSecurity::Unauthenticated,
