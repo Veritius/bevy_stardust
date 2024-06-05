@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use bevy_stardust::prelude::*;
-use crate::{connection::{established::control::ControlFrameIdent, ordering::OrderingManager}, plugin::PluginConfiguration, prelude::*};
+use crate::{connection::{established::control::ControlFrameIdent, ordering::{OrderedMessage, OrderingManager}}, plugin::PluginConfiguration, prelude::*};
 use super::{control::ControlFrame, frames::{frames::{FrameType, RecvFrame}, reader::PacketReaderContext}, Established};
 
 pub(in crate::connection) fn established_reading_system(
@@ -58,9 +58,9 @@ pub(in crate::connection) fn established_reading_system(
                             frame,
                             &registry,
                             &mut established.orderings,
+                            &mut messages,
                         ) {
-                            Ok((channel, payload)) => messages.push(channel, payload),
-
+                            Ok(()) => {},
                             Err(amt) => {
                                 established.ice_thickness = established.ice_thickness.saturating_sub(amt);
                             },
@@ -92,14 +92,34 @@ fn handle_stardust_frame(
     frame: RecvFrame,
     registry: &ChannelRegistryInner,
     orderings: &mut OrderingManager,
-) -> Result<(ChannelId, Bytes), u16> {
+    messages: &mut NetworkMessages<Incoming>,
+) -> Result<(), u16> {
     let varint = frame.ident.ok_or(256u16)?;
     let integer: u32 = varint.try_into().map_err(|_| 128u16)?;
     let channel: ChannelId = ChannelId::from(integer);
 
     let channel_data = registry.channel_config(channel).ok_or(256u16)?;
 
-    // TODO: Handle orderings
+    // If the message is unordered, push it as follows
+    if channel_data.ordered == OrderingGuarantee::Unordered {
+        messages.push(channel, frame.payload);
+        return Ok(());
+    }
 
-    return Ok((channel, frame.payload));
+    let ordering = orderings.get(channel_data);
+    let sequence = frame.order.ok_or(128u16)?;
+
+    let message = ordering.recv(OrderedMessage { sequence, payload: frame.payload });
+
+    if let Some(iter) = ordering.drain_available() {
+        for message in iter {
+            messages.push(channel, message.payload);
+        }
+    }
+
+    if let Some(message) = message {
+        messages.push(channel, message.payload);
+    }
+
+    return Ok(());
 }
