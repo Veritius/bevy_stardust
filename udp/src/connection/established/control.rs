@@ -2,7 +2,7 @@ use std::time::Instant;
 use bevy::prelude::*;
 use bytes::Bytes;
 use closing::CloseOrigin;
-use frames::frames::{FrameFlags, FrameType, SendFrame};
+use frames::frames::{FrameType, SendFrame};
 use crate::varint::VarInt;
 use super::*;
 
@@ -72,7 +72,6 @@ pub(in crate::connection) fn established_control_system(
                     established.builder.put(SendFrame {
                         priority: u32::MAX,
                         time: Instant::now(),
-                        flags: FrameFlags::IDENTIFIED,
                         ftype: FrameType::Control,
                         reliable: false,
                         order: None,

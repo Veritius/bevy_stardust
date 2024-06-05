@@ -14,7 +14,6 @@ pub(crate) struct RecvFrame {
 pub(crate) struct SendFrame {
     pub priority: u32,
     pub time: Instant,
-    pub flags: FrameFlags,
     pub ftype: FrameType,
     pub reliable: bool,
     pub order: Option<SequenceId>,
@@ -82,7 +81,6 @@ fn frame_ord_test() {
     fn frame(priority: u32, time: Instant) -> SendFrame {
         SendFrame {
             priority, time,
-            flags: FrameFlags::EMPTY,
             ftype: FrameType::Control,
             reliable: false,
             order: None,
@@ -150,7 +148,7 @@ impl From<FrameType> for u8 {
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
-pub(crate) struct FrameFlags(u8);
+pub(super) struct FrameFlags(u8);
 
 impl FrameFlags {
     pub const EMPTY: Self = Self(0);
@@ -303,7 +301,6 @@ fn frame_queue_test() {
     fn dummy(priority: u32, time: Instant) -> SendFrame {
         SendFrame {
             priority, time,
-            flags: FrameFlags::EMPTY,
             ftype: FrameType::Control,
             reliable: false,
             order: None,

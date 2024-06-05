@@ -1,4 +1,5 @@
 use bytes::{Bytes, BufMut};
+use crate::connection::established::frames::frames::FrameFlags;
 use crate::varint::VarInt;
 use super::super::flags::PacketHeaderFlags;
 use super::PackFnSharedCtx;
@@ -96,7 +97,10 @@ pub(super) fn pack_naive(
         let previous_length = scr.len();
 
         // Put the frame flags into the bin
-        scr.put_u8(frame.flags.into());
+        let mut flags = FrameFlags::EMPTY;
+        if frame.ident.is_some() { flags |= FrameFlags::IDENTIFIED; }
+        if frame.order.is_some() { flags |= FrameFlags::ORDERED;    }
+        scr.put_u8(flags.into());
 
         // Put the frame type into the bin
         scr.put_u8(frame.ftype.into());

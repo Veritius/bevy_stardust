@@ -2,7 +2,7 @@ use std::time::Instant;
 use bevy::ecs::entity::EntityHashSet;
 use bevy_stardust::prelude::*;
 use control::ControlFrameIdent;
-use frames::frames::{FrameFlags, FrameType, SendFrame};
+use frames::frames::{FrameType, SendFrame};
 use crate::prelude::*;
 use super::*;
 
@@ -60,7 +60,6 @@ pub(in crate::connection) fn established_close_events_system(
             established.builder.put(SendFrame {
                 priority: u32::MAX,
                 time: Instant::now(),
-                flags: FrameFlags::IDENTIFIED,
                 ftype: FrameType::Control,
                 reliable: true,
                 order: None,
@@ -84,7 +83,6 @@ pub(in crate::connection) fn established_closing_write_system(
             established.builder.put(SendFrame {
                 priority: u32::MAX,
                 time: Instant::now(),
-                flags: FrameFlags::IDENTIFIED,
                 ftype: FrameType::Control,
                 reliable: false,
                 order: None,

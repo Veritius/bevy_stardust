@@ -2,7 +2,7 @@ use std::time::Instant;
 use bevy::prelude::*;
 use bevy_stardust::prelude::*;
 use super::frames::builder::PacketBuilderContext;
-use super::frames::frames::{FrameFlags, FrameType, SendFrame};
+use super::frames::frames::{FrameType, SendFrame};
 use crate::plugin::PluginConfiguration;
 use crate::prelude::*;
 use crate::varint::VarInt;
@@ -47,13 +47,6 @@ pub(in crate::connection) fn established_writing_system(
                 let is_reliable = channel_data.reliable == ReliabilityGuarantee::Reliable;
                 let channel_varint: VarInt = Into::<u32>::into(channel).into();
 
-                // Create the flags for all frames
-                // This is fine since all messages are similar
-                let mut flags = FrameFlags::IDENTIFIED;
-                if is_ordered {
-                    flags |= FrameFlags::ORDERED;
-                }
-
                 // Get a new ordering if necessary
                 let mut orderings = match is_ordered {
                     true => Some(orderings.get(channel_data)),
@@ -72,7 +65,6 @@ pub(in crate::connection) fn established_writing_system(
                     let frame = SendFrame {
                         priority: channel_data.priority,
                         time: start,
-                        flags,
                         ftype: FrameType::Stardust,
                         reliable: is_reliable,
                         order,
