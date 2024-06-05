@@ -102,17 +102,20 @@ pub(in crate::connection) fn established_close_despawn_system(
     mut events: EventWriter<PeerDisconnectedEvent>,
 ) {
     for (peer, connection, established, lifestage) in connections.iter_mut() {
-        let reason = match &established.closing {
+        let closing = match &established.closing {
             Some(r) => {
                 if !r.finished { continue }
-                r.reason.clone()
+                r
             },
             None => { continue },
         };
 
         // At this point, we know they're finished
 
-        info!("Peer {peer:?} disconnected");
+        info!("Peer {peer:?} disconnected {}", match closing.origin {
+            CloseOrigin::Local => "by us",
+            CloseOrigin::Remote => "by them",
+        });
 
         commands.entity(peer).despawn();
 
@@ -130,6 +133,6 @@ pub(in crate::connection) fn established_close_despawn_system(
             *lifestage = NetworkPeerLifestage::Closed;
         }
 
-        events.send(PeerDisconnectedEvent { peer, reason });
+        events.send(PeerDisconnectedEvent { peer, reason: closing.reason.clone() });
     }
 }
