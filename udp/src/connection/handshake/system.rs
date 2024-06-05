@@ -37,6 +37,16 @@ pub(in crate::connection) fn potential_incoming_system(
             continue;
         }
 
+        // If the endpoint isn't listening, reject them
+        // This happens after version as that's more important
+        if !endpoint.listening {
+            let mut buf = Vec::with_capacity(2);
+            let code = HandshakeResponseCode::ServerNotListening;
+            Rejection { code, message: Bytes::new() }.send(&mut buf).unwrap();
+            endpoint.outgoing_pkts.push((event.address, Bytes::from(buf)));
+            continue;
+        }
+
         // Set up reliability
         let mut reliability = ReliabilityState::new();
         reliability.remote_sequence = seq_idt;
