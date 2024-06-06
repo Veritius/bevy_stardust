@@ -1,5 +1,6 @@
 use std::{cmp::Ordering, ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign}, time::Instant};
 use bytes::{BufMut, Bytes};
+use unbytes::Reader;
 use crate::{sequences::SequenceId, varint::VarInt};
 
 #[derive(Debug, Clone)]
@@ -8,6 +9,69 @@ pub(crate) struct RecvFrame {
     pub order: Option<SequenceId>,
     pub ident: Option<VarInt>,
     pub payload: Bytes,
+}
+
+impl RecvFrame {
+    pub(super) fn read(reader: &mut Reader) -> Result<Self, FrameReadError> {
+        // Get the byte for frame flags
+        let flags: FrameFlags = reader.read_u8()
+        .map_err(|_| FrameReadError::UnexpectedEnd)?
+        .into();
+
+        // Get the frame flags from the bitfield.
+        let no_payload = flags.any_high(FrameFlags::NO_PAYLOAD);
+        let has_ident = flags.any_high(FrameFlags::IDENTIFIED);
+        let has_order = flags.any_high(FrameFlags::ORDERED);
+
+        // Check that the flags are valid
+        if no_payload && has_order  { return Err(FrameReadError::IncompatibleFlags); }
+        if no_payload && !has_ident { return Err(FrameReadError::IncompatibleFlags); }
+
+        // Parse the frame header type
+        let ftype: FrameType = reader
+        .read_u8()
+        .map_err(|_| FrameReadError::UnexpectedEnd)?
+        .try_into()
+        .map_err(|_| FrameReadError::UnknownFrameType)?;
+
+        // Get the frame channel id if present
+        let ident = match has_ident {
+            false => None,
+            true => Some(VarInt::read(reader)
+                .map_err(|_| FrameReadError::InvalidFrameIdent)?),
+        };
+
+        // Get the frame channel ordering if present
+        let order = match has_order {
+            false => None,
+            true => Some(reader.read_u16()
+                .map_err(|_| FrameReadError::UnexpectedEnd)?.into()),
+        };
+
+        // Return a payload object, or make an empty one if there is no payload
+        let payload = if no_payload { Bytes::new() } else {
+            // Read the length of the packet
+            let len: usize = VarInt::read(reader)
+            .map_err(|_| FrameReadError::InvalidFrameLength)?
+            .into();
+
+            // Read the next few bytes as per len
+            reader.read_bytes(len)
+                .map_err(|_| FrameReadError::UnexpectedEnd)?
+        };
+
+        // Return the frame
+        return Ok(RecvFrame { ftype, order, ident, payload });
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum FrameReadError {
+    UnexpectedEnd,
+    IncompatibleFlags,
+    UnknownFrameType,
+    InvalidFrameLength,
+    InvalidFrameIdent,
 }
 
 #[derive(Debug, Clone)]
