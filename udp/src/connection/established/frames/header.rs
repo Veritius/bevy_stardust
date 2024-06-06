@@ -1,4 +1,39 @@
 use std::ops::{BitOr, BitOrAssign, BitAnd, BitAndAssign};
+use bytes::BufMut;
+use unbytes::{EndOfInput, Reader};
+use crate::{connection::reliability::AckMemory, sequences::SequenceId};
+
+pub(super) enum PacketHeader {
+    Reliable {
+        seq: SequenceId,
+        ack: SequenceId,
+        bits: AckMemory,
+        len: u8,
+    },
+
+    Unreliable,
+}
+
+impl PacketHeader {
+    pub fn read(reader: &mut Reader) -> Result<Self, PacketReadError> {
+        todo!()
+    }
+
+    pub fn write<B: BufMut>(mut b: B) {
+        todo!()
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum PacketReadError {
+    UnexpectedEnd,
+}
+
+impl From<EndOfInput> for PacketReadError {
+    fn from(value: EndOfInput) -> Self {
+        Self::UnexpectedEnd
+    }
+}
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub(super) struct PacketHeaderFlags(pub u8);

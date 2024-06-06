@@ -1,6 +1,6 @@
 use std::{cmp::Ordering, ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign}, time::Instant};
 use bytes::{BufMut, Bytes};
-use unbytes::Reader;
+use unbytes::{EndOfInput, Reader};
 use crate::{sequences::SequenceId, varint::VarInt};
 
 #[derive(Debug, Clone)]
@@ -72,6 +72,12 @@ pub(super) enum FrameReadError {
     UnknownFrameType,
     InvalidFrameLength,
     InvalidFrameIdent,
+}
+
+impl From<EndOfInput> for FrameReadError {
+    fn from(value: EndOfInput) -> Self {
+        Self::UnexpectedEnd
+    }
 }
 
 #[derive(Debug, Clone)]
