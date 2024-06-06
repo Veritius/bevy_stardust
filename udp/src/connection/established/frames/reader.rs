@@ -11,9 +11,7 @@ pub(crate) struct PacketParser {}
 
 impl Default for PacketParser {
     fn default() -> Self {
-        Self {
-
-        }
+        Self {}
     }
 }
 
@@ -126,6 +124,15 @@ fn parse_frame(
         .map_err(|_| PacketReadError::UnexpectedEnd)?
         .into();
 
+    // Get the frame flags from the bitfield.
+    let no_payload = flags.any_high(FrameFlags::NO_PAYLOAD);
+    let has_ident = flags.any_high(FrameFlags::IDENTIFIED);
+    let has_order = flags.any_high(FrameFlags::ORDERED);
+
+    // Check that the flags are valid
+    if no_payload && has_order  { return Err(PacketReadError::IncompatibleFlags); }
+    if no_payload && !has_ident { return Err(PacketReadError::IncompatibleFlags); }
+
     // Parse the frame header type
     let ftype: FrameType = reader
         .read_u8()
@@ -134,27 +141,30 @@ fn parse_frame(
         .map_err(|_| PacketReadError::InvalidFrameType)?;
 
     // Get the frame channel id if present
-    let ident = match flags.any_high(FrameFlags::IDENTIFIED) {
+    let ident = match has_ident {
         false => None,
         true => Some(VarInt::read(reader)
             .map_err(|_| PacketReadError::InvalidFrameIdent)?),
     };
 
     // Get the frame channel ordering if present
-    let order = match flags.any_high(FrameFlags::ORDERED) {
+    let order = match has_order {
         false => None,
         true => Some(reader.read_u16()
             .map_err(|_| PacketReadError::UnexpectedEnd)?.into()),
     };
 
-    // Read the length of the packet
-    let len: usize = VarInt::read(reader)
+    // Return a payload object, or make an empty one if there is no payload
+    let payload = if no_payload { Bytes::new() } else {
+        // Read the length of the packet
+        let len: usize = VarInt::read(reader)
         .map_err(|_| PacketReadError::InvalidFrameLen)?
         .into();
 
-    // Read the next few bytes as per len
-    let payload = reader.read_bytes(len)
-        .map_err(|_| PacketReadError::UnexpectedEnd)?;
+        // Read the next few bytes as per len
+        reader.read_bytes(len)
+            .map_err(|_| PacketReadError::UnexpectedEnd)?
+    };
 
     // Return the frame
     return Ok(RecvFrame { ftype, order, ident, payload });
@@ -163,6 +173,7 @@ fn parse_frame(
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum PacketReadError {
     UnexpectedEnd,
+    IncompatibleFlags,
     InvalidFrameType,
     InvalidFrameIdent,
     InvalidFrameLen,

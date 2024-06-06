@@ -148,12 +148,21 @@ impl VarInt {
 
     /// Returns how many bytes this varint will use on the wire.
     pub fn size(&self) -> usize {
-        match self.0 {
-            x if x < Self::B1_LMT => 1,
-            x if x < Self::B2_LMT => 2,
-            x if x < Self::B4_LMT => 4,
-            x if x < Self::B8_LMT => 8,
-            _ => unreachable!("bad varint"),
+        match Self::size_u64(self.0) {
+            Ok(v) => v,
+            Err(()) => unreachable!("bad varint"),
+        }
+    }
+
+    /// Returns how many bytes a varint representing `value` would use on the wire.
+    /// Returns an error if the value is unrepresentable.
+    pub fn size_u64(value: u64) -> Result<usize, ()> {
+        match value {
+            x if x < Self::B1_LMT => Ok(1),
+            x if x < Self::B2_LMT => Ok(2),
+            x if x < Self::B4_LMT => Ok(4),
+            x if x < Self::B8_LMT => Ok(8),
+            _ => Err(()),
         }
     }
 

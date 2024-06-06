@@ -29,15 +29,25 @@ impl SendFrame {
         // (flags + type + payload)
         let mut estimate = 2 + self.payload.len();
 
-        // Ordering id takes always takes up two bytes
-        if self.order.is_some() { estimate += 2 }
+        // The size of the frame is dependent on if the payload is of length zero
+        // Payloads with length zero have various optimisations to reduce their size
+        if self.payload.len() == 0 {
+            // Ordering id takes always takes up two bytes
+            if self.order.is_some() { estimate += 2 }
+
+            // Estimate of the length varint
+            // Unwrapping is fine because the payload would have
+            // to be a ridiculous size before it errors out.
+            // There isn't a computer on the planet (at the time of writing)
+            // that can store enough information to trigger a panic here.
+            estimate += VarInt::size_u64(self.payload.len() as u64).unwrap();
+        }
 
         // Identifier takes up space as well
         if let Some(ident) = self.ident {
             estimate += ident.size();
         }
 
-        // Estimate is one
         return estimate;
     }
 }
@@ -153,8 +163,9 @@ pub(super) struct FrameFlags(u8);
 impl FrameFlags {
     pub const EMPTY: Self = Self(0);
 
-    pub const IDENTIFIED : Self = Self(1 << 0);
-    pub const ORDERED    : Self = Self(1 << 1);
+    pub const NO_PAYLOAD : Self = Self(1 << 0);
+    pub const IDENTIFIED : Self = Self(1 << 1);
+    pub const ORDERED    : Self = Self(1 << 2);
 
     #[inline]
     pub fn any_high(&self, mask: FrameFlags) -> bool {
