@@ -42,8 +42,7 @@ pub(crate) fn io_sending_system(
 
                 // Randomly skip actually sending the packet
                 if let Some(performance) = performance {
-                    let roll = rng.f32();
-                    if performance.packet_drop_chance < roll {
+                    if performance.packet_drop_chance > rng.f32() {
                         // Updating these values simulates a successful packet send
                         connection.timings.set_last_sent_now();
                         endpoint_statistics.record_packet_send(payload.len());
