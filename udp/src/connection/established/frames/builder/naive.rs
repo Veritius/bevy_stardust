@@ -61,8 +61,7 @@ pub(super) fn pack_naive(
 
         // Store and compare the estimate to make sure
         // that we don't go over budget, and for later use
-        let payload_length = frame.payload.len();
-        let frame_size_estimate = frame.bytes_est();
+        let frame_size_estimate = frame.size();
         if (frame_size_estimate + used) > ctx.budget { continue 'outer; }
 
         // Find a suitable bin to pack into
@@ -92,60 +91,9 @@ pub(super) fn pack_naive(
             break 'bin &mut bins[bin_idx - 1];
         };
 
+        // Write the frame to the scratch
         let scr = &mut bin.inner_data;
-
-        #[cfg(debug_assertions)]
-        let previous_length = scr.len();
-
-        // Frame bitflags for concise reading
-        let mut flags = FrameFlags::EMPTY;
-        if frame.ident.is_some() { flags |= FrameFlags::IDENTIFIED; }
-
-        // Special handling for payloads that have length 0.
-        if payload_length == 0 {
-            // Assert because a no-payload frame with no identifier
-            // is meaningless and is probably a bug.
-            debug_assert!(!flags.any_high(FrameFlags::IDENTIFIED));
-
-            // Flag as a no-payload
-            flags |= FrameFlags::NO_PAYLOAD;
-        } else {
-            // Flag as ordered if the payload length is non-zero.
-            // This is because zero-length payloads have no reason to be
-            // ordered, as they are all functionally identical and do the same thing.
-            if frame.order.is_some() { flags |= FrameFlags::ORDERED; }
-        }
-
-        // Put the frame flags into the bin
-        scr.put_u8(flags.into());
-
-        // Put the frame type into the bin
-        scr.put_u8(frame.ftype.into());
-
-        // If the frame has an identifier, put it in.
-        if let Some(ident) = frame.ident {
-            ident.write(scr);
-        }
-
-        // These fields only appear if the payload length is greater than zero.
-        if payload_length != 0 {
-            // If the frame has an ordering, put it in!
-            if let Some(order) = frame.order {
-                scr.put_u16(order.into());
-            }
-
-            // Put the payload length into the bin using a varint
-            // Unwrapping is fine since I doubt anyone will try to
-            // send a payload with a length of 4,611 petabytes.
-            // Not that there's any computers that can even store that.
-            VarInt::try_from(frame.payload.len()).unwrap().write(scr);
-
-            // Put in the payload itself
-            scr.put(frame.payload);
-        }
-
-        #[cfg(debug_assertions)]
-        assert_eq!(scr.len() - previous_length - 1, frame_size_estimate);
+        frame.write(scr);
 
         // Update the bin
         bin.is_reliable |= rel_frm;

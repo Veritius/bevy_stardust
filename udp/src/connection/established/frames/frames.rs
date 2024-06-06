@@ -1,5 +1,5 @@
 use std::{cmp::Ordering, ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign}, time::Instant};
-use bytes::Bytes;
+use bytes::{BufMut, Bytes};
 use crate::{sequences::SequenceId, varint::VarInt};
 
 #[derive(Debug, Clone)]
@@ -24,14 +24,14 @@ pub(crate) struct SendFrame {
 impl SendFrame {
     /// Return an estimate for how many bytes this frame will take up when serialised.
     /// The estimate must be equal to or greater than the real value, or panics will occur.
-    pub fn bytes_est(&self) -> usize {
+    pub fn size(&self) -> usize {
         // Always takes up a certain amount of data
         // (flags + type + payload)
         let mut estimate = 2 + self.payload.len();
 
         // The size of the frame is dependent on if the payload is of length zero
         // Payloads with length zero have various optimisations to reduce their size
-        if self.payload.len() == 0 {
+        if self.payload.len() != 0 {
             // Ordering id takes always takes up two bytes
             if self.order.is_some() { estimate += 2 }
 
@@ -49,6 +49,62 @@ impl SendFrame {
         }
 
         return estimate;
+    }
+
+    pub(super) fn write<B: BufMut>(&self, mut b: B) {
+        #[cfg(debug_assertions)]
+        let (rem, est) = (b.remaining_mut(), self.size());
+
+        let mut flags = FrameFlags::EMPTY;
+        if self.ident.is_some() { flags |= FrameFlags::IDENTIFIED; }
+
+        let payload_length = self.payload.len();
+
+        if payload_length > 0 {
+            // Flag as ordered only if the payload length is non-zero.
+            // This is because zero-length payloads have no reason to be
+            // ordered, as they are all functionally identical and do the same thing.
+            if self.order.is_some() { flags |= FrameFlags::ORDERED; }
+        } else {
+            // Assert because a no-payload frame with no
+            // identifier is meaningless and is probably a bug.
+            debug_assert!(flags.any_high(FrameFlags::IDENTIFIED));
+
+            // Flag as a frame with no payload
+            flags |= FrameFlags::NO_PAYLOAD;
+        }
+
+        // Put the frame flags and type
+        // into the buffer first
+        b.put_u8(flags.into());
+        b.put_u8(self.ftype.into());
+
+        if let Some(ident) = self.ident {
+            ident.write(&mut b);
+        }
+
+        // Put in some extra data only if the payload is non-zero.
+        // These fields will only appear under this condition.
+        if payload_length > 0 {
+            // If the frame has an ordering, put it in!
+            if let Some(order) = self.order {
+                b.put_u16(order.into());
+            }
+
+            // Put the payload length into the bin using a varint
+            // Unwrapping is fine since I doubt anyone will try to
+            // send a payload with a length of 4,611 petabytes.
+            // Not that there's any computers that can even store that.
+            VarInt::try_from(self.payload.len()).unwrap().write(&mut b);
+
+            // Put in the payload itself
+            b.put(&self.payload[..]);
+        }
+
+        #[cfg(debug_assertions)] {
+            let new_rem = b.remaining_mut();
+            debug_assert_eq!(new_rem, rem - est);
+        }
     }
 }
 
@@ -244,7 +300,7 @@ impl FrameQueue {
         };
 
         self.queue.iter().for_each(|frame| {
-            stats.total_bytes_estimate += frame.bytes_est();
+            stats.total_bytes_estimate += frame.size();
 
             match frame.reliable {
                 true => stats.reliable_frames_count += 1,
