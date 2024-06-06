@@ -56,7 +56,13 @@ pub(in crate::connection) fn established_resend_system(
             let frozen = Bytes::copy_from_slice(&scr[..]);
             connection.send_queue.push_back(frozen);
 
-            todo!()
+            // Add to the resends set
+            resends.push((seq, packet.payload.clone()));
+        }
+
+        // Put the resends back into the reliability manager
+        for (sequence, payload) in resends.drain(..) {
+            established.reliability.record(sequence, payload);
         }
 
         // Update the sequence ID in the component as we can now access it mutably
