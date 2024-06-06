@@ -41,7 +41,7 @@ impl Congestion {
     }
 
     pub fn get_budget(&mut self, now: Instant) -> usize {
-        let dur = self.bytes_last_ticked.duration_since(now);
+        let dur = now.duration_since(self.bytes_last_ticked);
         self.bytes_last_ticked = now;
 
         let delta = dur.as_secs_f32() * self.bytes_regeneration;
