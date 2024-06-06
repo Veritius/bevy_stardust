@@ -2,9 +2,9 @@ use std::collections::VecDeque;
 use bytes::Bytes;
 use tracing::error;
 use unbytes::Reader;
-use crate::{connection::reliability::{AckMemory, ReliablePackets}, plugin::PluginConfiguration, sequences::SequenceId, varint::VarInt};
-use super::{frames::FrameReadError, header::{PacketHeader, PacketHeaderFlags, PacketReadError}};
-use super::frames::{FrameFlags, FrameType, RecvFrame};
+use crate::{connection::reliability::ReliablePackets, plugin::PluginConfiguration};
+use super::{frames::FrameReadError, header::{PacketHeader, PacketReadError}};
+use super::frames::RecvFrame;
 
 /// Parses incoming packets into an iterator of `Frame` objects.
 pub(crate) struct PacketParser {}
@@ -18,7 +18,7 @@ impl Default for PacketParser {
 impl PacketParser {
     #[must_use]
     pub fn iter<'a>(&'a mut self, context: PacketReaderContext<'a>) -> PacketReaderIter<'a> {
-        PacketReaderIter { inner: self, current: None, context }
+        PacketReaderIter { _inner: self, current: None, context }
     }
 }
 
@@ -31,7 +31,7 @@ pub(crate) struct PacketReaderContext<'a> {
 /// Dropping this type may cause data loss.
 /// Use [`is_safe_to_drop`](Self::is_safe_to_drop) to check if you can drop this without data loss.
 pub(crate) struct PacketReaderIter<'a> {
-    inner: &'a mut PacketParser,
+    _inner: &'a mut PacketParser,
     current: Option<Reader>,
     context: PacketReaderContext<'a>,
 }

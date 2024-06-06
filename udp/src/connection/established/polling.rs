@@ -6,10 +6,9 @@ use super::{control::ControlFrame, frames::{frames::{FrameType, RecvFrame}, read
 pub(in crate::connection) fn established_reading_system(
     registry: Res<ChannelRegistry>,
     config: Res<PluginConfiguration>,
-    mut connections: Query<(Entity, &mut Connection, &mut Established, &mut NetworkMessages<Incoming>)>,
+    mut connections: Query<(&mut Connection, &mut Established, &mut NetworkMessages<Incoming>)>,
 ) {
     connections.par_iter_mut().for_each(|(
-        entity,
         mut connection,
         mut established,
         mut messages,
