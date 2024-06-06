@@ -9,7 +9,10 @@ use control::ControlFrame;
 use smallvec::SmallVec;
 
 pub(super) use polling::established_reading_system;
-pub(super) use writer::established_writing_system;
+pub(super) use writer::{
+    established_resend_system,
+    established_writing_system,
+};
 pub(super) use control::established_control_system;
 pub(super) use closing::{
     DisconnectEstablishedPeerEvent,

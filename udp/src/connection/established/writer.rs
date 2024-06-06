@@ -1,12 +1,69 @@
 use std::time::Instant;
 use bevy::prelude::*;
 use bevy_stardust::prelude::*;
+use smallvec::SmallVec;
 use super::frames::builder::PacketBuilderContext;
 use super::frames::frames::{FrameType, SendFrame};
+use super::frames::header::PacketHeader;
 use crate::plugin::PluginConfiguration;
 use crate::prelude::*;
+use crate::sequences::SequenceId;
 use crate::varint::VarInt;
 use super::Established;
+
+pub(in crate::connection) fn established_resend_system(
+    config: Res<PluginConfiguration>,
+    mut connections: Query<(&mut Connection, &mut Established)>
+) {
+    // Iterate all peers in parallel
+    connections.par_iter_mut().for_each(|(mut connection, mut established)| {
+        // Record the time we started
+        let started = Instant::now();
+
+        // Create resend filter and check if anything needs resending
+        let resend = connection.congestion.get_resend();
+        let filter = |time: Instant| time.duration_since(started) > resend;
+        if !established.reliability.any_old(filter) { return } // Nothing to do
+
+        // Drain the old reliability packets
+        let mut resends: SmallVec<[(SequenceId, Bytes); 3]> = SmallVec::new();
+        let rel_state = established.reliability.clone_state();
+        let mut transient_sequence = rel_state.local_sequence.clone();
+        let iter = established.reliability.drain_old(filter);
+
+        // Serialise and resend all of these packets reliably
+        let mut scr: Vec<u8> = Vec::with_capacity(connection.congestion.get_mtu());
+        for packet in iter {
+            // Clear the scratch space
+            scr.clear();
+
+            // Create the packet header
+            let seq = transient_sequence;
+            let header = PacketHeader::Reliable {
+                seq,
+                ack: rel_state.remote_sequence,
+                bits: rel_state.ack_memory,
+            };
+
+            // Add to the sequence value
+            transient_sequence += 1;
+
+            // Serialize the packet header and add the payload.
+            header.write(&mut scr, config.reliable_bitfield_length);
+            scr.put(packet.payload.clone());
+
+            // Create a new Bytes to send this frame
+            let frozen = Bytes::copy_from_slice(&scr[..]);
+            connection.send_queue.push_back(frozen);
+
+            todo!()
+        }
+
+        // Update the sequence ID in the component as we can now access it mutably
+        // We couldn't previously do this as iter held a mutable borrow of established
+        established.reliability.state_mut().local_sequence = transient_sequence;
+    });
+}
 
 pub(in crate::connection) fn established_writing_system(
     registry: Res<ChannelRegistry>,

@@ -3,7 +3,7 @@ use bytes::BufMut;
 use unbytes::{EndOfInput, Reader};
 use crate::{connection::reliability::AckMemory, sequences::SequenceId};
 
-pub(super) enum PacketHeader {
+pub(in super::super) enum PacketHeader {
     Reliable {
         seq: SequenceId,
         ack: SequenceId,

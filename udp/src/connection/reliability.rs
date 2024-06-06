@@ -114,6 +114,10 @@ impl ReliablePackets {
         });
     }
 
+    pub fn state_mut(&mut self) -> &mut ReliabilityState {
+        &mut self.state
+    }
+
     pub fn clone_state(&self) -> ReliabilityState {
         self.state.clone()
     }
@@ -138,6 +142,10 @@ impl ReliablePackets {
     fn ack_state_testing_only(&mut self, state: ReliabilityState) {
         self.ack_seq(state.local_sequence);
         self.rec_ack(state.remote_sequence, state.ack_memory, 16);
+    }
+
+    pub fn any_old<Filter: Fn(Instant) -> bool>(&self, filter: Filter) -> bool {
+        self.unacked.iter().find(|(_, t)| filter(t.time)).is_some()
     }
 
     pub fn drain_old<'a, Filter: Fn(Instant) -> bool + 'a>(&'a mut self, filter: Filter) -> impl Iterator<Item = UnackedPacket> + 'a {

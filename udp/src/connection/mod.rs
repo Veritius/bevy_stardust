@@ -7,7 +7,7 @@ mod ordering;
 mod reliability;
 mod timing;
 
-use std::{collections::VecDeque, net::SocketAddr};
+use std::{collections::VecDeque, net::SocketAddr, time::Duration};
 use bevy::prelude::*;
 use bytes::Bytes;
 use established::DisconnectEstablishedPeerEvent;
@@ -29,7 +29,7 @@ pub(crate) fn add_systems(app: &mut App) {
 
     app.add_systems(PreUpdate, established::established_reading_system.in_set(PreUpdateSet::TickEstablished));
     app.add_systems(PreUpdate, established::established_control_system.after(established::established_reading_system));
-
+    app.add_systems(Update, established::established_resend_system);
     app.add_systems(PostUpdate, established::established_close_events_system);
     app.add_systems(PostUpdate, established::established_closing_write_system
         .after(established::established_close_events_system)
@@ -107,6 +107,14 @@ impl Connection {
     /// When congestion control is added, this function will be deprecated, and then removed.
     pub fn set_budget(&mut self, budget: usize) {
         self.congestion.set_usr_budget(budget);
+    }
+
+    /// Sets the time required before a reliable packet is considered 'dropped', at which point it is reset.
+    /// Setting this value too high can result in serious head-of-line blocking.
+    /// 
+    /// When RTT calculation is added, this function will be deprecated, and then removed.
+    pub fn set_resend(&mut self, time: Duration) {
+        self.congestion.set_usr_resend(time);
     }
 }
 
