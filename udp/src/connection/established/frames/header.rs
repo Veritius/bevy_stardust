@@ -10,7 +10,10 @@ pub(super) enum PacketHeader {
         bits: AckMemory,
     },
 
-    Unreliable,
+    Unreliable {
+        ack: SequenceId,
+        bits: AckMemory,
+    },
 }
 
 impl PacketHeader {
@@ -22,24 +25,23 @@ impl PacketHeader {
         // Some data for reading things
         let is_reliable = flags & PacketHeaderFlags::RELIABLE > 0;
 
-        if is_reliable {
-            // If the packet is flagged reliable, it has a sequence id
-            let seq = if is_reliable {
-                SequenceId(reader.read_u16()
-                    .map_err(|_| PacketReadError::UnexpectedEnd)?)
-            } else { SequenceId::new(0) }; // default
+        // This value is only present in reliable frames
+        // We use a default value if not reliable, and just don't use it
+        let seq = match is_reliable {
+            true => SequenceId(reader.read_u16().map_err(|_| PacketReadError::UnexpectedEnd)?),
+            false => SequenceId::default(),
+        };
 
-            // These reliability values are always present
-            let ack = SequenceId(reader.read_u16()
-                .map_err(|_| PacketReadError::UnexpectedEnd)?);
-            let bits = AckMemory::from_slice(reader.read_slice(bitlen)
-                .map_err(|_| PacketReadError::UnexpectedEnd)?).unwrap();
+        // These reliability values are always present
+        let ack = SequenceId(reader.read_u16()
+            .map_err(|_| PacketReadError::UnexpectedEnd)?);
+        let bits = AckMemory::from_slice(reader.read_slice(bitlen)
+            .map_err(|_| PacketReadError::UnexpectedEnd)?).unwrap();
 
-            // Return the packet, we have everything
-            return Ok(Self::Reliable { seq, ack, bits });
-        } else {
-            // Unreliable packets need no further work
-            return Ok(Self::Unreliable);
+        // Return the value
+        match is_reliable {
+            true => Ok(Self::Reliable { seq, ack, bits }),
+            false => Ok(Self::Unreliable { ack, bits }),
         }
     }
 
@@ -56,9 +58,13 @@ impl PacketHeader {
                 b.put(&arr[..bitlen]);
             },
 
-            PacketHeader::Unreliable => {
+            PacketHeader::Unreliable { ack, bits } => {
                 let flags = PacketHeaderFlags::EMPTY;
                 b.put_u8(flags.0);
+                b.put_u16(ack.0);
+
+                let arr = bits.into_array();
+                b.put(&arr[..bitlen]);
             },
         }
     }

@@ -95,14 +95,19 @@ fn parse_header(
     context: &mut PacketReaderContext,
 ) -> Result<(), ParsingError> {
     let bitlen = context.config.reliable_bitfield_length;
+    let bitlen8: u8 = bitlen.try_into().unwrap();
+
     match PacketHeader::read(reader, bitlen) {
         Ok(PacketHeader::Reliable { seq, ack, bits }) => {
             context.reliability.ack_seq(seq);
-            context.reliability.rec_ack(ack, bits, bitlen.try_into().unwrap());
+            context.reliability.rec_ack(ack, bits, bitlen8);
             Ok(())
         },
 
-        Ok(PacketHeader::Unreliable) => Ok(()),
+        Ok(PacketHeader::Unreliable { ack, bits }) => {
+            context.reliability.rec_ack(ack, bits, bitlen8);
+            Ok(())
+        },
 
         Err(err) => Err(ParsingError::PacketError(err)),
     }
