@@ -19,3 +19,8 @@ These features are unimplemented in this version, but will be added soon.
 - Encrypted and authenticated communications
     - Authentication using a remote authentication server
     - Authentication using TLS and X.509 certificates
+
+## Usage
+| Stardust | Crate |
+|----------|-------|
+| 0.6      | 0.1   |
