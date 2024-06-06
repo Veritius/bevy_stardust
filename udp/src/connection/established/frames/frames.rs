@@ -19,9 +19,9 @@ impl RecvFrame {
         .into();
 
         // Get the frame flags from the bitfield.
-        let no_payload = flags.any_high(FrameFlags::NO_PAYLOAD);
-        let has_ident = flags.any_high(FrameFlags::IDENTIFIED);
-        let has_order = flags.any_high(FrameFlags::ORDERED);
+        let no_payload = flags & FrameFlags::NO_PAYLOAD > 0;
+        let has_ident = flags & FrameFlags::IDENTIFIED > 0;
+        let has_order = flags & FrameFlags::ORDERED > 0;
 
         // Check that the flags are valid
         if no_payload && has_order  { return Err(FrameReadError::IncompatibleFlags); }
@@ -138,7 +138,7 @@ impl SendFrame {
         } else {
             // Assert because a no-payload frame with no
             // identifier is meaningless and is probably a bug.
-            debug_assert!(flags.any_high(FrameFlags::IDENTIFIED));
+            debug_assert!(flags & FrameFlags::IDENTIFIED > 0);
 
             // Flag as a frame with no payload
             flags |= FrameFlags::NO_PAYLOAD;
@@ -292,11 +292,6 @@ impl FrameFlags {
     pub const NO_PAYLOAD : Self = Self(1 << 0);
     pub const IDENTIFIED : Self = Self(1 << 1);
     pub const ORDERED    : Self = Self(1 << 2);
-
-    #[inline]
-    pub fn any_high(&self, mask: FrameFlags) -> bool {
-        return (*self & mask).0 > 0;
-    }
 }
 
 impl From<u8> for FrameFlags {
@@ -342,6 +337,18 @@ impl BitAndAssign for FrameFlags {
     #[inline]
     fn bitand_assign(&mut self, rhs: Self) {
         self.0 &= rhs.0
+    }
+}
+
+impl PartialEq<u8> for FrameFlags {
+    fn eq(&self, other: &u8) -> bool {
+        self.0.eq(other)
+    }
+}
+
+impl PartialOrd<u8> for FrameFlags {
+    fn partial_cmp(&self, other: &u8) -> Option<std::cmp::Ordering> {
+        self.0.partial_cmp(other)
     }
 }
 

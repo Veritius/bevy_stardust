@@ -82,7 +82,7 @@ impl From<EndOfInput> for PacketReadError {
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub(super) struct PacketHeaderFlags(pub u8);
+struct PacketHeaderFlags(pub u8);
 
 impl PacketHeaderFlags {
     pub const EMPTY: Self = Self(0);
