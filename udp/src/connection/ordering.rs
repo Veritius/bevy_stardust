@@ -71,7 +71,7 @@ impl OrderedMessages {
             // Based on Laminar's ordering algorithm, adapted to use an ordered vec instead of a hashmap.
             // https://github.com/TimonPost/laminar/blob/e8ffb26a915bb6ac3c8d959031d63f8a776e763c/src/infrastructure/arranging/ordering.rs#L230-L242
             OrderingMode::Ordered => {
-                match self.recv_index.cmp(&message.sequence) {
+                match message.sequence.cmp(&self.recv_index) {
                     Ordering::Less => {
                         return None;
                     },
@@ -81,8 +81,9 @@ impl OrderedMessages {
                     },
                     Ordering::Greater => {
                         match self.recv_queue.binary_search(&message) {
-                            Ok(_) => {
-                                // WTF?
+                            Ok(idx) => {
+                                // Shouldn't happen.
+                                self.recv_queue.remove(idx);
                                 return None;
                             }
                             Err(idx) => {
