@@ -4,7 +4,7 @@ pub const DEFAULT_RESEND: Duration = Duration::from_secs(2);
 pub const DEFAULT_MTU: usize = 1472;
 pub const DEFAULT_BUDGET: usize = 16384;
 
-const DEFAULT_REGENERATION: f32 = 256.0;
+const DEFAULT_REGENERATION: f32 = 4096.0;
 
 /// Congestion controller.
 pub(super) struct Congestion {
