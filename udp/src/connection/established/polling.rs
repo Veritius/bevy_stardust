@@ -39,6 +39,7 @@ pub(in crate::connection) fn established_reading_system(
                         FrameType::Control => {
                             if frame.ident.is_none() {
                                 established.ice_thickness = established.ice_thickness.saturating_sub(512);
+                                continue
                             }
         
                             let ident = frame.ident.unwrap();
@@ -49,6 +50,7 @@ pub(in crate::connection) fn established_reading_system(
                                 });
                             } else {
                                 established.ice_thickness = established.ice_thickness.saturating_sub(512);
+                                continue
                             }
                         },
 
