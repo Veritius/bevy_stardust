@@ -82,6 +82,13 @@ impl UdpManager<'_, '_> {
         // Spawn connection entity
         let id = commands.spawn(OutgoingHandshakeBundle::new(endpoint_id, address)).id();
 
+        // TODO: This is added for debugging, remove this
+        commands.entity(id).insert(bevy_stardust::connections::NetworkPerformanceReduction {
+            packet_drop_chance: 0.5,
+            packet_mangle_chance: 0.0,
+            transmit_delay_millis: 0,
+        });
+
         // SAFETY: Commands generates a unique ID concurrently, so this is fine.
         let token = unsafe { ConnectionOwnershipToken::new(id) };
         endpoint_ref.add_peer(address, token);
