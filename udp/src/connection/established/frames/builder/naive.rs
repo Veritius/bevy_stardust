@@ -1,5 +1,5 @@
-use bytes::{Bytes, BufMut};
-use super::super::header::PacketHeaderFlags;
+use bytes::Bytes;
+use crate::connection::established::frames::header::PacketHeader;
 use super::PackFnSharedCtx;
 
 /// The amount of space allocated for a frame header.
@@ -116,24 +116,26 @@ pub(super) fn pack_naive(
         let scr = &mut ctx.context.scratch;
         scr.clear();
 
-        // Create the packet header flags and push them
-        let mut header = PacketHeaderFlags::EMPTY;
-        if bin.is_reliable { header |= PacketHeaderFlags::RELIABLE }
-        scr.put_u8(header.0);
-
-        // Get the current reliability state
-        // If this is reliable, push a sequence id for this packet
+        // Create the packet header object
         let rel_hdr = ctx.context.rel_state.clone_state();
-        if bin.is_reliable {
-            scr.put_u16(rel_hdr.local_sequence.0);
-            ctx.context.rel_state.advance();
-        }
+        let header = match bin.is_reliable {
+            true => PacketHeader::Reliable {
+                seq: rel_hdr.local_sequence,
+                ack: rel_hdr.remote_sequence,
+                bits: rel_hdr.ack_memory,
+            },
 
-        // Put acknowledgement data
-        // Unlike the sequence id, this is always present
-        scr.put_u16(rel_hdr.remote_sequence.0);
-        let bf_bts = rel_hdr.ack_memory.into_array();
-        scr.put(&bf_bts[..ctx.context.config.reliable_bitfield_length]);
+            false => PacketHeader::Unreliable {
+                ack: rel_hdr.remote_sequence,
+                bits: rel_hdr.ack_memory,
+            },
+        };
+
+        // Advance local sequence value if it's a reliable frame
+        if bin.is_reliable { ctx.context.rel_state.advance(); }
+
+        // Write the header to the bin
+        header.write(&mut *scr, ctx.context.config.reliable_bitfield_length);
 
         // It's very important we don't accidentally overrun
         // the 'dead header' we've been assigned. We check here just in case.
