@@ -75,7 +75,7 @@ pub(crate) enum FrameReadError {
 }
 
 impl From<EndOfInput> for FrameReadError {
-    fn from(value: EndOfInput) -> Self {
+    fn from(_: EndOfInput) -> Self {
         Self::UnexpectedEnd
     }
 }

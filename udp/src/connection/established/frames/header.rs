@@ -76,7 +76,7 @@ pub(crate) enum PacketReadError {
 }
 
 impl From<EndOfInput> for PacketReadError {
-    fn from(value: EndOfInput) -> Self {
+    fn from(_: EndOfInput) -> Self {
         Self::UnexpectedEnd
     }
 }
