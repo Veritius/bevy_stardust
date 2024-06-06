@@ -96,7 +96,7 @@ impl Connection {
     /// 
     /// When MTU detection is added, this function will be deprecated, and then removed.
     pub fn set_mtu(&mut self, mtu: usize) {
-        self.congestion.set_usr_mtu(mtu);
+        self.congestion.set_mtu(mtu);
     }
 
     /// Sets the limit of the number of bytes that will be sent each **second.**
@@ -105,8 +105,8 @@ impl Connection {
     /// safely set to [`usize::MAX`] for better testing performance.
     /// 
     /// When congestion control is added, this function will be deprecated, and then removed.
-    pub fn set_budget(&mut self, budget: usize) {
-        self.congestion.set_usr_budget(budget);
+    pub fn set_kbps(&mut self, kbps: usize) {
+        self.congestion.set_kbps(kbps);
     }
 
     /// Sets the time required before a reliable packet is considered 'dropped', at which point it is reset.
@@ -114,7 +114,7 @@ impl Connection {
     /// 
     /// When RTT calculation is added, this function will be deprecated, and then removed.
     pub fn set_resend(&mut self, time: Duration) {
-        self.congestion.set_usr_resend(time);
+        self.congestion.set_resend(time);
     }
 }
 
