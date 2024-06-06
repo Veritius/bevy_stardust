@@ -66,7 +66,7 @@ impl RecvFrame {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(super) enum FrameReadError {
+pub(crate) enum FrameReadError {
     UnexpectedEnd,
     IncompatibleFlags,
     UnknownFrameType,

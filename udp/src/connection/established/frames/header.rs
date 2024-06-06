@@ -8,24 +8,64 @@ pub(super) enum PacketHeader {
         seq: SequenceId,
         ack: SequenceId,
         bits: AckMemory,
-        len: u8,
     },
 
     Unreliable,
 }
 
 impl PacketHeader {
-    pub fn read(reader: &mut Reader) -> Result<Self, PacketReadError> {
-        todo!()
+    pub fn read(reader: &mut Reader, bitlen: usize) -> Result<Self, PacketReadError> {
+        // Read the packet header flags byte
+        let flags = PacketHeaderFlags(reader.read_byte()
+            .map_err(|_| PacketReadError::UnexpectedEnd)?);
+
+        // Some data for reading things
+        let is_reliable = flags & PacketHeaderFlags::RELIABLE > 0;
+
+        if is_reliable {
+            // If the packet is flagged reliable, it has a sequence id
+            let seq = if is_reliable {
+                SequenceId(reader.read_u16()
+                    .map_err(|_| PacketReadError::UnexpectedEnd)?)
+            } else { SequenceId::new(0) }; // default
+
+            // These reliability values are always present
+            let ack = SequenceId(reader.read_u16()
+                .map_err(|_| PacketReadError::UnexpectedEnd)?);
+            let bits = AckMemory::from_slice(reader.read_slice(bitlen)
+                .map_err(|_| PacketReadError::UnexpectedEnd)?).unwrap();
+
+            // Return the packet, we have everything
+            return Ok(Self::Reliable { seq, ack, bits });
+        } else {
+            // Unreliable packets need no further work
+            return Ok(Self::Unreliable);
+        }
     }
 
-    pub fn write<B: BufMut>(mut b: B) {
-        todo!()
+    pub fn write<B: BufMut>(&self, mut b: B, bitlen: usize) {
+        match self {
+            PacketHeader::Reliable { seq, ack, bits } => {
+                let flags = PacketHeaderFlags::RELIABLE;
+                b.put_u8(flags.0);
+
+                b.put_u16(seq.0);
+                b.put_u16(ack.0);
+
+                let arr = bits.into_array();
+                b.put(&arr[..bitlen]);
+            },
+
+            PacketHeader::Unreliable => {
+                let flags = PacketHeaderFlags::EMPTY;
+                b.put_u8(flags.0);
+            },
+        }
     }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(super) enum PacketReadError {
+pub(crate) enum PacketReadError {
     UnexpectedEnd,
 }
 
