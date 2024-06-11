@@ -1,4 +1,4 @@
-use std::time::Instant;
+use std::{mem::swap, time::Instant};
 use bevy::prelude::*;
 use bytes::Bytes;
 use closing::CloseOrigin;
@@ -46,7 +46,13 @@ pub(in crate::connection) fn established_control_system(
     mut connections: Query<&mut Established>,
 ) {
     connections.par_iter_mut().for_each(|mut established| {
-        while let Some(frame) = established.control.pop() {
+        // Swap the buffer out of the component to drain it
+        // We have to do this so we don't hold a borrow on established
+        let mut control = SmallVec::new();
+        swap(&mut established.control, &mut control);
+        let iter = control.drain(..).rev();
+
+        for frame in iter {
             use ControlFrameIdent::*;
 
             match frame.ident {
@@ -98,5 +104,8 @@ pub(in crate::connection) fn established_control_system(
                 },
             }
         }
+
+        // Swap the buffer back into the component
+        swap(&mut established.control, &mut control);
     });
 }
