@@ -1,4 +1,6 @@
+use std::time::Instant;
 use bevy::prelude::*;
+use bytes::Bytes;
 use quinn_proto::{Connection, ConnectionHandle, VarInt};
 
 /// A QUIC connection, attached to an endpoint.
@@ -10,6 +12,17 @@ use quinn_proto::{Connection, ConnectionHandle, VarInt};
 pub struct QuicConnection {
     pub(crate) handle: ConnectionHandle,
     pub(crate) inner: Box<Connection>,
+}
+
+impl QuicConnection {
+    /// Begins closing the connection.
+    pub fn close(&mut self, reason: Bytes) {
+        self.inner.close(
+            Instant::now(),
+            DisconnectCode::AppDisconnect.try_into().unwrap(),
+            reason
+        );
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
