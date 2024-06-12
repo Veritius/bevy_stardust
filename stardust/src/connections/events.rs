@@ -1,27 +1,56 @@
-//! Connection events, like players leaving or joining.
+use bevy::prelude::*;
+use bytes::Bytes;
 
-use bevy_ecs::prelude::*;
-
-/// Raise to try and disconnect a peer, with an optional reason.
+/// Send to disconnect a peer.
+/// 
+/// This should be sent by the dev, not a plugin.
 #[derive(Event)]
 pub struct DisconnectPeerEvent {
-    /// The peer to disconnect.
-    pub target: Entity,
+    /// The peer to be disconnected.
+    pub peer: Entity,
     /// The reason for disconnection.
-    pub reason: Option<Box<str>>,
+    pub reason: Option<Bytes>,
+    /// Whether or not the peer should be disconnected immediately.
+    /// This may cause data loss if set to `true`, and should be used sparingly.
+    pub force: bool,
 }
 
-/// Raised when a new peer connects.
+/// Sent when a peer begins to connect.
+/// 
+/// This should be sent by a transport layer.
 #[derive(Event)]
-pub struct PeerConnectedEvent(pub Entity);
+pub struct PeerConnectingEvent {
+    /// The peer that is connecting.
+    pub peer: Entity,
+}
 
-/// Raised when a peer disconnects.
+/// Sent when a peer finishes connecting.
+/// 
+/// This should be sent by a transport layer.
+#[derive(Event)]
+pub struct PeerConnectedEvent {
+    /// The peer that has connected.
+    pub peer: Entity,
+}
+
+/// Sent when a peer starts to disconnect.
+/// 
+/// This should be sent by a transport layer.
+#[derive(Event)]
+pub struct PeerDisconnectingEvent {
+    /// The peer that is disconnecting.
+    pub peer: Entity,
+    /// The reason for disconnection, if one is available.
+    pub reason: Option<Bytes>,
+}
+
+/// Sent when a peer is disconnected.
+/// 
+/// This should be sent by a transport layer.
 #[derive(Event)]
 pub struct PeerDisconnectedEvent {
-    /// The entity id of the peer.
-    pub entity_id: Entity,
-    /// The peer's `PeerUuid` value, if it had one.
-    pub uuid: Option<uuid::Uuid>,
-    /// The reason the peer was disconnected.
-    pub reason: Box<str>,
+    /// The peer that disconnected.
+    pub peer: Entity,
+    /// The reason for disconnection, if one is available.
+    pub reason: Option<Bytes>,
 }

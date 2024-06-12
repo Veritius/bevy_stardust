@@ -2,34 +2,29 @@
 //! 
 //! All settings are not definitive, but hints to transport layers as how to treat channels.
 
-use std::ops::RangeInclusive;
+use bevy::reflect::Reflect;
 
 #[cfg(feature="hashing")]
 use {std::hash::Hasher, crate::hashing::StableHash};
 
 /// Configuration for a channel.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Hash, Reflect)]
+#[reflect(Debug, Hash)]
 pub struct ChannelConfiguration {
-    /// Whether messages will be resent if they're missed.
+    /// Whether messages should be resent if they're missed.
     pub reliable: ReliabilityGuarantee,
 
     /// Whether messages should be read in the order they were sent.
-    /// With reliability set on, this can cause delays in reading messages on the channel.
     pub ordered: OrderingGuarantee,
 
-    /// If messages should be broken up to send.
+    /// If messages on this channel may need to be broken up to be transmitted.
     /// If disabled, messages over the MTU will be discarded or panic, depending on the transport layer.
-    /// If enabled, each octet string will have a tiny bit more overhead.
     pub fragmented: bool,
 
     /// The priority of messages on this channel.
     /// Transport values will send messages on channels with higher `priority` values first.
     /// Channel priority is not hashed when the `hashing` feature is enabled.
     pub priority: u32,
-
-    /// How long an octet string sent over this channel will be, used for optimisations.
-    /// Octet strings with lengths outside this range may cause warnings or panics in transport layers.
-    pub string_size: RangeInclusive<u32>,
 }
 
 #[cfg(feature="hashing")]
@@ -38,17 +33,17 @@ impl StableHash for &ChannelConfiguration {
         self.reliable.hash(state);
         self.ordered.hash(state);
         self.fragmented.hash(state);
-        self.string_size.start().hash(state);
-        self.string_size.end().hash(state);
     }
 }
 
 /// The reliability guarantee of a channel.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Reflect)]
+#[reflect(Debug, PartialEq, Hash)]
 pub enum ReliabilityGuarantee {
-    /// If a message is lost, it's lost. There will be no attempt to get it back.
+    /// Messages are not guaranteed to arrive.
     Unreliable,
-    /// If a message is lost, it will be resent. This incurs some overhead.
+
+    /// Lost messages will be detected and resent.
     Reliable,
 }
 
@@ -63,13 +58,19 @@ impl StableHash for ReliabilityGuarantee {
 }
 
 /// The ordering guarantee of a channel.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Reflect)]
+#[reflect(Debug, PartialEq, Hash)]
 pub enum OrderingGuarantee {
-    /// Messages will be read in the order they are received.
+    /// Messages will be available in the order they are received.
+    /// This is not necessarily the order they were sent. If that matters, use a different variant.
     Unordered,
-    /// Messages that are out of order will be discarded.
+
+    /// Messages that are older than the most recent value will be discarded.
+    /// Therefore, messages will be available in order, but out of order messages are lost.
     Sequenced,
-    /// Messages will be reordered to be in the order they were sent.
+
+    /// Messages will be available in the exact order they were sent.
+    /// If [reliability](ReliabilityGuarantee::Reliable) is used, this can 'block' messages temporarily due to data loss.
     Ordered,
 }
 

@@ -1,19 +1,16 @@
 //! Hashing of Stardust's configuration and related plugins.
 
+pub use gxhash;
+
 mod stablehash;
 mod resource;
 
-use bevy_app::prelude::*;
+use bevy::prelude::*;
 
 pub(crate) use resource::{PendingHashValues, finalise_hasher_system};
 
-pub use stablehash::StableHash;
+pub use stablehash::{StableHash, STABLE_HASHER_SEED};
 pub use resource::ProtocolConfigHash;
-
-mod sealed {
-    pub trait Sealed {}
-    impl Sealed for bevy_app::App {}
-}
 
 /// Extends Bevy's `App` to add methods for generating the [ProtocolId].
 pub trait HashingAppExt: sealed::Sealed {
@@ -29,4 +26,9 @@ impl HashingAppExt for App {
         let mut hasher = self.world.resource_mut::<PendingHashValues>();
         value.hash(&mut hasher.state);
     }
+}
+
+mod sealed {
+    pub trait Sealed {}
+    impl Sealed for bevy::app::App {}
 }

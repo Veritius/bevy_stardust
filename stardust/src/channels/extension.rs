@@ -1,22 +1,17 @@
 //! Adds `add_channel` to the `App`.
 
-use bevy_app::App;
+use bevy::app::App;
 use crate::channels::config::ChannelConfiguration;
-use super::{
-    id::{Channel, ChannelMarker},
-    registry::ChannelRegistry,
-    incoming::IncomingMessages,
-    outgoing::OutgoingMessages
-};
+use super::{id::Channel, ChannelRegistryMut};
 
 mod sealed {
     pub trait Sealed {}
-    impl Sealed for bevy_app::App {}
+    impl Sealed for bevy::app::App {}
 }
 
 /// Adds channel-related functions to the `App`.
 pub trait ChannelSetupAppExt: sealed::Sealed {
-    /// Registers a channel with type `T` and the config and components given.
+    /// Registers a channel with type `C` and the config and components given.
     fn add_channel<C: Channel>(&mut self, config: ChannelConfiguration);
 }
 
@@ -33,15 +28,8 @@ impl ChannelSetupAppExt for App {
             self.net_hash_value(&config);
         }
 
-        // Spawn entity
-        let entity = self.world.spawn((
-            ChannelMarker::<C>::default(),
-            IncomingMessages::default(),
-            OutgoingMessages::default(),
-        )).id();
-
         // Add to registry
-        let mut registry = self.world.resource_mut::<ChannelRegistry>();
-        registry.register_channel::<C>(config, entity);
+        let mut registry = self.world.resource_mut::<ChannelRegistryMut>();
+        registry.0.register_channel::<C>(config);
     }
 }
