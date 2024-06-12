@@ -127,6 +127,19 @@ pub(crate) fn endpoint_datagram_recv_system(
                                     todo!(); // continue;
                                 },
                             };
+
+                            // SAFETY: Only this endpoint accesses this entity, since it controls it
+                            let query_item = unsafe { connections.get_unchecked(entity) };
+                            let mut connection = match query_item {
+                                Ok(v) => v,
+                                Err(_) => {
+                                    error!("Failed to get connection component from {entity:?}");
+                                    continue;
+                                },
+                            };
+
+                            // Connection handles event
+                            connection.inner.handle_event(event);
                         },
 
                         // New connection
