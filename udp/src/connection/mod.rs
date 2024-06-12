@@ -5,8 +5,10 @@ mod established;
 mod handshake;
 mod header;
 mod ordering;
+mod reading;
 mod reliability;
 mod timing;
+mod writing;
 
 use std::{collections::VecDeque, net::SocketAddr, time::Duration};
 use bevy::prelude::*;
