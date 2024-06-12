@@ -17,6 +17,7 @@ pub(crate) enum DisconnectCode {
     Invalid,
 
     Unspecified,
+    AppDisconnect,
 }
 
 impl From<VarInt> for DisconnectCode {
@@ -24,6 +25,8 @@ impl From<VarInt> for DisconnectCode {
         use DisconnectCode::*;
         match u64::from(value) {
             0 => Unspecified,
+            1 => AppDisconnect,
+
             _ => Invalid,
         }
     }
@@ -33,11 +36,13 @@ impl TryFrom<DisconnectCode> for VarInt {
     type Error = ();
 
     fn try_from(value: DisconnectCode) -> Result<Self, Self::Error> {
+        use DisconnectCode::*;
         return Ok(VarInt::from_u32(match value {
             // Special case: this variant can't be sent
-            DisconnectCode::Invalid => { return Err(()) },
+            Invalid => { return Err(()) },
 
-            DisconnectCode::Unspecified => 0,
+            Unspecified => 0,
+            AppDisconnect => 1,
         }));
     }
 }
