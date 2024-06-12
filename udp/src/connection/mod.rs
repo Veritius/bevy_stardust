@@ -22,21 +22,21 @@ pub(crate) use handshake::OutgoingHandshakeBundle;
 pub(crate) fn add_systems(app: &mut App) {
     app.add_event::<DisconnectEstablishedPeerEvent>();
 
-    app.add_systems(PreUpdate, handshake::potential_incoming_system.in_set(PreUpdateSet::HandleUnknown));
-    app.add_systems(Update, handshake::handshake_polling_system.in_set(UpdateSet::TickHandshaking));
-    app.add_systems(PostUpdate, handshake::handshake_events_system.before(handshake::handshake_sending_system));
-    app.add_systems(PostUpdate, handshake::handshake_sending_system.in_set(PostUpdateSet::HandshakeSend));
-    app.add_systems(PostUpdate, handshake::handshake_confirm_system.in_set(PostUpdateSet::CloseConnections));
+    // app.add_systems(PreUpdate, handshake::potential_incoming_system.in_set(PreUpdateSet::HandleUnknown));
+    // app.add_systems(Update, handshake::handshake_polling_system.in_set(UpdateSet::TickHandshaking));
+    // app.add_systems(PostUpdate, handshake::handshake_events_system.before(handshake::handshake_sending_system));
+    // app.add_systems(PostUpdate, handshake::handshake_sending_system.in_set(PostUpdateSet::HandshakeSend));
+    // app.add_systems(PostUpdate, handshake::handshake_confirm_system.in_set(PostUpdateSet::CloseConnections));
 
-    app.add_systems(PreUpdate, established::established_reading_system.in_set(PreUpdateSet::TickEstablished));
-    app.add_systems(PreUpdate, established::established_control_system.after(established::established_reading_system));
-    app.add_systems(Update, established::established_resend_system);
-    app.add_systems(PostUpdate, established::established_close_events_system);
-    app.add_systems(PostUpdate, established::established_closing_write_system
-        .after(established::established_close_events_system)
-        .before(established::established_writing_system));
-    app.add_systems(PostUpdate, established::established_writing_system.in_set(PostUpdateSet::FramePacking));
-    app.add_systems(PostUpdate, established::established_close_despawn_system.in_set(PostUpdateSet::CloseConnections));
+    // app.add_systems(PreUpdate, established::established_reading_system.in_set(PreUpdateSet::TickEstablished));
+    // app.add_systems(PreUpdate, established::established_control_system.after(established::established_reading_system));
+    // app.add_systems(Update, established::established_resend_system);
+    // app.add_systems(PostUpdate, established::established_close_events_system);
+    // app.add_systems(PostUpdate, established::established_closing_write_system
+    //     .after(established::established_close_events_system)
+    //     .before(established::established_writing_system));
+    // app.add_systems(PostUpdate, established::established_writing_system.in_set(PostUpdateSet::FramePacking));
+    // app.add_systems(PostUpdate, established::established_close_despawn_system.in_set(PostUpdateSet::CloseConnections));
 }
 
 /// An existing UDP connection.
