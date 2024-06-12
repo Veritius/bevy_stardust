@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use anyhow::Result;
-use bevy::prelude::*;
-use quinn_proto::{Endpoint, EndpointConfig, ServerConfig};
+use bevy::{ecs::entity::EntityHashMap, prelude::*};
+use quinn_proto::{ConnectionHandle, Endpoint, EndpointConfig, ServerConfig};
 
 /// A QUIC endpoint.
 /// 
@@ -10,7 +10,8 @@ use quinn_proto::{Endpoint, EndpointConfig, ServerConfig};
 /// Being put into another `World` will lead to undefined behavior.
 #[derive(Component)]
 pub struct QuicEndpoint {
-    inner: Box<Endpoint>,
+    pub(crate) inner: Box<Endpoint>,
+    pub(crate) handles: EntityHashMap<ConnectionHandle>,
 }
 
 impl QuicEndpoint {
@@ -26,6 +27,7 @@ impl QuicEndpoint {
     ) -> Result<Self> {
         Ok(Self {
             inner: Box::new(Endpoint::new(config, server_config, allow_mtud, rng_seed)),
+            handles: EntityHashMap::default(),
         })
     }
 
