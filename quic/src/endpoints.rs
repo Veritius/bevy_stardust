@@ -1,7 +1,8 @@
 use std::{io::ErrorKind, net::{SocketAddr, UdpSocket}, sync::Arc, time::Instant};
 use anyhow::Result;
-use bevy::{ecs::entity::EntityHashMap, prelude::*};
-use quinn_proto::{ClientConfig, ConnectionHandle, Endpoint, EndpointConfig, ServerConfig};
+use bevy::{ecs::entity::EntityHashMap, prelude::*, utils::HashMap};
+use bytes::BytesMut;
+use quinn_proto::{ClientConfig, ConnectionHandle, DatagramEvent, Endpoint, EndpointConfig, ServerConfig};
 use crate::QuicConnection;
 
 /// A QUIC endpoint.
@@ -13,6 +14,7 @@ use crate::QuicConnection;
 pub struct QuicEndpoint {
     pub(crate) inner: Box<Endpoint>,
     pub(crate) handles: EntityHashMap<ConnectionHandle>,
+    pub(crate) entities: HashMap<ConnectionHandle, Entity>,
     pub(crate) socket: UdpSocket,
 }
 
@@ -34,6 +36,7 @@ impl QuicEndpoint {
         Ok(Self {
             inner: Box::new(Endpoint::new(config, server_config, allow_mtud, rng_seed)),
             handles: EntityHashMap::default(),
+            entities: HashMap::default(),
             socket,
         })
     }
@@ -67,33 +70,74 @@ impl QuicEndpoint {
             inner: Box::new(connection),
         }).id();
 
+        // Add the entity ids to the map
+        self.handles.insert(entity, handle);
+        self.entities.insert(handle, entity);
+
         // Return the entity id
         return Ok(entity);
     }
 }
 
 pub(crate) fn endpoint_datagram_recv_system(
-    mut endpoints: Query<&mut QuicEndpoint>,
+    mut endpoints: Query<(Entity, &mut QuicEndpoint)>,
     mut connections: Query<&mut QuicConnection>,
 ) {
-    endpoints.par_iter_mut().for_each(|mut endpoint| {
+    endpoints.par_iter_mut().for_each(|(entity, mut endpoint)| {
+        // Logging stuff
+        let trace_span = trace_span!("Reading packets from endpoint", endpoint=?entity);
+        let _entered = trace_span.entered();
+
+        // Some stuff related to the endpoint
+        let endpoint = endpoint.as_mut();
+        let inner = endpoint.inner.as_mut();
+        let socket = &mut endpoint.socket;
+        let handles = &mut endpoint.handles;
+        let entities = &mut endpoint.entities;
+        let ip = socket.local_addr().unwrap().ip();
+
         // Allocate a buffer to store messages in
         let mut buf = Vec::with_capacity(2048); // TODO: Make this based on MTU
 
         // Repeatedly receive messages until we run out
-        loop { match endpoint.socket.recv_from(&mut buf) {
+        loop { match socket.recv_from(&mut buf) {
             // Received another packet
             Ok((len, addr)) => {
-                match endpoint.inner.handle(
+                // Log packet receive
+                trace!("Received packet of length {len} from {addr}");
+
+                // Pass packet to the endpoint
+                match inner.handle(
                     Instant::now(),
                     addr,
-                    Some(endpoint.socket.local_addr().unwrap().ip()),
+                    Some(ip),
                     None,
-                    todo!(),
+                    BytesMut::from(&buf[..]),
                     &mut buf,
                 ) {
-                    Some(_) => todo!(),
-                    None => todo!(),
+                    // Event received
+                    Some(event) => match event {
+                        // Connection event, route to an entity
+                        DatagramEvent::ConnectionEvent(handle, event) => {
+                            // Get the entity ID from the map
+                            let entity = match entities.get(&handle) {
+                                Some(v) => *v,
+                                None => {
+                                    error!("Connection {handle:?} had no associated entity");
+                                    todo!(); // continue;
+                                },
+                            };
+                        },
+
+                        // New connection
+                        DatagramEvent::NewConnection(_) => todo!(),
+
+                        // Endpoint wants to send
+                        DatagramEvent::Response(_) => todo!(),
+                    },
+
+                    // Nothing happened.
+                    None => { continue },
                 }
             },
 
