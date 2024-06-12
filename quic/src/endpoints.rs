@@ -13,7 +13,6 @@ use crate::QuicConnection;
 #[derive(Component)]
 pub struct QuicEndpoint {
     pub(crate) inner: Box<Endpoint>,
-    pub(crate) handles: EntityHashMap<ConnectionHandle>,
     pub(crate) entities: HashMap<ConnectionHandle, Entity>,
     pub(crate) socket: UdpSocket,
 }
@@ -35,7 +34,6 @@ impl QuicEndpoint {
 
         Ok(Self {
             inner: Box::new(Endpoint::new(config, server_config, allow_mtud, rng_seed)),
-            handles: EntityHashMap::default(),
             entities: HashMap::default(),
             socket,
         })
@@ -71,7 +69,6 @@ impl QuicEndpoint {
         }).id();
 
         // Add the entity ids to the map
-        self.handles.insert(entity, handle);
         self.entities.insert(handle, entity);
 
         // Return the entity id
@@ -92,7 +89,6 @@ pub(crate) fn endpoint_datagram_recv_system(
         let endpoint = endpoint.as_mut();
         let inner = endpoint.inner.as_mut();
         let socket = &mut endpoint.socket;
-        let handles = &mut endpoint.handles;
         let entities = &mut endpoint.entities;
         let ip = socket.local_addr().unwrap().ip();
 
