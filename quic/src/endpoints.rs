@@ -1,4 +1,4 @@
-use std::{net::SocketAddr, sync::Arc, time::Instant};
+use std::{net::{SocketAddr, UdpSocket}, sync::Arc, time::Instant};
 use anyhow::Result;
 use bevy::{ecs::entity::EntityHashMap, prelude::*};
 use quinn_proto::{ClientConfig, ConnectionHandle, Endpoint, EndpointConfig, ServerConfig};
@@ -14,14 +14,16 @@ use crate::QuicConnection;
 pub struct QuicEndpoint {
     pub(crate) inner: Box<Endpoint>,
     pub(crate) handles: EntityHashMap<ConnectionHandle>,
+    pub(crate) socket: UdpSocket,
 }
 
 impl QuicEndpoint {
-    /// Creates a new endpoint.
+    /// Creates a new endpoint, bound to `socket`.
     /// 
     /// If `server_config` is `None`, incoming connections will be rejected.
     /// This can be changed at any time with [`set_server_config`](Self::set_server_config).
     pub fn new(
+        socket: UdpSocket,
         config: Arc<EndpointConfig>,
         server_config: Option<Arc<ServerConfig>>,
         allow_mtud: bool,
@@ -30,6 +32,7 @@ impl QuicEndpoint {
         Ok(Self {
             inner: Box::new(Endpoint::new(config, server_config, allow_mtud, rng_seed)),
             handles: EntityHashMap::default(),
+            socket,
         })
     }
 
