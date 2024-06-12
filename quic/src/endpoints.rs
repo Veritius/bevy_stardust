@@ -1,8 +1,7 @@
-use std::{net::{SocketAddr, UdpSocket}, sync::Arc, time::Instant};
+use std::{io::ErrorKind, net::{SocketAddr, UdpSocket}, sync::Arc, time::Instant};
 use anyhow::Result;
 use bevy::{ecs::entity::EntityHashMap, prelude::*};
 use quinn_proto::{ClientConfig, ConnectionHandle, Endpoint, EndpointConfig, ServerConfig};
-
 use crate::QuicConnection;
 
 /// A QUIC endpoint.
@@ -29,6 +28,9 @@ impl QuicEndpoint {
         allow_mtud: bool,
         rng_seed: Option<[u8; 32]>,
     ) -> Result<Self> {
+        // Sockets must be nonblocking
+        socket.set_nonblocking(true)?;
+
         Ok(Self {
             inner: Box::new(Endpoint::new(config, server_config, allow_mtud, rng_seed)),
             handles: EntityHashMap::default(),
@@ -68,4 +70,40 @@ impl QuicEndpoint {
         // Return the entity id
         return Ok(entity);
     }
+}
+
+pub(crate) fn endpoint_datagram_recv_system(
+    mut endpoints: Query<&mut QuicEndpoint>,
+    mut connections: Query<&mut QuicConnection>,
+) {
+    endpoints.par_iter_mut().for_each(|mut endpoint| {
+        // Allocate a buffer to store messages in
+        let mut buf = Vec::with_capacity(2048); // TODO: Make this based on MTU
+
+        // Repeatedly receive messages until we run out
+        loop { match endpoint.socket.recv_from(&mut buf) {
+            // Received another packet
+            Ok((len, addr)) => {
+                match endpoint.inner.handle(
+                    Instant::now(),
+                    addr,
+                    Some(endpoint.socket.local_addr().unwrap().ip()),
+                    None,
+                    todo!(),
+                    &mut buf,
+                ) {
+                    Some(_) => todo!(),
+                    None => todo!(),
+                }
+            },
+
+            // There are no more packets to read, break the loop
+            Err(e) if e.kind() == ErrorKind::WouldBlock => { break },
+
+            // An actual IO error occurred
+            Err(e) => {
+                todo!()
+            },
+        }}
+    });
 }
