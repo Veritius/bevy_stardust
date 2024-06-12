@@ -1,7 +1,9 @@
-use std::sync::Arc;
+use std::{net::SocketAddr, sync::Arc, time::Instant};
 use anyhow::Result;
 use bevy::{ecs::entity::EntityHashMap, prelude::*};
-use quinn_proto::{ConnectionHandle, Endpoint, EndpointConfig, ServerConfig};
+use quinn_proto::{ClientConfig, ConnectionHandle, Endpoint, EndpointConfig, ServerConfig};
+
+use crate::QuicConnection;
 
 /// A QUIC endpoint.
 /// 
@@ -38,5 +40,29 @@ impl QuicEndpoint {
         server_config: Option<Arc<ServerConfig>>,
     ) {
         self.inner.set_server_config(server_config)
+    }
+
+    /// Connects to a new connection.
+    /// 
+    /// # Safety
+    /// `commands` must only be applied to the world the `QuicEndpoint` is part of.
+    pub fn connect(
+        &mut self,
+        commands: &mut Commands,
+        config: ClientConfig,
+        remote: SocketAddr,
+        server_name: &str,
+    ) -> Result<Entity> {
+        // Create the connection data
+        let (handle, connection) = self.inner.connect(Instant::now(), config, remote, server_name)?;
+
+        // Spawn the connection entity
+        let entity = commands.spawn(QuicConnection {
+            handle,
+            inner: Box::new(connection),
+        }).id();
+
+        // Return the entity id
+        return Ok(entity);
     }
 }
