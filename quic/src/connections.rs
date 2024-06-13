@@ -3,7 +3,8 @@ use bevy::prelude::*;
 use bevy_stardust::prelude::*;
 use bytes::Bytes;
 use endpoints::perform_transmit;
-use quinn_proto::{Connection, ConnectionHandle, Dir, StreamId, VarInt};
+use quinn_proto::{Connection, ConnectionHandle, Dir, StreamId, VarInt, coding::Codec};
+use streams::{StreamFrameHeader, StreamOpenHeader};
 use crate::*;
 
 /// A QUIC connection, attached to an endpoint.
@@ -90,6 +91,9 @@ pub(crate) fn connection_message_sender_system(
         let trace_span = trace_span!("Sending packets from endpoint", endpoint=?entity);
         let _entered = trace_span.entered();
 
+        // Tiny scratch space for some operations
+        let mut scr = Vec::with_capacity(4);
+
         // Iterate over all channels
         for (channel, messages) in outgoing.iter() {
             // Get the channel data
@@ -114,6 +118,13 @@ pub(crate) fn connection_message_sender_system(
                         None => {
                             // Wasn't in the map, we have to open a new stream
                             let stream_id = connection.inner.streams().open(Dir::Uni).unwrap();
+
+                            // Add the StreamOpenHeader to the stream
+                            // This informs the remote connection of what this stream is for
+                            StreamOpenHeader::StardustReliable { channel }.encode(&mut scr);
+                            connection.inner.send_stream(stream_id).write(&scr).unwrap();
+
+                            // Add the stream to the map
                             connection.channel_streams.insert(channel, stream_id);
                             stream_id
                         },
@@ -121,8 +132,14 @@ pub(crate) fn connection_message_sender_system(
 
                     // Iterate over all messages and send them
                     let mut send_stream = connection.inner.send_stream(stream_id);
-                    for message in messages.iter().cloned() {
-                        todo!()
+                    for payload in messages.iter().cloned() {
+                        // Stream frame header stuff
+                        scr.clear(); // Clear the scratch space
+                        StreamFrameHeader { length: payload.len() }.encode(&mut scr);
+
+                        // TODO: Handle error cases
+                        send_stream.write(&scr[..]).unwrap();
+                        send_stream.write(&payload[..]).unwrap();
                     }
                 },
             }
