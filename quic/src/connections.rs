@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use bevy_stardust::prelude::*;
 use bytes::Bytes;
 use endpoints::perform_transmit;
-use quinn_proto::{coding::Codec, Connection, ConnectionHandle, Dir, FinishError, StreamId, VarInt};
+use quinn_proto::{coding::Codec, Connection, ConnectionHandle, Dir, FinishError, StreamEvent, Event as AppEvent, StreamId, VarInt};
 use streams::{StreamFrameHeader, StreamOpenHeader};
 use crate::*;
 
@@ -101,6 +101,35 @@ impl TryFrom<DisconnectCode> for VarInt {
             NotListening => 2,
         }));
     }
+}
+
+pub(crate) fn connection_event_handler_system(
+    mut connections: Query<(Entity, &mut QuicConnection, &mut NetworkMessages<Incoming>)>,
+) {
+    // Iterate all connections in parallel
+    connections.par_iter_mut().for_each(|(entity, mut connection, mut incoming)| {
+        // Poll as many events as possible from the handler
+        while let Some(event) = connection.inner.poll() { match event {
+            AppEvent::Connected => todo!(),
+
+            AppEvent::ConnectionLost { reason } => todo!(),
+
+            AppEvent::Stream(event) => match event {
+                StreamEvent::Opened { dir } => todo!(),
+                StreamEvent::Readable { id } => todo!(),
+                StreamEvent::Writable { id } => todo!(),
+                StreamEvent::Finished { id } => todo!(),
+                StreamEvent::Stopped { id, error_code } => todo!(),
+                StreamEvent::Available { dir } => todo!(),
+            },
+
+            AppEvent::DatagramReceived => todo!(),
+            AppEvent::DatagramsUnblocked => todo!(),
+
+            // We don't care about this one.
+            AppEvent::HandshakeDataReady => {},
+        }}
+    });
 }
 
 pub(crate) fn connection_message_sender_system(
