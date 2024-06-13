@@ -152,7 +152,7 @@ pub(crate) fn connection_event_handler_system(
                     None => todo!(),
                 }
 
-                // Manually drop endpoints to release it early
+                // Manually drop the lock to release it early
                 // This probably doesn't make any difference but whatever
                 drop(endpoints);
 
