@@ -106,6 +106,42 @@ impl TryFrom<DisconnectCode> for VarInt {
     }
 }
 
+pub(crate) fn connection_endpoint_events_system(
+    mut endpoints: Query<(Entity, &mut QuicEndpoint)>,
+    connections: Query<&mut QuicConnection>,
+) {
+    endpoints.par_iter_mut().for_each(|(entity, mut endpoint)| {
+        // Logging stuff
+        let trace_span = trace_span!("Event interchange for endpoint", endpoint=?entity);
+        let _entered = trace_span.entered();
+
+        // Some stuff related to the endpoint
+        let endpoint = endpoint.as_mut();
+
+        // Iterate over all connections associated with this endpoint
+        let entities = endpoint.entities.iter();
+        for (handle, entity) in entities {
+            // Logging stuff
+            let trace_span = trace_span!("Event interchange for connection", connection=?entity, handle=?handle);
+            let _entered = trace_span.entered();
+
+            // SAFETY: Endpoints will only access the connections they have created
+            let query_item = unsafe { connections.get_unchecked(*entity) };
+            let mut connection = match query_item {
+                Ok(connection) => connection,
+                Err(err) => todo!(),
+            };
+
+            // Extract all endpoint events and give them to the endpoint
+            while let Some(event) = connection.inner.poll_endpoint_events() {
+                if let Some(event) = endpoint.inner.handle_event(*handle, event) {
+                    connection.inner.handle_event(event);
+                }
+            }
+        }
+    });
+}
+
 pub(crate) fn connection_event_handler_system(
     mut connections: Query<(Entity, &mut QuicConnection, Option<&mut NetworkPeerLifestage>)>,
     mut commands: Commands,

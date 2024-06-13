@@ -8,18 +8,16 @@ pub struct QuicTransportPlugin;
 
 impl Plugin for QuicTransportPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(PreUpdate, endpoint_datagram_recv_system
-            .in_set(NetworkRead::Receive));
+        app.add_systems(PreUpdate, (
+            endpoint_datagram_recv_system,
+            connection_endpoint_events_system,
+            connection_event_handler_system,
+        ).chain().in_set(NetworkRead::Receive));
 
-        app.add_systems(PreUpdate, connection_event_handler_system
-            .in_set(NetworkRead::Receive)
-            .after(endpoint_datagram_recv_system));
-
-        app.add_systems(PostUpdate, connection_message_sender_system
-            .in_set(NetworkWrite::Send));
-
-        app.add_systems(PostUpdate, connection_datagram_send_system
-            .in_set(NetworkWrite::Send)
-            .after(connection_message_sender_system));
+        app.add_systems(PostUpdate, (
+            connection_endpoint_events_system,
+            connection_message_sender_system,
+            connection_datagram_send_system,
+        ).chain().in_set(NetworkWrite::Send));
     }
 }
