@@ -1,7 +1,9 @@
 use std::time::Instant;
 use bevy::prelude::*;
 use bytes::Bytes;
+use endpoints::perform_transmit;
 use quinn_proto::{Connection, ConnectionHandle, VarInt};
+use crate::*;
 
 /// A QUIC connection, attached to an endpoint.
 /// 
@@ -61,4 +63,50 @@ impl TryFrom<DisconnectCode> for VarInt {
             NotListening => 2,
         }));
     }
+}
+
+pub(crate) fn connection_datagram_send_system(
+    mut endpoints: Query<(Entity, &mut QuicEndpoint)>,
+    connections: Query<&mut QuicConnection>,
+) {
+    endpoints.par_iter_mut().for_each(|(entity, mut endpoint)| {
+        // Logging stuff
+        let trace_span = trace_span!("Sending packets from endpoint", endpoint=?entity);
+        let _entered = trace_span.entered();
+
+        // Some stuff related to the endpoint
+        let endpoint = endpoint.as_mut();
+        let socket = &mut endpoint.socket;
+
+        // Allocate a buffer to store messages in
+        let mut buf = Vec::with_capacity(2048); // TODO: Make this based on MTU
+
+        // Iterate over all connections associated with this endpoint
+        let entities = endpoint.entities.iter();
+        for (handle, entity) in entities {
+            // Logging stuff
+            let trace_span = trace_span!("Polling connection", connection=?entity, handle=?handle);
+            let _entered = trace_span.entered();
+
+            // SAFETY: Endpoints will only access the connections they have created
+            let query_item = unsafe { connections.get_unchecked(*entity) };
+            let mut connection = match query_item {
+                Ok(connection) => connection,
+                Err(err) => todo!(),
+            };
+
+            // Handle timeouts
+            connection.inner.handle_timeout(Instant::now());
+
+            // Repeatedly poll transmit until the connection no longer wants to send any more packets
+            let mut send_count: u32 = 0;
+            while let Some(transmit) = connection.inner.poll_transmit(Instant::now(), 10, &mut buf) {
+                perform_transmit(socket, &buf, transmit);
+                send_count += 1;
+            }
+
+            // Record the amount of packets we've sent
+            _entered.record("sends", send_count);
+        }
+    });
 }
