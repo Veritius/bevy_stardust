@@ -1,9 +1,9 @@
-use std::time::Instant;
+use std::{collections::BTreeMap, time::Instant};
 use bevy::prelude::*;
-use bevy_stardust::messages::{NetworkMessages, Outgoing};
+use bevy_stardust::prelude::*;
 use bytes::Bytes;
 use endpoints::perform_transmit;
-use quinn_proto::{Connection, ConnectionHandle, VarInt};
+use quinn_proto::{Connection, ConnectionHandle, Dir, StreamId, VarInt};
 use crate::*;
 
 /// A QUIC connection, attached to an endpoint.
@@ -15,9 +15,23 @@ use crate::*;
 pub struct QuicConnection {
     pub(crate) handle: ConnectionHandle,
     pub(crate) inner: Box<Connection>,
+
+    channel_streams: BTreeMap<ChannelId, StreamId>,
 }
 
 impl QuicConnection {
+    pub(crate) fn new(
+        handle: ConnectionHandle,
+        inner: Box<Connection>,
+    ) -> Self {
+        Self {
+            handle,
+            inner,
+
+            channel_streams: BTreeMap::new(),
+        }
+    }
+
     /// Begins closing the connection.
     pub fn close(&mut self, reason: Bytes) {
         self.inner.close(
@@ -67,6 +81,7 @@ impl TryFrom<DisconnectCode> for VarInt {
 }
 
 pub(crate) fn connection_message_sender_system(
+    registry: Res<ChannelRegistry>,
     mut connections: Query<(Entity, &mut QuicConnection, &NetworkMessages<Outgoing>)>,
 ) {
     // Iterate all connections in parallel
@@ -75,7 +90,43 @@ pub(crate) fn connection_message_sender_system(
         let trace_span = trace_span!("Sending packets from endpoint", endpoint=?entity);
         let _entered = trace_span.entered();
 
-        todo!()
+        // Iterate over all channels
+        for (channel, messages) in outgoing.iter() {
+            // Get the channel data
+            let channel_data = match registry.channel_config(channel) {
+                Some(channel_data) => channel_data,
+                None => {
+                    error!("Tried to send a message to a channel that didn't exist ({channel:?})");
+                    continue;
+                },
+            };
+
+            // Different channels have different config requirements
+            match (channel_data.reliable, channel_data.ordered) {
+                (ReliabilityGuarantee::Unreliable, _) => todo!(),
+
+                // Reliable transport is reliable
+                // This forces us to use streams
+                (ReliabilityGuarantee::Reliable, _) => {
+                    // Get the stream ID of this channel
+                    let stream_id: StreamId = match connection.channel_streams.get(&channel) {
+                        Some(v) => *v,
+                        None => {
+                            // Wasn't in the map, we have to open a new stream
+                            let stream_id = connection.inner.streams().open(Dir::Uni).unwrap();
+                            connection.channel_streams.insert(channel, stream_id);
+                            stream_id
+                        },
+                    };
+
+                    // Iterate over all messages and send them
+                    let mut send_stream = connection.inner.send_stream(stream_id);
+                    for message in messages.iter().cloned() {
+                        todo!()
+                    }
+                },
+            }
+        }
     });
 }
 

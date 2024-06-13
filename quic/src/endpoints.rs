@@ -76,10 +76,8 @@ impl QuicEndpoint {
         let (handle, connection) = self.inner.connect(Instant::now(), config, remote, server_name)?;
 
         // Spawn the connection entity
-        let entity = commands.spawn(QuicConnection {
-            handle,
-            inner: Box::new(connection),
-        }).id();
+        let component = QuicConnection::new(handle, Box::new(connection));
+        let entity = commands.spawn(component).id();
 
         // Add the entity ids to the map
         self.entities.insert(handle, entity);
@@ -172,11 +170,10 @@ pub(crate) fn endpoint_datagram_recv_system(
                                 // Acceptance succeeded :)
                                 Ok((handle, connection)) => {
                                     // Spawn the connection entity
-                                    let entity = commands.command_scope(|mut commands| {
-                                        commands.spawn(QuicConnection {
-                                            handle,
-                                            inner: Box::new(connection),
-                                        }).id()
+                                    let connection = Box::new(connection);
+                                    let entity = commands.command_scope(move |mut commands| {
+                                        let component = QuicConnection::new(handle, connection);
+                                        commands.spawn(component).id()
                                     });
 
                                     // Add the entity ids to the map
