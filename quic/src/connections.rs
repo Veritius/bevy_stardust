@@ -19,7 +19,6 @@ pub struct QuicConnection {
     pub(crate) handle: ConnectionHandle,
     pub(crate) inner: Box<Connection>,
 
-    stream_events: Vec<StreamEvent>,
     channel_streams: BTreeMap<ChannelId, StreamId>,
 }
 
@@ -34,7 +33,6 @@ impl QuicConnection {
             handle,
             inner,
 
-            stream_events: Vec::with_capacity(4),
             channel_streams: BTreeMap::new(),
         }
     }
@@ -179,8 +177,14 @@ pub(crate) fn connection_event_handler_system(
                 info!("Peer {entity:?} disconnected: {reason}");
             },
 
-            // Store stream events for later processing in a different system
-            AppEvent::Stream(event) => connection.stream_events.push(event),
+            AppEvent::Stream(event) => match event {
+                StreamEvent::Opened { dir } => todo!(),
+                StreamEvent::Readable { id } => todo!(),
+                StreamEvent::Writable { id } => todo!(),
+                StreamEvent::Finished { id } => todo!(),
+                StreamEvent::Stopped { id, error_code } => todo!(),
+                StreamEvent::Available { dir } => todo!(),
+            },
 
             AppEvent::DatagramReceived => todo!(),
             AppEvent::DatagramsUnblocked => todo!(),
