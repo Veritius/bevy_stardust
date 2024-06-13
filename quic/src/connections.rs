@@ -1,5 +1,6 @@
 use std::time::Instant;
 use bevy::prelude::*;
+use bevy_stardust::messages::{NetworkMessages, Outgoing};
 use bytes::Bytes;
 use endpoints::perform_transmit;
 use quinn_proto::{Connection, ConnectionHandle, VarInt};
@@ -63,6 +64,19 @@ impl TryFrom<DisconnectCode> for VarInt {
             NotListening => 2,
         }));
     }
+}
+
+pub(crate) fn connection_message_sender_system(
+    mut connections: Query<(Entity, &mut QuicConnection, &NetworkMessages<Outgoing>)>,
+) {
+    // Iterate all connections in parallel
+    connections.par_iter_mut().for_each(|(entity, mut connection, outgoing)| {
+        // Logging stuff
+        let trace_span = trace_span!("Sending packets from endpoint", endpoint=?entity);
+        let _entered = trace_span.entered();
+
+        todo!()
+    });
 }
 
 pub(crate) fn connection_datagram_send_system(
