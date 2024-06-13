@@ -2,7 +2,7 @@ use std::{io::ErrorKind, net::{SocketAddr, UdpSocket}, sync::Arc, time::Instant}
 use anyhow::Result;
 use bevy::{prelude::*, utils::HashMap};
 use bytes::BytesMut;
-use quinn_proto::{ClientConfig, ConnectionHandle, DatagramEvent, Endpoint, EndpointConfig, ServerConfig};
+use quinn_proto::{ClientConfig, ConnectionHandle, DatagramEvent, Endpoint, EndpointConfig, ServerConfig, Transmit};
 use crate::QuicConnection;
 
 /// A QUIC endpoint.
@@ -90,6 +90,7 @@ impl QuicEndpoint {
 }
 
 pub(crate) fn endpoint_datagram_recv_system(
+    mut commands: ParallelCommands,
     mut endpoints: Query<(Entity, &mut QuicEndpoint)>,
     mut connections: Query<&mut QuicConnection>,
 ) {
@@ -103,6 +104,7 @@ pub(crate) fn endpoint_datagram_recv_system(
         let inner = endpoint.inner.as_mut();
         let socket = &mut endpoint.socket;
         let entities = &mut endpoint.entities;
+        let listening = endpoint.listening;
         let ip = socket.local_addr().unwrap().ip();
 
         // Allocate a buffer to store messages in
@@ -152,10 +154,54 @@ pub(crate) fn endpoint_datagram_recv_system(
                         },
 
                         // New connection
-                        DatagramEvent::NewConnection(_) => todo!(),
+                        DatagramEvent::NewConnection(incoming) => {
+                            // If the server isn't listening, immediately reject them.
+                            if !listening {
+                                // Refuse the connection and send the refusal packet
+                                let transmit = inner.refuse(incoming, &mut buf);
+                                perform_transmit(socket, &buf, transmit);
+
+                                // Move on
+                                continue;
+                            }
+
+                            // Accept the connection immediately
+                            // TODO: Allow game systems to deny the connection
+                            match inner.accept(incoming, Instant::now(), &mut buf, None) {
+                                // Acceptance succeeded :)
+                                Ok((handle, connection)) => {
+                                    // Spawn the connection entity
+                                    let entity = commands.command_scope(|mut commands| {
+                                        commands.spawn(QuicConnection {
+                                            handle,
+                                            inner: Box::new(connection),
+                                        }).id()
+                                    });
+
+                                    // Add the entity ids to the map
+                                    entities.insert(handle, entity);
+                                },
+
+                                // An error occurred
+                                Err(err) => {
+                                    // Log the error to the console
+                                    debug!("Error occurred while accepting peer: {}", err.cause);
+
+                                    // The error may have an associated response
+                                    if let Some(transmit) = err.response {
+                                        perform_transmit(socket, &buf, transmit);
+                                    }
+
+                                    // Done
+                                    continue;
+                                },
+                            }
+                        },
 
                         // Endpoint wants to send
-                        DatagramEvent::Response(_) => todo!(),
+                        DatagramEvent::Response(transmit) => {
+                            perform_transmit(socket, &buf, transmit);
+                        },
                     },
 
                     // Nothing happened.
@@ -168,8 +214,20 @@ pub(crate) fn endpoint_datagram_recv_system(
 
             // An actual IO error occurred
             Err(e) => {
-                todo!()
+                error!("IO error occurred while reading UDP packets: {e}");
+                break;
             },
         }}
     });
+}
+
+fn perform_transmit(
+    socket: &mut UdpSocket,
+    payload: &[u8],
+    transmit: Transmit,
+) {
+    match socket.send_to(&payload, transmit.destination) {
+        Ok(len) => { debug_assert_eq!(transmit.size, len); },
+        Err(err) => { error!("Error while sending connection refusal response: {err}"); },
+    }
 }
