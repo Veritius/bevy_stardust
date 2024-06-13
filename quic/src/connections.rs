@@ -1,9 +1,10 @@
 use std::{collections::BTreeMap, time::Instant};
+use anyhow::{bail, Result};
 use bevy::prelude::*;
 use bevy_stardust::prelude::*;
 use bytes::Bytes;
 use endpoints::perform_transmit;
-use quinn_proto::{Connection, ConnectionHandle, Dir, StreamId, VarInt, coding::Codec};
+use quinn_proto::{coding::Codec, Connection, ConnectionHandle, Dir, FinishError, StreamId, VarInt};
 use streams::{StreamFrameHeader, StreamOpenHeader};
 use crate::*;
 
@@ -40,6 +41,27 @@ impl QuicConnection {
             DisconnectCode::AppDisconnect.try_into().unwrap(),
             reason
         );
+    }
+
+    /// Closes a stream used to send Stardust messages, releasing some resources.
+    /// This is useful as an optimisation for channels that are never used after a certain point.
+    /// If the channel continues to be used, a new stream will be opened.
+    pub fn close_stardust_stream(&mut self, channel: ChannelId) -> Result<()> {
+        if let Some(stream_id) = self.channel_streams.get(&channel) {
+            // Try to close the stream
+            match self.inner.send_stream(*stream_id).finish() {
+                Ok(()) => {},
+                Err(FinishError::ClosedStream) => {},
+                Err(FinishError::Stopped(code)) => bail!("Stream was stopped by remote: {code}"),
+            }
+
+            // Remove from map
+            self.channel_streams.remove(&channel);
+            return Ok(())
+        } else {
+            // No work to do
+            return Ok(())
+        }
     }
 }
 
