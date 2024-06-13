@@ -107,7 +107,7 @@ impl TryFrom<DisconnectCode> for VarInt {
 }
 
 pub(crate) fn connection_event_handler_system(
-    mut connections: Query<(Entity, &mut QuicConnection, &mut NetworkMessages<Incoming>)>,
+    mut connections: Query<(Entity, &mut QuicConnection, Option<&mut NetworkPeerLifestage>, &mut NetworkMessages<Incoming>)>,
     mut commands: Commands,
     mut endpoints: Query<(Entity, &mut QuicEndpoint)>,
     mut dc_events: EventWriter<PeerDisconnectedEvent>,
@@ -119,16 +119,26 @@ pub(crate) fn connection_event_handler_system(
     let dc_events = Mutex::new(&mut dc_events);
 
     // Iterate all connections in parallel
-    connections.par_iter_mut().for_each(|(entity, mut connection, mut incoming)| {
+    connections.par_iter_mut().for_each(|(entity, mut connection, mut lifestage, mut incoming)| {
         // Logging stuff
         let trace_span = trace_span!("Handling connection events", connection=?entity);
         let _entered = trace_span.entered();
 
         // Poll as many events as possible from the handler
         while let Some(event) = connection.inner.poll() { match event {
-            AppEvent::Connected => todo!(),
+            AppEvent::Connected => {
+                // Set their lifestage to Established.
+                if let Some(ref mut lifestage) = lifestage {
+                    *lifestage.as_mut() = NetworkPeerLifestage::Established;
+                }
+            },
 
             AppEvent::ConnectionLost { reason } => {
+                // Set their lifestage to Closed.
+                if let Some(ref mut lifestage) = lifestage {
+                    *lifestage.as_mut() = NetworkPeerLifestage::Closed;
+                }
+
                 // Fetch the endpoint component
                 let mut endpoints = endpoints.lock().unwrap();
                 let (_, mut endpoint) = match endpoints.get_mut(connection.owner) {
