@@ -15,6 +15,8 @@ pub struct QuicEndpoint {
     pub(crate) inner: Box<Endpoint>,
     pub(crate) entities: HashMap<ConnectionHandle, Entity>,
     pub(crate) socket: UdpSocket,
+
+    listening: bool,
 }
 
 impl QuicEndpoint {
@@ -36,6 +38,7 @@ impl QuicEndpoint {
             inner: Box::new(Endpoint::new(config, server_config, allow_mtud, rng_seed)),
             entities: HashMap::default(),
             socket,
+            listening: true,
         })
     }
 
@@ -46,6 +49,16 @@ impl QuicEndpoint {
         server_config: Option<Arc<ServerConfig>>,
     ) {
         self.inner.set_server_config(server_config)
+    }
+
+    /// Sets whether or not the endpoint is listening to new connections.
+    /// Only affects endpoints with a server config. Enabled by default.
+    /// Turning this off does not remove the attached server config.
+    pub fn set_listening(
+        &mut self,
+        val: bool,
+    ) {
+        self.listening = val;
     }
 
     /// Connects to a new connection.

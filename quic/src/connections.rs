@@ -31,6 +31,7 @@ pub(crate) enum DisconnectCode {
 
     Unspecified,
     AppDisconnect,
+    NotListening,
 }
 
 impl From<VarInt> for DisconnectCode {
@@ -39,6 +40,7 @@ impl From<VarInt> for DisconnectCode {
         match u64::from(value) {
             0 => Unspecified,
             1 => AppDisconnect,
+            2 => NotListening,
 
             _ => Invalid,
         }
@@ -56,6 +58,7 @@ impl TryFrom<DisconnectCode> for VarInt {
 
             Unspecified => 0,
             AppDisconnect => 1,
+            NotListening => 2,
         }));
     }
 }
