@@ -1,6 +1,6 @@
 use std::{io::ErrorKind, net::{SocketAddr, UdpSocket}, sync::Arc, time::Instant};
 use anyhow::Result;
-use bevy::{ecs::entity::EntityHashMap, prelude::*, utils::HashMap};
+use bevy::{prelude::*, utils::HashMap};
 use bytes::BytesMut;
 use quinn_proto::{ClientConfig, ConnectionHandle, DatagramEvent, Endpoint, EndpointConfig, ServerConfig};
 use crate::QuicConnection;
