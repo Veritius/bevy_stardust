@@ -107,7 +107,7 @@ impl TryFrom<DisconnectCode> for VarInt {
 }
 
 pub(crate) fn connection_event_handler_system(
-    mut connections: Query<(Entity, &mut QuicConnection, Option<&mut NetworkPeerLifestage>, &mut NetworkMessages<Incoming>)>,
+    mut connections: Query<(Entity, &mut QuicConnection, Option<&mut NetworkPeerLifestage>)>,
     mut commands: Commands,
     mut endpoints: Query<(Entity, &mut QuicEndpoint)>,
     mut dc_events: EventWriter<PeerDisconnectedEvent>,
@@ -119,7 +119,7 @@ pub(crate) fn connection_event_handler_system(
     let dc_events = Mutex::new(&mut dc_events);
 
     // Iterate all connections in parallel
-    connections.par_iter_mut().for_each(|(entity, mut connection, mut lifestage, mut incoming)| {
+    connections.par_iter_mut().for_each(|(entity, mut connection, mut lifestage)| {
         // Logging stuff
         let trace_span = trace_span!("Handling connection events", connection=?entity);
         let _entered = trace_span.entered();
@@ -131,6 +131,14 @@ pub(crate) fn connection_event_handler_system(
                 if let Some(ref mut lifestage) = lifestage {
                     *lifestage.as_mut() = NetworkPeerLifestage::Established;
                 }
+
+                // Add the necessary components
+                commands.lock().unwrap().entity(entity).insert((
+                    NetworkPeer::new(),
+                    NetworkPeerAddress(connection.inner.remote_address()),
+                    NetworkMessages::<Incoming>::new(),
+                    NetworkMessages::<Outgoing>::new(),
+                ));
             },
 
             AppEvent::ConnectionLost { reason } => {
