@@ -1,4 +1,4 @@
-use std::{collections::BTreeMap, time::Instant};
+use std::{collections::BTreeMap, sync::Mutex, time::Instant};
 use anyhow::{bail, Result};
 use bevy::prelude::*;
 use bevy_stardust::prelude::*;
@@ -15,6 +15,7 @@ use crate::*;
 /// Being put into another `World` will lead to undefined behavior.
 #[derive(Component)]
 pub struct QuicConnection {
+    pub(crate) owner: Entity,
     pub(crate) handle: ConnectionHandle,
     pub(crate) inner: Box<Connection>,
 
@@ -23,10 +24,12 @@ pub struct QuicConnection {
 
 impl QuicConnection {
     pub(crate) fn new(
+        owner: Entity,
         handle: ConnectionHandle,
         inner: Box<Connection>,
     ) -> Self {
         Self {
+            owner,
             handle,
             inner,
 
@@ -104,15 +107,48 @@ impl TryFrom<DisconnectCode> for VarInt {
 }
 
 pub(crate) fn connection_event_handler_system(
+    mut endpoints: Query<(Entity, &mut QuicEndpoint)>,
+    mut disconnects: EventWriter<PeerDisconnectedEvent>,
     mut connections: Query<(Entity, &mut QuicConnection, &mut NetworkMessages<Incoming>)>,
 ) {
+    // Wrap the query and eventwriter in a mutex so we can use them in parallel
+    // Accesses (should be) infrequent enough that this is fine
+    let endpoints = Mutex::new(&mut endpoints);
+    let dc_events = Mutex::new(&mut disconnects);
+
     // Iterate all connections in parallel
     connections.par_iter_mut().for_each(|(entity, mut connection, mut incoming)| {
+        // Logging stuff
+        let trace_span = trace_span!("Handling connection events", connection=?entity);
+        let _entered = trace_span.entered();
+
         // Poll as many events as possible from the handler
         while let Some(event) = connection.inner.poll() { match event {
             AppEvent::Connected => todo!(),
 
-            AppEvent::ConnectionLost { reason } => todo!(),
+            AppEvent::ConnectionLost { reason } => {
+                // Fetch the endpoint component
+                let mut endpoints = endpoints.lock().unwrap();
+                let (_, mut endpoint) = match endpoints.get_mut(connection.owner) {
+                    Ok(endpoint) => endpoint,
+                    Err(_) => todo!(),
+                };
+
+                // Remove the entity id from the map
+                match endpoint.entities.remove(&connection.handle) {
+                    Some(_) => {},
+                    None => todo!(),
+                }
+
+                // Notify other systems of the disconnection
+                dc_events.lock().unwrap().send(PeerDisconnectedEvent {
+                    peer: entity,
+                    reason: None, // TODO: give good reasons
+                });
+
+                // Log the disconnection
+                info!("Peer {entity:?} disconnected: {reason}");
+            },
 
             AppEvent::Stream(event) => match event {
                 StreamEvent::Opened { dir } => todo!(),
@@ -139,7 +175,7 @@ pub(crate) fn connection_message_sender_system(
     // Iterate all connections in parallel
     connections.par_iter_mut().for_each(|(entity, mut connection, outgoing)| {
         // Logging stuff
-        let trace_span = trace_span!("Sending packets from endpoint", endpoint=?entity);
+        let trace_span = trace_span!("Queuing message sends", connection=?entity);
         let _entered = trace_span.entered();
 
         // Tiny scratch space for some operations

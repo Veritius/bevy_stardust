@@ -62,12 +62,14 @@ impl QuicEndpoint {
     }
 
     /// Connects to a new connection.
+    /// `entity` must be the id of the entity that the `QuicEndpoint` component is attached to.
     /// 
     /// # Safety
     /// `commands` must only be applied to the world the `QuicEndpoint` is part of.
     pub fn connect(
         &mut self,
         commands: &mut Commands,
+        entity: Entity,
         config: ClientConfig,
         remote: SocketAddr,
         server_name: &str,
@@ -76,7 +78,7 @@ impl QuicEndpoint {
         let (handle, connection) = self.inner.connect(Instant::now(), config, remote, server_name)?;
 
         // Spawn the connection entity
-        let component = QuicConnection::new(handle, Box::new(connection));
+        let component = QuicConnection::new(entity, handle, Box::new(connection));
         let entity = commands.spawn(component).id();
 
         // Add the entity ids to the map
@@ -172,7 +174,11 @@ pub(crate) fn endpoint_datagram_recv_system(
                                     // Spawn the connection entity
                                     let connection = Box::new(connection);
                                     let entity = commands.command_scope(move |mut commands| {
-                                        let component = QuicConnection::new(handle, connection);
+                                        let component = QuicConnection::new(
+                                            entity,
+                                            handle,
+                                            connection
+                                        );
                                         commands.spawn(component).id()
                                     });
 
