@@ -107,14 +107,16 @@ impl TryFrom<DisconnectCode> for VarInt {
 }
 
 pub(crate) fn connection_event_handler_system(
-    mut endpoints: Query<(Entity, &mut QuicEndpoint)>,
-    mut disconnects: EventWriter<PeerDisconnectedEvent>,
     mut connections: Query<(Entity, &mut QuicConnection, &mut NetworkMessages<Incoming>)>,
+    mut commands: Commands,
+    mut endpoints: Query<(Entity, &mut QuicEndpoint)>,
+    mut dc_events: EventWriter<PeerDisconnectedEvent>,
 ) {
-    // Wrap the query and eventwriter in a mutex so we can use them in parallel
-    // Accesses (should be) infrequent enough that this is fine
+    // Wrap the commands queue, query and eventwriter in a mutex so we can use them in parallel
+    // Accesses (should be) infrequent enough that this is fine.
+    let commands = Mutex::new(&mut commands);
     let endpoints = Mutex::new(&mut endpoints);
-    let dc_events = Mutex::new(&mut disconnects);
+    let dc_events = Mutex::new(&mut dc_events);
 
     // Iterate all connections in parallel
     connections.par_iter_mut().for_each(|(entity, mut connection, mut incoming)| {
@@ -139,6 +141,13 @@ pub(crate) fn connection_event_handler_system(
                     Some(_) => {},
                     None => todo!(),
                 }
+
+                // Manually drop endpoints to release it early
+                // This probably doesn't make any difference but whatever
+                drop(endpoints);
+
+                // Queue the entity to be despawned
+                commands.lock().unwrap().entity(entity).despawn();
 
                 // Notify other systems of the disconnection
                 dc_events.lock().unwrap().send(PeerDisconnectedEvent {
