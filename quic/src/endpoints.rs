@@ -90,9 +90,9 @@ impl QuicEndpoint {
 }
 
 pub(crate) fn endpoint_datagram_recv_system(
-    mut commands: ParallelCommands,
+    commands: ParallelCommands,
     mut endpoints: Query<(Entity, &mut QuicEndpoint)>,
-    mut connections: Query<&mut QuicConnection>,
+    connections: Query<&mut QuicConnection>,
 ) {
     endpoints.par_iter_mut().for_each(|(entity, mut endpoint)| {
         // Logging stuff
@@ -114,8 +114,9 @@ pub(crate) fn endpoint_datagram_recv_system(
         loop { match socket.recv_from(&mut buf) {
             // Received another packet
             Ok((len, addr)) => {
-                // Log packet receive
-                trace!("Received packet of length {len} from {addr}");
+                // More logging stuff
+                let trace_span = trace_span!("Reading packet", len, address=?addr);
+                let _entered = trace_span.entered();
 
                 // Pass packet to the endpoint
                 match inner.handle(
@@ -221,6 +222,49 @@ pub(crate) fn endpoint_datagram_recv_system(
     });
 }
 
+pub(crate) fn endpoint_datagram_send_system(
+    mut endpoints: Query<(Entity, &mut QuicEndpoint)>,
+    connections: Query<&mut QuicConnection>,
+) {
+    endpoints.par_iter_mut().for_each(|(entity, mut endpoint)| {
+        // Logging stuff
+        let trace_span = trace_span!("Sending packets from endpoint", endpoint=?entity);
+        let _entered = trace_span.entered();
+
+        // Some stuff related to the endpoint
+        let endpoint = endpoint.as_mut();
+        let socket = &mut endpoint.socket;
+
+        // Allocate a buffer to store messages in
+        let mut buf = Vec::with_capacity(2048); // TODO: Make this based on MTU
+
+        // Iterate over all connections associated with this endpoint
+        let entities = endpoint.entities.iter();
+        for (handle, entity) in entities {
+            // Logging stuff
+            let trace_span = trace_span!("Polling connection", connection=?entity, handle=?handle);
+            let _entered = trace_span.entered();
+
+            // SAFETY: Endpoints will only access the connections they have created
+            let query_item = unsafe { connections.get_unchecked(*entity) };
+            let mut connection = match query_item {
+                Ok(connection) => connection,
+                Err(err) => todo!(),
+            };
+
+            // Repeatedly poll transmit until the connection no longer wants to send any more packets
+            let mut send_count: u32 = 0;
+            while let Some(transmit) = connection.inner.poll_transmit(Instant::now(), 10, &mut buf) {
+                perform_transmit(socket, &buf, transmit);
+                send_count += 1;
+            }
+
+            // Record the amount of packets we've sent
+            _entered.record("sends", send_count);
+        }
+    });
+}
+
 fn perform_transmit(
     socket: &mut UdpSocket,
     payload: &[u8],
@@ -228,6 +272,6 @@ fn perform_transmit(
 ) {
     match socket.send_to(&payload, transmit.destination) {
         Ok(len) => { debug_assert_eq!(transmit.size, len); },
-        Err(err) => { error!("Error while sending connection refusal response: {err}"); },
+        Err(err) => { error!("Error while sending packet: {err}"); },
     }
 }
