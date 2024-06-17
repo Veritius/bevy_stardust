@@ -248,7 +248,7 @@ pub(crate) fn endpoint_datagram_recv_system(
     });
 }
 
-pub(crate) fn connection_datagram_send_system(
+pub(crate) fn endpoint_datagram_send_system(
     mut endpoints: Query<(Entity, &mut QuicEndpoint)>,
     connections: Query<&mut QuicConnection>,
 ) {

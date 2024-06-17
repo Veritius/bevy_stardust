@@ -16,7 +16,7 @@ impl Plugin for QuicPlugin {
 
         app.add_systems(PostUpdate, (
             connection_message_sender_system,
-            connection_datagram_send_system,
+            endpoint_datagram_send_system,
             connection_endpoint_events_system,
         ).chain().in_set(NetworkWrite::Send));
     }
