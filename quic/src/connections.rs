@@ -5,7 +5,7 @@ use bevy_stardust::prelude::*;
 use bytes::Bytes;
 use endpoints::perform_transmit;
 use quinn_proto::{coding::Codec, Connection, ConnectionHandle, Dir, FinishError, StreamEvent, Event as AppEvent, StreamId, VarInt};
-use streams::{StreamFrameHeader, StreamOpenHeader};
+use streams::{FramedMessage, StreamOpenHeader};
 use crate::*;
 
 /// A QUIC connection, attached to an endpoint.
@@ -283,13 +283,8 @@ pub(crate) fn connection_message_sender_system(
                     // Iterate over all messages and send them
                     let mut send_stream = connection.inner.send_stream(stream_id);
                     for payload in messages.iter().cloned() {
-                        // Stream frame header stuff
-                        scr.clear(); // Clear the scratch space
-                        StreamFrameHeader { length: payload.len() }.encode(&mut scr);
-
-                        // TODO: Handle error cases
-                        send_stream.write(&scr[..]).unwrap();
-                        send_stream.write(&payload[..]).unwrap();
+                        // TODO: Handle the error case
+                        FramedMessage { payload }.write(&mut scr, &mut send_stream).unwrap();
                     }
                 },
             }

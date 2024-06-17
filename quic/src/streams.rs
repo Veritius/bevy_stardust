@@ -1,5 +1,5 @@
 use bevy_stardust::prelude::*;
-use quinn_proto::{VarInt, coding::{Codec, UnexpectedEnd, Result as DecodeResult}};
+use quinn_proto::{coding::{Codec, Result as DecodeResult, UnexpectedEnd}, SendStream, VarInt, WriteError};
 
 pub(crate) enum StreamOpenHeader {
     StardustReliable {
@@ -37,21 +37,26 @@ impl Codec for StreamOpenHeader {
     }
 }
 
-pub(crate) struct StreamFrameHeader {
-    pub length: usize,
+/// A framed message that can be sent over a stream.
+#[derive(Debug, Clone)]
+pub(crate) struct FramedMessage {
+    pub payload: Bytes,
 }
 
-impl Codec for StreamFrameHeader {
-    fn encode<B: BufMut>(&self, buf: &mut B) {
-        // Encode the length as a variable length integer
-        // This is fine since I don't think anyone will
-        // attempt to send a message bigger than 4,000 petabytes
-        VarInt::try_from(self.length).unwrap().encode(buf);
-    }
+impl FramedMessage {
+    pub fn write(self, buf: &mut Vec<u8>, stream: &mut SendStream) -> Result<usize, WriteError> {
+        // Counter for written bytes
+        let mut written = 0;
 
-    fn decode<B: Buf>(buf: &mut B) -> DecodeResult<Self> {
-        Ok(Self {
-            length: u64::from(VarInt::decode(buf)?) as usize,
-        })
+        // Write the length of the message
+        VarInt::try_from(self.payload.len()).unwrap().encode(buf);
+        written += stream.write(buf)?;
+        buf.clear();
+
+        // Write the payload itself
+        written += stream.write(&self.payload[..])?;
+
+        // Return amount of bytes that are written
+        return Ok(written)
     }
 }
