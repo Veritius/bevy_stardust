@@ -163,6 +163,9 @@ pub(crate) fn connection_event_handler_system(
         // Poll as many events as possible from the handler
         while let Some(event) = connection.inner.poll() { match event {
             AppEvent::Connected => {
+                // Log this to the console
+                info!("Connection {entity:?} finished handshake");
+
                 // Set their lifestage to Established.
                 if let Some(ref mut lifestage) = lifestage {
                     *lifestage.as_mut() = NetworkPeerLifestage::Established;
@@ -178,6 +181,9 @@ pub(crate) fn connection_event_handler_system(
             },
 
             AppEvent::ConnectionLost { reason } => {
+                // Log this to the console
+                info!("Connection {entity:?} lost: {reason}");
+
                 // Set their lifestage to Closed.
                 if let Some(ref mut lifestage) = lifestage {
                     *lifestage.as_mut() = NetworkPeerLifestage::Closed;
@@ -208,9 +214,6 @@ pub(crate) fn connection_event_handler_system(
                     peer: entity,
                     reason: None, // TODO: give good reasons
                 });
-
-                // Log the disconnection
-                info!("Peer {entity:?} disconnected: {reason}");
             },
 
             AppEvent::Stream(event) => match event {

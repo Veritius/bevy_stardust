@@ -34,6 +34,8 @@ impl QuicEndpoint {
         // Sockets must be nonblocking
         socket.set_nonblocking(true)?;
 
+        debug!("Opened QUIC endpoint on address {:?}", socket.local_addr().unwrap());
+
         Ok(Self {
             inner: Box::new(Endpoint::new(config, server_config, allow_mtud, rng_seed)),
             entities: HashMap::default(),
