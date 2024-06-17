@@ -5,7 +5,7 @@ use bevy_stardust::prelude::*;
 use bytes::Bytes;
 use endpoints::perform_transmit;
 use quinn_proto::{coding::Codec, Connection, ConnectionHandle, Dir, FinishError, StreamEvent, Event as AppEvent, StreamId, VarInt};
-use streams::{FramedMessage, StreamOpenHeader};
+use streams::{FramedMessage, FramedReader, FramedWriter, StreamOpenHeader};
 use crate::*;
 
 /// A QUIC connection, attached to an endpoint.
@@ -20,6 +20,8 @@ pub struct QuicConnection {
     pub(crate) inner: Box<Connection>,
 
     channel_streams: BTreeMap<ChannelId, StreamId>,
+    framed_readers: BTreeMap<StreamId, FramedReader>,
+    framed_writers: BTreeMap<StreamId, FramedWriter>,
 }
 
 impl QuicConnection {
@@ -34,6 +36,8 @@ impl QuicConnection {
             inner,
 
             channel_streams: BTreeMap::new(),
+            framed_readers: BTreeMap::new(),
+            framed_writers: BTreeMap::new(),
         }
     }
 

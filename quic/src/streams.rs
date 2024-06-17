@@ -1,3 +1,4 @@
+use bevy::utils::smallvec::SmallVec;
 use bevy_stardust::prelude::*;
 use quinn_proto::{coding::{Codec, Result as DecodeResult, UnexpectedEnd}, SendStream, VarInt, WriteError};
 
@@ -34,6 +35,82 @@ impl Codec for StreamOpenHeader {
 
             _ => Err(UnexpectedEnd),
         }
+    }
+}
+
+struct FramedMessageHeader {
+    length: VarInt,
+}
+
+impl Codec for FramedMessageHeader {
+    fn encode<B: BufMut>(&self, buf: &mut B) {
+        self.length.encode(buf);
+    }
+
+    fn decode<B: Buf>(buf: &mut B) -> DecodeResult<Self> {
+        Ok(Self {
+            length: VarInt::decode(buf)?,
+        })
+    }
+}
+
+pub(crate) struct FramedWriter {
+    buffer: SmallVec<[Bytes; 1]>,
+}
+
+impl FramedWriter {
+    pub fn new() -> Self {
+        Self {
+            buffer: SmallVec::new(),
+        }
+    }
+
+    pub fn with_capacity(capacity: usize) -> Self {
+        Self {
+            buffer: SmallVec::with_capacity(capacity),
+        }
+    }
+
+    pub fn push(&mut self, bytes: Bytes) {
+        // Create the header data
+        let mut buf = BytesMut::new();
+        FramedMessageHeader {
+            length: VarInt::from_u64(bytes.len() as u64).unwrap(),
+        }.encode(&mut buf);
+
+        // Push segments to the buffer
+        self.buffer.push(buf.freeze());
+        self.buffer.push(bytes);
+    }
+}
+
+pub(crate) struct FramedReader {
+    buffer: SmallVec<[Bytes; 1]>,
+}
+
+impl FramedReader {
+    pub fn new() -> Self {
+        Self {
+            buffer: SmallVec::new(),
+        }
+    }
+
+    pub fn with_capacity(capacity: usize) -> Self {
+        Self {
+            buffer: SmallVec::with_capacity(capacity),
+        }
+    }
+
+    pub fn push(&mut self, bytes: Bytes) {
+        self.buffer.push(bytes);
+    }
+
+    pub fn unread(&self) -> usize {
+        self.buffer.iter().map(|bytes| bytes.len()).sum()
+    }
+
+    pub fn pop(&mut self) -> Option<Bytes> {
+        todo!()
     }
 }
 
