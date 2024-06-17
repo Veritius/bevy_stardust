@@ -18,10 +18,10 @@ pub fn setup_app() -> App {
         DefaultPlugins.build().disable::<LogPlugin>(),
         LogPlugin {
             filter: "".to_string(),
-            level: bevy::log::Level::DEBUG,
+            level: bevy::log::Level::TRACE,
             update_subscriber: None,
         },
-        ScheduleRunnerPlugin::default(),
+        ScheduleRunnerPlugin::run_loop(std::time::Duration::from_millis(200)),
         StardustPlugin,
         QuicPlugin,
     ));

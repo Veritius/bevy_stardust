@@ -123,6 +123,7 @@ pub(crate) fn endpoint_datagram_recv_system(
                 1. recv_from takes a mutable slice, which can't resize
                 2. recv_from will drop any bytes that can't fit in the slice
                 3. Without this, the slice's length may be lower than it should be
+                4. Endpoint::handle may change the vec's length or capacity
 
                 This is fine because
                 1. u8s have no special drop impl
