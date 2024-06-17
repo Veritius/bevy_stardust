@@ -110,120 +110,140 @@ pub(crate) fn endpoint_datagram_recv_system(
         let ip = socket.local_addr().unwrap().ip();
 
         // Allocate a buffer to store messages in
-        let mut buf = Vec::with_capacity(2048); // TODO: Make this based on MTU
+        let buf_size = 2048; // TODO: Make this based on MTU
+        let mut buf = Vec::with_capacity(buf_size);
+        buf.extend((0..buf_size).into_iter().map(|_| 0)); // Fill with zeros
 
         // Repeatedly receive messages until we run out
-        loop { match socket.recv_from(&mut buf) {
-            // Received another packet
-            Ok((len, addr)) => {
-                // More logging stuff
-                let trace_span = trace_span!("Reading packet", len, address=?addr);
-                let _entered = trace_span.entered();
+        loop {
+            /*
+                SAFETY
 
-                // Pass packet to the endpoint
-                match inner.handle(
-                    Instant::now(),
-                    addr,
-                    Some(ip),
-                    None,
-                    BytesMut::from(&buf[..]),
-                    &mut buf,
-                ) {
-                    // Event received
-                    Some(event) => match event {
-                        // Connection event, route to an entity
-                        DatagramEvent::ConnectionEvent(handle, event) => {
-                            // Get the entity ID from the map
-                            let entity = match entities.get(&handle) {
-                                Some(v) => *v,
-                                None => {
-                                    error!("Connection {handle:?} had no associated entity");
-                                    todo!(); // continue;
-                                },
-                            };
+                This is needed because
+                1. recv_from takes a mutable slice, which can't resize
+                2. recv_from will drop any bytes that can't fit in the slice
+                3. Without this, the slice's length may be lower than it should be
 
-                            // SAFETY: Only this endpoint accesses this entity, since it controls it
-                            let query_item = unsafe { connections.get_unchecked(entity) };
-                            let mut connection = match query_item {
-                                Ok(v) => v,
-                                Err(_) => {
-                                    error!("Failed to get connection component from {entity:?}");
+                This is fine because
+                1. u8s have no special drop impl
+                2. We filled the vec with zeros
+                3. recv_from returns the valid length
+                4. It's just bytes, we can't fuck up
+            */
+            unsafe { buf.set_len(buf.capacity()); }
+
+            match socket.recv_from(&mut buf) {
+                // Received another packet
+                Ok((len, addr)) => {
+                    // More logging stuff
+                    let trace_span = trace_span!("Reading packet", len, address=?addr);
+                    let _entered = trace_span.entered();
+
+                    // Pass packet to the endpoint
+                    match inner.handle(
+                        Instant::now(),
+                        addr,
+                        Some(ip),
+                        None,
+                        BytesMut::from(&buf[..]),
+                        &mut buf,
+                    ) {
+                        // Event received
+                        Some(event) => match event {
+                            // Connection event, route to an entity
+                            DatagramEvent::ConnectionEvent(handle, event) => {
+                                // Get the entity ID from the map
+                                let entity = match entities.get(&handle) {
+                                    Some(v) => *v,
+                                    None => {
+                                        error!("Connection {handle:?} had no associated entity");
+                                        todo!(); // continue;
+                                    },
+                                };
+
+                                // SAFETY: Only this endpoint accesses this entity, since it controls it
+                                let query_item = unsafe { connections.get_unchecked(entity) };
+                                let mut connection = match query_item {
+                                    Ok(v) => v,
+                                    Err(_) => {
+                                        error!("Failed to get connection component from {entity:?}");
+                                        continue;
+                                    },
+                                };
+
+                                // Connection handles event
+                                connection.inner.handle_event(event);
+                            },
+
+                            // New connection
+                            DatagramEvent::NewConnection(incoming) => {
+                                // If the server isn't listening, immediately reject them.
+                                if !listening {
+                                    // Refuse the connection and send the refusal packet
+                                    let transmit = inner.refuse(incoming, &mut buf);
+                                    perform_transmit(socket, &buf, transmit);
+
+                                    // Move on
                                     continue;
-                                },
-                            };
+                                }
 
-                            // Connection handles event
-                            connection.inner.handle_event(event);
-                        },
+                                // Accept the connection immediately
+                                // TODO: Allow game systems to deny the connection
+                                match inner.accept(incoming, Instant::now(), &mut buf, None) {
+                                    // Acceptance succeeded :)
+                                    Ok((handle, connection)) => {
+                                        // Spawn the connection entity
+                                        let connection = Box::new(connection);
+                                        let entity = commands.command_scope(move |mut commands| {
+                                            let component = QuicConnection::new(
+                                                entity,
+                                                handle,
+                                                connection
+                                            );
+                                            commands.spawn(component).id()
+                                        });
 
-                        // New connection
-                        DatagramEvent::NewConnection(incoming) => {
-                            // If the server isn't listening, immediately reject them.
-                            if !listening {
-                                // Refuse the connection and send the refusal packet
-                                let transmit = inner.refuse(incoming, &mut buf);
+                                        // Add the entity ids to the map
+                                        entities.insert(handle, entity);
+                                    },
+
+                                    // An error occurred
+                                    Err(err) => {
+                                        // Log the error to the console
+                                        debug!("Error occurred while accepting peer: {}", err.cause);
+
+                                        // The error may have an associated response
+                                        if let Some(transmit) = err.response {
+                                            perform_transmit(socket, &buf, transmit);
+                                        }
+
+                                        // Done
+                                        continue;
+                                    },
+                                }
+                            },
+
+                            // Endpoint wants to send
+                            DatagramEvent::Response(transmit) => {
                                 perform_transmit(socket, &buf, transmit);
-
-                                // Move on
-                                continue;
-                            }
-
-                            // Accept the connection immediately
-                            // TODO: Allow game systems to deny the connection
-                            match inner.accept(incoming, Instant::now(), &mut buf, None) {
-                                // Acceptance succeeded :)
-                                Ok((handle, connection)) => {
-                                    // Spawn the connection entity
-                                    let connection = Box::new(connection);
-                                    let entity = commands.command_scope(move |mut commands| {
-                                        let component = QuicConnection::new(
-                                            entity,
-                                            handle,
-                                            connection
-                                        );
-                                        commands.spawn(component).id()
-                                    });
-
-                                    // Add the entity ids to the map
-                                    entities.insert(handle, entity);
-                                },
-
-                                // An error occurred
-                                Err(err) => {
-                                    // Log the error to the console
-                                    debug!("Error occurred while accepting peer: {}", err.cause);
-
-                                    // The error may have an associated response
-                                    if let Some(transmit) = err.response {
-                                        perform_transmit(socket, &buf, transmit);
-                                    }
-
-                                    // Done
-                                    continue;
-                                },
-                            }
+                            },
                         },
 
-                        // Endpoint wants to send
-                        DatagramEvent::Response(transmit) => {
-                            perform_transmit(socket, &buf, transmit);
-                        },
-                    },
+                        // Nothing happened.
+                        None => { continue },
+                    }
+                },
 
-                    // Nothing happened.
-                    None => { continue },
-                }
-            },
+                // There are no more packets to read, break the loop
+                Err(e) if e.kind() == ErrorKind::WouldBlock => { break },
 
-            // There are no more packets to read, break the loop
-            Err(e) if e.kind() == ErrorKind::WouldBlock => { break },
-
-            // An actual IO error occurred
-            Err(e) => {
-                error!("IO error occurred while reading UDP packets: {e}");
-                break;
-            },
-        }}
+                // An actual IO error occurred
+                Err(e) => {
+                    error!("IO error occurred while reading UDP packets: {e}");
+                    break;
+                },
+            }
+        }
     });
 }
 
