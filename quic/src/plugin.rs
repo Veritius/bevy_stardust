@@ -15,9 +15,9 @@ impl Plugin for QuicTransportPlugin {
         ).chain().in_set(NetworkRead::Receive));
 
         app.add_systems(PostUpdate, (
-            connection_endpoint_events_system,
             connection_message_sender_system,
             connection_datagram_send_system,
+            connection_endpoint_events_system,
         ).chain().in_set(NetworkWrite::Send));
     }
 }
