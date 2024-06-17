@@ -333,6 +333,7 @@ pub(crate) fn connection_datagram_send_system(
             while let Some(transmit) = connection.inner.poll_transmit(Instant::now(), 1, &mut buf) {
                 perform_transmit(socket, &buf, transmit);
                 send_count += 1;
+                buf.clear(); // Clear the buffer
             }
 
             // Record the amount of packets we've sent
