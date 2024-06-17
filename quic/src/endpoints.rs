@@ -126,9 +126,9 @@ pub(crate) fn endpoint_datagram_recv_system(
                 4. Endpoint::handle may change the vec's length or capacity
 
                 This is fine because
-                1. u8s have no special drop impl
-                2. We filled the vec with zeros
-                3. recv_from returns the valid length
+                1. u8s have no special drop or initialisation considerations
+                2. We filled the vec with zeros, replacing old, uninitialised memory
+                3. recv_from returns the valid length of actually initialised data
                 4. The buffer already fills with arbitrary, untrusted data
             */
             unsafe { buf.set_len(buf.capacity()); }
