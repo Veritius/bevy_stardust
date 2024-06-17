@@ -26,8 +26,18 @@ pub fn setup_app() -> App {
         QuicPlugin,
     ));
 
+    app.add_channel::<SimpleChannel>(ChannelConfiguration {
+        reliable: ReliabilityGuarantee::Reliable,
+        ordered: OrderingGuarantee::Ordered,
+        fragmented: false,
+        priority: 0,
+    });
+
     return app;
 }
+
+#[derive(TypePath)]
+struct SimpleChannel;
 
 // This is not meant to be used.
 #[allow(unused)]
