@@ -330,7 +330,7 @@ pub(crate) fn connection_datagram_send_system(
 
             // Repeatedly poll transmit until the connection no longer wants to send any more packets
             let mut send_count: u32 = 0;
-            while let Some(transmit) = connection.inner.poll_transmit(Instant::now(), 10, &mut buf) {
+            while let Some(transmit) = connection.inner.poll_transmit(Instant::now(), 1, &mut buf) {
                 perform_transmit(socket, &buf, transmit);
                 send_count += 1;
             }
