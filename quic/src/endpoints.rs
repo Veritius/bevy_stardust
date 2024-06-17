@@ -146,7 +146,7 @@ pub(crate) fn endpoint_datagram_recv_system(
                         addr,
                         Some(ip),
                         None,
-                        BytesMut::from(&buf[..]),
+                        BytesMut::from(&buf[..len]),
                         &mut buf,
                     ) {
                         // Event received
