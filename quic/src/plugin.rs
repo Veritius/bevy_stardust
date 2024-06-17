@@ -4,9 +4,9 @@ use crate::connections::*;
 use crate::endpoints::*;
 
 /// Adds QUIC functionality to the application.
-pub struct QuicTransportPlugin;
+pub struct QuicPlugin;
 
-impl Plugin for QuicTransportPlugin {
+impl Plugin for QuicPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(PreUpdate, (
             endpoint_datagram_recv_system,

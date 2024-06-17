@@ -24,3 +24,11 @@ version = "1"
 
 [dependencies.quinn-proto]
 version = "0.11.3"
+
+[[example]]
+name = "simple-server"
+path = "examples/simple/server.rs"
+
+[[example]]
+name = "simple-client"
+path = "examples/simple/client.rs"

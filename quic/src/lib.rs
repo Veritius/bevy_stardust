@@ -9,3 +9,4 @@ mod streams;
 pub use plugin::*;
 pub use connections::QuicConnection;
 pub use endpoints::QuicEndpoint;
+pub use quinn_proto::{EndpointConfig, ClientConfig, ServerConfig};
