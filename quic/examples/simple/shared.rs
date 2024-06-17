@@ -1,3 +1,4 @@
+use std::any::TypeId;
 pub use std::sync::Arc;
 pub use std::net::{UdpSocket, SocketAddr};
 pub use bevy::prelude::*;
@@ -33,11 +34,37 @@ pub fn setup_app() -> App {
         priority: 0,
     });
 
+    app.add_systems(Update, send_recv_message_system);
+
     return app;
 }
 
 #[derive(TypePath)]
 struct SimpleChannel;
+
+fn send_recv_message_system(
+    registry: Res<ChannelRegistry>,
+    mut increment: Local<u64>,
+    mut peers: Query<(
+        Entity,
+        &NetworkMessages<Incoming>,
+        &mut NetworkMessages<Outgoing>,
+    )>,
+) {
+    for (entity, incoming, mut outgoing) in peers.iter_mut() {
+        // Read out all messages
+        let iter = incoming.iter().flat_map(|(c, m)| m.iter().cloned().map(move |v| (c, v)));
+        for (channel, message) in iter {
+            info!("Received message from {entity:?} on channel {channel:?}: {message:?}")
+        }
+
+        // Send a message
+        let cid = registry.channel_id(TypeId::of::<SimpleChannel>()).unwrap();
+        let message = format!("This is message {}", *increment);
+        outgoing.push(cid, Bytes::from(message));
+        *increment += 1;
+    }
+}
 
 // This is not meant to be used.
 #[allow(unused)]
