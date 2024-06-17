@@ -129,7 +129,7 @@ pub(crate) fn endpoint_datagram_recv_system(
                 1. u8s have no special drop impl
                 2. We filled the vec with zeros
                 3. recv_from returns the valid length
-                4. It's just bytes, we can't fuck up
+                4. The buffer already fills with arbitrary, untrusted data
             */
             unsafe { buf.set_len(buf.capacity()); }
 
