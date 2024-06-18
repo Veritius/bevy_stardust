@@ -5,7 +5,7 @@ use bevy_stardust::prelude::*;
 use bytes::Bytes;
 use endpoints::perform_transmit;
 use quinn_proto::{coding::Codec, Connection, ConnectionHandle, Dir, FinishError, StreamEvent, Event as AppEvent, StreamId, VarInt};
-use streams::{FramedMessage, FramedReader, FramedWriter, StreamOpenHeader};
+use streams::{FramedReader, FramedWriter, StreamOpenHeader};
 use crate::*;
 
 /// A QUIC connection, attached to an endpoint.
@@ -55,6 +55,12 @@ impl QuicConnection {
     /// If the channel continues to be used, a new stream will be opened.
     pub fn close_stardust_stream(&mut self, channel: ChannelId) -> Result<()> {
         if let Some(stream_id) = self.channel_streams.get(&channel) {
+            // Check if the framed writer has any data in it
+            if let Some(writer) = self.framed_writers.get(stream_id) {
+                if writer.unsent() != 0 { bail!("Stream had unsent framed messages"); }
+                self.framed_writers.remove(stream_id);
+            }
+
             // Try to close the stream
             match self.inner.send_stream(*stream_id).finish() {
                 Ok(()) => {},
@@ -164,8 +170,13 @@ pub(crate) fn connection_event_handler_system(
         let trace_span = trace_span!("Handling connection events", connection=?entity);
         let _entered = trace_span.entered();
 
+        // Split borrows
+        let connection = connection.as_mut();
+        let inner = connection.inner.as_mut();
+        let framed_writers = &mut connection.framed_writers;
+
         // Poll as many events as possible from the handler
-        while let Some(event) = connection.inner.poll() { match event {
+        while let Some(event) = inner.poll() { match event {
             AppEvent::Connected => {
                 // Log this to the console
                 info!("Connection {entity:?} finished handshake");
@@ -178,7 +189,7 @@ pub(crate) fn connection_event_handler_system(
                 // Add the necessary components
                 commands.lock().unwrap().entity(entity).insert((
                     NetworkPeer::new(),
-                    NetworkPeerAddress(connection.inner.remote_address()),
+                    NetworkPeerAddress(inner.remote_address()),
                     NetworkMessages::<Incoming>::new(),
                     NetworkMessages::<Outgoing>::new(),
                 ));
@@ -223,7 +234,21 @@ pub(crate) fn connection_event_handler_system(
             AppEvent::Stream(event) => match event {
                 StreamEvent::Opened { dir } => todo!(),
                 StreamEvent::Readable { id } => todo!(),
-                StreamEvent::Writable { id } => todo!(),
+
+                StreamEvent::Writable { id } => {
+                    // If the stream is writable, we can write a bunch of streams to it
+                    if let Some(writer) = framed_writers.get_mut(&id) {
+                        let mut stream = inner.send_stream(id);
+                        match writer.write(&mut stream) {
+                            Ok(_) => {},
+                            Err(error) => {
+                                debug!("Error while writing framed messages on stream {id}: {error}");
+                                framed_writers.remove(&id);
+                            },
+                        }
+                    }
+                },
+
                 StreamEvent::Finished { id } => todo!(),
                 StreamEvent::Stopped { id, error_code } => todo!(),
                 StreamEvent::Available { dir } => todo!(),
@@ -251,6 +276,12 @@ pub(crate) fn connection_message_sender_system(
         // Tiny scratch space for some operations
         let mut scr = Vec::with_capacity(4);
 
+        // Split borrows
+        let connection = connection.as_mut();
+        let inner = connection.inner.as_mut();
+        let channel_streams = &mut connection.channel_streams;
+        let framed_writers = &mut connection.framed_writers;
+
         // Iterate over all channels
         for (channel, messages) in outgoing.iter() {
             // Get the channel data
@@ -270,28 +301,30 @@ pub(crate) fn connection_message_sender_system(
                 // This forces us to use streams
                 (ReliabilityGuarantee::Reliable, _) => {
                     // Get the stream ID of this channel
-                    let stream_id: StreamId = match connection.channel_streams.get(&channel) {
+                    let stream_id: StreamId = match channel_streams.get(&channel) {
                         Some(v) => *v,
                         None => {
                             // Wasn't in the map, we have to open a new stream
-                            let stream_id = connection.inner.streams().open(Dir::Uni).unwrap();
+                            let stream_id = inner.streams().open(Dir::Uni).unwrap();
 
                             // Add the StreamOpenHeader to the stream
                             // This informs the remote connection of what this stream is for
                             StreamOpenHeader::StardustReliable { channel }.encode(&mut scr);
-                            connection.inner.send_stream(stream_id).write(&scr).unwrap();
+                            inner.send_stream(stream_id).write(&scr).unwrap();
 
                             // Add the stream to the map
-                            connection.channel_streams.insert(channel, stream_id);
+                            channel_streams.insert(channel, stream_id);
                             stream_id
                         },
                     };
 
                     // Iterate over all messages and send them
-                    let mut send_stream = connection.inner.send_stream(stream_id);
+                    // let mut send_stream = inner.send_stream(stream_id);
                     for payload in messages.iter().cloned() {
-                        // TODO: Handle the error case
-                        FramedMessage { payload }.write(&mut scr, &mut send_stream).unwrap();
+                        let writer = framed_writers.entry(stream_id)
+                            .or_insert_with(|| FramedWriter::new());
+
+                        todo!()
                     }
                 },
             }

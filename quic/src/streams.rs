@@ -55,7 +55,7 @@ impl Codec for FramedMessageHeader {
 }
 
 pub(crate) struct FramedWriter {
-    buffer: SmallVec<[Bytes; 1]>,
+    buffer: SmallVec<[Bytes; 2]>,
 }
 
 impl FramedWriter {
@@ -65,13 +65,7 @@ impl FramedWriter {
         }
     }
 
-    pub fn with_capacity(capacity: usize) -> Self {
-        Self {
-            buffer: SmallVec::with_capacity(capacity),
-        }
-    }
-
-    pub fn push(&mut self, bytes: Bytes) {
+    pub fn queue(&mut self, bytes: Bytes) {
         // Create the header data
         let mut buf = BytesMut::new();
         FramedMessageHeader {
@@ -83,13 +77,47 @@ impl FramedWriter {
         self.buffer.push(bytes);
     }
 
-    pub fn pop(&mut self, space: usize) -> Option<Bytes> {
-        // TODO: Optimise this, unnecessarily shifts occur
-        match self.buffer.len() {
-            0 => None,
-            1 => self.buffer.pop(),
-            _ => Some(self.buffer.remove(0)),
+    pub fn write(&mut self, stream: &mut SendStream) -> Result<usize, WriteError> {
+        // Some working space stuff
+        let mut written = 0;
+        let mut swap: SmallVec<[Bytes; 2]> = SmallVec::with_capacity(self.buffer.len());
+        let mut drain = self.buffer.drain(..);
+
+        // Write as many chunks as possible
+        while let Some(bytes) = drain.next() {
+            let len = bytes.len();
+            match stream.write(&bytes[..]) {
+                // Partial write
+                Ok(amt) if amt != len => {
+                    written += amt;
+                    swap.push(bytes.slice(amt..));
+                }
+
+                // Full write
+                Ok(amt) => {
+                    written += amt;
+                },
+
+                // Stream is blocked
+                Err(err) if err == WriteError::Blocked => {
+                    break;
+                }
+
+                // Error during write
+                Err(err) => {
+                    return Err(err);
+                },
+            }
         }
+
+        // Finish up
+        swap.extend(drain);
+        self.buffer = swap;
+        return Ok(written);
+    }
+
+    pub fn unsent(&self) -> usize {
+        self.buffer.iter().map(|v| v.len()).sum()
     }
 }
 
@@ -120,29 +148,5 @@ impl FramedReader {
 
     pub fn pop(&mut self) -> Option<Bytes> {
         todo!()
-    }
-}
-
-/// A framed message that can be sent over a stream.
-#[derive(Debug, Clone)]
-pub(crate) struct FramedMessage {
-    pub payload: Bytes,
-}
-
-impl FramedMessage {
-    pub fn write(self, buf: &mut Vec<u8>, stream: &mut SendStream) -> Result<usize, WriteError> {
-        // Counter for written bytes
-        let mut written = 0;
-
-        // Write the length of the message
-        VarInt::try_from(self.payload.len()).unwrap().encode(buf);
-        written += stream.write(buf)?;
-        buf.clear();
-
-        // Write the payload itself
-        written += stream.write(&self.payload[..])?;
-
-        // Return amount of bytes that are written
-        return Ok(written)
     }
 }
