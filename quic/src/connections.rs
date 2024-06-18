@@ -251,11 +251,14 @@ pub(crate) fn connection_event_handler_system(
                                     },
 
                                     // We've run out of chunks to read
-                                    Ok(None) => todo!(),
+                                    Ok(None) => break,
 
                                     // Error while reading chunks
                                     Err(_) => todo!(),
                                 }}
+
+                                // MUST_USE: We poll sends anyway
+                                let _ = chunks.finalize();
                             },
 
                             // Error encountered when reading stream
