@@ -82,6 +82,15 @@ impl FramedWriter {
         self.buffer.push(buf.freeze());
         self.buffer.push(bytes);
     }
+
+    pub fn pop(&mut self, space: usize) -> Option<Bytes> {
+        // TODO: Optimise this, unnecessarily shifts occur
+        match self.buffer.len() {
+            0 => None,
+            1 => self.buffer.pop(),
+            _ => Some(self.buffer.remove(0)),
+        }
+    }
 }
 
 pub(crate) struct FramedReader {
