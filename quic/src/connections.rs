@@ -237,6 +237,7 @@ pub(crate) fn connection_event_handler_system(
 
                 StreamEvent::Readable { id } => {
                     if let Some(reader) = framed_readers.get_mut(&id) {
+                        // Read chunks from the stream into the table
                         let mut stream = inner.recv_stream(id);
                         match stream.read(true) {
                             // A chunk iterator is available
@@ -259,6 +260,12 @@ pub(crate) fn connection_event_handler_system(
 
                             // Error encountered when reading stream
                             Err(error) => todo!(),
+                        }
+
+                        // If the reader has messages, try pulling one out
+                        // This may return nothing, such as when the chunks aren't done sending
+                        if reader.unread() > 0 {
+                            todo!()
                         }
                     }
                 },
