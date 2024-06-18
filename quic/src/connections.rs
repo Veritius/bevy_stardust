@@ -173,6 +173,7 @@ pub(crate) fn connection_event_handler_system(
         // Split borrows
         let connection = connection.as_mut();
         let inner = connection.inner.as_mut();
+        let framed_readers = &mut connection.framed_readers;
         let framed_writers = &mut connection.framed_writers;
 
         // Poll as many events as possible from the handler
@@ -233,7 +234,34 @@ pub(crate) fn connection_event_handler_system(
 
             AppEvent::Stream(event) => match event {
                 StreamEvent::Opened { dir } => todo!(),
-                StreamEvent::Readable { id } => todo!(),
+
+                StreamEvent::Readable { id } => {
+                    if let Some(reader) = framed_readers.get_mut(&id) {
+                        let mut stream = inner.recv_stream(id);
+                        match stream.read(true) {
+                            // A chunk iterator is available
+                            Ok(mut chunks) => {
+                                // Try to read as many chunks as possible
+                                loop { match chunks.next(1024) {
+                                    // A chunk of data is readable
+                                    Ok(Some(chunk)) => {
+                                        // Push to the reader
+                                        reader.push(chunk.bytes);
+                                    },
+
+                                    // We've run out of chunks to read
+                                    Ok(None) => todo!(),
+
+                                    // Error while reading chunks
+                                    Err(_) => todo!(),
+                                }}
+                            },
+
+                            // Error encountered when reading stream
+                            Err(error) => todo!(),
+                        }
+                    }
+                },
 
                 StreamEvent::Writable { id } => {
                     // If the stream is writable, we can write a bunch of streams to it
