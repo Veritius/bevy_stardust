@@ -265,9 +265,8 @@ pub(crate) fn connection_event_handler_system(
                             Err(error) => todo!(),
                         }
 
-                        // If the reader has messages, try pulling one out
-                        // This may return nothing, such as when the chunks aren't done sending
-                        if reader.unread() > 0 {
+                        // Drain the reader of any items
+                        for segment in reader.read() {
                             todo!()
                         }
                     }

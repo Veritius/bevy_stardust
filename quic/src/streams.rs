@@ -146,7 +146,16 @@ impl FramedReader {
         self.buffer.iter().map(|bytes| bytes.len()).sum()
     }
 
-    pub fn pop(&mut self) -> Option<Bytes> {
-        todo!()
+    pub fn read(&mut self) -> impl Iterator<Item = Bytes> {
+        struct Dn {}
+        impl Iterator for Dn {
+            type Item = Bytes;
+            fn next(&mut self) -> Option<Self::Item> {
+                unimplemented!()
+            }
+        }
+
+        todo!();
+        return Dn {};
     }
 }
