@@ -254,7 +254,7 @@ pub(crate) fn connection_event_handler_system(
                                     Ok(None) => break,
 
                                     // Error while reading chunks
-                                    Err(_) => todo!(),
+                                    Err(_) => break,
                                 }}
 
                                 // MUST_USE: We poll sends anyway
