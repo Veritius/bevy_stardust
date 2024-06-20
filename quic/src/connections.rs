@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use bevy_stardust::prelude::*;
 use bytes::Bytes;
 use endpoints::perform_transmit;
-use quinn_proto::{coding::Codec, Connection, ConnectionHandle, Dir, FinishError, StreamEvent, Event as AppEvent, StreamId, VarInt};
+use quinn_proto::{coding::Codec, Connection, ConnectionHandle, Dir, Event as AppEvent, FinishError, StreamEvent, StreamId, VarInt, WriteError};
 use streams::{FramedReader, FramedWriter, StreamOpenHeader};
 use crate::*;
 
@@ -273,15 +273,23 @@ pub(crate) fn connection_event_handler_system(
                 },
 
                 StreamEvent::Writable { id } => {
-                    // If the stream is writable, we can write a bunch of streams to it
+                    // If the stream is writable, check to see if there's any messages waiting
                     if let Some(writer) = framed_writers.get_mut(&id) {
                         let mut stream = inner.send_stream(id);
                         match writer.write(&mut stream) {
                             Ok(_) => {},
                             Err(error) => {
+                                // If it errors, dump the messages
                                 debug!("Error while writing framed messages on stream {id}: {error}");
                                 framed_writers.remove(&id);
+                                continue;
                             },
+                        }
+
+                        // If the writer is out of frames, remove it
+                        if writer.unsent() == 0 {
+                            framed_writers.remove(&id);
+                            continue;
                         }
                     }
                 },
@@ -356,12 +364,38 @@ pub(crate) fn connection_message_sender_system(
                     };
 
                     // Iterate over all messages and send them
-                    // let mut send_stream = inner.send_stream(stream_id);
+                    let mut send_stream = inner.send_stream(stream_id);
                     for payload in messages.iter().cloned() {
-                        let writer = framed_writers.entry(stream_id)
-                            .or_insert_with(|| FramedWriter::new());
+                        // If there is a writer in the map, add it
+                        match framed_writers.get_mut(&stream_id) {
+                            // If there's a writer in the map, it means
+                            // there are unsent messages, so we add this to the queue
+                            Some(writer) => { writer.queue(payload); },
 
-                        todo!()
+                            // If these is no writer, it means
+                            // there are no unsent messages
+                            None => {
+                                // New writer, used to generate header
+                                let mut writer = FramedWriter::new();
+                                writer.queue(payload);
+
+                                // Try to send in the stream
+                                let wresult = writer.write(&mut send_stream);
+                                match (wresult, writer.unsent()) {
+                                    // Writer done, move on
+                                    (Ok(_), 0) => { continue },
+
+                                    // Writer not done, add to map
+                                    (Ok(_), _) => { framed_writers.insert(stream_id, writer); },
+
+                                    (Err(WriteError::Stopped(_code)), _) => { todo!() },
+                                    (Err(WriteError::ClosedStream), _) => { todo!() },
+
+                                    // Doesn't happen, FramedWriter handles it
+                                    (Err(WriteError::Blocked), _) => unreachable!(),
+                                }
+                            },
+                        }
                     }
                 },
             }

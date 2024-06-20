@@ -100,6 +100,7 @@ impl FramedWriter {
 
                 // Stream is blocked
                 Err(err) if err == WriteError::Blocked => {
+                    swap.push(bytes);
                     break;
                 }
 
