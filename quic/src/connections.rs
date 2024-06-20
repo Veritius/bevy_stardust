@@ -233,8 +233,11 @@ pub(crate) fn connection_event_handler_system(
             },
 
             AppEvent::Stream(event) => match event {
-                // Do nothing for now
-                StreamEvent::Opened { dir } => {},
+                StreamEvent::Opened { dir } => {
+                    // Accept the stream
+                    let stream_id = inner.streams().accept(dir).unwrap();
+                    framed_readers.insert(stream_id, FramedReader::new());
+                },
 
                 StreamEvent::Readable { id } => {
                     if let Some(reader) = framed_readers.get_mut(&id) {
