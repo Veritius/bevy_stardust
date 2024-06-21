@@ -5,7 +5,7 @@ use bevy_stardust::prelude::*;
 use bytes::Bytes;
 use endpoints::perform_transmit;
 use quinn_proto::{coding::Codec, Connection, ConnectionHandle, Dir, Event as AppEvent, FinishError, StreamEvent, StreamId, VarInt, WriteError};
-use streams::{FramedWriter, StreamOpenHeader, StreamReader};
+use streams::{FramedWriter, StreamOpenHeader, StreamReaderSegment, StreamReader};
 use crate::*;
 
 /// A QUIC connection, attached to an endpoint.
@@ -269,12 +269,17 @@ pub(crate) fn connection_event_handler_system(
                             Err(error) => todo!(),
                         }
 
-                        // Drain the reader of any items
-                        if let Some(iter) = reader.read() {
-                            for segment in iter {
-                                
-                            }
-                        }
+                        // Try to read any available frames
+                        loop { match reader.next() {
+                            // No readable data
+                            Ok(None) => { break },
+
+                            // A chunk of data was read
+                            Ok(Some(StreamReaderSegment::Stardust { channel, payload })) => todo!(),
+
+                            // Error while reading
+                            Err(err) => todo!(),
+                        }}
                     }
                 },
 

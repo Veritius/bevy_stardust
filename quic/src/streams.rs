@@ -1,4 +1,4 @@
-use bevy::utils::smallvec::SmallVec;
+use bevy::utils::{smallvec::SmallVec, thiserror::Error};
 use bevy_stardust::prelude::*;
 use quinn_proto::{coding::{Codec, Result as DecodeResult, UnexpectedEnd}, SendStream, VarInt, WriteError};
 
@@ -124,14 +124,14 @@ impl FramedWriter {
 }
 
 pub(crate) struct StreamReader {
-    queue: SmallVec<[Bytes; 1]>,
+    queue: BytesMut,
     state: StreamReaderState,
 }
 
 impl Default for StreamReader {
     fn default() -> Self {
         Self {
-            queue: SmallVec::new(),
+            queue: BytesMut::new(),
             state: StreamReaderState::ParseHeader,
         }
     }
@@ -139,36 +139,43 @@ impl Default for StreamReader {
 
 impl StreamReader {
     pub fn push(&mut self, bytes: Bytes) {
-        self.queue.push(bytes);
+        self.queue.extend_from_slice(&bytes[..]);
     }
 
-    pub fn read<'a>(&'a mut self) -> Option<impl Iterator<Item = Bytes> + 'a> {
-        if self.queue.len() == 0 { return None }
-        return Some(NextIter { reader: self })
+    pub fn next<'a>(&'a mut self) -> Result<Option<StreamReaderSegment>, StreamReadError> {
+        if self.queue.len() == 0 { return Ok(None); }
+
+        match self.state {
+            StreamReaderState::ParseHeader => todo!(),
+            StreamReaderState::Stardust { channel } => todo!(),
+        }
+
+        todo!()
     }
 
     #[inline]
     pub fn unread(&self) -> usize {
-        self.queue.iter().map(|v| v.len()).sum()
+        self.queue.len()
     }
 }
 
 enum StreamReaderState {
     ParseHeader,
 
-    StardustStream {
+    Stardust {
         channel: ChannelId,
     },
 }
 
-struct NextIter<'a> {
-    reader: &'a mut StreamReader,
+pub(crate) enum StreamReaderSegment {
+    Stardust {
+        channel: ChannelId,
+        payload: Bytes,
+    },
 }
 
-impl Iterator for NextIter<'_> {
-    type Item = Bytes;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        todo!()
-    }
+#[derive(Debug, Clone, Copy, Error)]
+pub(crate) enum StreamReadError {
+    #[error("length exceeded maximum")]
+    LengthExceededMaximum,
 }
