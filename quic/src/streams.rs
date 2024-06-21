@@ -201,9 +201,7 @@ impl<'a> Burner<'a> {
         }
     }
 
-    fn commit(&mut self) {
-        self.consumed = 0;
-
+    fn commit(mut self) {
         if self.cursor > 0 {
             let m = &mut self.inner[self.cursor];
             *m = m.slice(self.cursor..);
@@ -222,11 +220,8 @@ impl<'a> Burner<'a> {
         drop(swap);
     }
 
-    fn reset(&mut self) {
+    fn abort(mut self) {
         self.consumed = 0;
-        self.cursor = 0;
-        self.index = 0;
-        self.remaining = self.inner.iter().map(|v| v.len()).sum();
     }
 }
 
