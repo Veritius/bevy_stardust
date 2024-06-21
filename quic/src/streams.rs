@@ -138,7 +138,10 @@ impl StreamReader {
         self.queue.push(bytes);
     }
 
-    pub fn next<'a>(&'a mut self) -> Result<Option<StreamReaderSegment>, StreamReadError> {
+    pub fn next<'a>(
+        &'a mut self,
+        framelimt: usize,
+    ) -> Result<Option<StreamReaderSegment>, StreamReadError> {
         if self.queue.len() == 0 { return Ok(None); }
         let mut reader = Burner::new(&mut self.queue);
 
@@ -159,7 +162,7 @@ impl StreamReader {
                         // Update state and run this function again
                         self.state = StreamReaderState::Stardust { channel };
                         reader.commit();
-                        return self.next();
+                        return self.next(framelimt);
                     }
                 }
             },
@@ -173,7 +176,7 @@ impl StreamReader {
 
                 // Prevents a denial of service attack
                 let length = header.length.into_inner() as usize;
-                if header.length.into_inner() > todo!() {
+                if header.length.into_inner() as usize > framelimt {
                     return Err(StreamReadError::LengthExceededMaximum);
                 }
 

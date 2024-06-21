@@ -153,6 +153,7 @@ pub(crate) fn connection_endpoint_events_system(
 }
 
 pub(crate) fn connection_event_handler_system(
+    config: Res<PluginConfig>,
     mut connections: Query<(Entity, &mut QuicConnection, Option<&mut NetworkPeerLifestage>)>,
     mut commands: Commands,
     mut endpoints: Query<(Entity, &mut QuicEndpoint)>,
@@ -270,7 +271,7 @@ pub(crate) fn connection_event_handler_system(
                         }
 
                         // Try to read any available frames
-                        loop { match reader.next() {
+                        loop { match reader.next(config.max_frm_msg_len) {
                             // No readable data
                             Ok(None) => { break },
 
