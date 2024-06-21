@@ -1,12 +1,11 @@
 use std::cmp::Ordering;
-
 use bevy::utils::{smallvec::{smallvec, SmallVec}, thiserror::Error};
 use bevy_stardust::prelude::*;
 use quinn_proto::{coding::{Codec, Result as DecodeResult, UnexpectedEnd}, SendStream, VarInt, WriteError};
 
 pub(crate) enum StreamOpenHeader {
     StardustReliable {
-        channel: ChannelId,
+        channel: VarInt,
     },
 }
 
@@ -19,7 +18,7 @@ impl Codec for StreamOpenHeader {
         match self {
             StreamOpenHeader::StardustReliable { channel } => {
                 Self::STARDUST_RELIABLE.encode(buf);
-                VarInt::from_u32(channel.clone().into()).encode(buf)
+                channel.encode(buf);
             },
         }
     }
@@ -27,12 +26,7 @@ impl Codec for StreamOpenHeader {
     fn decode<B: Buf>(buf: &mut B) -> DecodeResult<Self> {
         match VarInt::decode(buf)? {
             Self::STARDUST_RELIABLE => Ok(Self::StardustReliable {
-                channel: {
-                    let vint = VarInt::decode(buf)?.into_inner();
-                    // TODO: Output a good error type instead of unexpected end
-                    let uint: u32 = vint.try_into().map_err(|_| UnexpectedEnd)?;
-                    ChannelId::from(uint)
-                },
+                channel: VarInt::decode(buf)?,
             }),
 
             _ => Err(UnexpectedEnd),
@@ -146,10 +140,56 @@ impl StreamReader {
 
     pub fn next<'a>(&'a mut self) -> Result<Option<StreamReaderSegment>, StreamReadError> {
         if self.queue.len() == 0 { return Ok(None); }
+        let mut reader = Burner::new(&mut self.queue);
 
         match self.state {
-            StreamReaderState::ParseHeader => todo!(),
-            StreamReaderState::Stardust { channel } => todo!(),
+            StreamReaderState::ParseHeader => {
+                let header = match StreamOpenHeader::decode(&mut reader) {
+                    Ok(v) => v,
+                    Err(_) => return Ok(None),
+                };
+
+                match header {
+                    StreamOpenHeader::StardustReliable { channel } => {
+                        // Ensure it's a valid channel id
+                        let channel = channel.into_inner();
+                        if channel > 2u64.pow(32) { return Err(StreamReadError::InvalidChannelId) };
+                        let channel = ChannelId::from(channel as u32);
+
+                        // Update state and run this function again
+                        self.state = StreamReaderState::Stardust { channel };
+                        reader.commit();
+                        return self.next();
+                    }
+                }
+            },
+
+            StreamReaderState::Stardust { channel } => {
+                // Decode the header
+                let header = match FramedMessageHeader::decode(&mut reader) {
+                    Ok(header) => header,
+                    Err(_) => return Ok(None),
+                };
+
+                // Prevents a denial of service attack
+                let length = header.length.into_inner() as usize;
+                if header.length.into_inner() > todo!() {
+                    return Err(StreamReadError::LengthExceededMaximum);
+                }
+
+                // Check if we can read this
+                if reader.remaining() < length {
+                    return Ok(None);
+                }
+
+                // Read the payload
+                let payload = reader.copy_to_bytes(length);
+                let res = StreamReaderSegment::Stardust { channel, payload };
+
+                // Commit and return
+                reader.commit();
+                return Ok(Some(res));
+            },
         }
 
         todo!()
@@ -180,6 +220,8 @@ pub(crate) enum StreamReaderSegment {
 pub(crate) enum StreamReadError {
     #[error("length exceeded maximum")]
     LengthExceededMaximum,
+    #[error("invalid stardust channel")]
+    InvalidChannelId,
 }
 
 struct Burner<'a> {

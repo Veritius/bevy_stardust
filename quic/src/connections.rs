@@ -365,7 +365,9 @@ pub(crate) fn connection_message_sender_system(
 
                             // Add the StreamOpenHeader to the stream
                             // This informs the remote connection of what this stream is for
-                            StreamOpenHeader::StardustReliable { channel }.encode(&mut scr);
+                            StreamOpenHeader::StardustReliable {
+                                channel: VarInt::from_u32(channel.into()),
+                            }.encode(&mut scr);
                             inner.send_stream(stream_id).write(&scr).unwrap();
 
                             // Add the stream to the map
