@@ -5,7 +5,7 @@ use bevy_stardust::prelude::*;
 use bytes::Bytes;
 use endpoints::perform_transmit;
 use quinn_proto::{coding::Codec, Connection, ConnectionHandle, Dir, Event as AppEvent, FinishError, StreamEvent, StreamId, VarInt, WriteError};
-use streams::{FramedReader, FramedWriter, StreamOpenHeader};
+use streams::{FramedWriter, StreamOpenHeader, StreamReader};
 use crate::*;
 
 /// A QUIC connection, attached to an endpoint.
@@ -20,7 +20,7 @@ pub struct QuicConnection {
     pub(crate) inner: Box<Connection>,
 
     channel_streams: BTreeMap<ChannelId, StreamId>,
-    framed_readers: BTreeMap<StreamId, FramedReader>,
+    framed_readers: BTreeMap<StreamId, StreamReader>,
     framed_writers: BTreeMap<StreamId, FramedWriter>,
 }
 
@@ -236,7 +236,7 @@ pub(crate) fn connection_event_handler_system(
                 StreamEvent::Opened { dir } => {
                     // Accept the stream
                     let stream_id = inner.streams().accept(dir).unwrap();
-                    framed_readers.insert(stream_id, FramedReader::new());
+                    framed_readers.insert(stream_id, StreamReader::default());
                 },
 
                 StreamEvent::Readable { id } => {
@@ -270,8 +270,10 @@ pub(crate) fn connection_event_handler_system(
                         }
 
                         // Drain the reader of any items
-                        for segment in reader.read() {
-                            todo!()
+                        if let Some(iter) = reader.read() {
+                            for segment in iter {
+                                
+                            }
                         }
                     }
                 },

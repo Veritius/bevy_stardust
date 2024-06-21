@@ -117,46 +117,58 @@ impl FramedWriter {
         return Ok(written);
     }
 
+    #[inline]
     pub fn unsent(&self) -> usize {
         self.buffer.iter().map(|v| v.len()).sum()
     }
 }
 
-pub(crate) struct FramedReader {
-    buffer: SmallVec<[Bytes; 1]>,
+pub(crate) struct StreamReader {
+    queue: SmallVec<[Bytes; 1]>,
+    state: StreamReaderState,
 }
 
-impl FramedReader {
-    pub fn new() -> Self {
+impl Default for StreamReader {
+    fn default() -> Self {
         Self {
-            buffer: SmallVec::new(),
+            queue: SmallVec::new(),
+            state: StreamReaderState::ParseHeader,
         }
     }
+}
 
-    pub fn with_capacity(capacity: usize) -> Self {
-        Self {
-            buffer: SmallVec::with_capacity(capacity),
-        }
-    }
-
+impl StreamReader {
     pub fn push(&mut self, bytes: Bytes) {
-        self.buffer.push(bytes);
+        self.queue.push(bytes);
     }
 
+    pub fn read<'a>(&'a mut self) -> Option<impl Iterator<Item = Bytes> + 'a> {
+        if self.queue.len() == 0 { return None }
+        return Some(NextIter { reader: self })
+    }
+
+    #[inline]
     pub fn unread(&self) -> usize {
-        self.buffer.iter().map(|bytes| bytes.len()).sum()
+        self.queue.iter().map(|v| v.len()).sum()
     }
+}
 
-    pub fn read(&mut self) -> impl Iterator<Item = Bytes> {
-        struct Dn {}
-        impl Iterator for Dn {
-            type Item = Bytes;
-            fn next(&mut self) -> Option<Self::Item> {
-                unimplemented!()
-            }
-        }
+enum StreamReaderState {
+    ParseHeader,
 
-        todo!();
-        return Dn {};
+    StardustStream {
+        channel: ChannelId,
+    },
+}
+
+struct NextIter<'a> {
+    reader: &'a mut StreamReader,
+}
+
+impl Iterator for NextIter<'_> {
+    type Item = Bytes;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        todo!()
     }
 }
