@@ -218,6 +218,8 @@ impl<'a> Burner<'a> {
 
         core::mem::swap(self.inner, &mut swap);
         drop(swap);
+
+        self.abort();
     }
 
     fn abort(mut self) {
