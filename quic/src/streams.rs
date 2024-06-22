@@ -194,8 +194,6 @@ impl StreamReader {
                 return Ok(Some(res));
             },
         }
-
-        todo!()
     }
 
     #[inline]
