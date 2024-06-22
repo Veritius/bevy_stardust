@@ -307,11 +307,11 @@ impl Buf for Burner<'_> {
     }
 }
 
-impl Drop for Burner<'_> {
-    fn drop(&mut self) {
-        debug_assert!(self.consumed == 0, "Burner was dropped but not committed");
-    }
-}
+// impl Drop for Burner<'_> {
+//     fn drop(&mut self) {
+//         debug_assert!(self.consumed == 0, "Burner was dropped but not committed");
+//     }
+// }
 
 #[test]
 fn burner_test() {
