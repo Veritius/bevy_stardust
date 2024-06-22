@@ -248,7 +248,7 @@ impl<'a> Burner<'a> {
 
     fn commit(mut self) {
         if self.cursor > 0 {
-            let m = &mut self.inner[self.cursor];
+            let m = &mut self.inner[self.index];
             *m = m.slice(self.cursor..);
             self.cursor = 0;
         }
