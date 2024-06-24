@@ -453,6 +453,7 @@ pub(crate) fn connection_message_sender_system(
 }
 
 pub(crate) fn connection_datagram_send_system(
+    config: Res<QuicConfig>,
     mut endpoints: Query<(Entity, &mut QuicEndpoint)>,
     connections: Query<&mut QuicConnection>,
 ) {
@@ -466,7 +467,7 @@ pub(crate) fn connection_datagram_send_system(
         let socket = &mut endpoint.socket;
 
         // Allocate a buffer to store messages in
-        let mut buf = Vec::with_capacity(2048); // TODO: Make this based on MTU
+        let mut buf = Vec::with_capacity(config.maximum_transport_units);
 
         // Iterate over all connections associated with this endpoint
         let entities = endpoint.entities.iter();
