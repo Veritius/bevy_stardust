@@ -271,18 +271,17 @@ pub(crate) fn connection_event_handler_system(
                         }
 
                         // Try to read any available frames
-                        loop { match reader.next(config.max_frm_msg_len) {
-                            // No readable data
-                            Ok(None) => { break },
+                        for item in reader.iter(config.max_frm_msg_len) {
+                            match item {
+                                // A chunk of data was read
+                                Ok(StreamReaderSegment::Stardust { channel, payload }) => {
+                                    debug!("Received message on {channel:?}: {payload:?}");
+                                },
 
-                            // A chunk of data was read
-                            Ok(Some(StreamReaderSegment::Stardust { channel, payload })) => {
-                                debug!("Received message on {channel:?}: {payload:?}");
-                            },
-
-                            // Error while reading
-                            Err(err) => todo!(),
-                        }}
+                                // Error while reading
+                                Err(err) => todo!(),
+                            }
+                        }
                     }
                 },
 

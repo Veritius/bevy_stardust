@@ -29,7 +29,7 @@ impl Codec for StreamOpenHeader {
                 channel: VarInt::decode(buf)?,
             }),
 
-            _ => Err(UnexpectedEnd),
+            _ => todo!(),
         }
     }
 }
@@ -138,61 +138,83 @@ impl StreamReader {
         self.queue.push(bytes);
     }
 
-    pub fn next<'a>(
+    pub fn iter<'a>(
         &'a mut self,
-        framelimt: usize,
-    ) -> Result<Option<StreamReaderSegment>, StreamReadError> {
-        if self.queue.len() == 0 { return Ok(None); }
-        let mut reader = Burner::new(&mut self.queue);
+        framelimit: usize,
+    ) -> impl Iterator<Item = Result<StreamReaderSegment, StreamReadError>> + 'a {
+        struct IterImpl<'a> {
+            reader: &'a mut StreamReader,
+            framelimit: usize,
+        }
 
-        match self.state {
-            StreamReaderState::ParseHeader => {
-                let header = match StreamOpenHeader::decode(&mut reader) {
-                    Ok(v) => v,
-                    Err(_) => return Ok(None),
-                };
+        impl Iterator for IterImpl<'_> {
+            type Item = Result<StreamReaderSegment, StreamReadError>;
 
-                match header {
-                    StreamOpenHeader::StardustReliable { channel } => {
-                        // Ensure it's a valid channel id
-                        let channel = channel.into_inner();
-                        if channel > 2u64.pow(32) { return Err(StreamReadError::InvalidChannelId) };
-                        let channel = ChannelId::from(channel as u32);
+            fn next(&mut self) -> Option<Self::Item> {
+                if self.reader.queue.len() == 0 { return None; }
+                let mut burner = Burner::new(&mut self.reader.queue);
 
-                        // Update state and run this function again
-                        self.state = StreamReaderState::Stardust { channel };
-                        reader.commit();
-                        return self.next(framelimt);
-                    }
+                match self.reader.state {
+                    StreamReaderState::ParseHeader => {
+                        let header = match StreamOpenHeader::decode(&mut burner) {
+                            Ok(v) => v,
+                            Err(_) => return None,
+                        };
+        
+                        match header {
+                            StreamOpenHeader::StardustReliable { channel } => {
+                                // Ensure it's a valid channel id
+                                let channel = channel.into_inner();
+                                if channel > 2u64.pow(32) {
+                                    burner.commit();
+                                    return Some(Err(StreamReadError::InvalidChannelId))
+                                };
+
+                                // Make into channelid
+                                let channel = ChannelId::from(channel as u32);
+        
+                                // Update state and run this function again
+                                self.reader.state = StreamReaderState::Stardust { channel };
+                                burner.commit();
+                                return self.next();
+                            }
+                        }
+                    },
+
+                    StreamReaderState::Stardust { channel } => {
+                        // Decode the header
+                        let header = match FramedMessageHeader::decode(&mut burner) {
+                            Ok(header) => header,
+                            Err(_) => return None,
+                        };
+
+                        // Prevents a denial of service attack
+                        let length = header.length.into_inner() as usize;
+                        if header.length.into_inner() as usize > self.framelimit {
+                            burner.commit();
+                            return Some(Err(StreamReadError::LengthExceededMaximum));
+                        }
+
+                        // Check if we can read this
+                        if burner.remaining() < length {
+                            return None;
+                        }
+
+                        // Read the payload
+                        let payload = burner.copy_to_bytes(length);
+                        let res = StreamReaderSegment::Stardust { channel, payload };
+
+                        // Commit and return
+                        burner.commit();
+                        return Some(Ok(res));
+                    },
                 }
-            },
+            }
+        }
 
-            StreamReaderState::Stardust { channel } => {
-                // Decode the header
-                let header = match FramedMessageHeader::decode(&mut reader) {
-                    Ok(header) => header,
-                    Err(_) => return Ok(None),
-                };
-
-                // Prevents a denial of service attack
-                let length = header.length.into_inner() as usize;
-                if header.length.into_inner() as usize > framelimt {
-                    return Err(StreamReadError::LengthExceededMaximum);
-                }
-
-                // Check if we can read this
-                if reader.remaining() < length {
-                    return Ok(None);
-                }
-
-                // Read the payload
-                let payload = reader.copy_to_bytes(length);
-                let res = StreamReaderSegment::Stardust { channel, payload };
-
-                // Commit and return
-                reader.commit();
-                return Ok(Some(res));
-            },
+        return IterImpl {
+            reader: self,
+            framelimit,
         }
     }
 
