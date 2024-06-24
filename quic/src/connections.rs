@@ -381,11 +381,17 @@ pub(crate) fn connection_message_sender_system(
 
             // Different channels have different config requirements
             match (channel_data.reliable, channel_data.ordered) {
-                (ReliabilityGuarantee::Unreliable, _) => todo!(),
+                (ReliabilityGuarantee::Unreliable, OrderingGuarantee::Unordered) => todo!(),
 
-                // Reliable transport is reliable
-                // This forces us to use streams
-                (ReliabilityGuarantee::Reliable, _) => {
+                (ReliabilityGuarantee::Unreliable, OrderingGuarantee::Sequenced) => todo!(),
+
+                (ReliabilityGuarantee::Unreliable, OrderingGuarantee::Ordered) => todo!(),
+
+                (ReliabilityGuarantee::Reliable, OrderingGuarantee::Unordered) => todo!(),
+
+                (ReliabilityGuarantee::Reliable, OrderingGuarantee::Sequenced) => todo!(),
+
+                (ReliabilityGuarantee::Reliable, OrderingGuarantee::Ordered) => {
                     // Get the stream ID of this channel
                     let (stream_id, mut stream) = match channel_streams.get(&channel) {
                         Some(stream_id) => {
