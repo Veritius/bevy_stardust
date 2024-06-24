@@ -62,7 +62,7 @@ fn send_recv_message_system(
         // Send a message
         let cid = registry.channel_id(TypeId::of::<SimpleChannel>()).unwrap();
         let message = format!("This is message {}", *increment);
-        info!("Sending message to {entity:?}: {message}");
+        info!("Sending message to {entity:?} on channel {cid:?}: {message}");
         outgoing.push(cid, Bytes::from(message));
         *increment += 1;
     }
