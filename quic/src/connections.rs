@@ -274,9 +274,7 @@ pub(crate) fn connection_event_handler_system(
                         for item in reader.iter(config.max_frm_msg_len) {
                             match item {
                                 // A chunk of data was read
-                                Ok(StreamReaderSegment::Stardust { channel, payload }) => {
-                                    debug!("Received message on {channel:?}: {payload:?}");
-                                },
+                                Ok(StreamReaderSegment::Stardust { channel, payload }) => todo!(),
 
                                 // Error while reading
                                 Err(err) => todo!(),

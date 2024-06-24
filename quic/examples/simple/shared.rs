@@ -55,7 +55,8 @@ fn send_recv_message_system(
         // Read out all messages
         let iter = incoming.iter().flat_map(|(c, m)| m.iter().cloned().map(move |v| (c, v)));
         for (channel, message) in iter {
-            info!("Received message from {entity:?} on channel {channel:?}: {message:?}")
+            let str = std::str::from_utf8(&message[..]).unwrap();
+            info!("Received message from {entity:?} on channel {channel:?}: {str}")
         }
 
         // Send a message
