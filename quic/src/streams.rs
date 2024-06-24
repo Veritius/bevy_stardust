@@ -61,7 +61,11 @@ impl FramedWriter {
         }
     }
 
-    pub fn queue(&mut self, bytes: Bytes) {
+    pub fn queue_raw(&mut self, bytes: Bytes) {
+        self.buffer.push(bytes);
+    }
+
+    pub fn queue_framed(&mut self, bytes: Bytes) {
         // Create the header data
         let mut buf = BytesMut::new();
         FramedMessageHeader {

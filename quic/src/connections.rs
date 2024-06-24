@@ -411,14 +411,14 @@ pub(crate) fn connection_message_sender_system(
                         match framed_writers.get_mut(&stream_id) {
                             // If there's a writer in the map, it means
                             // there are unsent messages, so we add this to the queue
-                            Some(writer) => { writer.queue(payload); },
+                            Some(writer) => { writer.queue_framed(payload); },
 
                             // If these is no writer, it means
                             // there are no unsent messages
                             None => {
                                 // New writer, used to generate header
                                 let mut writer = FramedWriter::new();
-                                writer.queue(payload);
+                                writer.queue_framed(payload);
 
                                 // Try to send in the stream
                                 let wresult = writer.write(&mut send_stream);
