@@ -3,7 +3,7 @@ use anyhow::Result;
 use bevy::{prelude::*, utils::HashMap};
 use bytes::BytesMut;
 use quinn_proto::{ClientConfig, ConnectionHandle, DatagramEvent, Endpoint, EndpointConfig, ServerConfig, Transmit};
-use crate::QuicConnection;
+use crate::{QuicConfig, QuicConnection};
 
 /// A QUIC endpoint.
 /// 
@@ -92,6 +92,7 @@ impl QuicEndpoint {
 }
 
 pub(crate) fn endpoint_datagram_recv_system(
+    config: Res<QuicConfig>,
     commands: ParallelCommands,
     mut endpoints: Query<(Entity, &mut QuicEndpoint)>,
     connections: Query<&mut QuicConnection>,
@@ -110,9 +111,9 @@ pub(crate) fn endpoint_datagram_recv_system(
         let ip = socket.local_addr().unwrap().ip();
 
         // Allocate a buffer to store messages in
-        let buf_size = 2048; // TODO: Make this based on MTU
-        let mut buf = Vec::with_capacity(buf_size);
-        buf.extend((0..buf_size).into_iter().map(|_| 0)); // Fill with zeros
+        let mtu = config.maximum_transport_units;
+        let mut buf = Vec::with_capacity(config.maximum_transport_units);
+        buf.extend((0..mtu).into_iter().map(|_| 0)); // Fill with zeros
 
         // Repeatedly receive messages until we run out
         loop {
