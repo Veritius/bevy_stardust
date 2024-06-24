@@ -266,7 +266,7 @@ impl<'a> Burner<'a> {
         }
     }
 
-    fn commit(mut self) {
+    fn commit(&mut self) {
         if self.cursor > 0 {
             let m = &mut self.inner[self.index];
             *m = m.slice(self.cursor..);
@@ -284,10 +284,6 @@ impl<'a> Burner<'a> {
         core::mem::swap(self.inner, &mut swap);
         drop(swap);
 
-        self.abort();
-    }
-
-    fn abort(mut self) {
         self.consumed = 0;
     }
 }
