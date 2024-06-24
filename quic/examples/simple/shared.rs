@@ -24,7 +24,7 @@ pub fn setup_app() -> App {
         },
         ScheduleRunnerPlugin::run_loop(std::time::Duration::from_millis(200)),
         StardustPlugin,
-        QuicPlugin::default(),
+        QuicPlugin,
     ));
 
     app.add_channel::<SimpleChannel>(ChannelConfiguration {

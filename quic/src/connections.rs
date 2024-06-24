@@ -153,7 +153,7 @@ pub(crate) fn connection_endpoint_events_system(
 }
 
 pub(crate) fn connection_event_handler_system(
-    config: Res<PluginConfig>,
+    config: Res<QuicConfig>,
     mut connections: Query<(Entity, &mut QuicConnection, Option<&mut NetworkPeerLifestage>, Option<&mut NetworkMessages<Incoming>>)>,
     mut commands: Commands,
     mut endpoints: Query<(Entity, &mut QuicEndpoint)>,
@@ -271,7 +271,7 @@ pub(crate) fn connection_event_handler_system(
                         }
 
                         // Try to read any available frames
-                        for item in reader.iter(config.max_frm_msg_len) {
+                        for item in reader.iter(config.maximum_framed_message_length) {
                             match item {
                                 // A chunk of data was read
                                 Ok(StreamReaderSegment::Stardust { channel, payload }) => {
