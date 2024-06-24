@@ -112,29 +112,15 @@ pub(crate) fn endpoint_datagram_recv_system(
 
         // Allocate a buffer to store messages in
         let mtu = config.maximum_transport_units;
-        let mut buf = Vec::with_capacity(config.maximum_transport_units);
-        buf.extend((0..mtu).into_iter().map(|_| 0)); // Fill with zeros
+        let mut data = Vec::with_capacity(config.maximum_transport_units);
+        data.extend((0..mtu).into_iter().map(|_| 0)); // Fill with zeros
+
+        // Scratch space for Quinn to use
+        let mut buf = Vec::new();
 
         // Repeatedly receive messages until we run out
         loop {
-            /*
-                SAFETY
-
-                This is needed because
-                1. recv_from takes a mutable slice, which can't resize
-                2. recv_from will drop any bytes that can't fit in the slice
-                3. Without this, the slice's length may be lower than it should be
-                4. Endpoint::handle may change the vec's length or capacity
-
-                This is fine because
-                1. u8s have no special drop or initialisation considerations
-                2. We filled the vec with zeros, replacing old, uninitialised memory
-                3. recv_from returns the valid length of actually initialised data
-                4. The buffer already fills with arbitrary, untrusted data
-            */
-            unsafe { buf.set_len(buf.capacity()); }
-
-            match socket.recv_from(&mut buf) {
+            match socket.recv_from(&mut data) {
                 // Received another packet
                 Ok((len, addr)) => {
                     // More logging stuff
@@ -147,7 +133,7 @@ pub(crate) fn endpoint_datagram_recv_system(
                         addr,
                         Some(ip),
                         None,
-                        BytesMut::from(&buf[..len]),
+                        BytesMut::from(&data[..len]),
                         &mut buf,
                     ) {
                         // Event received
@@ -182,8 +168,8 @@ pub(crate) fn endpoint_datagram_recv_system(
                                 // If the server isn't listening, immediately reject them.
                                 if !listening {
                                     // Refuse the connection and send the refusal packet
-                                    let transmit = inner.refuse(incoming, &mut buf);
-                                    perform_transmit(socket, &buf, transmit);
+                                    let transmit = inner.refuse(incoming, &mut data);
+                                    perform_transmit(socket, &data, transmit);
 
                                     // Move on
                                     continue;
@@ -191,7 +177,7 @@ pub(crate) fn endpoint_datagram_recv_system(
 
                                 // Accept the connection immediately
                                 // TODO: Allow game systems to deny the connection
-                                match inner.accept(incoming, Instant::now(), &mut buf, None) {
+                                match inner.accept(incoming, Instant::now(), &mut data, None) {
                                     // Acceptance succeeded :)
                                     Ok((handle, connection)) => {
                                         // Spawn the connection entity
@@ -216,7 +202,7 @@ pub(crate) fn endpoint_datagram_recv_system(
 
                                         // The error may have an associated response
                                         if let Some(transmit) = err.response {
-                                            perform_transmit(socket, &buf, transmit);
+                                            perform_transmit(socket, &data, transmit);
                                         }
 
                                         // Done
@@ -227,7 +213,7 @@ pub(crate) fn endpoint_datagram_recv_system(
 
                             // Endpoint wants to send
                             DatagramEvent::Response(transmit) => {
-                                perform_transmit(socket, &buf, transmit);
+                                perform_transmit(socket, &data, transmit);
                             },
                         },
 
