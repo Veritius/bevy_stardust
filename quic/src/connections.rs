@@ -174,6 +174,7 @@ pub(crate) fn connection_event_handler_system(
         // Split borrows
         let connection = connection.as_mut();
         let inner = connection.inner.as_mut();
+        let channel_streams = &mut connection.channel_streams;
         let framed_readers = &mut connection.framed_readers;
         let framed_writers = &mut connection.framed_writers;
 
@@ -309,9 +310,32 @@ pub(crate) fn connection_event_handler_system(
                     }
                 },
 
-                StreamEvent::Finished { id } => todo!(),
-                StreamEvent::Stopped { id, error_code } => todo!(),
-                StreamEvent::Available { dir } => todo!(),
+                StreamEvent::Finished { id } |
+                StreamEvent::Stopped { id, error_code: _ } => {
+                    // Stopping a stream discards all data
+                    // as it is a reset, not a finish.
+                    framed_writers.remove(&id);
+                    framed_readers.remove(&id);
+
+                    // Find the channel id by the stream id
+                    // This is an expensive operation but it won't happen often (probably)
+                    let cid = channel_streams
+                        .iter()
+                        .find(|(_, sid)| **sid == id)
+                        .map(|(cid, _)| cid)
+                        .copied();
+
+                    // Remove the channel ID from the map
+                    if let Some(cid) = cid {
+                        channel_streams.remove(&cid);
+                    }
+
+                    // Log the stream removal
+                    debug!("Stream {id} was stopped or finished");
+                }
+
+                // We don't care about this
+                StreamEvent::Available { dir: _ } => {},
             },
 
             AppEvent::DatagramReceived => todo!(),
