@@ -119,7 +119,7 @@ fn quic_config_checker_system(
     { // Frame len checks start
         let (mfml, mbfd) = (config.maximum_framed_message_length, config.maximum_buffered_frame_data);
         
-        if mbfd > mfml {
+        if mfml > mbfd {
             warn!("Maximum buffered data value ({mbfd}) was less than maximum framed message length ({mfml})");
         }
     } // Frame len checks end
