@@ -367,7 +367,9 @@ pub(crate) fn connection_message_sender_system(
         let framed_writers = &mut connection.framed_writers;
 
         // Iterate over all channels
-        for (channel, messages) in outgoing.iter() {
+        'outgoing: for (channel, messages) in outgoing.iter() {
+            scr.clear();
+
             // Get the channel data
             let channel_data = match registry.channel_config(channel) {
                 Some(channel_data) => channel_data,
@@ -385,49 +387,55 @@ pub(crate) fn connection_message_sender_system(
                 // This forces us to use streams
                 (ReliabilityGuarantee::Reliable, _) => {
                     // Get the stream ID of this channel
-                    let stream_id: StreamId = match channel_streams.get(&channel) {
-                        Some(v) => *v,
+                    let (stream_id, mut stream) = match channel_streams.get(&channel) {
+                        Some(stream_id) => {
+                            (*stream_id, inner.send_stream(*stream_id))
+                        },
                         None => {
                             // Wasn't in the map, we have to open a new stream
                             let stream_id = inner.streams().open(Dir::Uni).unwrap();
-
-                            // Add the StreamOpenHeader to the stream
-                            // This informs the remote connection of what this stream is for
-                            StreamOpenHeader::StardustReliable {
-                                channel: VarInt::from_u32(channel.into()),
-                            }.encode(&mut scr);
-                            inner.send_stream(stream_id).write(&scr).unwrap();
-
-                            // Add the stream to the map
                             channel_streams.insert(channel, stream_id);
-                            stream_id
+                            (stream_id, inner.send_stream(stream_id))
                         },
                     };
 
-                    // Iterate over all messages and send them
-                    let mut send_stream = inner.send_stream(stream_id);
-                    for payload in messages.iter().cloned() {
-                        // If there is a writer in the map, add it
-                        match framed_writers.get_mut(&stream_id) {
-                            // If there's a writer in the map, it means
-                            // there are unsent messages, so we add this to the queue
-                            Some(writer) => { writer.queue_framed(payload); },
+                    // Try to get a writer from the writer map
+                    match framed_writers.get_mut(&stream_id) {
+                        // If there's a writer in the map, it means there are
+                        // unsent messages, so we add messages to the writer's queue
+                        Some(writer) => {
+                            // Queue all messages in the writer
+                            for payload in messages.iter().cloned() {
+                                writer.queue_framed(payload);
+                            }
+                        },
 
-                            // If these is no writer, it means
-                            // there are no unsent messages
-                            None => {
-                                // New writer, used to generate header
-                                let mut writer = FramedWriter::new();
+                        // If there's no writer in the map, it means
+                        // there are no messages queued, so we need a
+                        // new FramedWriter instance
+                        None => {
+                            // New instance of a FramedWriter
+                            let mut writer = FramedWriter::new();
+
+                            // Encode a header for the new stream
+                            StreamOpenHeader::StardustReliable { channel: VarInt::from_u32(channel.into()) }.encode(&mut scr);
+                            writer.queue_raw(Bytes::copy_from_slice(&scr));
+
+                            // Queue all messages in the writer
+                            for payload in messages.iter().cloned() {
                                 writer.queue_framed(payload);
 
                                 // Try to send in the stream
-                                let wresult = writer.write(&mut send_stream);
+                                let wresult = writer.write(&mut stream);
                                 match (wresult, writer.unsent()) {
                                     // Writer done, move on
                                     (Ok(_), 0) => { continue },
 
                                     // Writer not done, add to map
-                                    (Ok(_), _) => { framed_writers.insert(stream_id, writer); },
+                                    (Ok(_), _) => {
+                                        framed_writers.insert(stream_id, writer);
+                                        continue 'outgoing; // Skip this channel
+                                    },
 
                                     (Err(WriteError::Stopped(_code)), _) => { todo!() },
                                     (Err(WriteError::ClosedStream), _) => { todo!() },
@@ -435,7 +443,7 @@ pub(crate) fn connection_message_sender_system(
                                     // Doesn't happen, FramedWriter handles it
                                     (Err(WriteError::Blocked), _) => unreachable!(),
                                 }
-                            },
+                            }
                         }
                     }
                 },
