@@ -247,6 +247,7 @@ pub(crate) enum StreamReadError {
     InvalidChannelId,
 }
 
+#[derive(Debug)]
 struct Burner<'a> {
     consumed: usize,
     remaining: usize,
@@ -267,6 +268,14 @@ impl<'a> Burner<'a> {
     }
 
     fn commit(&mut self) {
+        self.consumed = 0;
+
+        if (self.index + 1) > self.inner.len() {
+            self.cursor = 0;
+            self.inner.clear();
+            return;
+        }
+
         if self.cursor > 0 {
             let m = &mut self.inner[self.index];
             *m = m.slice(self.cursor..);
@@ -283,8 +292,6 @@ impl<'a> Burner<'a> {
 
         core::mem::swap(self.inner, &mut swap);
         drop(swap);
-
-        self.consumed = 0;
     }
 }
 
