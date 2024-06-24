@@ -1,7 +1,7 @@
 use std::cmp::Ordering;
-use bevy::utils::{smallvec::{smallvec, SmallVec}, thiserror::Error};
+use bevy::utils::{smallvec::SmallVec, thiserror::Error};
 use bevy_stardust::prelude::*;
-use quinn_proto::{coding::{Codec, Result as DecodeResult, UnexpectedEnd}, SendStream, VarInt, WriteError};
+use quinn_proto::{coding::{Codec, Result as DecodeResult}, SendStream, VarInt, WriteError};
 
 pub(crate) enum StreamOpenHeader {
     StardustReliable {
@@ -330,14 +330,10 @@ impl Buf for Burner<'_> {
     }
 }
 
-// impl Drop for Burner<'_> {
-//     fn drop(&mut self) {
-//         debug_assert!(self.consumed == 0, "Burner was dropped but not committed");
-//     }
-// }
-
 #[test]
 fn burner_test() {
+    use bevy::utils::smallvec::smallvec;
+
     let mut slices: SmallVec<[Bytes; 1]> = smallvec![
         Bytes::from_static(b"Hello"),
         Bytes::from_static(b", "),
