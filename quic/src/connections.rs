@@ -276,7 +276,9 @@ pub(crate) fn connection_event_handler_system(
                             Ok(None) => { break },
 
                             // A chunk of data was read
-                            Ok(Some(StreamReaderSegment::Stardust { channel, payload })) => todo!(),
+                            Ok(Some(StreamReaderSegment::Stardust { channel, payload })) => {
+                                debug!("Received message on {channel:?}: {payload:?}");
+                            },
 
                             // Error while reading
                             Err(err) => todo!(),
