@@ -1,243 +1,260 @@
-use std::{net::{SocketAddr, ToSocketAddrs, UdpSocket}, sync::{Arc, Exclusive}, collections::HashMap};
-use anyhow::{Context, Result};
-use bevy_ecs::{prelude::*, system::SystemParam, entity::Entities};
-use quinn_proto::*;
-// UdpState is such a terrible type name I needed to rename it
-use quinn_udp::{UdpSockRef, UdpSocketState, UdpState as UdpCapability};
-use rustls::{Certificate, PrivateKey, RootCertStore};
-use crate::{plugin::PluginConfig, QuicConnection};
+use std::{io::ErrorKind, net::{SocketAddr, UdpSocket}, sync::Arc, time::Instant};
+use anyhow::Result;
+use bevy::{prelude::*, utils::HashMap};
+use bytes::BytesMut;
+use quinn_proto::{ClientConfig, ConnectionHandle, DatagramEvent, Endpoint, EndpointConfig, ServerConfig, Transmit};
+use crate::QuicConnection;
 
-/// An active QUIC endpoint.
+/// A QUIC endpoint.
+/// 
+/// # Safety
+/// This component must always stay in the same [`World`] as it was created in.
+/// Being put into another `World` will lead to undefined behavior.
 #[derive(Component)]
 pub struct QuicEndpoint {
-    pub(crate) inner: Exclusive<Endpoint>,
-    pub(crate) connections: HashMap<ConnectionHandle, Entity>,
+    pub(crate) inner: Box<Endpoint>,
+    pub(crate) entities: HashMap<ConnectionHandle, Entity>,
+    pub(crate) socket: UdpSocket,
 
-    root_certs: Arc<RootCertStore>,
-
-    udp_socket: UdpSocket,
-    socket_state: UdpSocketState,
-    socket_capabilities: UdpCapability,
-
-    close_requested: bool,
+    listening: bool,
 }
 
 impl QuicEndpoint {
-    pub(crate) fn new(
-        endpoint: Endpoint,
-        root_certs: Arc<RootCertStore>,
-        socket_addr: impl ToSocketAddrs,
+    /// Creates a new endpoint, bound to `socket`.
+    /// 
+    /// If `server_config` is `None`, incoming connections will be rejected.
+    /// This can be changed at any time with [`set_server_config`](Self::set_server_config).
+    pub fn new(
+        socket: UdpSocket,
+        config: Arc<EndpointConfig>,
+        server_config: Option<Arc<ServerConfig>>,
+        allow_mtud: bool,
+        rng_seed: Option<[u8; 32]>,
     ) -> Result<Self> {
-        let udp_socket = UdpSocket::bind(socket_addr)?;
-        UdpSocketState::configure(UdpSockRef::from(&udp_socket))?;
+        // Sockets must be nonblocking
+        socket.set_nonblocking(true)?;
+
+        debug!("Opened QUIC endpoint on address {:?}", socket.local_addr().unwrap());
 
         Ok(Self {
-            inner: Exclusive::new(endpoint),
-            connections: HashMap::new(),
-            root_certs,
-            udp_socket,
-            socket_state: UdpSocketState::new(),
-            socket_capabilities: UdpCapability::new(),
-            close_requested: false,
+            inner: Box::new(Endpoint::new(config, server_config, allow_mtud, rng_seed)),
+            entities: HashMap::default(),
+            socket,
+            listening: true,
         })
     }
 
-    #[must_use]
-    pub(crate) fn connect(
+    /// Replaces the server config of the endpoint, affecting new connections only.
+    /// If `None`, the endpoint cannot act as a server, and incoming connections will be rejected.
+    pub fn set_server_config(
         &mut self,
-        entities: &Entities,
-        address: SocketAddr,
-        server_name: &str,
-        transport: Arc<TransportConfig>,
-        verifier: Arc<dyn crate::crypto::ServerCertVerifier>
-    ) -> Result<(Entity, ConnectionHandle, Connection)> {
-        let crypto = Self::build_client_config(Arc::new(crate::crypto::ServerCertVerifierWrapper {
-            roots: self.root_certs.clone(),
-            inner: verifier,
-        }))?;
-
-        let mut client_config = ClientConfig::new(Arc::new(crypto));
-        client_config.transport_config(transport);
-
-        let (handle, connection) = self.inner.get_mut().connect(
-            client_config,
-            address,
-            server_name
-        )?;
-
-        let id = entities.reserve_entity();
-        self.connections.insert(handle, id);
-        Ok((id, handle, connection))
+        server_config: Option<Arc<ServerConfig>>,
+    ) {
+        self.inner.set_server_config(server_config)
     }
 
-    pub(crate) fn recv_split_borrow(&mut self) -> (&mut Endpoint, &HashMap<ConnectionHandle, Entity>, &UdpSocket, &UdpSocketState) {
-        (self.inner.get_mut(), &self.connections, &self.udp_socket, &self.socket_state)
-    }
-
-    pub(crate) fn send_split_borrow(&self) -> (&UdpSocket, &UdpSocketState, &UdpCapability) {
-        (&self.udp_socket, &self.socket_state, &self.socket_capabilities)
-    }
-
-    /// Returns the local address that the endpoint is connected to.
-    pub fn local_address(&self) -> SocketAddr {
-        self.udp_socket.local_addr().unwrap()
-    }
-
-    /// Marks the endpoint for closing, disconnecting all clients and shutting down the connection.
-    pub fn close(&mut self) {
-        self.close_requested = true;
-        self.inner.get_mut().reject_new_connections();
-    }
-
-    /// Returns `true` if the endpoint is marked for closing.
-    pub fn is_closing(&self) -> bool {
-        self.close_requested
-    }
-
-    fn build_client_config(verifier: Arc<dyn rustls::client::ServerCertVerifier>) -> Result<rustls::ClientConfig> {
-        Ok(rustls::ClientConfig::builder()
-            .with_safe_default_cipher_suites()
-            .with_safe_default_kx_groups()
-            .with_protocol_versions(&[&rustls::version::TLS13])?
-            .with_custom_certificate_verifier(verifier)
-            .with_no_client_auth())
-    }
-}
-
-/// Tool for opening QUIC endpoints.
-#[derive(SystemParam)]
-pub struct QuicConnectionManager<'w, 's> {
-    plugin_config: Res<'w, PluginConfig>,
-    endpoints: Query<'w, 's, &'static mut QuicEndpoint>,
-    entities: &'w Entities,
-    commands: Commands<'w, 's>,
-}
-
-impl QuicConnectionManager<'_, '_> {
-    /// Opens a client (outgoing-only) endpoint.
-    pub fn open_client_endpoint(
+    /// Sets whether or not the endpoint is listening to new connections.
+    /// Only affects endpoints with a server config. Enabled by default.
+    /// Turning this off does not remove the attached server config.
+    pub fn set_listening(
         &mut self,
-        address: impl ToSocketAddrs,
-        root_certs: Arc<RootCertStore>,
-    ) -> Result<Entity> {
-        let address = address.to_socket_addrs()?.nth(0)
-            .context("No SocketAddr provided")?;
-
-        let endpoint = Endpoint::new(
-            self.plugin_config.endpoint_config.clone(),
-            None,
-            false
-        );
-
-        let id = self.commands.spawn(QuicEndpoint::new(
-            endpoint,
-            root_certs,
-            address
-        )?).id();
-
-        tracing::info!("Opened client endpoint {id:?} on {address}");
-        Ok(id)
+        val: bool,
+    ) {
+        self.listening = val;
     }
 
-    /// Opens a server (outgoing or incoming) endpoint.
-    pub fn open_server_endpoint(
-        &mut self,
-        address: impl ToSocketAddrs,
-        root_certs: Arc<RootCertStore>,
-        certificate_chain: Vec<Certificate>,
-        private_key: PrivateKey,
-    ) -> Result<Entity> {
-        let address = address.to_socket_addrs()?.nth(0)
-            .context("No SocketAddr provided")?;
-
-        let crypto = rustls::ServerConfig::builder()
-            .with_safe_default_cipher_suites()
-            .with_safe_default_kx_groups()
-            .with_protocol_versions(&[&rustls::version::TLS13])?
-            .with_no_client_auth()
-            .with_single_cert(certificate_chain, private_key)?;
-
-        let mut config = ServerConfig::with_crypto(Arc::new(crypto));
-        config.transport_config(self.plugin_config.transport_config.clone());
-
-        let endpoint = Endpoint::new(
-            self.plugin_config.endpoint_config.clone(),
-            Some(Arc::new(config)),
-            false
-        );
-
-        let id = self.commands.spawn(QuicEndpoint::new(
-            endpoint,
-            root_certs,
-            address
-        )?).id();
-
-        tracing::info!("Opened server endpoint {id:?} on {address}");
-        Ok(id)
-    }
-
-    /// Try to connect to a remote server.
-    /// The connection will be established on the endpoint bound to the `local` address.
+    /// Connects to a new connection.
+    /// `entity` must be the id of the entity that the `QuicEndpoint` component is attached to.
     /// 
-    /// The first value provided by the `ToSocketAddr` implementation will be used.
-    pub fn try_connect(
+    /// # Safety
+    /// `commands` must only be applied to the world the `QuicEndpoint` is part of.
+    pub fn connect(
         &mut self,
-        endpoint: Entity,
-        remote: impl ToSocketAddrs,
+        commands: &mut Commands,
+        entity: Entity,
+        config: ClientConfig,
+        remote: SocketAddr,
         server_name: &str,
     ) -> Result<Entity> {
-        // Get a single SocketAddr from remote
-        let remote = remote.to_socket_addrs()?.nth(0)
-            .context("No SocketAddr provided")?;
+        // Create the connection data
+        let (handle, connection) = self.inner.connect(Instant::now(), config, remote, server_name)?;
 
-        // Find component for endpoint
-        let mut endpoint_comp = self.endpoints.get_mut(endpoint)?;
+        // Spawn the connection entity
+        let component = QuicConnection::new(entity, handle, Box::new(connection));
+        let entity = commands.spawn(component).id();
 
-        // Connect to target with endpoint
-        let (entity, handle, connection) = endpoint_comp.connect(
-            self.entities,
-            remote.clone(),
-            server_name,
-            self.plugin_config.transport_config.clone(),
-            self.plugin_config.server_cert_verifier.clone()
-        )?;
+        // Add the entity ids to the map
+        self.entities.insert(handle, entity);
 
-        // Spawn entity to hold Connection
-        self.commands.get_or_spawn(entity).insert(QuicConnection::new(endpoint, handle, connection));
-
-        tracing::info!("Created new connection {entity:?} to remote peer {remote} on endpoint {endpoint:?}");
-        Ok(entity)
+        // Return the entity id
+        return Ok(entity);
     }
+}
 
-    /// Like [`try_connect`](Self::try_connect) but with a custom certificate verifier.
-    #[cfg(feature="insecure")]
-    pub fn try_connect_with_custom_verifier(
-        &mut self,
-        endpoint: Entity,
-        remote: impl ToSocketAddrs,
-        server_name: &str,
-        verifier: Arc<dyn crate::crypto::ServerCertVerifier>,
-    ) -> Result<Entity> {
-        // Get a single SocketAddr from remote
-        let remote = remote.to_socket_addrs()?.nth(0)
-            .context("No SocketAddr provided")?;
+pub(crate) fn endpoint_datagram_recv_system(
+    commands: ParallelCommands,
+    mut endpoints: Query<(Entity, &mut QuicEndpoint)>,
+    connections: Query<&mut QuicConnection>,
+) {
+    endpoints.par_iter_mut().for_each(|(entity, mut endpoint)| {
+        // Logging stuff
+        let trace_span = trace_span!("Reading packets from endpoint", endpoint=?entity);
+        let _entered = trace_span.entered();
 
-        // Find component for endpoint
-        let mut endpoint_comp = self.endpoints.get_mut(endpoint)?;
+        // Some stuff related to the endpoint
+        let endpoint = endpoint.as_mut();
+        let inner = endpoint.inner.as_mut();
+        let socket = &mut endpoint.socket;
+        let entities = &mut endpoint.entities;
+        let listening = endpoint.listening;
+        let ip = socket.local_addr().unwrap().ip();
 
-        // Connect to target with endpoint using custom verifier
-        let (entity, handle, connection) = endpoint_comp.connect(
-            self.entities,
-            remote.clone(),
-            server_name,
-            self.plugin_config.transport_config.clone(),
-            verifier
-        )?;
+        // Allocate a buffer to store messages in
+        let buf_size = 2048; // TODO: Make this based on MTU
+        let mut buf = Vec::with_capacity(buf_size);
+        buf.extend((0..buf_size).into_iter().map(|_| 0)); // Fill with zeros
 
-        // Spawn entity to hold Connection
-        self.commands.get_or_spawn(entity).insert(QuicConnection::new(endpoint, handle, connection));
+        // Repeatedly receive messages until we run out
+        loop {
+            /*
+                SAFETY
 
-        tracing::info!("Connecting to remote peer {remote} on endpoint {endpoint:?} with custom verifier");
-        Ok(entity)
+                This is needed because
+                1. recv_from takes a mutable slice, which can't resize
+                2. recv_from will drop any bytes that can't fit in the slice
+                3. Without this, the slice's length may be lower than it should be
+                4. Endpoint::handle may change the vec's length or capacity
+
+                This is fine because
+                1. u8s have no special drop or initialisation considerations
+                2. We filled the vec with zeros, replacing old, uninitialised memory
+                3. recv_from returns the valid length of actually initialised data
+                4. The buffer already fills with arbitrary, untrusted data
+            */
+            unsafe { buf.set_len(buf.capacity()); }
+
+            match socket.recv_from(&mut buf) {
+                // Received another packet
+                Ok((len, addr)) => {
+                    // More logging stuff
+                    let trace_span = trace_span!("Reading packet", len, address=?addr);
+                    let _entered = trace_span.entered();
+
+                    // Pass packet to the endpoint
+                    match inner.handle(
+                        Instant::now(),
+                        addr,
+                        Some(ip),
+                        None,
+                        BytesMut::from(&buf[..len]),
+                        &mut buf,
+                    ) {
+                        // Event received
+                        Some(event) => match event {
+                            // Connection event, route to an entity
+                            DatagramEvent::ConnectionEvent(handle, event) => {
+                                // Get the entity ID from the map
+                                let entity = match entities.get(&handle) {
+                                    Some(v) => *v,
+                                    None => {
+                                        error!("Connection {handle:?} had no associated entity");
+                                        todo!(); // continue;
+                                    },
+                                };
+
+                                // SAFETY: Only this endpoint accesses this entity, since it controls it
+                                let query_item = unsafe { connections.get_unchecked(entity) };
+                                let mut connection = match query_item {
+                                    Ok(v) => v,
+                                    Err(_) => {
+                                        error!("Failed to get connection component from {entity:?}");
+                                        continue;
+                                    },
+                                };
+
+                                // Connection handles event
+                                connection.inner.handle_event(event);
+                            },
+
+                            // New connection
+                            DatagramEvent::NewConnection(incoming) => {
+                                // If the server isn't listening, immediately reject them.
+                                if !listening {
+                                    // Refuse the connection and send the refusal packet
+                                    let transmit = inner.refuse(incoming, &mut buf);
+                                    perform_transmit(socket, &buf, transmit);
+
+                                    // Move on
+                                    continue;
+                                }
+
+                                // Accept the connection immediately
+                                // TODO: Allow game systems to deny the connection
+                                match inner.accept(incoming, Instant::now(), &mut buf, None) {
+                                    // Acceptance succeeded :)
+                                    Ok((handle, connection)) => {
+                                        // Spawn the connection entity
+                                        let connection = Box::new(connection);
+                                        let entity = commands.command_scope(move |mut commands| {
+                                            let component = QuicConnection::new(
+                                                entity,
+                                                handle,
+                                                connection
+                                            );
+                                            commands.spawn(component).id()
+                                        });
+
+                                        // Add the entity ids to the map
+                                        entities.insert(handle, entity);
+                                    },
+
+                                    // An error occurred
+                                    Err(err) => {
+                                        // Log the error to the console
+                                        debug!("Error occurred while accepting peer: {}", err.cause);
+
+                                        // The error may have an associated response
+                                        if let Some(transmit) = err.response {
+                                            perform_transmit(socket, &buf, transmit);
+                                        }
+
+                                        // Done
+                                        continue;
+                                    },
+                                }
+                            },
+
+                            // Endpoint wants to send
+                            DatagramEvent::Response(transmit) => {
+                                perform_transmit(socket, &buf, transmit);
+                            },
+                        },
+
+                        // Nothing happened.
+                        None => { continue },
+                    }
+                },
+
+                // There are no more packets to read, break the loop
+                Err(e) if e.kind() == ErrorKind::WouldBlock => { break },
+
+                // An actual IO error occurred
+                Err(e) => {
+                    error!("IO error occurred while reading UDP packets: {e}");
+                    break;
+                },
+            }
+        }
+    });
+}
+
+pub(crate) fn perform_transmit(
+    socket: &mut UdpSocket,
+    payload: &[u8],
+    transmit: Transmit,
+) {
+    match socket.send_to(&payload, transmit.destination) {
+        Ok(len) => { debug_assert_eq!(transmit.size, len); },
+        Err(err) => { error!("Error while sending packet: {err}"); },
     }
 }

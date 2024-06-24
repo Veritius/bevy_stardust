@@ -1,32 +1,15 @@
-//! # bevy_stardust_quic
-//! A QUIC transport layer for bevy_stardust.
-
+#![doc = include_str!("../README.md")]
 #![warn(missing_docs)]
-#![feature(exclusive_wrapper)]
 
 mod connections;
-mod crypto;
 mod endpoints;
-mod receive;
-mod sending;
 mod plugin;
-mod polling;
 mod streams;
-mod reading;
-mod writing;
 
-pub use plugin::{QuicTransportPlugin, TlsAuthentication};
-pub use endpoints::{QuicEndpoint, QuicConnectionManager};
-pub use connections::{QuicConnection, ConnectionState};
-pub use rustls::{Certificate, PrivateKey, RootCertStore, Error as TlsError};
-pub use quinn_proto::TransportConfig;
-
-#[cfg(feature="insecure")]
-pub use insecure_pub_uses::*;
-
-mod insecure_pub_uses {
-    #![cfg_attr(not(feature="insecure"), allow(unused_imports))]
-
-    use crate::*;
-    pub use crypto::ServerCertVerifier;
-}
+pub use plugin::*;
+pub use connections::QuicConnection;
+pub use endpoints::QuicEndpoint;
+pub use quinn_proto::{EndpointConfig, ClientConfig, ServerConfig};
+pub use quinn_proto::crypto::rustls::{QuicClientConfig, QuicServerConfig};
+pub use rustls::pki_types::{CertificateDer, PrivateKeyDer};
+pub use rustls::{ServerConfig as TlsServerConfig, ClientConfig as TlsClientConfig};

@@ -1,93 +1,57 @@
+use bevy::prelude::*;
+use bevy_stardust::prelude::*;
+use crate::connections::*;
+use crate::endpoints::*;
 
-use std::sync::Arc;
-use bevy_app::prelude::*;
-use bevy_ecs::prelude::*;
-use bevy_stardust::scheduling::{NetworkRead, NetworkWrite};
-use quinn_proto::{EndpointConfig, TransportConfig, VarInt};
-
-/// Adds QUIC support to Stardust.
-pub struct QuicTransportPlugin {
-    /// How certificates should be verified for outgoing connections.
-    /// See the [`TlsAuthentication`] documentation for details.
-    pub authentication: TlsAuthentication,
-
-    /// Overrides the `TransportConfig` used in connections.
-    /// This is for advanced users - the defaults are good enough for almost all applications.
-    pub transport_config_override: Option<Arc<quinn_proto::TransportConfig>>,
+/// Adds QUIC functionality to the application.
+pub struct QuicPlugin {
+    /// The maximum length of framed messages, applying to Stardust messages.
+    /// 
+    /// Due to how framed messages are handled within QUIC streams,
+    /// denial-of-service attacks are possible. This variable allows
+    /// this attack vector to be mitigated. If this value is too low,
+    /// your messages will be incorrectly identified as attacks.
+    /// If it's too high, denial of service attacks become viable.
+    /// 
+    /// This should be as set as high as your app will ever use,
+    /// and then a little bit more for wiggle room.
+    /// If you need to send data that is extremely large,
+    /// but you don't want to have this attack vector available,
+    /// look into rolling your own fragmentation protocol.
+    /// 
+    /// Defaults to `2^16` (`65535`) bytes.
+    pub maximum_framed_message_length: usize,
 }
 
-impl Plugin for QuicTransportPlugin {
-    fn build(&self, app: &mut App) {
-        // This step is a bit of a powerhouse
-        app.add_systems(PreUpdate, (
-            crate::receive::quic_receive_packets_system,
-            crate::polling::endpoint_connection_comm_system,
-            crate::polling::poll_application_event_system,
-            crate::reading::read_messages_from_streams_system,
-        ).chain().in_set(NetworkRead::Receive));
-
-        app.add_systems(PostUpdate, (
-            crate::writing::write_messages_to_streams_system,
-            crate::polling::endpoint_connection_comm_system,
-            crate::sending::quic_poll_transmit_system,
-            crate::polling::remove_drained_connections_system,
-        ).chain().in_set(NetworkWrite::Send));
-
-        // Check if a transport config is provided, if not, just use defaults that are good for us
-        let transport_config = if let Some(config) = self.transport_config_override.clone() {
-            config
-        } else {
-            let mut config = TransportConfig::default();
-            config.max_idle_timeout(Some(VarInt::from_u32(15_000).into())); // 15 seconds
-            Arc::new(config)
-        };
-
-        // Add resources
-        app.insert_resource(PluginConfig {
-            transport_config,
-            endpoint_config: Arc::new(EndpointConfig::default()),
-            server_cert_verifier: match &self.authentication {
-                TlsAuthentication::Secure => Arc::new(crate::crypto::WebPkiVerifier),
-
-                #[cfg(feature="insecure")]
-                TlsAuthentication::AlwaysVerify => Arc::new(crate::crypto::insecure_verifiers::AlwaysTrueVerifier),
-
-                #[cfg(feature="insecure")]
-                TlsAuthentication::Custom(verifier) => verifier.clone(),
-            },
-        });
+impl Default for QuicPlugin {
+    fn default() -> Self {
+        Self {
+            maximum_framed_message_length: 2usize.pow(16),
+        }
     }
 }
 
-/// How certificates should be authenticated when using [`try_connect`](crate::endpoints::QuicConnectionManager::try_connect).
-/// 
-/// By default, only the `Secure` variant is available, providing the best security.
-/// Set the `insecure` feature flag for more options, including disabling authentication.
-#[non_exhaustive]
-#[derive(Debug, Default)]
-pub enum TlsAuthentication {
-    /// The certificate chain will be fully checked for authenticity.
-    /// 
-    /// This is the safest option and ensures the best security possible as long as your root CAs are good.
-    #[default]
-    Secure,
+impl Plugin for QuicPlugin {
+    fn build(&self, app: &mut App) {
+        app.insert_resource(PluginConfig {
+            max_frm_msg_len: self.maximum_framed_message_length,
+        });
 
-    /// The certificate provided by a remote connection will always be accepted as valid.
-    /// 
-    /// This completely invalidates all authentication and makes connections vulnerable to MITM attacks.
-    /// This is useful if you don't care about TLS authentication or you're doing testing.
-    #[cfg(feature="insecure")]
-    AlwaysVerify,
+        app.add_systems(PreUpdate, (
+            endpoint_datagram_recv_system,
+            connection_endpoint_events_system,
+            connection_event_handler_system,
+        ).chain().in_set(NetworkRead::Receive));
 
-    /// Use a custom implementation of `ServerCertVerifier`.
-    #[cfg(feature="insecure")]
-    Custom(Arc<dyn crate::crypto::ServerCertVerifier>),
+        app.add_systems(PostUpdate, (
+            connection_message_sender_system,
+            connection_datagram_send_system,
+            connection_endpoint_events_system,
+        ).chain().in_set(NetworkWrite::Send));
+    }
 }
 
-/// Resource added by the plugin to store values defined/created when it was added.
 #[derive(Resource)]
 pub(crate) struct PluginConfig {
-    pub transport_config: Arc<TransportConfig>,
-    pub endpoint_config: Arc<EndpointConfig>,
-    pub server_cert_verifier: Arc<dyn crate::crypto::ServerCertVerifier>,
+    pub max_frm_msg_len: usize,
 }
