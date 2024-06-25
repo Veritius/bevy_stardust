@@ -180,8 +180,6 @@ impl<'a> Iterator for ChannelIter<'a> {
     }
 }
 
-impl<'a> ExactSizeIterator for ChannelIter<'a> {}
-
 #[derive(Clone)]
 pub struct MessageIter<'a> {
     messages: &'a [Bytes],
@@ -207,6 +205,16 @@ impl<'a> Iterator for MessageIter<'a> {
         // Return the message
         return Some(val);
     }
+
+    #[inline]
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (self.indexes.len(), None)
+    }
 }
 
-impl<'a> ExactSizeIterator for MessageIter<'a> {}
+impl<'a> ExactSizeIterator for MessageIter<'a> {
+    #[inline]
+    fn len(&self) -> usize {
+        self.indexes.len()
+    }
+}
