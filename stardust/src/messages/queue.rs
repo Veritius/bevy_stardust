@@ -208,7 +208,8 @@ impl<'a> Iterator for MessageIter<'a> {
 
     #[inline]
     fn size_hint(&self) -> (usize, Option<usize>) {
-        (self.indexes.len(), None)
+        let len = self.indexes.len();
+        (len, Some(len))
     }
 }
 
