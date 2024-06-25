@@ -14,7 +14,7 @@ pub struct ChannelConfiguration {
     /// Guarantees that the transport layer must make
     /// for messages sent on this channel. See the
     /// documentation of [`Consistency`].
-    pub consistency: Consistency,
+    pub consistency: ChannelConsistency,
 
     /// The priority of messages on this channel.
     /// Transport values will send messages on channels with higher `priority` values first.
@@ -56,7 +56,7 @@ impl StableHash for &ChannelConfiguration {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Reflect)]
 #[reflect(Debug, PartialEq, Hash)]
 #[non_exhaustive]
-pub enum Consistency {
+pub enum ChannelConsistency {
     /// Messages lost in transport will not be resent.
     /// They are added to the queue in the order they're received,
     /// which may be different to the order they were sent in.
@@ -94,36 +94,36 @@ pub enum Consistency {
     ReliableOrdered,
 }
 
-impl Consistency {
+impl ChannelConsistency {
     /// Returns `true` if messages in this channel must be sent reliably.
     pub fn is_reliable(&self) -> bool {
         match self {
-            Consistency::UnreliableUnordered => false,
-            Consistency::UnreliableSequenced => false,
-            Consistency::ReliableUnordered   => true,
-            Consistency::ReliableOrdered     => true,
+            ChannelConsistency::UnreliableUnordered => false,
+            ChannelConsistency::UnreliableSequenced => false,
+            ChannelConsistency::ReliableUnordered   => true,
+            ChannelConsistency::ReliableOrdered     => true,
         }
     }
 
     /// Returns `true` if messages in this channel have any ordering constraints applied.
     pub fn is_ordered(&self) -> bool {
         match self {
-            Consistency::UnreliableUnordered => false,
-            Consistency::UnreliableSequenced => true,
-            Consistency::ReliableUnordered   => false,
-            Consistency::ReliableOrdered     => true,
+            ChannelConsistency::UnreliableUnordered => false,
+            ChannelConsistency::UnreliableSequenced => true,
+            ChannelConsistency::ReliableUnordered   => false,
+            ChannelConsistency::ReliableOrdered     => true,
         }
     }
 }
 
 #[cfg(feature="hashing")]
-impl StableHash for Consistency {
+impl StableHash for ChannelConsistency {
     fn hash<H: Hasher>(&self, state: &mut H) {
         match self {
-            Consistency::UnreliableUnordered => state.write_u8(0),
-            Consistency::UnreliableSequenced => state.write_u8(1),
-            Consistency::ReliableUnordered   => state.write_u8(2),
-            Consistency::ReliableOrdered     => state.write_u8(3),
+            ChannelConsistency::UnreliableUnordered => state.write_u8(0),
+            ChannelConsistency::UnreliableSequenced => state.write_u8(1),
+            ChannelConsistency::ReliableUnordered   => state.write_u8(2),
+            ChannelConsistency::ReliableOrdered     => state.write_u8(3),
         }
     }
 }

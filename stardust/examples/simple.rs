@@ -1,5 +1,4 @@
 use std::any::TypeId;
-
 use bevy::app::{AppLabel, SubApp, ScheduleRunnerPlugin};
 use bevy::log::LogPlugin;
 use bevy::prelude::*;
@@ -33,7 +32,7 @@ fn main() {
         app.add_plugins((StardustPlugin, LinkTransportPlugin));
 
         let config = ChannelConfiguration {
-            consistency: Consistency::ReliableOrdered,
+            consistency: ChannelConsistency::ReliableOrdered,
             priority: 0,
         };
 
@@ -83,7 +82,7 @@ fn write_system<C: Channel>(
 ) {
     for mut outgoing in query.iter_mut() {
         let rand = fastrand::u128(..);
-        let bytes = Bytes::copy_from_slice(&rand.to_be_bytes()[..]);
+        let bytes = bytes::Bytes::copy_from_slice(&rand.to_be_bytes()[..]);
 
         info!("{}: Sent a message to a peer: {bytes:?}", name.0);
         outgoing.push(registry.channel_id(TypeId::of::<C>()).unwrap(), bytes);

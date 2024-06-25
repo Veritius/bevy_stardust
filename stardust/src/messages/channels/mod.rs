@@ -27,4 +27,4 @@ mod extension;
 pub use config::*;
 pub use id::*;
 pub use registry::*;
-pub use extension::ChannelSetupAppExt;
+pub use extension::*;
