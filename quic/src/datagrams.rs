@@ -102,10 +102,18 @@ fn decode_varint<B: Buf>(b: &mut B) -> Result<u64, DatagramHeaderParseError> {
 #[test]
 fn datagram_queue_sorting_test() {
     let mut queue = DatagramQueue::with_capacity(3);
-    queue.push(PendingDatagram { priority: 0, purpose: DatagramPurpose::Stardust, payload: Bytes::new() });
-    queue.push(PendingDatagram { priority: 1, purpose: DatagramPurpose::Stardust, payload: Bytes::new() });
-    queue.push(PendingDatagram { priority: 2, purpose: DatagramPurpose::Stardust, payload: Bytes::new() });
 
+    // Insert a bunch of items with arbitrary priorities
+    let priorities = [0, 1, 5, 6, 2, 3];
+    for priority in priorities {
+        queue.push(PendingDatagram {
+            priority,
+            purpose: DatagramPurpose::Stardust,
+            payload: Bytes::new(),
+        });
+    }
+
+    // Check that the output is sorted
     let mut last_priority: u32 = 0;
     for item in queue.drain() {
         assert!(item.priority >= last_priority);
