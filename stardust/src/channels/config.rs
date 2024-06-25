@@ -11,15 +11,9 @@ use {std::hash::Hasher, crate::hashing::StableHash};
 #[derive(Debug, Clone, Hash, Reflect)]
 #[reflect(Debug, Hash)]
 pub struct ChannelConfiguration {
-    /// Whether messages should be resent if they're missed.
-    pub reliable: ReliabilityGuarantee,
-
-    /// Whether messages should be read in the order they were sent.
-    pub ordered: OrderingGuarantee,
-
-    /// If messages on this channel may need to be broken up to be transmitted.
-    /// If disabled, messages over the MTU will be discarded or panic, depending on the transport layer.
-    pub fragmented: bool,
+    /// Whether messages should be resent if they're missed,
+    /// and if they should be added to the message queue in the order of sending.
+    pub consistency: Consistency,
 
     /// The priority of messages on this channel.
     /// Transport values will send messages on channels with higher `priority` values first.
@@ -30,57 +24,105 @@ pub struct ChannelConfiguration {
 #[cfg(feature="hashing")]
 impl StableHash for &ChannelConfiguration {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        self.reliable.hash(state);
-        self.ordered.hash(state);
-        self.fragmented.hash(state);
+        self.consistency.hash(state);
     }
 }
 
-/// The reliability guarantee of a channel.
+/// Reliability and ordering guarantees.
+/// This is enforced by the transport layer handling the client.
+/// 
+/// # Why?
+/// ## Reliability
+/// https://en.wikipedia.org/wiki/Reliability_(computer_networking)
+/// 
+/// The Internet makes no guarantees about your message being received.
+/// This is a challenge if your application is expecting something, and it's lost.
+/// Reliability guarantees that individual messages on this channel are received
+/// eventually, through whatever means are available to the transport layer.
+/// This almost always incurs some overhead, and may be undesirable for
+/// certain kinds of transmission, especially for real-time data.
+/// 
+/// ## Ordering
+/// The Internet makes no guarantees about the order packets are received in.
+/// This means that if you're trying to send chunks of an image, you may
+/// receive packets in the wrong order to the one they were sent in, and end
+/// up with a very muddled up image.
+/// 
+/// By enabling ordering for a channel, transport layers will ensure
+/// that messages in the channel will be received in a specified order,
+/// relative to the order they were sent in. Messages are only ordered
+/// against other messages in the same channel.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Reflect)]
 #[reflect(Debug, PartialEq, Hash)]
-pub enum ReliabilityGuarantee {
-    /// Messages are not guaranteed to arrive.
-    Unreliable,
+#[non_exhaustive]
+pub enum Consistency {
+    /// Messages lost in transport will not be resent.
+    /// They are added to the queue in the order they're received,
+    /// which may be different to the order they were sent in.
+    /// 
+    /// Useful for messages that can occasionally be lost,
+    /// and aren't needed to be read in a specific order,
+    /// such as spawning particle effects.
+    UnreliableUnordered,
 
-    /// Lost messages will be detected and resent.
-    Reliable,
+    /// Messages lost in transport will not be resent.
+    /// Only messages that were sent after the last received message
+    /// are added to the queue. Messages that were sent before are dropped.
+    /// 
+    /// Useful for messages that can occasionally be lost,
+    /// but are used to keep things up-to-date,
+    /// such as player position in a shooter.
+    UnreliableSequenced,
+
+    /// Messages lost in transport will be resent.
+    /// They are added to the queue in the order they're received,
+    /// which may be different to the order they were sent in.
+    /// 
+    /// Useful for message that must be received,
+    /// but don't have any ordering requirements,
+    /// such as inventory updates in a survival game.
+    ReliableUnordered,
+
+    /// Messages lost in transport will be resent.
+    /// They are added to the queue in the order they were sent,
+    /// which may introduce a delay in the case of a resend.
+    /// 
+    /// Useful for messages that must be received,
+    /// and must be received in a certain order,
+    /// such as chat messages in a multiplayer game.
+    ReliableOrdered,
 }
 
-#[cfg(feature="hashing")]
-impl StableHash for ReliabilityGuarantee {
-    fn hash<H: Hasher>(&self, state: &mut H) {
+impl Consistency {
+    /// Returns `true` if messages in this channel must be sent reliably.
+    pub fn is_reliable(&self) -> bool {
         match self {
-            ReliabilityGuarantee::Unreliable => state.write_u8(0),
-            ReliabilityGuarantee::Reliable => state.write_u8(1),
+            Consistency::UnreliableUnordered => false,
+            Consistency::UnreliableSequenced => false,
+            Consistency::ReliableUnordered => true,
+            Consistency::ReliableOrdered => true,
+        }
+    }
+
+    /// Returns `true` if messages in this channel have any ordering constraints applied.
+    pub fn is_ordered(&self) -> bool {
+        match self {
+            Consistency::UnreliableUnordered => false,
+            Consistency::UnreliableSequenced => true,
+            Consistency::ReliableUnordered => false,
+            Consistency::ReliableOrdered => true,
         }
     }
 }
 
-/// The ordering guarantee of a channel.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Reflect)]
-#[reflect(Debug, PartialEq, Hash)]
-pub enum OrderingGuarantee {
-    /// Messages will be available in the order they are received.
-    /// This is not necessarily the order they were sent. If that matters, use a different variant.
-    Unordered,
-
-    /// Messages that are older than the most recent value will be discarded.
-    /// Therefore, messages will be available in order, but out of order messages are lost.
-    Sequenced,
-
-    /// Messages will be available in the exact order they were sent.
-    /// If [reliability](ReliabilityGuarantee::Reliable) is used, this can 'block' messages temporarily due to data loss.
-    Ordered,
-}
-
 #[cfg(feature="hashing")]
-impl StableHash for OrderingGuarantee {
+impl StableHash for Consistency {
     fn hash<H: Hasher>(&self, state: &mut H) {
         match self {
-            OrderingGuarantee::Unordered => state.write_u8(0),
-            OrderingGuarantee::Sequenced => state.write_u8(1),
-            OrderingGuarantee::Ordered => state.write_u8(2),
+            Consistency::UnreliableUnordered => state.write_u8(0),
+            Consistency::UnreliableSequenced => state.write_u8(1),
+            Consistency::ReliableUnordered   => state.write_u8(2),
+            Consistency::ReliableOrdered     => state.write_u8(3),
         }
     }
 }

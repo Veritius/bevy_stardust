@@ -33,9 +33,7 @@ fn main() {
         app.add_plugins((StardustPlugin, LinkTransportPlugin));
 
         let config = ChannelConfiguration {
-            reliable: ReliabilityGuarantee::Reliable,
-            ordered: OrderingGuarantee::Ordered,
-            fragmented: false,
+            consistency: Consistency::ReliableOrdered,
             priority: 0,
         };
 
