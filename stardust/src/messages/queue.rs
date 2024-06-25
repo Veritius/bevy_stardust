@@ -40,11 +40,15 @@ impl<D: NetDirectionType> NetworkMessages<D> {
     }
 
     /// Counts how many messages are queued in all channels.
+    #[inline]
     pub fn count(&self) -> usize {
-        self.index_map
-        .iter()
-        .map(|(_,v)| v.len())
-        .sum()
+        self.messages.len()
+    }
+
+    /// Returns the total amount of bytes queued to be sent.
+    #[inline]
+    pub fn bytes(&self) -> usize {
+        self.messages.iter().map(|v| v.len()).sum()
     }
 
     /// Pushes a new item to the queue.
