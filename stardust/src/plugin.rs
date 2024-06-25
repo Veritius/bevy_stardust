@@ -44,8 +44,8 @@ impl Plugin for StardustPlugin {
         // Add systems
         app.add_systems(Last, crate::connections::systems::despawn_closed_connections_system);
         app.add_systems(PostUpdate, (
-            crate::messages::systems::clear_message_queue_system::<Outgoing>,
-            crate::messages::systems::clear_message_queue_system::<Incoming>,
+            crate::messages::clear_message_queue_system::<Outgoing>,
+            crate::messages::clear_message_queue_system::<Incoming>,
         ).in_set(NetworkWrite::Clear));
 
         // Hashing-related functionality
