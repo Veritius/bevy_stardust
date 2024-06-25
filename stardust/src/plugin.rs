@@ -27,8 +27,6 @@ impl Plugin for StardustPlugin {
         app.register_type::<NetDirection>();
         app.register_type::<Incoming>();
         app.register_type::<Outgoing>();
-        app.register_type::<NetworkMessages<Incoming>>();
-        app.register_type::<NetworkMessages<Outgoing>>();
 
         // Register events
         app.add_event::<DisconnectPeerEvent>();

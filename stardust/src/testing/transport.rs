@@ -88,7 +88,7 @@ fn send_link_data(
     query.par_iter_mut().for_each(|(mut link, queue)| {
         let sender = &link.0.sender;
         'outer: for (channel, queue) in queue.iter() {
-            for payload in queue.iter().cloned() {
+            for payload in queue {
                 match sender.send(Message { channel, payload }) {
                     Ok(_) => {},
                     Err(_) => {
