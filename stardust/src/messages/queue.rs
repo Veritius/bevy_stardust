@@ -157,6 +157,10 @@ impl<'a, D: NetDirectionType> IntoIterator for &'a NetworkMessages<D> {
     }
 }
 
+/// An iterator over individual channels in a [`NetworkMessages<D>`] component.
+/// 
+/// Produces `ChannelId` values, and [`MessageIter`] iterators.
+/// The order of iteration over channels is unspecified, and may change unpredictably.
 #[derive(Clone)]
 pub struct ChannelIter<'a> {
     messages: &'a [Bytes],
@@ -180,6 +184,9 @@ impl<'a> Iterator for ChannelIter<'a> {
     }
 }
 
+/// An iterator over individual messages in channel, produced by a [`ChannelIter`] from an [`NetworkMessages<D>`] component.
+/// 
+/// Produces the contents of the messages in the order they were added to the queue.
 #[derive(Clone)]
 pub struct MessageIter<'a> {
     messages: &'a [Bytes],
