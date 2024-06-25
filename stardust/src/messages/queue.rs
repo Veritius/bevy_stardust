@@ -125,6 +125,16 @@ impl<D: NetDirectionType> NetworkMessages<D> {
             map_iter: self.index_map.iter(),
         }
     }
+
+    /// Returns an iterator over each message, with an associated channel ID.
+    pub fn iter_flat(&self) -> impl Iterator<Item = (ChannelId, Bytes)> + '_ {
+        self.index_map.iter()
+        .map(|(c, i)| {
+            i.iter()
+            .map(|v| self.messages[*v].clone())
+            .map(|v| (*c, v))
+        }).flatten()
+    }
 }
 
 impl<D: NetDirectionType> Default for NetworkMessages<D> {
