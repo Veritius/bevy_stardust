@@ -79,6 +79,7 @@ impl<D: NetDirectionType> NetworkMessages<D> {
         // Expand the message vector to fit, if necessary
         self.messages.reserve_exact(size.saturating_sub(self.messages.capacity()));
 
+        // Push everything as per usual
         for (channel, payload) in iter {
             self.push(channel, payload);
         }
