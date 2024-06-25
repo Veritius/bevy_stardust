@@ -1,7 +1,7 @@
 //! Adds `add_channel` to the `App`.
 
 use bevy::app::App;
-use crate::channels::config::ChannelConfiguration;
+use super::config::ChannelConfiguration;
 use super::{id::Channel, ChannelRegistryMut};
 
 mod sealed {
