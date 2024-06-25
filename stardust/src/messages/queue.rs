@@ -1,6 +1,7 @@
 use std::{collections::HashMap, marker::PhantomData};
 use bevy::prelude::*;
 use bytes::Bytes;
+use smallvec::SmallVec;
 use crate::prelude::*;
 use super::direction::NetDirectionType;
 
@@ -14,7 +15,7 @@ static EMPTY_SLICE: &[Bytes] = &[];
 #[reflect(Debug, Component)]
 pub struct NetworkMessages<D: NetDirectionType> {
     #[reflect(ignore)]
-    pub(crate) queue_map: HashMap<ChannelId, Vec<Bytes>>,
+    pub(crate) queue_map: HashMap<ChannelId, SmallVec<[Bytes; 1]>>,
     #[reflect(ignore)]
     phantom: PhantomData<D>
 }
@@ -47,7 +48,7 @@ impl<D: NetDirectionType> NetworkMessages<D> {
     pub fn push(&mut self, channel: ChannelId, bytes: Bytes) {
         self.queue_map
         .entry(channel)
-        .or_insert(Vec::with_capacity(1))
+        .or_insert(SmallVec::with_capacity(1))
         .push(bytes);
     }
 
@@ -65,31 +66,6 @@ impl<D: NetDirectionType> NetworkMessages<D> {
         .iter()
         .filter(|(_,v)| v.len() != 0)
         .map(|(k,v)| (k.clone(), v.as_slice()))
-    }
-
-    /// Resizes all buffers based on `func`.
-    /// 
-    /// `func` takes the current capacity of the buffer as an input,
-    /// and outputs the new size of the buffer. Nothing happens if the two values are equal.
-    /// If the returned value is lesser, the buffer will resize to either the length or the target,
-    /// whichever is greater. If the returned value is greater, the length will be exactly so.
-    pub fn resize(&mut self, func: impl Fn(usize) -> usize) {
-        self.queue_map.iter_mut().for_each(|(_, buf)| {
-            use std::cmp::Ordering;
-
-            let cur_len = buf.len();
-            let new_len = func(cur_len);
-            match new_len.cmp(&cur_len) {
-                Ordering::Equal => {},
-                Ordering::Less => {
-                    buf.shrink_to(new_len);
-                },
-                Ordering::Greater => {
-                    let diff = new_len - cur_len;
-                    buf.reserve(diff);
-                },
-            }
-        });
     }
 }
 
