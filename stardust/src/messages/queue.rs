@@ -58,7 +58,10 @@ impl<D: NetDirectionType> NetworkMessages<D> {
 
     /// Returns an iterator over channels, and their associated queues.
     pub fn iter(&self) -> ChannelIter {
-        todo!()
+        ChannelIter {
+            messages: &self.messages,
+            map_iter: self.queue_map.iter(),
+        }
     }
 }
 
