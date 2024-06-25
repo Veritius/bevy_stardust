@@ -14,7 +14,7 @@ type IdxVec = SmallVec<[usize; 1]>;
 #[derive(Component)]
 pub struct NetworkMessages<D: NetDirectionType> {
     pub(crate) messages: Vec<Bytes>,
-    pub(crate) queue_map: HashMap<ChannelId, IdxVec>,
+    pub(crate) index_map: HashMap<ChannelId, IdxVec>,
     phantom: PhantomData<D>
 }
 
@@ -23,21 +23,25 @@ impl<D: NetDirectionType> NetworkMessages<D> {
     pub fn new() -> Self {
         Self {
             messages: Vec::new(),
-            queue_map: HashMap::new(),
+            index_map: HashMap::new(),
             phantom: PhantomData,
         }
     }
 
     /// Clears all queues but doesn't reallocate.
     pub(crate) fn clear(&mut self) {
-        self.queue_map
+        // Clear the message map
+        self.messages.clear();
+
+        // Clear all indexes in the map
+        self.index_map
         .iter_mut()
         .for_each(|(_, v)| v.clear())
     }
 
     /// Counts how many messages are queued in all channels.
     pub fn count(&self) -> usize {
-        self.queue_map
+        self.index_map
         .iter()
         .map(|(_,v)| v.len())
         .sum()
@@ -50,7 +54,7 @@ impl<D: NetDirectionType> NetworkMessages<D> {
         self.messages.push(bytes);
 
         // Add index to the map
-        self.queue_map
+        self.index_map
         .entry(channel)
         .or_insert(IdxVec::with_capacity(1))
         .push(idx);
@@ -73,7 +77,7 @@ impl<D: NetDirectionType> NetworkMessages<D> {
         };
 
         // Add index to the map
-        let indexes = self.queue_map
+        let indexes = self.index_map
             .entry(channel)
             .or_insert(IdxVec::with_capacity(size));
 
@@ -93,7 +97,7 @@ impl<D: NetDirectionType> NetworkMessages<D> {
     pub fn iter(&self) -> ChannelIter {
         ChannelIter {
             messages: &self.messages,
-            map_iter: self.queue_map.iter(),
+            map_iter: self.index_map.iter(),
         }
     }
 }
