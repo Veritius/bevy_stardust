@@ -48,10 +48,10 @@ impl<D: NetDirectionType> NetworkMessages<D> {
     }
 
     /// Pushes a new item to the queue.
-    pub fn push(&mut self, channel: ChannelId, bytes: Bytes) {
+    pub fn push(&mut self, channel: ChannelId, message: Bytes) {
         // Add to the messages vec
         let idx = self.messages.len();
-        self.messages.push(bytes);
+        self.messages.push(message);
 
         // Add index to the map
         self.index_map
@@ -60,12 +60,36 @@ impl<D: NetDirectionType> NetworkMessages<D> {
         .push(idx);
     }
 
-    /// Pushes messages from an iterator to a single channel.
+    /// Pushes messages from an iterator.
     /// This can be faster than calling [`push`](Self::push) repeatedly.
     /// The efficiency of this function depends on `I`'s implementation of [`size_hint`].
     /// 
     /// [`size_hint`]: https://doc.rust-lang.org/std/iter/trait.Iterator.html#method.size_hint
-    pub fn push_many<I>(&mut self, channel: ChannelId, iter: I)
+    pub fn push_many<I>(&mut self, iter: I)
+    where
+        I: IntoIterator<Item = (ChannelId, Bytes)>,
+    {
+        // Convert the iterator and find the maximum expected size
+        let iter = iter.into_iter();
+        let size = match iter.size_hint() {
+            (v, None) => v,
+            (v, Some(a)) => v.max(a),
+        };
+
+        // Expand the message vector to fit, if necessary
+        self.messages.reserve_exact(size.saturating_sub(self.messages.capacity()));
+
+        for (channel, payload) in iter {
+            self.push(channel, payload);
+        }
+    }
+
+    /// Pushes messages from an iterator to a single channel.
+    /// This can be faster than calling [`push`](Self::push) or [`push_many`](Self::push_many) repeatedly.
+    /// The efficiency of this function depends on `I`'s implementation of [`size_hint`].
+    /// 
+    /// [`size_hint`]: https://doc.rust-lang.org/std/iter/trait.Iterator.html#method.size_hint
+    pub fn push_channel<I>(&mut self, channel: ChannelId, iter: I)
     where
         I: IntoIterator<Item = Bytes>,
     {
