@@ -5,7 +5,7 @@ use smallvec::SmallVec;
 use crate::prelude::*;
 use super::direction::NetDirectionType;
 
-type IdxVec = SmallVec<[usize; 1]>; 
+type IdxVec = SmallVec<[usize; 2]>; 
 
 /// A queue-like structure for storing messages, separated by channels.
 /// 
