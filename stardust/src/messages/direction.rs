@@ -18,7 +18,7 @@ pub enum NetDirection {
 /// - [`Incoming`], corresponding to [`Direction::Incoming`]
 pub trait NetDirectionType: Debug + Send + Sync + Reflect + sealed::Sealed {
     /// Returns the corresponding [`Direction`].
-    fn as_enum() -> NetDirection;
+    fn net_dir() -> NetDirection;
 }
 
 /// Messages being sent to a remote peer. Counterpart to [`Incoming`].
@@ -26,7 +26,7 @@ pub trait NetDirectionType: Debug + Send + Sync + Reflect + sealed::Sealed {
 #[reflect(Debug)]
 pub struct Outgoing;
 impl NetDirectionType for Outgoing {
-    fn as_enum() -> NetDirection {
+    fn net_dir() -> NetDirection {
         NetDirection::Outgoing
     }
 }
@@ -36,7 +36,7 @@ impl NetDirectionType for Outgoing {
 #[reflect(Debug)]
 pub struct Incoming;
 impl NetDirectionType for Incoming {
-    fn as_enum() -> NetDirection {
+    fn net_dir() -> NetDirection {
         NetDirection::Incoming
     }
 }
