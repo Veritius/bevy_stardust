@@ -145,6 +145,16 @@ impl<D: NetDirectionType> Extend<(ChannelId, Bytes)> for NetworkMessages<D> {
     }
 }
 
+impl<'a, D: NetDirectionType> IntoIterator for &'a NetworkMessages<D> {
+    type IntoIter = ChannelIter<'a>;
+    type Item = <ChannelIter<'a> as Iterator>::Item;
+
+    #[inline]
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
+    }
+}
+
 #[derive(Clone)]
 pub struct ChannelIter<'a> {
     messages: &'a [Bytes],
