@@ -1,10 +1,10 @@
-use std::{collections::BTreeMap, sync::Mutex, time::Instant};
+use std::{collections::BTreeMap, sync::Mutex, time::{Duration, Instant}};
 use anyhow::{bail, Result};
 use bevy::prelude::*;
 use bevy_stardust::prelude::*;
 use bytes::Bytes;
 use endpoints::perform_transmit;
-use quinn_proto::{coding::Codec, Connection, ConnectionHandle, Dir, Event as AppEvent, FinishError, StreamEvent, StreamId, VarInt, WriteError};
+use quinn_proto::{coding::Codec, Connection, ConnectionHandle, ConnectionStats, Dir, Event as AppEvent, FinishError, StreamEvent, StreamId, VarInt, WriteError};
 use streams::{FramedWriter, StreamOpenHeader, StreamReaderSegment, StreamReader};
 use crate::*;
 
@@ -48,6 +48,16 @@ impl QuicConnection {
             DisconnectCode::AppDisconnect.try_into().unwrap(),
             reason
         );
+    }
+
+    /// Returns the current best estimate of the connection's round-trip time.
+    pub fn rtt(&self) -> Duration {
+        self.inner.rtt()
+    }
+
+    /// Returns the full collection of statistics for the connection.
+    pub fn stats(&self) -> ConnectionStats {
+        self.inner.stats()
     }
 
     /// Closes a stream used to send Stardust messages, releasing some resources.
