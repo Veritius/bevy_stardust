@@ -66,9 +66,6 @@ impl<D: NetDirectionType> NetworkMessages<D> {
 
     /// Pushes messages from an iterator.
     /// This can be faster than calling [`push`](Self::push) repeatedly.
-    /// The efficiency of this function depends on `I`'s implementation of [`size_hint`].
-    /// 
-    /// [`size_hint`]: https://doc.rust-lang.org/std/iter/trait.Iterator.html#method.size_hint
     pub fn push_many<I>(&mut self, iter: I)
     where
         I: IntoIterator<Item = (ChannelId, Bytes)>,
@@ -91,9 +88,6 @@ impl<D: NetDirectionType> NetworkMessages<D> {
 
     /// Pushes messages from an iterator to a single channel.
     /// This can be faster than calling [`push`](Self::push) or [`push_many`](Self::push_many) repeatedly.
-    /// The efficiency of this function depends on `I`'s implementation of [`size_hint`].
-    /// 
-    /// [`size_hint`]: https://doc.rust-lang.org/std/iter/trait.Iterator.html#method.size_hint
     pub fn push_channel<I>(&mut self, channel: ChannelId, iter: I)
     where
         I: IntoIterator<Item = Bytes>,
