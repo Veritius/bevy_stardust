@@ -11,8 +11,9 @@ use {std::hash::Hasher, crate::hashing::StableHash};
 #[derive(Debug, Clone, Hash, Reflect)]
 #[reflect(Debug, Hash)]
 pub struct ChannelConfiguration {
-    /// Whether messages should be resent if they're missed,
-    /// and if they should be added to the message queue in the order of sending.
+    /// Guarantees that the transport layer must make
+    /// for messages sent on this channel. See the
+    /// documentation of [`Consistency`].
     pub consistency: Consistency,
 
     /// The priority of messages on this channel.
