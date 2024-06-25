@@ -78,7 +78,7 @@ impl<D: NetDirectionType> NetworkMessages<D> {
         };
 
         // Expand the message vector to fit, if necessary
-        self.messages.reserve_exact(size.saturating_sub(self.messages.capacity()));
+        self.messages.reserve_exact(size);
 
         // Push everything as per usual
         for (channel, payload) in iter {
@@ -105,8 +105,8 @@ impl<D: NetDirectionType> NetworkMessages<D> {
             .or_insert(IdxVec::with_capacity(size));
 
         // Expand the vectors to fit, if necessary
-        self.messages.reserve_exact(size.saturating_sub(self.messages.capacity()));
-        indexes.reserve_exact(size.saturating_sub(indexes.capacity()));
+        self.messages.reserve_exact(size);
+        indexes.reserve_exact(size);
 
         // Insert all payloads
         for payload in iter {
