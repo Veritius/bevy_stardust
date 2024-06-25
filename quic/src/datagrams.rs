@@ -1,3 +1,4 @@
+use bevy::log::trace_span;
 use bytes::{Buf, BufMut, Bytes};
 use quinn_proto::{VarInt, coding::Codec};
 
@@ -23,7 +24,12 @@ impl DatagramQueue {
     }
 
     pub fn drain(&mut self) -> impl Iterator<Item = PendingDatagram> + '_ {
-        self.queue.sort_by(|a, b| b.priority.cmp(&a.priority));
+        // Sort all items
+        trace_span!("Sorting datagrams").in_scope(|| {
+            self.queue.sort_by(|a, b| {
+                b.priority.cmp(&a.priority)
+            });
+        });
 
         struct DatagramQueueDrain<'a> {
             inner: &'a mut DatagramQueue,
