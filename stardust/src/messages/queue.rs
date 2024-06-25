@@ -7,7 +7,9 @@ use super::direction::NetDirectionType;
 
 type IdxVec = SmallVec<[usize; 2]>; 
 
-/// A component for queuing messages to be sent by transport layers.
+/// A component for queuing messages that, in the case of:
+/// - `Outgoing`: messages that must be sent by transport layers
+/// - `Incoming`: messages that have been received by transport layers
 /// 
 /// The items in this queue **do not** persist across frames.
 /// They are cleared in [`NetworkWrite::Clear`] in [`PostUpdate`].
