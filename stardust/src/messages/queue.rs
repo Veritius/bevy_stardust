@@ -78,6 +78,12 @@ impl<D: NetDirectionType> std::fmt::Debug for NetworkMessages<D> {
     }
 }
 
+impl<D: NetDirectionType> Extend<(ChannelId, Bytes)> for NetworkMessages<D> {
+    fn extend<T: IntoIterator<Item = (ChannelId, Bytes)>>(&mut self, iter: T) {
+        iter.into_iter().for_each(|(c,p)| self.push(c, p));
+    }
+}
+
 #[derive(Clone)]
 pub struct ChannelIter<'a> {
     messages: &'a [Bytes],
