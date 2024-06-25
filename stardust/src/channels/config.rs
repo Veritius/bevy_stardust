@@ -99,8 +99,8 @@ impl Consistency {
         match self {
             Consistency::UnreliableUnordered => false,
             Consistency::UnreliableSequenced => false,
-            Consistency::ReliableUnordered => true,
-            Consistency::ReliableOrdered => true,
+            Consistency::ReliableUnordered   => true,
+            Consistency::ReliableOrdered     => true,
         }
     }
 
@@ -109,8 +109,8 @@ impl Consistency {
         match self {
             Consistency::UnreliableUnordered => false,
             Consistency::UnreliableSequenced => true,
-            Consistency::ReliableUnordered => false,
-            Consistency::ReliableOrdered => true,
+            Consistency::ReliableUnordered   => false,
+            Consistency::ReliableOrdered     => true,
         }
     }
 }
