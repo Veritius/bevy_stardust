@@ -56,6 +56,39 @@ impl<D: NetDirectionType> NetworkMessages<D> {
         .push(idx);
     }
 
+    /// Pushes messages from an iterator to a single channel.
+    /// This can be faster than calling [`push`](Self::push) repeatedly.
+    /// The efficiency of this function depends on `I`'s implementation of [`size_hint`].
+    /// 
+    /// [`size_hint`]: https://doc.rust-lang.org/std/iter/trait.Iterator.html#method.size_hint
+    pub fn push_many<I>(&mut self, channel: ChannelId, iter: I)
+    where
+        I: IntoIterator<Item = Bytes>,
+    {
+        // Convert the iterator and find the maximum expected size
+        let iter = iter.into_iter();
+        let size = match iter.size_hint() {
+            (v, None) => v,
+            (v, Some(a)) => v.max(a),
+        };
+
+        // Add index to the map
+        let indexes = self.queue_map
+            .entry(channel)
+            .or_insert(IdxVec::with_capacity(size));
+
+        // Expand the vectors to fit, if necessary
+        self.messages.reserve_exact(size.saturating_sub(self.messages.capacity()));
+        indexes.reserve_exact(size.saturating_sub(indexes.capacity()));
+
+        // Insert all payloads
+        for payload in iter {
+            let idx = self.messages.len();
+            self.messages.push(payload);
+            indexes.push(idx);
+        }
+    }
+
     /// Returns an iterator over channels, and their associated queues.
     pub fn iter(&self) -> ChannelIter {
         ChannelIter {
