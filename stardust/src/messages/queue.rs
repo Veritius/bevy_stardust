@@ -6,12 +6,24 @@ use super::direction::NetDirectionType;
 
 type IdxVec = SmallVec<[usize; 2]>; 
 
-/// A component for queuing messages that, in the case of:
-/// - `Outgoing`: messages that must be sent by transport layers
-/// - `Incoming`: messages that have been received by transport layers
+/// A queue of [messages](Message), organised by channel.
+/// When added to [`NetworkPeer`] entities, it is the set of messages related to them.
+/// Items in this queue are not shared. If you want to send a message to multiple peers,
+/// you must push it manually to each queue.
 /// 
-/// The items in this queue **do not** persist across frames.
-/// They are cleared in [`NetworkWrite::Clear`] in [`PostUpdate`].
+/// This queue is cleared every tick in [`PostUpdate`], in the [`NetworkWrite::Clear`] system set.
+/// Since a [`Message`] is a reference-counting type, that allocation may remain if used elsewhere.
+/// Note that the clearing is done by a system, so if it's not in the `World`, it will not be cleared.
+/// 
+/// # Direction
+/// The `D` generic in `NetworkMessages<D>` is the 'direction'.
+/// This makes it so that there are two instances of this component per peer,
+/// where each serves a different purpose in networking code, as well as aiding concurrency.
+/// 
+/// | Direction | Purpose                                     | Game systems | Transport layers |
+/// |-----------|---------------------------------------------|--------------|------------------|
+/// | Incoming  | Iterator over newly received messages       | Read only    | Write only       |
+/// | Outgoing  | Queue for messages that must be transmitted | Write only   | Read only        |
 #[derive(Component)]
 pub struct NetworkMessages<D: NetDirectionType> {
     messages: Vec<Message>,
