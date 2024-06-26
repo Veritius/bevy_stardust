@@ -1,5 +1,10 @@
 //! This module exposes APIs for working with messages and channels.
 //! 
+//! Stardust does not deal with I/O directly, and by itself,
+//! cannot actually facilitate communication between applications.
+//! You must install a transport layer plugin to handle the
+//! transmission of information.
+//! 
 //! ## Messages
 //! Messages are individual, contiguous octet (byte) strings.
 //! They are most often utilised with the [`Message`] type,
