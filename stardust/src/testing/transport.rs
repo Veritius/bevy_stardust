@@ -98,11 +98,18 @@ fn send_link_data(
 fn remove_disconnected(
     mut commands: Commands,
     mut query: Query<(Entity, &Link, Option<&mut NetworkPeerLifestage>)>,
+    mut events: EventWriter<PeerDisconnectedEvent>,
 ) {
     for (entity, link, stage) in query.iter_mut() {
         if link.0.disconnected {
             debug!("Link on entity {entity:?} disconnected");
             commands.entity(entity).remove::<Link>();
+
+            events.send(PeerDisconnectedEvent {
+                peer: entity,
+                reason: None,
+            });
+
             if let Some(mut stage) = stage {
                 *stage = NetworkPeerLifestage::Closed;
             }
