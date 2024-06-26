@@ -98,7 +98,7 @@ pub enum DisconnectReason {
     /// 
     /// This reason is returned for instances such as a
     /// server at capacity, or a full lobby in a party game.
-    Mitigation,
+    ResourceCapacity,
 
     /// The peer stopped responding.
     TimedOut {
