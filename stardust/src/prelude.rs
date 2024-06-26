@@ -1,5 +1,7 @@
 //! Common imports for using Stardust.
 
+pub use bytes::Bytes;
+
 pub use crate::plugin::StardustPlugin;
 pub use crate::scheduling::{NetworkRecv, NetworkSend};
 pub use crate::connections::{NetworkPeer, NetworkPeerUid, NetworkPeerLifestage, NetworkSecurity};

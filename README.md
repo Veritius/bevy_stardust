@@ -74,16 +74,9 @@ fn main() {
     // Once you do this, it becomes visible in the ChannelRegistry.
     // The ChannelRegistry is effectively a giant table of every registered channel.
     app.add_channel::<MyChannel>(ChannelConfiguration {
-        // 'Reliable' messages will be detected if lost.
-        reliable: ReliabilityGuarantee::Reliable,
-
-        // 'Ordered' messages will be received in the same order they're sent.
-        ordered: OrderingGuarantee::Ordered,
-
-        // 'Fragmentable' messages will be broken up for transmission if need be.
-        // This is actually just a flag to say that the messages *might* need to be fragmented.
-        // Whether or not things are fragmented is up to the transport layer.
-        fragmented: true,
+        // Controls the reliability and ordering of messages.
+        // Read the documentation for ChannelConsistency for a full explanation.
+        consistency: ChannelConsistency::ReliableOrdered,
 
         // Higher priority messages will be sent before others.
         priority: 0,
@@ -100,10 +93,10 @@ fn main() {
     app.add_systems(Update, (send_words_system, read_words_system));
 }
 
-// Messages use the Bytes type.
+// Messages use the Message type, which is a wrapper around the Bytes type.
 // This is cheaply clonable and you can send the same message to multiple peers.
 // For this example, we create one from the bytes of a static str.
-const MESSAGE: Bytes = Bytes::from_static("Hello, world!".as_bytes());
+const MESSAGE: Message = Message::from_bytes(Bytes::from_static("Hello, world!".as_bytes()));
 
 // Queueing messages just requires component access.
 // This means you can use query filters to achieve better parallelism.
@@ -134,8 +127,7 @@ fn read_words_system(
 ) {
     let channel = registry.channel_id(TypeId::of::<MyChannel>()).unwrap();
     for (entity, incoming) in query.iter() {
-        let messages = incoming.get(channel);
-        for message in messages.iter() {
+        for message in incoming.iter_channel(channel) {
             // Stardust only outputs bytes, so you need to convert to the desired type.
             // Also, in real products, don't unwrap, write checks. Never trust user data.
             let string = std::str::from_utf8(&*message).unwrap();
