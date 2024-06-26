@@ -9,7 +9,8 @@ impl Plugin for MessageCountDiagnosticsPlugin {
         app.register_diagnostic(Diagnostic::new(Self::INCOMING_COUNT));
         app.register_diagnostic(Diagnostic::new(Self::OUTGOING_COUNT));
 
-        app.add_systems(Update, diagnostic_system);
+        app.add_systems(PreUpdate, diagnostic_system::<Incoming>.in_set(NetworkRecv::Read));
+        app.add_systems(PostUpdate, diagnostic_system::<Outgoing>.in_set(NetworkSend::Diagnostics));
     }
 }
 
@@ -21,25 +22,15 @@ impl MessageCountDiagnosticsPlugin {
     pub const OUTGOING_COUNT: DiagnosticPath = DiagnosticPath::const_new("net/core/messages/outgoing");
 }
 
-type QueryFilter = (Or<(With<NetworkMessages<Incoming>>, With<NetworkMessages<Outgoing>>)>, With<NetworkPeer>);
-
-fn diagnostic_system(
+fn diagnostic_system<D: NetDirectionType>(
     mut diagnostics: Diagnostics,
-    query: Query<(Option<&NetworkMessages<Incoming>>, Option<&NetworkMessages<Outgoing>>), QueryFilter>,
+    query: Query<&NetworkMessages<D>, With<NetworkPeer>>,
 ) {
-    let mut incoming_count: usize = 0;
-    let mut outgoing_count: usize = 0;
+    let count = query.iter().map(|m| m.count()).sum::<usize>() as f64;
+    let path = match D::net_dir() {
+        NetDirection::Outgoing => MessageCountDiagnosticsPlugin::OUTGOING_COUNT,
+        NetDirection::Incoming => MessageCountDiagnosticsPlugin::INCOMING_COUNT,
+    };
 
-    for (incoming, outgoing) in query.iter() {
-        if let Some(incoming) = incoming {
-            incoming_count += incoming.count();
-        }
-
-        if let Some(outgoing) = outgoing {
-            outgoing_count += outgoing.count();
-        }
-    }
-
-    diagnostics.add_measurement(&MessageCountDiagnosticsPlugin::INCOMING_COUNT, || incoming_count as f64);
-    diagnostics.add_measurement(&MessageCountDiagnosticsPlugin::OUTGOING_COUNT, || outgoing_count as f64);
+    diagnostics.add_measurement(&path, || count as f64);
 }

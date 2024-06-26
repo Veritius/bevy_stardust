@@ -17,6 +17,8 @@ pub enum NetworkRecv {
 pub enum NetworkSend {
     /// Transport layers send messages queued by game systems.
     Transmit,
+    /// Records statistics for diagnostic purposes.
+    Diagnostics,
     /// Queued messages (both the incoming and outgoing buffers) are cleared.
     Clear,
 }
@@ -27,6 +29,7 @@ pub(super) fn configure_scheduling(app: &mut App) {
     ));
 
     app.configure_sets(PostUpdate, (
-       NetworkSend::Clear.after(NetworkSend::Transmit),
+        NetworkSend::Diagnostics.after(NetworkSend::Transmit),
+        NetworkSend::Clear.after(NetworkSend::Diagnostics),
     ));
 }
