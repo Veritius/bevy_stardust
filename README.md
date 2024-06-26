@@ -102,7 +102,7 @@ const MESSAGE: Message = Message::from_bytes(Bytes::from_static("Hello, world!".
 // This means you can use query filters to achieve better parallelism.
 fn send_words_system(
     registry: Res<ChannelRegistry>,
-    mut query: Query<(Entity, &mut Messages<Outgoing>), With<Peer>>
+    mut query: Query<(Entity, &mut PeerMessages<Outgoing>), With<Peer>>
 ) {
     // The ChannelId must be retrieved from the registry.
     // These are more friendly to store since they're just numbers.
@@ -113,7 +113,11 @@ fn send_words_system(
     for (entity, mut outgoing) in query.iter_mut() {
         // Bytes objects are cheaply clonable, reference counted storages.
         // You can send them to as many peers as you want once created.
-        outgoing.push(channel, MESSAGE);
+        outgoing.push(ChannelMessage {
+            channel,
+            payload: MESSAGE,
+        });
+
         println!("Sent a message to {entity:?}");
     }
 }
@@ -123,7 +127,7 @@ fn send_words_system(
 // This means you can read and send bytes in parallel, or in different systems.
 fn read_words_system(
     registry: Res<ChannelRegistry>,
-    query: Query<(Entity, &Messages<Incoming>), With<Peer>>
+    query: Query<(Entity, &PeerMessages<Incoming>), With<Peer>>
 ) {
     let channel = registry.channel_id(TypeId::of::<MyChannel>()).unwrap();
     for (entity, incoming) in query.iter() {

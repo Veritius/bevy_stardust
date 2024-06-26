@@ -24,7 +24,7 @@ impl MessageCountDiagnosticsPlugin {
 
 fn diagnostic_system<D: NetDirectionType>(
     mut diagnostics: Diagnostics,
-    query: Query<&Messages<D>, With<Peer>>,
+    query: Query<&PeerMessages<D>, With<Peer>>,
 ) {
     let count = query.iter().map(|m| m.count()).sum::<usize>() as f64;
     let path = match D::net_dir() {

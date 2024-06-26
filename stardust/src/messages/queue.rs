@@ -1,48 +1,26 @@
-use std::{collections::HashMap, marker::PhantomData};
-use bevy::prelude::*;
+use std::collections::HashMap;
 use smallvec::SmallVec;
 use crate::prelude::*;
-use super::direction::NetDirectionType;
 
 type IdxVec = SmallVec<[usize; 2]>; 
 
-/// A queue of [messages](Message), organised by channel.
-/// When added to [`Peer`] entities, it is the set of messages related to them.
-/// Items in this queue are not shared. If you want to send a message to multiple peers,
-/// you must push it manually to each queue.
-/// 
-/// This queue is cleared every tick in [`PostUpdate`], in the [`NetworkSend::Clear`] system set.
-/// Since a [`Message`] is a reference-counting type, that allocation may remain if used elsewhere.
-/// Note that the clearing is done by a system, so if it's not in the `World`, it will not be cleared.
-/// 
-/// # Direction
-/// The `D` generic in `Messages<D>` is the 'direction'.
-/// This makes it so that there are two instances of this component per peer,
-/// where each serves a different purpose in networking code, as well as aiding concurrency.
-/// 
-/// | Direction | Purpose                                     | Game systems | Transport layers |
-/// |-----------|---------------------------------------------|--------------|------------------|
-/// | Incoming  | Iterator over newly received messages       | Read only    | Write only       |
-/// | Outgoing  | Queue for messages that must be transmitted | Write only   | Read only        |
-#[derive(Component)]
-pub struct Messages<D: NetDirectionType> {
+/// An efficient queue of messages, organised by channel.
+pub struct MessageQueue {
     messages: Vec<Message>,
     index_map: HashMap<ChannelId, IdxVec>,
-    phantom: PhantomData<D>
 }
 
-impl<D: NetDirectionType> Messages<D> {
+impl MessageQueue {
     /// Creates a new `Messages` store. Doesn't allocate until [`push`](Self::push) is used.
     pub fn new() -> Self {
         Self {
             messages: Vec::new(),
             index_map: HashMap::new(),
-            phantom: PhantomData,
         }
     }
 
     /// Clears all queues but doesn't reallocate.
-    pub(crate) fn clear(&mut self) {
+    pub fn clear(&mut self) {
         // Clear the message map
         self.messages.clear();
 
@@ -158,27 +136,21 @@ impl<D: NetDirectionType> Messages<D> {
     }
 }
 
-impl<D: NetDirectionType> Default for Messages<D> {
+impl Default for MessageQueue {
     #[inline]
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<D: NetDirectionType> std::fmt::Debug for Messages<D> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_fmt(format_args!("Messages<{}>", std::any::type_name::<D>()))
-    }
-}
-
-impl<D: NetDirectionType> Extend<ChannelMessage> for Messages<D> {
+impl Extend<ChannelMessage> for MessageQueue {
     #[inline]
     fn extend<T: IntoIterator<Item = ChannelMessage>>(&mut self, iter: T) {
         self.push_many(iter);
     }
 }
 
-impl<'a, D: NetDirectionType> IntoIterator for &'a Messages<D> {
+impl<'a> IntoIterator for &'a MessageQueue {
     type IntoIter = ChannelIter<'a>;
     type Item = <ChannelIter<'a> as Iterator>::Item;
 
@@ -256,12 +228,4 @@ impl<'a> ExactSizeIterator for MessageIter<'a> {
     fn len(&self) -> usize {
         self.indexes.len()
     }
-}
-
-pub(crate) fn clear_message_queue_system<D: NetDirectionType>(
-    mut queues: Query<&mut Messages<D>, Changed<Messages<D>>>,
-) {
-    queues.par_iter_mut().for_each(|mut queue| {
-        queue.clear();
-    });
 }

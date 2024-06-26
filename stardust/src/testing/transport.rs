@@ -57,7 +57,7 @@ struct SideInner {
 }
 
 fn recv_link_data(
-    mut query: Query<(&mut Link, &mut Messages<Incoming>), With<Peer>>,
+    mut query: Query<(&mut Link, &mut PeerMessages<Incoming>), With<Peer>>,
 ) {
     query.par_iter_mut().for_each(|(mut link, mut queue)| {
         let receiver = link.0.receiver.get_mut().unwrap();
@@ -79,7 +79,7 @@ fn recv_link_data(
 }
 
 fn send_link_data(
-    mut query: Query<(&mut Link, &Messages<Outgoing>), With<Peer>>,
+    mut query: Query<(&mut Link, &PeerMessages<Outgoing>), With<Peer>>,
 ) {
     query.par_iter_mut().for_each(|(mut link, queue)| {
         let sender = &link.0.sender;
