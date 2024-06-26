@@ -136,6 +136,26 @@ impl<D: NetDirectionType> NetworkMessages<D> {
             map_iter: self.index_map.iter(),
         }
     }
+
+    /// Returns an iterator over all messages in a specific channel.
+    pub fn iter_channel(&self, channel: ChannelId) -> MessageIter {
+        match self.index_map.get(&channel) {
+            // The index map exists, return a real MessageIter
+            Some(indexes) => MessageIter {
+                messages: &self.messages,
+                indexes: indexes.as_slice(),
+            },
+
+            // MessageIter tracks progress by shrinking a slice every iteration.
+            // If the slice we give it is empty, it instantly returns None.
+            // By returning an iterator that ends instantly, we don't need to
+            // make this function have a return type of Option<MessageIter>.
+            None => MessageIter {
+                messages: &self.messages,
+                indexes: &[],
+            },
+        }
+    }
 }
 
 impl<D: NetDirectionType> Default for NetworkMessages<D> {
