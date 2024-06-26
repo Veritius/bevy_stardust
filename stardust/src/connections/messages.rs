@@ -1,10 +1,9 @@
-use std::{marker::PhantomData, ops::Deref};
+use std::marker::PhantomData;
 use bevy::prelude::*;
-use crate::messages::{MessageQueue, NetDirectionType, ChannelMessage, Message, ChannelId};
-
+use crate::messages::{ChannelId, ChannelIter, ChannelMessage, Message, MessageIter, MessageQueue, NetDirectionType};
 use super::Peer;
 
-/// A message queue for a [peer entity].
+/// A message queue for a [peer entity], exposing a subset of [`MessageQueue`]'s API.
 /// The generic `D` defines its [direction].
 /// 
 /// [peer entity]: crate::connections
@@ -22,6 +21,18 @@ impl<D: NetDirectionType> PeerMessages<D> {
             inner: MessageQueue::new(),
             phantom: PhantomData,
         }
+    }
+
+    /// Returns the total number of messages stored in the queue.
+    #[inline]
+    pub fn count(&self) -> usize {
+        self.inner.count()
+    }
+
+    /// Returns the sum of bytes from all messages in the queue.
+    #[inline]
+    pub fn bytes(&self) -> usize {
+        self.inner.bytes()
     }
 
     /// Pushes a single message to the queue.
@@ -49,14 +60,17 @@ impl<D: NetDirectionType> PeerMessages<D> {
     {
         self.inner.push_channel(channel, iter);
     }
-}
 
-impl<D: NetDirectionType> Deref for PeerMessages<D> {
-    type Target = MessageQueue;
-
+    /// Returns an iterator over channels, and their associated queues.
     #[inline]
-    fn deref(&self) -> &Self::Target {
-        &self.inner
+    pub fn iter(&self) -> ChannelIter {
+        self.inner.iter()
+    }
+
+    /// Returns an iterator over all messages in a specific channel.
+    #[inline]
+    pub fn iter_channel(&self, channel: ChannelId) -> MessageIter {
+        self.inner.iter_channel(channel)
     }
 }
 
