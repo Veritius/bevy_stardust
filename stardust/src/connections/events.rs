@@ -79,18 +79,38 @@ pub enum DisconnectReason {
     #[default]
     Unspecified,
 
-    /// The connection was refused.
-    Refused,
+    /// The connection was finished gracefully,
+    /// and both sides terminated with no data loss.
+    Finished,
 
-    /// The peer stopped responding for too long.
+    /// The peer failed some kind of verification check for protocol,
+    /// such as checking game versions, or game modifications.
+    /// This most often will occur during a handshake.
+    FailedVerification,
+
+    /// The peer failed some kind of authentication check for their identity,
+    /// such as an account ID, key exchange, or a TLS certificate.
+    /// This most often will occur during a handshake.
+    FailedAuthentication,
+
+    /// The connection was refused by the remote peer,
+    /// as their acceptance would exceed the limit for some resource.
+    /// 
+    /// This reason is returned for instances such as a
+    /// server at capacity, or a full lobby in a party game.
+    Mitigation,
+
+    /// The peer stopped responding.
     TimedOut {
         /// The duration between the last data received from the peer, and the time of disconnection.
         after: Duration,
     },
 
-    /// The transport layer identified the peer as violating its protocol.
-    Protocol,
+    /// The transport layer identified the peer as violating
+    /// its protocol, and was subsequently disconnected.
+    ProtocolViolation,
 
     /// The peer behaved unexpectedly, and was disconnected by the application.
+    /// This is useful for instances such as kicking buggy or hacked clients.
     Misbehaving,
 }
