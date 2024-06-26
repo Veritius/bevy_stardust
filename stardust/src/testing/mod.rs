@@ -1,3 +1,3 @@
-//! Utilities for testing
+//! Utilities for debugging and testing.
 
-pub mod transport;
+pub mod link;
