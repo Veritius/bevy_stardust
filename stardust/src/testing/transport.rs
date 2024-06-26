@@ -64,9 +64,11 @@ fn recv_link_data(
         loop {
             match receiver.try_recv() {
                 Ok(message) => {
-                    queue.push(message.channel, message.payload);
+                    queue.push(message);
                 },
+
                 Err(TryRecvError::Empty) => { break },
+
                 Err(TryRecvError::Disconnected) => {
                     link.0.disconnected = true;
                     break;

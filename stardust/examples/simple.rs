@@ -85,6 +85,9 @@ fn write_system<C: Channel>(
         let bytes = bytes::Bytes::copy_from_slice(&rand.to_be_bytes()[..]);
 
         info!("{}: Sent a message to a peer: {bytes:?}", name.0);
-        outgoing.push(registry.channel_id(TypeId::of::<C>()).unwrap(), Message::from_bytes(bytes));
+        outgoing.push(ChannelMessage {
+            channel: registry.channel_id(TypeId::of::<C>()).unwrap(),
+            payload: Message::from_bytes(bytes),
+        });
     }
 }

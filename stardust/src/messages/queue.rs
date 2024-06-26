@@ -65,14 +65,14 @@ impl<D: NetDirectionType> Messages<D> {
     }
 
     /// Pushes a new item to the queue.
-    pub fn push(&mut self, channel: ChannelId, message: Message) {
+    pub fn push(&mut self, message: ChannelMessage) {
         // Add to the messages vec
         let idx = self.messages.len();
-        self.messages.push(message);
+        self.messages.push(message.payload);
 
         // Add index to the map
         self.index_map
-        .entry(channel)
+        .entry(message.channel)
         .or_insert(IdxVec::with_capacity(1))
         .push(idx);
     }
@@ -81,7 +81,7 @@ impl<D: NetDirectionType> Messages<D> {
     /// This can be faster than calling [`push`](Self::push) repeatedly.
     pub fn push_many<I>(&mut self, iter: I)
     where
-        I: IntoIterator<Item = (ChannelId, Message)>,
+        I: IntoIterator<Item = ChannelMessage>,
     {
         // Convert the iterator and find the maximum expected size
         let iter = iter.into_iter();
@@ -94,8 +94,8 @@ impl<D: NetDirectionType> Messages<D> {
         self.messages.reserve(size);
 
         // Push everything as per usual
-        for (channel, payload) in iter {
-            self.push(channel, payload);
+        for message in iter {
+            self.push(message);
         }
     }
 
@@ -171,9 +171,9 @@ impl<D: NetDirectionType> std::fmt::Debug for Messages<D> {
     }
 }
 
-impl<D: NetDirectionType> Extend<(ChannelId, Message)> for Messages<D> {
+impl<D: NetDirectionType> Extend<ChannelMessage> for Messages<D> {
     #[inline]
-    fn extend<T: IntoIterator<Item = (ChannelId, Message)>>(&mut self, iter: T) {
+    fn extend<T: IntoIterator<Item = ChannelMessage>>(&mut self, iter: T) {
         self.push_many(iter);
     }
 }
