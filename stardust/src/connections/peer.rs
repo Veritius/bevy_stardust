@@ -7,15 +7,6 @@ use bevy::prelude::*;
 pub struct Peer {
     /// The point in time this peer was added to the `World`.
     pub joined: Instant,
-
-    /// The quality of the connection, from `0.0` to `1.0`.
-    /// This is subjective and defined by the transport layer.
-    /// `None` means a value is not provided.
-    pub quality: Option<f32>,
-
-    /// Round-trip time estimate, in milliseconds.
-    /// `None`  means an estimate is not available.
-    pub ping: Option<u32>,
 }
 
 impl Peer {
@@ -23,8 +14,6 @@ impl Peer {
     pub fn new() -> Self {
         Self {
             joined: Instant::now(),
-            quality: None,
-            ping: None,
         }
     }
 }
