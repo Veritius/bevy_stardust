@@ -114,3 +114,31 @@ pub enum DisconnectReason {
     /// This is useful for instances such as kicking buggy or hacked clients.
     Misbehaving,
 }
+
+impl std::fmt::Display for DisconnectReason {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        use DisconnectReason::*;
+
+        match self {
+            Unspecified => f.write_str("no reason given"),
+            Finished => f.write_str("finished"),
+            FailedVerification => f.write_str("failed verification"),
+            FailedAuthentication => f.write_str("failed authentication"),
+            ResourceCapacity => f.write_str("at capacity"),
+            ProtocolViolation => f.write_str("transport protocol violation"),
+            Misbehaving => f.write_str("peer misbehaving"),
+
+            TimedOut { after } => {
+                let (secs, millis) = (after.as_secs(), after.subsec_millis());
+                if (secs, millis) == (0, 0) { return f.write_str("timed out immediately"); }
+    
+                f.write_str("timed out after ")?;
+                if secs != 0 { f.write_fmt(format_args!("{secs} seconds "))?; }
+                if secs != 0 && millis != 0 { f.write_str("and ")?; }
+                if millis != 0 { f.write_fmt(format_args!("{millis} milliseconds"))?; }
+
+                return Ok(())
+            },
+        }
+    }
+}
