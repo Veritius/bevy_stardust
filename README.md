@@ -129,8 +129,9 @@ fn read_words_system(
     for (entity, incoming) in query.iter() {
         for message in incoming.iter_channel(channel) {
             // Stardust only outputs bytes, so you need to convert to the desired type.
-            // Also, in real products, don't unwrap, write checks. Never trust user data.
-            let string = std::str::from_utf8(&*message).unwrap();
+            // We unwrap here for the sake of an example. In real code, you should
+            // program defensively, and handle error cases appropriately.
+            let string = message.as_str().unwrap();
             println!("Received a message from {entity:?}: {string:?}");
         }
     }
