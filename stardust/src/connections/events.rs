@@ -36,7 +36,7 @@ pub struct DisconnectPeerEvent {
 
     /// A human-readable string associated with the disconnection.
     /// This is useful to communicate information that isn't in the reason enum,
-    /// such as a player being banned for flyhacking.
+    /// such as a ban reason or detailed error code.
     pub comment: Option<Arc<str>>,
 
     /// Whether or not the peer should be disconnected immediately.
@@ -67,7 +67,7 @@ pub struct PeerDisconnectedEvent {
 
     /// A human-readable string associated with the disconnection.
     /// This is useful to communicate information that isn't in the reason enum,
-    /// such as a player being banned for flyhacking.
+    /// such as a ban reason or detailed error code.
     pub comment: Option<Arc<str>>,
 }
 
