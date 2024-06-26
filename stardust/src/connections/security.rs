@@ -8,7 +8,7 @@ use bevy::prelude::*;
 ///
 /// This value is set by the transport layer managing this peer.
 /// It's up to it to provide an appropriate value here.
-#[derive(Debug, Component, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Reflect)]
+#[derive(Debug, Default, Component, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Reflect)]
 #[reflect(Debug, Component, PartialEq)]
 #[non_exhaustive]
 pub enum NetworkSecurity {
@@ -19,6 +19,7 @@ pub enum NetworkSecurity {
     /// It is vulnerable to [man in the middle attacks] like reading and modifying in-flight information.
     /// 
     /// [man in the middle attacks]: https://en.wikipedia.org/wiki/Man-in-the-middle_attack
+    #[default]
     Unauthenticated,
 
     /// Communication is both encrypted and authenticated.
@@ -32,7 +33,7 @@ pub enum NetworkSecurity {
     /// 
     /// Additionally, since transport layers can read any and all outgoing messages, it's up to you to verify that they're safe.
     /// Regardless, it's not a good idea to transfer something like credit card details in the first place without incredible precautions.
-    /// Some things (like banking. especially banking) should be left up to the experts.
+    /// Some things, like banking information, should be left up to the experts, who are okay with that legal liability.
     ///
     /// **For transport layer implementors:**
     /// - For TLS, this should be set if a full chain of trust is set up.
