@@ -57,7 +57,7 @@ struct SideInner {
 }
 
 fn recv_link_data(
-    mut query: Query<(&mut Link, &mut NetworkMessages<Incoming>), With<NetworkPeer>>,
+    mut query: Query<(&mut Link, &mut Messages<Incoming>), With<Peer>>,
 ) {
     query.par_iter_mut().for_each(|(mut link, mut queue)| {
         let receiver = link.0.receiver.get_mut().unwrap();
@@ -77,7 +77,7 @@ fn recv_link_data(
 }
 
 fn send_link_data(
-    mut query: Query<(&mut Link, &NetworkMessages<Outgoing>), With<NetworkPeer>>,
+    mut query: Query<(&mut Link, &Messages<Outgoing>), With<Peer>>,
 ) {
     query.par_iter_mut().for_each(|(mut link, queue)| {
         let sender = &link.0.sender;
@@ -97,7 +97,7 @@ fn send_link_data(
 
 fn remove_disconnected(
     mut commands: Commands,
-    mut query: Query<(Entity, &Link, Option<&mut NetworkPeerLifestage>)>,
+    mut query: Query<(Entity, &Link, Option<&mut PeerLifestage>)>,
     mut events: EventWriter<PeerDisconnectedEvent>,
 ) {
     for (entity, link, stage) in query.iter_mut() {
@@ -111,7 +111,7 @@ fn remove_disconnected(
             });
 
             if let Some(mut stage) = stage {
-                *stage = NetworkPeerLifestage::Closed;
+                *stage = PeerLifestage::Closed;
             }
         }
     }

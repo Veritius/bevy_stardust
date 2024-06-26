@@ -25,8 +25,8 @@ fn main() {
     right.insert_resource(AppName("Right"));
 
     let (link_left, link_right) = pair();
-    left.world.spawn((NetworkPeer::new(), NetworkMessages::<Incoming>::new(), NetworkMessages::<Outgoing>::new(), link_left));
-    right.world.spawn((NetworkPeer::new(), NetworkMessages::<Incoming>::new(), NetworkMessages::<Outgoing>::new(), link_right));
+    left.world.spawn((Peer::new(), Messages::<Incoming>::new(), Messages::<Outgoing>::new(), link_left));
+    right.world.spawn((Peer::new(), Messages::<Incoming>::new(), Messages::<Outgoing>::new(), link_right));
 
     for app in [&mut left, &mut right] {
         app.add_plugins((StardustPlugin, LinkTransportPlugin));
@@ -64,7 +64,7 @@ fn main() {
 
 fn read_system(
     name: Res<AppName>,
-    query: Query<&NetworkMessages<Incoming>, With<NetworkPeer>>,
+    query: Query<&Messages<Incoming>, With<Peer>>,
 ) {
     for incoming in query.iter() {
         for (channel, queues) in incoming {
@@ -78,7 +78,7 @@ fn read_system(
 fn write_system<C: Channel>(
     name: Res<AppName>,
     registry: Res<ChannelRegistry>,
-    mut query: Query<&mut NetworkMessages<Outgoing>, With<NetworkPeer>>,
+    mut query: Query<&mut Messages<Outgoing>, With<Peer>>,
 ) {
     for mut outgoing in query.iter_mut() {
         let rand = fastrand::u128(..);

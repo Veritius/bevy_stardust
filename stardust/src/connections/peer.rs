@@ -9,18 +9,18 @@ use bevy::prelude::*;
 /// If you're writing a star-topology system, you can treat these as servers and clients.
 /// If you're writing a mesh-topology system, you can treat these as another peer in the mesh.
 /// 
-/// The `NetworkPeer` component is intended to be queried freely, but not created by the developer.
+/// The `Peer` component is intended to be queried freely, but not created by the developer.
 /// Instead, it should be managed by transport layer plugins.
 /// 
 /// Entities with this component may also have the following components:
-/// - [`NetworkMessages`](crate::messages::NetworkMessages), relating to messages.
-/// - [`NetworkPeerAddress`], relating to IP address data.
-/// - [`NetworkPeerUid`], relating to persistent data.
-/// - [`NetworkPeerLifestage`], relating to connection state.
+/// - [`Messages`](crate::messages::Messages), relating to messages.
+/// - [`PeerAddress`], relating to IP address data.
+/// - [`PeerUid`], relating to persistent data.
+/// - [`PeerLifestage`], relating to connection state.
 /// - [`NetworkSecurity`](super::security::NetworkSecurity), relating to encryption.
 #[derive(Debug, Component, Reflect)]
 #[reflect(Debug, Component)]
-pub struct NetworkPeer {
+pub struct Peer {
     /// The point in time this peer was added to the `World`.
     pub joined: Instant,
 
@@ -34,7 +34,7 @@ pub struct NetworkPeer {
     pub ping: Option<u32>,
 }
 
-impl NetworkPeer {
+impl Peer {
     /// Creates the component in the `Handshaking` state.
     pub fn new() -> Self {
         Self {
@@ -52,7 +52,7 @@ impl NetworkPeer {
 #[derive(Debug, Component, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Reflect)]
 #[reflect(Debug, Component, PartialEq)]
 #[non_exhaustive]
-pub enum NetworkPeerLifestage {
+pub enum PeerLifestage {
     /// Midway through a [handshake].
     /// Messages sent to peers in this stage will likely be ignored.
     /// 
@@ -73,39 +73,39 @@ pub enum NetworkPeerLifestage {
 
 /// The IP address of a network peer, if it has one.
 #[derive(Component, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct NetworkPeerAddress(pub SocketAddr);
+pub struct PeerAddress(pub SocketAddr);
 
-/// A unique identifier for a [`NetworkPeer`], to store persistent data across multiple connections.
+/// A unique identifier for a [`Peer`], to store persistent data across multiple connections.
 /// This component should only be constructed by the app developer, but can be read by any plugins.
 /// 
 /// If you're working with another ID namespace, like UUIDs and Steam IDs, you should
 /// map the ids from that space into a unique value here through some kind of associative array.
 #[derive(Component, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Reflect)]
 #[reflect(Debug, Component, PartialEq, Hash)]
-pub struct NetworkPeerUid(pub u64);
+pub struct PeerUid(pub u64);
 
-impl std::fmt::Debug for NetworkPeerUid {
+impl std::fmt::Debug for PeerUid {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_fmt(format_args!("{:X}", self.0))
     }
 }
 
-impl std::fmt::Display for NetworkPeerUid {
+impl std::fmt::Display for PeerUid {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         <Self as std::fmt::Debug>::fmt(self, f)
     }
 }
 
-impl From<u64> for NetworkPeerUid {
+impl From<u64> for PeerUid {
     #[inline]
     fn from(value: u64) -> Self {
         Self(value)
     }
 }
 
-impl From<NetworkPeerUid> for u64 {
+impl From<PeerUid> for u64 {
     #[inline]
-    fn from(value: NetworkPeerUid) -> Self {
+    fn from(value: PeerUid) -> Self {
         value.0
     }
 }

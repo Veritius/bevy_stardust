@@ -1,7 +1,7 @@
 //! Virtual connections.
 //! 
-//! In Stardust, a virtual connection is any entity with the [`NetworkPeer`] component.
-//! Additional functionality is given with other components, like [`NetworkPeerLifestage`].
+//! In Stardust, a virtual connection is any entity with the [`Peer`] component.
+//! Additional functionality is given with other components, like [`PeerLifestage`].
 
 mod peer;
 mod security;

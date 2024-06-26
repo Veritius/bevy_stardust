@@ -5,6 +5,6 @@ mod connections;
 mod messages;
 mod slowdown;
 
-pub use connections::NetworkPeerDiagnosticPlugin;
+pub use connections::PeerDiagnosticPlugin;
 pub use messages::MessageCountDiagnosticsPlugin;
 pub use slowdown::NetworkPerformanceReduction;

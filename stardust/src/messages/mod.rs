@@ -33,4 +33,4 @@ pub use bytes;
 pub use channels::{Channel, ChannelId, ChannelRegistry};
 pub use direction::{NetDirection, NetDirectionType, Incoming, Outgoing};
 pub use message::{Message, ChannelMessage};
-pub use queue::{NetworkMessages, ChannelIter, MessageIter};
+pub use queue::{Messages, ChannelIter, MessageIter};

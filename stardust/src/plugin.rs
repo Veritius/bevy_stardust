@@ -12,9 +12,9 @@ pub struct StardustPlugin;
 impl Plugin for StardustPlugin {
     fn build(&self, app: &mut App) {
         // Register connection types
-        app.register_type::<NetworkPeer>();
-        app.register_type::<NetworkPeerUid>();
-        app.register_type::<NetworkPeerLifestage>();
+        app.register_type::<Peer>();
+        app.register_type::<PeerUid>();
+        app.register_type::<PeerLifestage>();
         app.register_type::<NetworkSecurity>();
         app.register_type::<NetworkPerformanceReduction>();
 

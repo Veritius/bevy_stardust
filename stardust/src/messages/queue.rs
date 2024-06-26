@@ -7,16 +7,16 @@ use super::direction::NetDirectionType;
 type IdxVec = SmallVec<[usize; 2]>; 
 
 /// A queue of [messages](Message), organised by channel.
-/// When added to [`NetworkPeer`] entities, it is the set of messages related to them.
+/// When added to [`Peer`] entities, it is the set of messages related to them.
 /// Items in this queue are not shared. If you want to send a message to multiple peers,
 /// you must push it manually to each queue.
 /// 
-/// This queue is cleared every tick in [`PostUpdate`], in the [`NetworkWrite::Clear`] system set.
+/// This queue is cleared every tick in [`PostUpdate`], in the [`NetworkSend::Clear`] system set.
 /// Since a [`Message`] is a reference-counting type, that allocation may remain if used elsewhere.
 /// Note that the clearing is done by a system, so if it's not in the `World`, it will not be cleared.
 /// 
 /// # Direction
-/// The `D` generic in `NetworkMessages<D>` is the 'direction'.
+/// The `D` generic in `Messages<D>` is the 'direction'.
 /// This makes it so that there are two instances of this component per peer,
 /// where each serves a different purpose in networking code, as well as aiding concurrency.
 /// 
@@ -25,13 +25,13 @@ type IdxVec = SmallVec<[usize; 2]>;
 /// | Incoming  | Iterator over newly received messages       | Read only    | Write only       |
 /// | Outgoing  | Queue for messages that must be transmitted | Write only   | Read only        |
 #[derive(Component)]
-pub struct NetworkMessages<D: NetDirectionType> {
+pub struct Messages<D: NetDirectionType> {
     messages: Vec<Message>,
     index_map: HashMap<ChannelId, IdxVec>,
     phantom: PhantomData<D>
 }
 
-impl<D: NetDirectionType> NetworkMessages<D> {
+impl<D: NetDirectionType> Messages<D> {
     /// Creates a new `Messages` store. Doesn't allocate until [`push`](Self::push) is used.
     pub fn new() -> Self {
         Self {
@@ -158,27 +158,27 @@ impl<D: NetDirectionType> NetworkMessages<D> {
     }
 }
 
-impl<D: NetDirectionType> Default for NetworkMessages<D> {
+impl<D: NetDirectionType> Default for Messages<D> {
     #[inline]
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<D: NetDirectionType> std::fmt::Debug for NetworkMessages<D> {
+impl<D: NetDirectionType> std::fmt::Debug for Messages<D> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_fmt(format_args!("NetworkMessages<{}>", std::any::type_name::<D>()))
+        f.write_fmt(format_args!("Messages<{}>", std::any::type_name::<D>()))
     }
 }
 
-impl<D: NetDirectionType> Extend<(ChannelId, Message)> for NetworkMessages<D> {
+impl<D: NetDirectionType> Extend<(ChannelId, Message)> for Messages<D> {
     #[inline]
     fn extend<T: IntoIterator<Item = (ChannelId, Message)>>(&mut self, iter: T) {
         self.push_many(iter);
     }
 }
 
-impl<'a, D: NetDirectionType> IntoIterator for &'a NetworkMessages<D> {
+impl<'a, D: NetDirectionType> IntoIterator for &'a Messages<D> {
     type IntoIter = ChannelIter<'a>;
     type Item = <ChannelIter<'a> as Iterator>::Item;
 
@@ -188,7 +188,7 @@ impl<'a, D: NetDirectionType> IntoIterator for &'a NetworkMessages<D> {
     }
 }
 
-/// An iterator over individual channels in a [`NetworkMessages<D>`] component.
+/// An iterator over individual channels in a [`Messages<D>`] component.
 /// 
 /// Produces `ChannelId` values, and [`MessageIter`] iterators.
 /// The order of iteration over channels is unspecified, and may change unpredictably.
@@ -215,7 +215,7 @@ impl<'a> Iterator for ChannelIter<'a> {
     }
 }
 
-/// An iterator over individual messages in channel, produced by a [`ChannelIter`] from an [`NetworkMessages<D>`] component.
+/// An iterator over individual messages in channel, produced by a [`ChannelIter`] from an [`Messages<D>`] component.
 /// 
 /// Produces the contents of the messages in the order they were added to the queue.
 #[derive(Clone)]
@@ -259,7 +259,7 @@ impl<'a> ExactSizeIterator for MessageIter<'a> {
 }
 
 pub(crate) fn clear_message_queue_system<D: NetDirectionType>(
-    mut queues: Query<&mut NetworkMessages<D>, Changed<NetworkMessages<D>>>,
+    mut queues: Query<&mut Messages<D>, Changed<Messages<D>>>,
 ) {
     queues.par_iter_mut().for_each(|mut queue| {
         queue.clear();

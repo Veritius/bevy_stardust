@@ -47,7 +47,7 @@ The following features are planned to be created as additional crates, as part o
 ```rust
 // This example assumes that you don't have the reflect feature flag.
 // If you do, make sure your channel types implement TypePath.
-// Additionally, spawning NetworkPeer entities is handled by transport layer plugins.
+// Additionally, spawning Peer entities is handled by transport layer plugins.
 // For the purpose of this example, we'll assume they magically appeared somehow.
 
 use std::any::TypeId;
@@ -102,7 +102,7 @@ const MESSAGE: Message = Message::from_bytes(Bytes::from_static("Hello, world!".
 // This means you can use query filters to achieve better parallelism.
 fn send_words_system(
     registry: Res<ChannelRegistry>,
-    mut query: Query<(Entity, &mut NetworkMessages<Outgoing>), With<NetworkPeer>>
+    mut query: Query<(Entity, &mut Messages<Outgoing>), With<Peer>>
 ) {
     // The ChannelId must be retrieved from the registry.
     // These are more friendly to store since they're just numbers.
@@ -123,7 +123,7 @@ fn send_words_system(
 // This means you can read and send bytes in parallel, or in different systems.
 fn read_words_system(
     registry: Res<ChannelRegistry>,
-    query: Query<(Entity, &NetworkMessages<Incoming>), With<NetworkPeer>>
+    query: Query<(Entity, &Messages<Incoming>), With<Peer>>
 ) {
     let channel = registry.channel_id(TypeId::of::<MyChannel>()).unwrap();
     for (entity, incoming) in query.iter() {
