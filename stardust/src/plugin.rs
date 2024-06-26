@@ -2,7 +2,8 @@
 
 use std::sync::Arc;
 use bevy::prelude::*;
-use crate::{messages::{channels, ChannelRegistryMut}, prelude::*};
+use crate::prelude::*;
+use crate::{diagnostics::NetworkPerformanceReduction, messages::{channels, ChannelRegistryMut}};
 
 /// The Stardust multiplayer plugin.
 /// Adds the core functionality of Stardust, but does not add a transport layer.

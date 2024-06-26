@@ -24,7 +24,7 @@ mod queue;
 
 // Internal types
 pub(crate) use queue::clear_message_queue_system;
-pub(crate) use channels::{ChannelRegistryMut, ChannelRegistryInner};
+pub(crate) use channels::ChannelRegistryMut;
 
 // Re-exports
 pub use bytes;
