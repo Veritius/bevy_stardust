@@ -1,6 +1,6 @@
 //! Connection events.
 
-use std::{sync::Arc, time::Duration};
+use std::{fmt::Display, sync::Arc, time::Duration};
 use bevy::prelude::*;
 
 macro_rules! dir_comment {
@@ -71,6 +71,19 @@ pub struct PeerDisconnectedEvent {
     pub comment: Option<Arc<str>>,
 }
 
+impl Display for PeerDisconnectedEvent {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!("peer {:?} disconnected: {}", self.peer, self.reason))?;
+
+        // If a comment is present, show it
+        if let Some(comment) = &self.comment {
+            f.write_fmt(format_args!(" ({comment})"))?;
+        }
+
+        return Ok(())
+    }
+}
+
 /// A reason for disconnection.
 #[derive(Debug, Clone, Default)]
 #[non_exhaustive]
@@ -115,7 +128,7 @@ pub enum DisconnectReason {
     Misbehaving,
 }
 
-impl std::fmt::Display for DisconnectReason {
+impl Display for DisconnectReason {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         use DisconnectReason::*;
 
