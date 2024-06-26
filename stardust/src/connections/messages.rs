@@ -8,7 +8,7 @@ use super::Peer;
 /// 
 /// [peer entity]: crate::connections
 /// [direction]: crate::messages::NetDirection
-#[derive(Component)]
+#[derive(Default, Component)]
 pub struct PeerMessages<D: NetDirectionType> {
     inner: MessageQueue,
     phantom: PhantomData<D>,
