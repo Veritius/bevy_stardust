@@ -2,6 +2,8 @@ use std::{marker::PhantomData, ops::Deref};
 use bevy::prelude::*;
 use crate::messages::{MessageQueue, NetDirectionType, ChannelMessage, Message, ChannelId};
 
+use super::Peer;
+
 /// A message queue for a [peer entity].
 /// The generic `D` defines its [direction].
 /// 
@@ -65,5 +67,13 @@ impl<'a, D: NetDirectionType> IntoIterator for &'a PeerMessages<D> {
     #[inline]
     fn into_iter(self) -> Self::IntoIter {
         self.inner.into_iter()
+    }
+}
+
+pub(crate) fn clear_message_queues_system<D: NetDirectionType>(
+    mut instances: Query<&mut PeerMessages<D>, With<Peer>>,
+) {
+    for mut messages in instances.iter_mut() {
+        messages.inner.clear()
     }
 }

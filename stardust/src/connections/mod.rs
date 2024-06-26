@@ -12,6 +12,7 @@ mod peer;
 mod security;
 
 pub(crate) mod systems;
+pub(crate) use messages::clear_message_queues_system;
 
 pub mod events;
 
