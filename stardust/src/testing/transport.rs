@@ -64,7 +64,7 @@ fn recv_link_data(
         loop {
             match receiver.try_recv() {
                 Ok(message) => {
-                    queue.push(message);
+                    queue.push_one(message);
                 },
 
                 Err(TryRecvError::Empty) => { break },
@@ -83,7 +83,7 @@ fn send_link_data(
 ) {
     query.par_iter_mut().for_each(|(mut link, queue)| {
         let sender = &link.0.sender;
-        'outer: for (channel, queue) in queue.iter() {
+        'outer: for (channel, queue) in queue {
             for payload in queue {
                 match sender.send(ChannelMessage { channel, payload }) {
                     Ok(_) => {},

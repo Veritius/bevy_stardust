@@ -30,20 +30,20 @@ impl MessageQueue {
         .for_each(|(_, v)| v.clear())
     }
 
-    /// Counts how many messages are queued in all channels.
+    /// Returns the total number of messages stored in the queue.
     #[inline]
     pub fn count(&self) -> usize {
         self.messages.len()
     }
 
-    /// Returns the total amount of bytes queued to be sent.
+    /// Returns the sum of bytes from all messages in the queue.
     #[inline]
     pub fn bytes(&self) -> usize {
         self.messages.iter().map(|v| v.len()).sum()
     }
 
-    /// Pushes a new item to the queue.
-    pub fn push(&mut self, message: ChannelMessage) {
+    /// Pushes a single message to the queue.
+    pub fn push_one(&mut self, message: ChannelMessage) {
         // Add to the messages vec
         let idx = self.messages.len();
         self.messages.push(message.payload);
@@ -55,8 +55,8 @@ impl MessageQueue {
         .push(idx);
     }
 
-    /// Pushes messages from an iterator.
-    /// This can be faster than calling [`push`](Self::push) repeatedly.
+    /// Pushes messages from `iter` to the queue.
+    /// This can be faster than calling [`push_one`](Self::push_one) repeatedly.
     pub fn push_many<I>(&mut self, iter: I)
     where
         I: IntoIterator<Item = ChannelMessage>,
@@ -73,12 +73,12 @@ impl MessageQueue {
 
         // Push everything as per usual
         for message in iter {
-            self.push(message);
+            self.push_one(message);
         }
     }
 
-    /// Pushes messages from an iterator to a single channel.
-    /// This can be faster than calling [`push`](Self::push) or [`push_many`](Self::push_many) repeatedly.
+    /// Pushes many messages from `iter` to a single channel.
+    /// This can be faster than calling [`push_one`](Self::push_one) or [`push_many`](Self::push_many) repeatedly.
     pub fn push_channel<I>(&mut self, channel: ChannelId, iter: I)
     where
         I: IntoIterator<Item = Message>,

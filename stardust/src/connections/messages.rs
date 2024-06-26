@@ -1,6 +1,6 @@
-use std::{marker::PhantomData, ops::{Deref, DerefMut}};
+use std::marker::PhantomData;
 use bevy::prelude::*;
-use crate::messages::{MessageQueue, NetDirectionType};
+use crate::messages::{MessageQueue, NetDirectionType, ChannelMessage, Message, ChannelId};
 
 /// A message queue for a [peer entity].
 /// The generic `D` defines its [direction].
@@ -21,19 +21,43 @@ impl<D: NetDirectionType> PeerMessages<D> {
             phantom: PhantomData,
         }
     }
-}
 
-impl<D: NetDirectionType> Deref for PeerMessages<D> {
-    type Target = MessageQueue;
-
-    fn deref(&self) -> &Self::Target {
-        &self.inner
+    /// Returns the total number of messages stored in the queue.
+    #[inline]
+    pub fn count(&self) -> usize {
+        self.inner.count()
     }
-}
 
-impl<D: NetDirectionType> DerefMut for PeerMessages<D> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.inner
+    /// Returns the sum of bytes from all messages in the queue.
+    #[inline]
+    pub fn bytes(&self) -> usize {
+        self.inner.bytes()
+    }
+
+    /// Pushes a single message to the queue.
+    #[inline]
+    pub fn push_one(&mut self, message: ChannelMessage) {
+        self.inner.push_one(message);
+    }
+
+    /// Pushes many messages from `iter` to the queue.
+    /// This can be faster than calling [`push_one`](Self::push_one) repeatedly.
+    #[inline]
+    pub fn push_many<I>(&mut self, iter: I)
+    where
+        I: IntoIterator<Item = ChannelMessage>,
+    {
+        self.inner.push_many(iter);
+    }
+
+    // Pushes many messages from `iter` to a single channel.
+    /// This can be faster than calling [`push_one`](Self::push_one) or [`push_many`](Self::push_many) repeatedly.
+    #[inline]
+    pub fn push_channel<I>(&mut self, channel: ChannelId, iter: I)
+    where
+        I: IntoIterator<Item = Message>,
+    {
+        self.inner.push_channel(channel, iter);
     }
 }
 

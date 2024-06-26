@@ -113,7 +113,7 @@ fn send_words_system(
     for (entity, mut outgoing) in query.iter_mut() {
         // Bytes objects are cheaply clonable, reference counted storages.
         // You can send them to as many peers as you want once created.
-        outgoing.push(ChannelMessage {
+        outgoing.push_one(ChannelMessage {
             channel,
             payload: MESSAGE,
         });
