@@ -107,7 +107,8 @@ fn remove_disconnected(
 
             events.send(PeerDisconnectedEvent {
                 peer: entity,
-                reason: None,
+                reason: DisconnectReason::Unspecified,
+                comment: None,
             });
 
             if let Some(mut stage) = stage {
