@@ -6,7 +6,7 @@ use super::ChannelId;
 /// 
 /// An individual message has the following guarantees:
 /// - Complete: messages are never received piecemeal.
-/// - Unmodified: a received message is exactly what was sent.
+/// - Correct: a received message is exactly what was sent.
 /// 
 /// These guarantees **are not** enforced by this type.
 /// Instead, they are enforced by the transport layer handling I/O.
