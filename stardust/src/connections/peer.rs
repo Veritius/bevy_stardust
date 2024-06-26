@@ -1,6 +1,6 @@
 //! "Peers" aka other computers over the network.
 
-use std::{net::SocketAddr, sync::Mutex, time::Instant};
+use std::{net::SocketAddr, time::Instant};
 use bevy::prelude::*;
 
 /// An active connection to a remote peer, as well as additional 
