@@ -24,7 +24,7 @@ pub struct PeerConnectedEvent {
     pub peer: Entity,
 }
 
-/// Send to disconnect a peer.
+/// Sent by the application to disconnect a peer.
 #[doc = dir_comment!(a2t)]
 #[derive(Event)]
 pub struct DisconnectPeerEvent {
