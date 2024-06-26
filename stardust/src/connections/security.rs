@@ -48,3 +48,12 @@ pub enum NetworkSecurity {
     /// - [netcode.io](https://github.com/networkprotocol/netcode.io/blob/master/STANDARD.md)
     Authenticated,
 }
+
+impl std::fmt::Display for NetworkSecurity {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match self {
+            NetworkSecurity::Unauthenticated => "Unauthenticated",
+            NetworkSecurity::Authenticated => "Authenticated",
+        })
+    }
+}
