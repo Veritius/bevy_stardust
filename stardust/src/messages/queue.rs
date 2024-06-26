@@ -1,6 +1,5 @@
 use std::{collections::HashMap, marker::PhantomData};
 use bevy::prelude::*;
-use bytes::Bytes;
 use smallvec::SmallVec;
 use crate::prelude::*;
 use super::direction::NetDirectionType;
@@ -15,7 +14,7 @@ type IdxVec = SmallVec<[usize; 2]>;
 /// They are cleared in [`NetworkWrite::Clear`] in [`PostUpdate`].
 #[derive(Component)]
 pub struct NetworkMessages<D: NetDirectionType> {
-    messages: Vec<Bytes>,
+    messages: Vec<Message>,
     index_map: HashMap<ChannelId, IdxVec>,
     phantom: PhantomData<D>
 }
@@ -54,7 +53,7 @@ impl<D: NetDirectionType> NetworkMessages<D> {
     }
 
     /// Pushes a new item to the queue.
-    pub fn push(&mut self, channel: ChannelId, message: Bytes) {
+    pub fn push(&mut self, channel: ChannelId, message: Message) {
         // Add to the messages vec
         let idx = self.messages.len();
         self.messages.push(message);
@@ -70,7 +69,7 @@ impl<D: NetDirectionType> NetworkMessages<D> {
     /// This can be faster than calling [`push`](Self::push) repeatedly.
     pub fn push_many<I>(&mut self, iter: I)
     where
-        I: IntoIterator<Item = (ChannelId, Bytes)>,
+        I: IntoIterator<Item = (ChannelId, Message)>,
     {
         // Convert the iterator and find the maximum expected size
         let iter = iter.into_iter();
@@ -92,7 +91,7 @@ impl<D: NetDirectionType> NetworkMessages<D> {
     /// This can be faster than calling [`push`](Self::push) or [`push_many`](Self::push_many) repeatedly.
     pub fn push_channel<I>(&mut self, channel: ChannelId, iter: I)
     where
-        I: IntoIterator<Item = Bytes>,
+        I: IntoIterator<Item = Message>,
     {
         // Convert the iterator and find the maximum expected size
         let iter = iter.into_iter();
@@ -140,9 +139,9 @@ impl<D: NetDirectionType> std::fmt::Debug for NetworkMessages<D> {
     }
 }
 
-impl<D: NetDirectionType> Extend<(ChannelId, Bytes)> for NetworkMessages<D> {
+impl<D: NetDirectionType> Extend<(ChannelId, Message)> for NetworkMessages<D> {
     #[inline]
-    fn extend<T: IntoIterator<Item = (ChannelId, Bytes)>>(&mut self, iter: T) {
+    fn extend<T: IntoIterator<Item = (ChannelId, Message)>>(&mut self, iter: T) {
         self.push_many(iter);
     }
 }
@@ -163,7 +162,7 @@ impl<'a, D: NetDirectionType> IntoIterator for &'a NetworkMessages<D> {
 /// The order of iteration over channels is unspecified, and may change unpredictably.
 #[derive(Clone)]
 pub struct ChannelIter<'a> {
-    messages: &'a [Bytes],
+    messages: &'a [Message],
     map_iter: std::collections::hash_map::Iter<'a, ChannelId, IdxVec>,
 }
 
@@ -189,12 +188,12 @@ impl<'a> Iterator for ChannelIter<'a> {
 /// Produces the contents of the messages in the order they were added to the queue.
 #[derive(Clone)]
 pub struct MessageIter<'a> {
-    messages: &'a [Bytes],
+    messages: &'a [Message],
     indexes: &'a [usize],
 }
 
 impl<'a> Iterator for MessageIter<'a> {
-    type Item = Bytes;
+    type Item = Message;
 
     fn next(&mut self) -> Option<Self::Item> {
         // If there's no items left, return

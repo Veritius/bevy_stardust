@@ -6,7 +6,6 @@
 
 use std::sync::{mpsc::{channel, Receiver, Sender, TryRecvError}, Mutex};
 use bevy::prelude::*;
-use bytes::Bytes;
 use crate::prelude::*;
 
 /// Adds a simple transport plugin for apps part of the same process.
@@ -50,16 +49,11 @@ pub fn pair() -> (Link, Link) {
 }
 
 struct SideInner {
-    sender: Sender<Message>,
+    sender: Sender<ChannelMessage>,
     // Makes the struct Sync, so it can be in a Component.
     // Use Exclusive when it's stabilised.
-    receiver: Mutex<Receiver<Message>>,
+    receiver: Mutex<Receiver<ChannelMessage>>,
     disconnected: bool,
-}
-
-struct Message {
-    channel: ChannelId,
-    payload: Bytes,
 }
 
 fn recv_link_data(
@@ -89,7 +83,7 @@ fn send_link_data(
         let sender = &link.0.sender;
         'outer: for (channel, queue) in queue.iter() {
             for payload in queue {
-                match sender.send(Message { channel, payload }) {
+                match sender.send(ChannelMessage { channel, payload }) {
                     Ok(_) => {},
                     Err(_) => {
                         link.0.disconnected = true;
