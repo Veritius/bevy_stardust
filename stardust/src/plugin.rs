@@ -13,7 +13,6 @@ impl Plugin for StardustPlugin {
         // Register connection types
         app.register_type::<NetworkPeer>();
         app.register_type::<NetworkPeerUid>();
-        app.register_type::<NetworkGroup>();
         app.register_type::<NetworkPeerLifestage>();
         app.register_type::<NetworkSecurity>();
         app.register_type::<NetworkPerformanceReduction>();
