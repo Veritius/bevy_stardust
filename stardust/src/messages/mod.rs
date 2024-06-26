@@ -16,7 +16,8 @@
 //! This is used by the [transport layers](#transport) to efficiently handle message exchange.
 //! These configuration values are also an optimisation method that you, the developer, can use to make better netcode.
 
-mod channels;
+pub mod channels;
+
 mod direction;
 mod message;
 mod queue;
@@ -29,7 +30,7 @@ pub(crate) use channels::{ChannelRegistryMut, ChannelRegistryInner};
 pub use bytes;
 
 // Public types
-pub use channels::{Channel, ChannelId, ChannelConfiguration, ChannelConsistency, ChannelData, ChannelRegistry, ChannelSetupAppExt};
+pub use channels::{Channel, ChannelId, ChannelRegistry};
 pub use direction::{NetDirection, NetDirectionType, Incoming, Outgoing};
 pub use message::{Message, ChannelMessage};
 pub use queue::{NetworkMessages, ChannelIter, MessageIter};

@@ -15,10 +15,10 @@ pub struct LinkTransportPlugin;
 impl Plugin for LinkTransportPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(PreUpdate, (recv_link_data, remove_disconnected)
-            .chain().in_set(NetworkRead::Receive));
+            .chain().in_set(NetworkRecv::Receive));
 
         app.add_systems(PostUpdate, (send_link_data, remove_disconnected)
-            .chain().in_set(NetworkWrite::Send));
+            .chain().in_set(NetworkSend::Transmit));
     }
 }
 

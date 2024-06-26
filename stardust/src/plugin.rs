@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 use bevy::prelude::*;
-use crate::prelude::*;
+use crate::{messages::{channels, ChannelRegistryMut}, prelude::*};
 
 /// The Stardust multiplayer plugin.
 /// Adds the core functionality of Stardust, but does not add a transport layer.
@@ -20,8 +20,8 @@ impl Plugin for StardustPlugin {
 
         // Register channel types
         app.register_type::<ChannelId>();
-        app.register_type::<ChannelConfiguration>();
-        app.register_type::<ChannelConsistency>();
+        app.register_type::<channels::ChannelConfiguration>();
+        app.register_type::<channels::ChannelConsistency>();
 
         // Register messaging types
         app.register_type::<NetDirection>();
@@ -46,7 +46,7 @@ impl Plugin for StardustPlugin {
         app.add_systems(PostUpdate, (
             crate::messages::clear_message_queue_system::<Outgoing>,
             crate::messages::clear_message_queue_system::<Incoming>,
-        ).in_set(NetworkWrite::Clear));
+        ).in_set(NetworkSend::Clear));
 
         // Hashing-related functionality
         #[cfg(feature="hashing")] {

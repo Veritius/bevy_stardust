@@ -1,20 +1,6 @@
 use bevy::prelude::*;
 use bytes::Bytes;
 
-/// Send to disconnect a peer.
-/// 
-/// This should be sent by the dev, not a plugin.
-#[derive(Event)]
-pub struct DisconnectPeerEvent {
-    /// The peer to be disconnected.
-    pub peer: Entity,
-    /// The reason for disconnection.
-    pub reason: Option<Bytes>,
-    /// Whether or not the peer should be disconnected immediately.
-    /// This may cause data loss if set to `true`, and should be used sparingly.
-    pub force: bool,
-}
-
 /// Sent when a peer begins to connect.
 /// 
 /// This should be sent by a transport layer.
@@ -32,6 +18,21 @@ pub struct PeerConnectedEvent {
     /// The peer that has connected.
     pub peer: Entity,
 }
+
+/// Send to disconnect a peer.
+/// 
+/// This should be sent by the dev, not a plugin.
+#[derive(Event)]
+pub struct DisconnectPeerEvent {
+    /// The peer to be disconnected.
+    pub peer: Entity,
+    /// The reason for disconnection.
+    pub reason: Option<Bytes>,
+    /// Whether or not the peer should be disconnected immediately.
+    /// This may cause data loss if set to `true`, and should be used sparingly.
+    pub force: bool,
+}
+
 
 /// Sent when a peer starts to disconnect.
 /// 
