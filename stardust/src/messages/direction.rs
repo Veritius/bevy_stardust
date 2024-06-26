@@ -5,23 +5,27 @@ use bevy::reflect::Reflect;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Reflect)]
 #[reflect(Debug, PartialEq, Hash)]
 pub enum NetDirection {
-    /// Messages being sent to a remote peer.
+    /// Messages being transmitted from this peer to a remote peer.
+    /// Corresponds to, and is returned by, [`Outgoing`].
     Outgoing,
-    /// Messages being received from a remote peer.
+
+    /// Messages being transmitted to this peer by a remote peer.
+    /// Corresponds to, and is returned by, [`Incoming`].
     Incoming,
 }
 
 /// The direction a message is going, as a trait for use in the type system.
 /// 
 /// Implemented by:
-/// - [`Outgoing`], corresponding to [`Direction::Outgoing`]
-/// - [`Incoming`], corresponding to [`Direction::Incoming`]
+/// - [`Outgoing`], corresponding to [`NetDirection::Outgoing`]
+/// - [`Incoming`], corresponding to [`NetDirection::Incoming`]
 pub trait NetDirectionType: Debug + Send + Sync + Reflect + sealed::Sealed {
-    /// Returns the corresponding [`Direction`].
+    /// Returns the corresponding [`NetDirection`].
     fn net_dir() -> NetDirection;
 }
 
-/// Messages being sent to a remote peer. Counterpart to [`Incoming`].
+/// Messages being transmitted from this peer to a remote peer.
+/// Counterpart to [`Incoming`], and corresponds to [`NetDirection::Incoming`].
 #[derive(Debug, Clone, Copy, Reflect)]
 #[reflect(Debug)]
 pub struct Outgoing;
@@ -31,7 +35,8 @@ impl NetDirectionType for Outgoing {
     }
 }
 
-/// Messages being received from a remote peer. Counterpart to [`Outgoing`].
+/// Messages being transmitted to this peer by a remote peer.
+/// Counterpart to [`Outgoing`], and corresponds to [`NetDirection::Outgoing`].
 #[derive(Debug, Clone, Copy, Reflect)]
 #[reflect(Debug)]
 pub struct Incoming;
