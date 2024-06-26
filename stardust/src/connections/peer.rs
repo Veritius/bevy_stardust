@@ -1,23 +1,7 @@
-//! "Peers" aka other computers over the network.
-
 use std::{net::SocketAddr, time::Instant};
 use bevy::prelude::*;
 
 /// An active connection to a remote peer, as well as additional 
-/// 
-/// The term 'peer' is used interchangeably for any kind of connection to another instance of the application.
-/// If you're writing a star-topology system, you can treat these as servers and clients.
-/// If you're writing a mesh-topology system, you can treat these as another peer in the mesh.
-/// 
-/// The `Peer` component is intended to be queried freely, but not created by the developer.
-/// Instead, it should be managed by transport layer plugins.
-/// 
-/// Entities with this component may also have the following components:
-/// - [`Messages`](crate::messages::Messages), relating to messages.
-/// - [`PeerAddress`], relating to IP address data.
-/// - [`PeerUid`], relating to persistent data.
-/// - [`PeerLifestage`], relating to connection state.
-/// - [`NetworkSecurity`](super::security::NetworkSecurity), relating to encryption.
 #[derive(Debug, Component, Reflect)]
 #[reflect(Debug, Component)]
 pub struct Peer {

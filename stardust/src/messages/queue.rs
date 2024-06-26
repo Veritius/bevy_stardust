@@ -160,9 +160,9 @@ impl<'a> IntoIterator for &'a MessageQueue {
     }
 }
 
-/// An iterator over individual channels in a [`Messages<D>`] component.
+/// An iterator over individual channels in a [`MessageQueue`].
 /// 
-/// Produces `ChannelId` values, and [`MessageIter`] iterators.
+/// Produces [`ChannelId`] values, and [`MessageIter`] iterators.
 /// The order of iteration over channels is unspecified, and may change unpredictably.
 #[derive(Clone)]
 pub struct ChannelIter<'a> {
@@ -187,7 +187,7 @@ impl<'a> Iterator for ChannelIter<'a> {
     }
 }
 
-/// An iterator over individual messages in channel, produced by a [`ChannelIter`] from an [`Messages<D>`] component.
+/// An iterator over individual messages in channel, produced by a [`ChannelIter`].
 /// 
 /// Produces the contents of the messages in the order they were added to the queue.
 #[derive(Clone)]
