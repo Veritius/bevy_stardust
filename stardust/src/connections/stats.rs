@@ -44,6 +44,7 @@ impl From<Duration> for PeerRtt {
 /// 
 /// When added to a peer, it tracks data about the peer's connection.
 /// This is useful for debugging and system administrator tools.
+/// These values are set by the transport layer managing the connection.
 /// 
 /// Note that round-trip time is not tracked in this component.
 /// RTT is tracked in its own component, called [`PeerRtt`].
