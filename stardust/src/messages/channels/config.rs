@@ -4,9 +4,6 @@
 
 use bevy::reflect::Reflect;
 
-#[cfg(feature="hashing")]
-use {std::hash::Hasher, crate::hashing::StableHash};
-
 /// Configuration for a channel.
 #[derive(Debug, Clone, Hash, Reflect)]
 #[reflect(Debug, Hash)]
@@ -18,15 +15,7 @@ pub struct ChannelConfiguration {
 
     /// The priority of messages on this channel.
     /// Transport values will send messages on channels with higher `priority` values first.
-    /// Channel priority is not hashed when the `hashing` feature is enabled.
     pub priority: u32,
-}
-
-#[cfg(feature="hashing")]
-impl StableHash for &ChannelConfiguration {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        self.consistency.hash(state);
-    }
 }
 
 /// Reliability and ordering guarantees.
@@ -112,18 +101,6 @@ impl ChannelConsistency {
             ChannelConsistency::UnreliableSequenced => true,
             ChannelConsistency::ReliableUnordered   => false,
             ChannelConsistency::ReliableOrdered     => true,
-        }
-    }
-}
-
-#[cfg(feature="hashing")]
-impl StableHash for ChannelConsistency {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        match self {
-            ChannelConsistency::UnreliableUnordered => state.write_u8(0),
-            ChannelConsistency::UnreliableSequenced => state.write_u8(1),
-            ChannelConsistency::ReliableUnordered   => state.write_u8(2),
-            ChannelConsistency::ReliableOrdered     => state.write_u8(3),
         }
     }
 }

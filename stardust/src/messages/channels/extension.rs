@@ -22,14 +22,6 @@ impl ChannelSetupAppExt for App {
         &mut self,
         config: ChannelConfiguration,
     ) -> ChannelId {
-        // Change hash value
-        #[cfg(feature="hashing")] {
-            use crate::hashing::HashingAppExt;
-            self.net_hash_value("channel");
-            self.net_hash_value(C::type_path());
-            self.net_hash_value(&config);
-        }
-
         // Get the registry
         let mut registry = self.world.get_resource_mut::<ChannelRegistryBuilder>()
             .expect("Cannot add channels after plugin finish");
