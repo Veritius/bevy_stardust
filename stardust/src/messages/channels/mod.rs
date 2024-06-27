@@ -20,7 +20,9 @@
 //! This aligns very well with the compartmentalisation that ECS is designed for.
 //! 
 //! Note that you *can* technically access a channel without a type, using its ID,
-//! but this is very unreliable and considered bad practice.
+//! but this is very unreliable and considered bad practice. Visibility cannot be
+//! perfectly enforced, as transport layers must have access to all channels to
+//! be able to do their job.
 //! 
 //! # Adding channels
 //! Channels are accessed using the type system. You can use any type,
