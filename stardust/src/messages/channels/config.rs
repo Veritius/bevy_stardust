@@ -34,7 +34,7 @@ impl StableHash for &ChannelConfiguration {
 /// 
 /// # Why?
 /// ## Reliability
-/// https://en.wikipedia.org/wiki/Reliability_(computer_networking)
+/// <https://en.wikipedia.org/wiki/Reliability_(computer_networking)>
 /// 
 /// The Internet makes no guarantees about your message being received.
 /// This is a challenge if your application is expecting something, and it's lost.
