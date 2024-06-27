@@ -2,6 +2,7 @@
 
 use bevy::app::App;
 use super::config::ChannelConfiguration;
+use super::ChannelId;
 use super::{id::Channel, ChannelRegistryBuilder};
 
 mod sealed {
@@ -12,14 +13,15 @@ mod sealed {
 /// Adds channel-related functions to the `App`.
 pub trait ChannelSetupAppExt: sealed::Sealed {
     /// Registers a channel with type `C` and the config and components given.
-    fn add_channel<C: Channel>(&mut self, config: ChannelConfiguration);
+    /// Returns the sequential `ChannelId` now associated with the channel.
+    fn add_channel<C: Channel>(&mut self, config: ChannelConfiguration) -> ChannelId;
 }
 
 impl ChannelSetupAppExt for App {
     fn add_channel<C: Channel>(
         &mut self,
         config: ChannelConfiguration,
-    ) {
+    ) -> ChannelId {
         // Change hash value
         #[cfg(feature="hashing")] {
             use crate::hashing::HashingAppExt;
@@ -33,6 +35,6 @@ impl ChannelSetupAppExt for App {
             .expect("Cannot add channels after plugin finish");
 
         // Add to registry
-        registry.0.register_channel::<C>(config);
+        return registry.0.register_channel::<C>(config);
     }
 }
