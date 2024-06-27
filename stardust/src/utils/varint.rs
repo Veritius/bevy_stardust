@@ -29,7 +29,6 @@ impl VarInt {
         let mut bytes = [0u8; 8];
         let first = b.get_u8();
         bytes[0] = first & !MASK;
-        b.advance(1);
 
         match first & MASK {
             0b00 => {},
@@ -37,19 +36,16 @@ impl VarInt {
             0b01 => {
                 if b.remaining() < 1 { return Err(()) }
                 bytes[1] = b.get_u8();
-                b.advance(1);
             },
 
             0b10 => {
                 if b.remaining() < 3 { return Err(()); }
-                bytes[1..4].copy_from_slice(&b.chunk()[..3]);
-                b.advance(3);
+                b.copy_to_slice(&mut bytes[1..4]);
             },
 
             0b11 => {
                 if b.remaining() < 7 { return Err(()); }
-                bytes[1..7].copy_from_slice(&b.chunk()[..7]);
-                b.advance(7);
+                b.copy_to_slice(&mut bytes[1..8]);
             },
 
             _ => unreachable!(),
