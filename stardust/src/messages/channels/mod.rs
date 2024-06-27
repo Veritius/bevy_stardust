@@ -1,5 +1,27 @@
 //! Message organisation systems.
 //! 
+//! # What are channels
+//! Channels are an abstraction provided by Stardust to make writing netcode easier.
+//! Instead of having a static number like `12345` to identify message types,
+//! Stardust automatically generates these numbers, which have the dual benefit of
+//! being very efficient to transmit, and easy to work with for a developer.
+//! Most of the time, you as the developer won't directly work with channel identifiers.
+//! Instead, you use the type system, just like you would to use Bevy systemparams.
+//! 
+//! A major benefit of automatically generating channel identifiers is that
+//! it's incredibly easy to add new message types. You don't need a massive
+//! document of every channel ID to make sure that system A doesn't read a
+//! message intended for system B. This is especially useful when using plugins,
+//! which now just work, with no extra effort on your part.
+//! 
+//! Channels also obey Rust's visibility system. Since you primarily access
+//! channels with their associated type, if that type is not accessible,
+//! that channel cannot be accessed, letting you compartmentalise code better.
+//! This aligns very well with the compartmentalisation that ECS is designed for.
+//! 
+//! Note that you *can* technically access a channel without a type, using its ID,
+//! but this is very unreliable and considered bad practice.
+//! 
 //! # Adding channels
 //! Channels are accessed using the type system. You can use any type,
 //! as long as it implements [`Channel`]. Since `Channel` is automatically
@@ -67,9 +89,10 @@
 //! 
 //! Note that channels must be added *after* [`StardustPlugin`] is added,
 //! and *before* `StardustPlugin` [finishes][Plugin::finish]. Channel
-//! insertion order also matters. You must make sure all calls to
+//! insertion order also matters: you must make sure all calls to
 //! [`add_channel`][add_channel] are in a deterministic order.
-//! This is an unfortunate limitation that will be lifted in future.
+//! This includes channels registered by plugins.
+//! This is an unfortunate limitation that will (hopefully) be lifted in future.
 //! 
 //! [messages]: crate::messages
 //! [`StardustPlugin`]: crate::plugin::StardustPlugin
