@@ -1,4 +1,4 @@
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use bevy::prelude::*;
 
 /// Round-trip time estimate for [peer entities].
@@ -54,6 +54,10 @@ impl From<Duration> for PeerRtt {
 #[reflect(Default)]
 #[non_exhaustive]
 pub struct PeerStats {
+    /// The last time any data was received by the transport layer.
+    /// May be `None` if data has never been received.
+    pub last_recv: Option<Instant>,
+
     /// Outgoing data in kilobits per second, including overhead from the transport layer.
     pub all_kbps_out: u32,
 
