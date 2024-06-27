@@ -28,7 +28,8 @@ pub trait NetDirectionType: Debug + Send + Sync + Reflect + sealed::Sealed {
 /// Counterpart to [`Incoming`], and corresponds to [`NetDirection::Incoming`].
 #[derive(Debug, Clone, Copy, Reflect)]
 #[reflect(Debug)]
-pub struct Outgoing;
+pub enum Outgoing {}
+
 impl NetDirectionType for Outgoing {
     fn net_dir() -> NetDirection {
         NetDirection::Outgoing
@@ -39,7 +40,8 @@ impl NetDirectionType for Outgoing {
 /// Counterpart to [`Outgoing`], and corresponds to [`NetDirection::Outgoing`].
 #[derive(Debug, Clone, Copy, Reflect)]
 #[reflect(Debug)]
-pub struct Incoming;
+pub enum Incoming {}
+
 impl NetDirectionType for Incoming {
     fn net_dir() -> NetDirection {
         NetDirection::Incoming
