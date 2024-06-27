@@ -1,26 +1,32 @@
 //! Types that can be used to interface with Stardust's message reading and writing APIs.
 //!
-//! Note: In the following examples, `#[derive(Reflect)]` is only needed with the `reflect` feature flag.
+//! ```no_run
+//! # use bevy::prelude::*;
+//! # use bevy_stardust::prelude::*;
+//! # use std::marker::PhantomData;
 //! 
-//! ```ignore
 //! // Defining a channel type is simple
-//! #[derive(Reflect)]
+//! #[derive(TypePath)]
 //! pub struct MyChannel;
 //! 
 //! // You can make channels private
-//! #[derive(Reflect)]
+//! #[derive(TypePath)]
 //! struct MyPrivateChannel;
 //! 
-//! // You can make channels with generic type bounds too
-//! #[derive(Reflect)]
+//! // You can make channels with generic type bounds too,
+//! // as long as the resulting type is still TypePath
+//! #[derive(TypePath)]
 //! struct MyGenericChannel<T: Channel>(PhantomData<T>);
 //! ```
 //! 
-//! In Stardust, `Channel` trait objects are just used for their type data.
-//! The type itself isn't actually stored. That means you can do things like this.
+//! In Stardust, the `Channel` trait is just used for compile-time type data,
+//! and the type itself isn't stored anywhere. That lets you do things like this.
 //! 
-//! ```ignore
-//! #[derive(Reflect, Event)]
+//! ```no_run
+//! # use bevy::prelude::*;
+//! # use bevy_stardust::prelude::*;
+//! 
+//! #[derive(TypePath, Event)]
 //! pub struct MovementEvent(pub Vec3);
 //!
 //! fn main() {
@@ -30,15 +36,15 @@
 //! 
 //!     app.add_event::<MovementEvent>();
 //!     app.add_channel::<MovementEvent>(ChannelConfiguration {
-//!         reliable: ReliabilityGuarantee::Unreliable,
-//!         ordered: OrderingGuarantee::Unordered,
-//!         fragmented: false,
+//!         consistency: ChannelConsistency::UnreliableUnordered,
 //!         priority: 0,
 //!     });
+//! 
+//!     app.run();
 //! }
 //! ```
 
-use std::{marker::PhantomData, ops::Deref};
+use std::ops::Deref;
 use bevy::prelude::*;
 use super::ChannelRegistryInner;
 
@@ -46,16 +52,6 @@ use super::ChannelRegistryInner;
 pub trait Channel: TypePath + Send + Sync + 'static {}
 
 impl<T: TypePath + Send + Sync + 'static> Channel for T {}
-
-/// Typed marker component for filtering channel entities.
-#[derive(Component)]
-pub(super) struct ChannelMarker<C: Channel>(pub PhantomData<C>);
-
-impl<C: Channel> Default for ChannelMarker<C> {
-    fn default() -> Self {
-        Self(Default::default())
-    }
-}
 
 /// A sequential channel identifier that can be used to access data without type information.
 /// 
