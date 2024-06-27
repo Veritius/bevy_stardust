@@ -42,13 +42,13 @@ impl VarInt {
 
             0b10 => {
                 if b.remaining() < 3 { return Err(()); }
-                bytes[1..4].copy_from_slice(&b.chunk()[0..4]);
+                bytes[1..4].copy_from_slice(&b.chunk()[..3]);
                 b.advance(3);
             },
 
             0b11 => {
                 if b.remaining() < 7 { return Err(()); }
-                bytes[1..7].copy_from_slice(&b.chunk()[0..8]);
+                bytes[1..7].copy_from_slice(&b.chunk()[..7]);
                 b.advance(7);
             },
 
