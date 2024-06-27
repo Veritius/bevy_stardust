@@ -13,7 +13,7 @@ use {std::hash::Hasher, crate::hashing::StableHash};
 pub struct ChannelConfiguration {
     /// Guarantees that the transport layer must make
     /// for messages sent on this channel. See the
-    /// documentation of [`Consistency`].
+    /// documentation of [`ChannelConsistency`].
     pub consistency: ChannelConsistency,
 
     /// The priority of messages on this channel.

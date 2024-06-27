@@ -42,7 +42,7 @@ use std::{marker::PhantomData, ops::Deref};
 use bevy::prelude::*;
 use super::ChannelRegistryInner;
 
-/// Marker trait for channels. See the [module level documentation](self) for more information.
+/// Types that can be used to identify channels within the type system.
 pub trait Channel: TypePath + Send + Sync + 'static {}
 
 impl<T: TypePath + Send + Sync + 'static> Channel for T {}

@@ -11,7 +11,7 @@ pub struct MessageQueue {
 }
 
 impl MessageQueue {
-    /// Creates a new `Messages` store. Doesn't allocate until [`push`](Self::push) is used.
+    /// Creates a new `Messages` store. Doesn't allocate until [`push_one`](Self::push_one) is used.
     pub fn new() -> Self {
         Self {
             messages: Vec::new(),
