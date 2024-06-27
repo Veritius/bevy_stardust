@@ -101,13 +101,13 @@ const MESSAGE: Message = Message::from_bytes(Bytes::from_static("Hello, world!".
 // Queueing messages just requires component access.
 // This means you can use query filters to achieve better parallelism.
 fn send_words_system(
-    registry: Res<ChannelRegistry>,
+    channels: Channels,
     mut query: Query<(Entity, &mut PeerMessages<Outgoing>), With<Peer>>
 ) {
     // The ChannelId must be retrieved from the registry.
     // These are more friendly to store since they're just numbers.
     // You can cache them if you want, as long as they aren't used in different Worlds.
-    let channel = registry.channel_id(TypeId::of::<MyChannel>()).unwrap();
+    let channel = channels.id(TypeId::of::<MyChannel>()).unwrap();
 
     // You can also iterate in parallel, if you have a lot of things.
     for (entity, mut outgoing) in query.iter_mut() {
@@ -126,10 +126,10 @@ fn send_words_system(
 // The reading queue is a different component from the sending queue.
 // This means you can read and send bytes in parallel, or in different systems.
 fn read_words_system(
-    registry: Res<ChannelRegistry>,
+    channels: Channels,
     query: Query<(Entity, &PeerMessages<Incoming>), With<Peer>>
 ) {
-    let channel = registry.channel_id(TypeId::of::<MyChannel>()).unwrap();
+    let channel = channels.id(TypeId::of::<MyChannel>()).unwrap();
     for (entity, incoming) in query.iter() {
         for message in incoming.iter_channel(channel) {
             // Stardust only outputs bytes, so you need to convert to the desired type.
