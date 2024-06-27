@@ -3,7 +3,7 @@ use bevy::app::{AppLabel, SubApp, ScheduleRunnerPlugin};
 use bevy::log::LogPlugin;
 use bevy::prelude::*;
 use bevy_stardust::prelude::*;
-use bevy_stardust::testing::link::*;
+use bevy_stardust::utils::link::*;
 
 #[derive(TypePath)]
 struct MyChannelA;
