@@ -9,7 +9,6 @@
 //! ```no_run
 //! # use bevy::prelude::*;
 //! # use bevy_stardust::prelude::*;
-//! # use std::marker::PhantomData;
 //! #
 //! #[derive(TypePath)]
 //! pub struct MyChannel;
@@ -83,7 +82,53 @@
 //! you will use ZSTs like unit-like structs or zero-variant enums,
 //! any type that implements `Channel` can be used.
 //! 
-//! TODO
+//! Let's say you have an event called `MovementEvent`, that is
+//! used to inform systems of player movements. If you want to
+//! send this event to other peers, you could create a new type
+//! and use it in `add_channel`, or you could use `MovementEvent`.
+//! 
+//! ```no_run
+//! # use bevy::prelude::*;
+//! # use bevy_stardust::prelude::*;
+//! #
+//! #[derive(Event, TypePath)]
+//! struct MovementEvent {
+//!     change: Vec3,
+//! }
+//! 
+//! fn main() {
+//!     // App setup as detailed earlier
+//!     let mut app = App::new();
+//!     app.add_plugins((DefaultPlugins, StardustPlugin));
+//! 
+//!     // Register MovementEvent as an event
+//!     app.add_event::<MovementEvent>();
+//! 
+//!     // And register it as a channel
+//!     app.add_channel::<MovementEvent>(ChannelConfiguration {
+//!         consistency: ChannelConsistency::UnreliableUnordered,
+//!         priority: 32,
+//!     });
+//! }
+//! ```
+//! 
+//! At this point, you can introduce a system in `NetworkRecv::Read`
+//! to turn the messages on your `MovementEvent` channel into events
+//! in `Events<MovementEvent>`, which other systems can read from.
+//! This can be useful to make your code less cluttered, especially
+//! for replicated events like this, but there are times where it's
+//! not suitable. It's up to you to decide when you want to use this.
+//! 
+//! You can also use generic type parameters as an organisational tool.
+//! As long as the type still implements `Channel`, it's just fine!
+//! ```no_run
+//! # use bevy::prelude::*;
+//! # use bevy_stardust::prelude::*;
+//! # use std::marker::PhantomData;
+//! #
+//! #[derive(TypePath)]
+//! pub struct MyGenericChannel<C: Channel>(PhantomData<C>);
+//! ```
 
 mod config;
 mod id;
