@@ -86,7 +86,7 @@ fn write_system<C: Channel>(
 
         info!("{}: Sent a message to a peer: {bytes:?}", name.0);
         outgoing.push_one(ChannelMessage {
-            channel: channels.channel_id(TypeId::of::<C>()).unwrap(),
+            channel: channels.id(TypeId::of::<C>()).unwrap(),
             payload: Message::from_bytes(bytes),
         });
     }

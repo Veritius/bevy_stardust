@@ -92,7 +92,7 @@ impl ChannelRegistry {
         }
 
         // Add to map
-        let channel_id = ChannelId::try_from(self.channel_count()).unwrap();
+        let channel_id = ChannelId::try_from(self.count()).unwrap();
         self.channel_type_ids.insert(type_id, channel_id);
         
         self.channel_data.push(ChannelData {
@@ -108,29 +108,23 @@ impl ChannelRegistry {
 
     /// Gets the id from the `ToChannelId` implementation.
     #[inline]
-    pub fn channel_id(&self, value: impl ToChannelId) -> Option<ChannelId> {
+    pub fn id(&self, value: impl ToChannelId) -> Option<ChannelId> {
         value.to_channel_id(self)
     }
 
     /// Returns a reference to the channel configuration.
-    pub fn channel_config(&self, id: impl ToChannelId) -> Option<&ChannelData> {
+    pub fn config(&self, id: impl ToChannelId) -> Option<&ChannelData> {
         self.channel_data.get(Into::<usize>::into(id.to_channel_id(self)?))
     }
 
     /// Returns whether the channel exists.
-    pub fn channel_exists(&self, id: ChannelId) -> bool {
+    pub fn exists(&self, id: ChannelId) -> bool {
         self.channel_data.len() >= Into::<usize>::into(id)
     }
 
     /// Returns how many channels currently exist.
-    pub fn channel_count(&self) -> u32 {
+    pub fn count(&self) -> u32 {
         TryInto::<u32>::try_into(self.channel_data.len()).unwrap()
-    }
-
-    /// Returns an iterator of all existing channel ids.
-    pub fn channel_ids(&self) -> impl Iterator<Item = ChannelId> {
-        (0..self.channel_count()).into_iter()
-        .map(|f| ChannelId::try_from(f).unwrap())
     }
 }
 
