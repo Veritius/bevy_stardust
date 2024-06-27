@@ -61,7 +61,7 @@ impl VarInt {
         let len = self.len();
         if len as usize > b.remaining_mut() { return Err(()); }
 
-        match self.len() {
+        match len {
             1 => {
                 b.put_u8(bytes[0]);
             },
