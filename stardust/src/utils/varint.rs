@@ -58,27 +58,25 @@ impl VarInt {
     /// Encodes a `VarInt` to a [`BufMut`].
     pub fn write<B: BufMut>(&self, b: &mut B) -> Result<(), ()> {
         let mut bytes = (self.0 << 2).to_le_bytes();
+        let len = self.len();
+        if len as usize > b.remaining_mut() { return Err(()); }
 
         match self.len() {
             1 => {
-                if b.remaining_mut() < 1 { return Err(()); }
                 b.put_u8(bytes[0]);
             },
 
             2 => {
-                if b.remaining_mut() < 2 { return Err(()); }
                 bytes[0] |= 0b01;
                 b.put(&bytes[..2]);
             },
 
             4 => {
-                if b.remaining_mut() < 4 { return Err(()); }
                 bytes[0] |= 0b10;
                 b.put(&bytes[..4]);
             },
 
             8 => {
-                if b.remaining_mut() < 8 { return Err(()); }
                 bytes[0] |= 0b11;
                 b.put(&bytes[..8]);
             },
