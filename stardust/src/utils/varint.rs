@@ -1,5 +1,4 @@
 use std::fmt::{Debug, Display};
-
 use bytes::{Buf, BufMut};
 
 /// A variable length integer that can store values up to `(2^62)-1`.
