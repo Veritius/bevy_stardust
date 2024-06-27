@@ -9,6 +9,3 @@ pub mod plugin;
 pub mod prelude;
 pub mod scheduling;
 pub mod testing;
-
-#[cfg(feature="hashing")]
-pub mod hashing;
