@@ -10,6 +10,8 @@ use crate::diagnostics::NetworkPerformanceReduction;
 pub struct StardustPlugin;
 
 impl Plugin for StardustPlugin {
+    fn name(&self) -> &str { "StardustPlugin" }
+
     fn build(&self, app: &mut App) {
         // Register connection types
         app.register_type::<Peer>();
@@ -47,18 +49,11 @@ impl Plugin for StardustPlugin {
             crate::connections::clear_message_queues_system::<Outgoing>,
             crate::connections::clear_message_queues_system::<Incoming>,
         ).in_set(NetworkSend::Clear));
-
-        // Hashing-related functionality
-        #[cfg(feature="hashing")] {
-            use crate::hashing::*;
-            app.insert_resource(PendingHashValues::new());
-            app.add_systems(PreStartup, finalise_hasher_system);    
-        }
     }
 
     fn finish(&self, app: &mut App) {
         // Log because of ordering stuff
-        debug!("{} finished", std::any::type_name::<Self>());
+        debug!("{} finished", self.name());
 
         // Finish channels
         channels::finish_channels(app);
