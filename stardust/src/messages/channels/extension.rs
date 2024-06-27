@@ -2,7 +2,7 @@
 
 use bevy::app::App;
 use super::config::ChannelConfiguration;
-use super::{id::Channel, ChannelRegistryMut};
+use super::{id::Channel, ChannelRegistryBuilder};
 
 mod sealed {
     pub trait Sealed {}
@@ -28,8 +28,11 @@ impl ChannelSetupAppExt for App {
             self.net_hash_value(&config);
         }
 
+        // Get the registry
+        let mut registry = self.world.get_resource_mut::<ChannelRegistryBuilder>()
+            .expect("Cannot add channels after plugin finish");
+
         // Add to registry
-        let mut registry = self.world.resource_mut::<ChannelRegistryMut>();
         registry.0.register_channel::<C>(config);
     }
 }

@@ -1,9 +1,9 @@
 //! The Stardust core plugin.
 
-use std::sync::Arc;
 use bevy::prelude::*;
 use crate::prelude::*;
-use crate::{diagnostics::NetworkPerformanceReduction, messages::{channels, ChannelRegistryMut}};
+use crate::messages::channels;
+use crate::diagnostics::NetworkPerformanceReduction;
 
 /// The Stardust multiplayer plugin.
 /// Adds the core functionality of Stardust, but does not add a transport layer.
@@ -38,8 +38,8 @@ impl Plugin for StardustPlugin {
         // Setup orderings
         crate::scheduling::configure_scheduling(app);
 
-        // Add ChannelRegistryMut
-        app.insert_resource(ChannelRegistryMut(Box::new(ChannelRegistryInner::new())));
+        // Setup channels
+        channels::build_channels(app);
 
         // Add systems
         app.add_systems(Last, crate::connections::systems::despawn_closed_connections_system);
@@ -57,8 +57,10 @@ impl Plugin for StardustPlugin {
     }
 
     fn finish(&self, app: &mut App) {
-        // Remove SetupChannelRegistry and put the inner into an Arc inside ChannelRegistry
-        let registry = app.world.remove_resource::<ChannelRegistryMut>().unwrap();
-        app.insert_resource(ChannelRegistry(Arc::from(registry.0)));
+        // Log because of ordering stuff
+        debug!("{} finished", std::any::type_name::<Self>());
+
+        // Finish channels
+        channels::finish_channels(app);
     }
 }

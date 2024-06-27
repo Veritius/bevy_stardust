@@ -1,52 +1,74 @@
 //! The channel registry.
 
-use std::{any::TypeId, collections::BTreeMap, ops::{Deref, DerefMut}, sync::Arc};
-use bevy::prelude::*;
+use std::{any::TypeId, collections::BTreeMap, ops::Deref, sync::Arc};
+use bevy::{ecs::system::SystemParam, prelude::*};
 use crate::prelude::ChannelConfiguration;
 use super::{id::{Channel, ChannelId}, ToChannelId};
 
-#[derive(Resource)]
-pub(crate) struct ChannelRegistryMut(pub(crate) Box<ChannelRegistryInner>);
-
-impl Deref for ChannelRegistryMut {
-    type Target = ChannelRegistryInner;
-
-    #[inline]
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl DerefMut for ChannelRegistryMut {
-    #[inline]
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
-}
-
-/// Read-only access to the channel registry, only available after app setup.
+/// Access to registered channels and channel data.
 /// 
-/// This can be freely and cheaply cloned, and will point to the same inner channel registry.
-#[derive(Resource, Clone)]
-pub struct ChannelRegistry(pub(crate) Arc<ChannelRegistryInner>);
+/// This is only available after [`StardustPlugin`]`::`[`finish`] is called.
+/// Attempts to call before this point will cause a panic.
+/// 
+/// For asynchronous contexts, [`clone_arc`](Self::clone_arc) can be used
+/// to get a reference to the registry that will exist longer than the system.
+/// This can be used in the [`ComputeTaskPool`] or [`AsyncComputeTaskPool`].
+/// 
+/// [`StardustPlugin`]: crate::plugin::StardustPlugin
+/// [`finish`]: bevy::app::Plugin::finish
+/// [`ComputeTaskPool`]: bevy::tasks::ComputeTaskPool
+/// [`AsyncComputeTaskPool`]: bevy::tasks::AsyncComputeTaskPool
+#[derive(SystemParam)]
+pub struct Channels<'w> {
+    // This hides the ChannelRegistryFinished type so that it
+    // cannot be removed from the World, which would be bad
+    finished: Res<'w, ChannelRegistryFinished>,
+}
 
-impl Deref for ChannelRegistry {
-    type Target = ChannelRegistryInner;
-
-    #[inline]
-    fn deref(&self) -> &Self::Target {
-        &self.0
+impl<'w> Channels<'w> {
+    /// Returns an `Arc` to the underlying `ChannelRegistry`.
+    /// This allows the registry to be used in asynchronous contexts.
+    pub fn clone_arc(&self) -> Arc<ChannelRegistry> {
+        self.finished.0.clone()
     }
 }
 
-/// Stores channel configuration data. Accessible through the [`ChannelRegistry`] system parameter.
-pub struct ChannelRegistryInner {
+impl<'a> AsRef<ChannelRegistry> for Channels<'a> {
+    #[inline]
+    fn as_ref(&self) -> &ChannelRegistry {
+        &self.finished.0
+    }
+}
+
+impl<'a> Deref for Channels<'a> {
+    type Target = ChannelRegistry;
+
+    #[inline]
+    fn deref(&self) -> &Self::Target {
+        self.as_ref()
+    }
+}
+
+#[derive(Resource)]
+pub(super) struct ChannelRegistryBuilder(pub ChannelRegistry);
+
+impl ChannelRegistryBuilder {
+    pub fn finish(self) -> ChannelRegistryFinished {
+        ChannelRegistryFinished(Arc::new(self.0))
+    }
+}
+
+#[derive(Resource)]
+pub(super) struct ChannelRegistryFinished(Arc<ChannelRegistry>);
+
+/// The inner registry 
+pub struct ChannelRegistry {
     pub(super) channel_type_ids: BTreeMap<TypeId, ChannelId>,
     pub(super) channel_data: Vec<ChannelData>,
 }
 
-impl ChannelRegistryInner {
-    pub(in crate) fn new() -> Self {
+impl ChannelRegistry {
+    pub(super) fn new() -> Self {
         Self {
             channel_type_ids: BTreeMap::new(),
             channel_data: vec![],
@@ -112,13 +134,20 @@ impl ChannelRegistryInner {
     }
 }
 
-impl Default for ChannelRegistryInner {
+impl Default for ChannelRegistry {
     fn default() -> Self {
         Self {
             channel_type_ids: BTreeMap::new(),
             channel_data: vec![],
         }
     }
+}
+
+// AsRef is not reflexive, so we must implement it here
+// https://doc.rust-lang.org/std/convert/trait.AsRef.html#reflexivity
+impl AsRef<ChannelRegistry> for ChannelRegistry {
+    #[inline]
+    fn as_ref(&self) -> &ChannelRegistry { self }
 }
 
 /// Channel information generated when `add_channel` is run.

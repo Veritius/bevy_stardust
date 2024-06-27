@@ -1,6 +1,5 @@
-use std::ops::Deref;
 use bevy::prelude::*;
-use super::ChannelRegistryInner;
+use super::ChannelRegistry;
 
 /// Types that can be used to identify channels within the type system.
 pub trait Channel: TypePath + Send + Sync + 'static {}
@@ -55,24 +54,24 @@ impl From<ChannelId> for [u8;4] {
 /// Types that can be used to access channel data in a channel registry.
 pub trait ToChannelId: sealed::Sealed {
     /// Convert the type to a `ChannelId`
-    fn to_channel_id(&self, registry: impl Deref<Target = ChannelRegistryInner>) -> Option<ChannelId>;
+    fn to_channel_id(&self, registry: impl AsRef<ChannelRegistry>) -> Option<ChannelId>;
 }
 
 impl ToChannelId for ChannelId {
     #[inline]
-    fn to_channel_id(&self, _: impl Deref<Target = ChannelRegistryInner>) -> Option<ChannelId> {
+    fn to_channel_id(&self, _: impl AsRef<ChannelRegistry>) -> Option<ChannelId> {
         Some(self.clone())
     }
 }
 
 impl ToChannelId for std::any::TypeId {
-    fn to_channel_id(&self, registry: impl Deref<Target = ChannelRegistryInner>) -> Option<ChannelId> {
-        registry.channel_type_ids.get(&self).cloned()
+    fn to_channel_id(&self, registry: impl AsRef<ChannelRegistry>) -> Option<ChannelId> {
+        registry.as_ref().channel_type_ids.get(&self).cloned()
     }
 }
 
 impl ToChannelId for &dyn bevy::reflect::Reflect {
-    fn to_channel_id(&self, registry: impl Deref<Target = ChannelRegistryInner>) -> Option<ChannelId> {
+    fn to_channel_id(&self, registry: impl AsRef<ChannelRegistry>) -> Option<ChannelId> {
         self.type_id().to_channel_id(registry)
     }
 }

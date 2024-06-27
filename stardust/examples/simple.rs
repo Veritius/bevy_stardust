@@ -77,7 +77,7 @@ fn read_system(
 
 fn write_system<C: Channel>(
     name: Res<AppName>,
-    registry: Res<ChannelRegistry>,
+    channels: Channels,
     mut query: Query<&mut PeerMessages<Outgoing>, With<Peer>>,
 ) {
     for mut outgoing in query.iter_mut() {
@@ -86,7 +86,7 @@ fn write_system<C: Channel>(
 
         info!("{}: Sent a message to a peer: {bytes:?}", name.0);
         outgoing.push_one(ChannelMessage {
-            channel: registry.channel_id(TypeId::of::<C>()).unwrap(),
+            channel: channels.channel_id(TypeId::of::<C>()).unwrap(),
             payload: Message::from_bytes(bytes),
         });
     }

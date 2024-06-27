@@ -27,9 +27,6 @@ mod direction;
 mod message;
 mod queue;
 
-// Internal types
-pub(crate) use channels::ChannelRegistryMut;
-
 // Re-exports
 pub use bytes;
 

@@ -164,3 +164,14 @@ pub use config::*;
 pub use id::*;
 pub use registry::*;
 pub use extension::*;
+
+use bevy::prelude::*;
+
+pub(crate) fn build_channels(app: &mut App) {
+    app.insert_resource(ChannelRegistryBuilder(ChannelRegistry::new()));
+}
+
+pub(crate) fn finish_channels(app: &mut App) {
+    let builder = app.world.remove_resource::<ChannelRegistryBuilder>().unwrap();
+    app.world.insert_resource(builder.finish());
+}
