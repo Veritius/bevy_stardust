@@ -1,7 +1,7 @@
 use std::{collections::BTreeMap, sync::Mutex, time::{Duration, Instant}};
 use anyhow::{bail, Result};
 use bevy::prelude::*;
-use bevy_stardust::prelude::*;
+use bevy_stardust::{connections::PeerAddress, prelude::*};
 use bytes::Bytes;
 use endpoints::perform_transmit;
 use quinn_proto::{coding::Codec, Connection, ConnectionHandle, ConnectionStats, Dir, Event as AppEvent, FinishError, StreamEvent, StreamId, VarInt, WriteError};
@@ -164,7 +164,7 @@ pub(crate) fn connection_endpoint_events_system(
 
 pub(crate) fn connection_event_handler_system(
     config: Res<QuicConfig>,
-    mut connections: Query<(Entity, &mut QuicConnection, Option<&mut NetworkPeerLifestage>, Option<&mut NetworkMessages<Incoming>>)>,
+    mut connections: Query<(Entity, &mut QuicConnection, Option<&mut PeerLifestage>, Option<&mut PeerMessages<Incoming>>)>,
     mut commands: Commands,
     mut endpoints: Query<(Entity, &mut QuicEndpoint)>,
     mut dc_events: EventWriter<PeerDisconnectedEvent>,
@@ -196,15 +196,15 @@ pub(crate) fn connection_event_handler_system(
 
                 // Set their lifestage to Established.
                 if let Some(ref mut lifestage) = lifestage {
-                    *lifestage.as_mut() = NetworkPeerLifestage::Established;
+                    *lifestage.as_mut() = PeerLifestage::Established;
                 }
 
                 // Add the necessary components
                 commands.lock().unwrap().entity(entity).insert((
-                    NetworkPeer::new(),
-                    NetworkPeerAddress(inner.remote_address()),
-                    NetworkMessages::<Incoming>::new(),
-                    NetworkMessages::<Outgoing>::new(),
+                    Peer::new(),
+                    PeerAddress(inner.remote_address()),
+                    PeerMessages::<Incoming>::new(),
+                    PeerMessages::<Outgoing>::new(),
                 ));
             },
 
@@ -214,7 +214,7 @@ pub(crate) fn connection_event_handler_system(
 
                 // Set their lifestage to Closed.
                 if let Some(ref mut lifestage) = lifestage {
-                    *lifestage.as_mut() = NetworkPeerLifestage::Closed;
+                    *lifestage.as_mut() = PeerLifestage::Closed;
                 }
 
                 // Fetch the endpoint component
@@ -240,7 +240,8 @@ pub(crate) fn connection_event_handler_system(
                 // Notify other systems of the disconnection
                 dc_events.lock().unwrap().send(PeerDisconnectedEvent {
                     peer: entity,
-                    reason: None, // TODO: give good reasons
+                    reason: DisconnectReason::Unspecified, // TODO
+                    comment: None,
                 });
             },
 
@@ -287,7 +288,10 @@ pub(crate) fn connection_event_handler_system(
                                 // A chunk of data was read
                                 Ok(StreamReaderSegment::Stardust { channel, payload }) => {
                                     if let Some(ref mut incoming) = incoming {
-                                        incoming.push(channel, payload);
+                                        incoming.push_one(ChannelMessage {
+                                            channel,
+                                            payload: payload.into(),
+                                        });
                                     }
                                 },
 
@@ -358,8 +362,8 @@ pub(crate) fn connection_event_handler_system(
 }
 
 pub(crate) fn connection_message_sender_system(
-    registry: Res<ChannelRegistry>,
-    mut connections: Query<(Entity, &mut QuicConnection, &NetworkMessages<Outgoing>)>,
+    channels: Channels,
+    mut connections: Query<(Entity, &mut QuicConnection, &PeerMessages<Outgoing>)>,
 ) {
     // Iterate all connections in parallel
     connections.par_iter_mut().for_each(|(entity, mut connection, outgoing)| {
@@ -381,7 +385,7 @@ pub(crate) fn connection_message_sender_system(
             scr.clear();
 
             // Get the channel data
-            let channel_data = match registry.channel_config(channel) {
+            let config = match channels.config(channel) {
                 Some(channel_data) => channel_data,
                 None => {
                     error!("Tried to send a message to a channel that didn't exist ({channel:?})");
@@ -390,19 +394,15 @@ pub(crate) fn connection_message_sender_system(
             };
 
             // Different channels have different config requirements
-            use {ReliabilityGuarantee::*, OrderingGuarantee::*};
-            match (channel_data.reliable, channel_data.ordered) {
-                (Unreliable, Unordered) => todo!(),
+            use ChannelConsistency::*;
+            match config.consistency {
+                UnreliableUnordered => {},
 
-                (Unreliable, Sequenced) => todo!(),
+                UnreliableSequenced => {},
 
-                (Unreliable, Ordered) => todo!(),
+                ReliableUnordered => {},
 
-                (Reliable, Unordered) => todo!(),
-
-                (Reliable, Sequenced) => todo!(),
-
-                (Reliable, Ordered) => {
+                ReliableOrdered => {
                     // Get the stream ID of this channel
                     let (stream_id, mut stream) = match channel_streams.get(&channel) {
                         Some(stream_id) => {
@@ -422,8 +422,8 @@ pub(crate) fn connection_message_sender_system(
                         // unsent messages, so we add messages to the writer's queue
                         Some(writer) => {
                             // Queue all messages in the writer
-                            for payload in messages.iter().cloned() {
-                                writer.queue_framed(payload);
+                            for message in messages {
+                                writer.queue_framed(message.into());
                             }
                         },
 
@@ -439,8 +439,8 @@ pub(crate) fn connection_message_sender_system(
                             writer.queue_raw(Bytes::copy_from_slice(&scr));
 
                             // Queue all messages in the writer
-                            for payload in messages.iter().cloned() {
-                                writer.queue_framed(payload);
+                            for message in messages {
+                                writer.queue_framed(message.into());
 
                                 // Try to send in the stream
                                 let wresult = writer.write(&mut stream);
@@ -464,6 +464,8 @@ pub(crate) fn connection_message_sender_system(
                         }
                     }
                 },
+
+                _ => unimplemented!()
             }
         }
     });

@@ -16,13 +16,13 @@ impl Plugin for QuicPlugin {
             endpoint_datagram_recv_system,
             connection_endpoint_events_system,
             connection_event_handler_system,
-        ).chain().in_set(NetworkRead::Receive));
+        ).chain().in_set(NetworkRecv::Receive));
 
         app.add_systems(PostUpdate, (
             connection_message_sender_system,
             connection_datagram_send_system,
             connection_endpoint_events_system,
-        ).chain().in_set(NetworkWrite::Send));
+        ).chain().in_set(NetworkSend::Transmit));
 
         app.add_systems(Last, quic_config_checker_system);
     }

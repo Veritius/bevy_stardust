@@ -28,9 +28,7 @@ pub fn setup_app() -> App {
     ));
 
     app.add_channel::<SimpleChannel>(ChannelConfiguration {
-        reliable: ReliabilityGuarantee::Reliable,
-        ordered: OrderingGuarantee::Ordered,
-        fragmented: false,
+        consistency: ChannelConsistency::ReliableOrdered,
         priority: 0,
     });
 
@@ -43,27 +41,28 @@ pub fn setup_app() -> App {
 struct SimpleChannel;
 
 fn send_recv_message_system(
-    registry: Res<ChannelRegistry>,
+    channels: Channels,
     mut increment: Local<u64>,
     mut peers: Query<(
         Entity,
-        &NetworkMessages<Incoming>,
-        &mut NetworkMessages<Outgoing>,
+        &PeerMessages<Incoming>,
+        &mut PeerMessages<Outgoing>,
     )>,
 ) {
     for (entity, incoming, mut outgoing) in peers.iter_mut() {
         // Read out all messages
-        let iter = incoming.iter().flat_map(|(c, m)| m.iter().cloned().map(move |v| (c, v)));
+        let iter = incoming.iter().flat_map(|(c, m)| m.map(move |v| (c, v)));
         for (channel, message) in iter {
             let str = std::str::from_utf8(&message[..]).unwrap();
             info!("Received message from {entity:?} on channel {channel:?}: {str}")
         }
 
         // Send a message
-        let cid = registry.channel_id(TypeId::of::<SimpleChannel>()).unwrap();
+        let channel = channels.id(TypeId::of::<SimpleChannel>()).unwrap();
         let message = format!("This is message {}", *increment);
-        info!("Sending message to {entity:?} on channel {cid:?}: {message}");
-        outgoing.push(cid, Bytes::from(message));
+        info!("Sending message to {entity:?} on channel {channel:?}: {message}");
+        let payload = Message::from(Bytes::from(message));
+        outgoing.push_one(ChannelMessage { channel, payload });
         *increment += 1;
     }
 }

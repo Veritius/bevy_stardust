@@ -1,6 +1,7 @@
 use std::cmp::Ordering;
 use bevy::utils::{smallvec::SmallVec, thiserror::Error};
 use bevy_stardust::prelude::*;
+use bytes::{Buf, BufMut, BytesMut};
 use quinn_proto::{coding::{Codec, Result as DecodeResult}, SendStream, VarInt, WriteError};
 
 pub(crate) enum StreamOpenHeader {
