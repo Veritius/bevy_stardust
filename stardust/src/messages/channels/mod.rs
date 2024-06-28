@@ -155,13 +155,15 @@
 //! ```
 
 mod config;
-mod id;
-mod registry;
 mod extension;
+mod id;
+mod params;
+mod registry;
 
 pub use config::*;
 pub use id::*;
 pub use registry::*;
+pub use params::ChannelData;
 pub use extension::*;
 
 use bevy::prelude::*;
