@@ -160,13 +160,14 @@ mod id;
 mod params;
 mod registry;
 
-pub use config::*;
+pub use config::{ChannelConfiguration, ChannelConsistency};
 pub use id::*;
-pub use registry::*;
+pub use registry::{Channels, ChannelRegistry, ChannelMetadata};
 pub use params::ChannelData;
 pub use extension::*;
 
 use bevy::prelude::*;
+use registry::{ChannelRegistryBuilder, ChannelRegistryFinished};
 
 pub(crate) fn plugin_build(app: &mut App) {
     app.insert_resource(ChannelRegistryBuilder(ChannelRegistry::new()));

@@ -73,7 +73,7 @@ impl Deref for ChannelRegistryFinished {
 /// The inner registry 
 pub struct ChannelRegistry {
     pub(super) channel_type_ids: BTreeMap<TypeId, ChannelId>,
-    pub(super) channel_data: Vec<ChannelData>,
+    pub(super) channel_data: Vec<Registration>,
 }
 
 impl ChannelRegistry {
@@ -104,10 +104,12 @@ impl ChannelRegistry {
         let channel_id = ChannelId::try_from(self.count()).unwrap();
         self.channel_type_ids.insert(type_id, channel_id);
         
-        self.channel_data.push(ChannelData {
-            type_id,
-            type_path,
-            channel_id,
+        self.channel_data.push(Registration {
+            metadata: ChannelMetadata {
+                type_id,
+                type_path,
+                channel_id,
+            },
 
             config,
         });
@@ -121,9 +123,19 @@ impl ChannelRegistry {
         value.to_channel_id(self)
     }
 
+    pub(super) fn get_registration(&self, id: impl ToChannelId) -> Option<&Registration> {
+        self.channel_data
+            .get(Into::<usize>::into(id.to_channel_id(self)?))
+    }
+
+    /// Returns a reference to the channel metadata.
+    pub fn metadata(&self, id: impl ToChannelId) -> Option<&ChannelMetadata> {
+        self.get_registration(id).map(|v| &v.metadata)
+    }
+
     /// Returns a reference to the channel configuration.
-    pub fn config(&self, id: impl ToChannelId) -> Option<&ChannelData> {
-        self.channel_data.get(Into::<usize>::into(id.to_channel_id(self)?))
+    pub fn config(&self, id: impl ToChannelId) -> Option<&ChannelConfiguration> {
+        self.get_registration(id).map(|v| &v.config)
     }
 
     /// Returns whether the channel exists.
@@ -153,8 +165,8 @@ impl AsRef<ChannelRegistry> for ChannelRegistry {
     fn as_ref(&self) -> &ChannelRegistry { self }
 }
 
-/// Channel information generated when `add_channel` is run.
-pub struct ChannelData {
+/// Metadata about a channel, generated during channel registration.
+pub struct ChannelMetadata {
     /// The channel's `TypeId`.
     pub type_id: TypeId,
 
@@ -163,16 +175,9 @@ pub struct ChannelData {
 
     /// The channel's sequential ID assigned by the registry.
     pub channel_id: ChannelId,
-
-    /// The config of the channel.
-    /// Since `ChannelData` implements `Deref` for `ChannelConfiguration`, this is just clutter.
-    config: ChannelConfiguration,
 }
 
-impl std::ops::Deref for ChannelData {
-    type Target = ChannelConfiguration;
-
-    fn deref(&self) -> &Self::Target {
-        &self.config
-    }
+pub(super) struct Registration {
+    pub metadata: ChannelMetadata,
+    pub config: ChannelConfiguration,
 }
