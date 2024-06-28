@@ -61,6 +61,15 @@ impl ChannelRegistryBuilder {
 #[derive(Resource)]
 pub(super) struct ChannelRegistryFinished(Arc<ChannelRegistry>);
 
+impl Deref for ChannelRegistryFinished {
+    type Target = ChannelRegistry;
+
+    #[inline]
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
 /// The inner registry 
 pub struct ChannelRegistry {
     pub(super) channel_type_ids: BTreeMap<TypeId, ChannelId>,
