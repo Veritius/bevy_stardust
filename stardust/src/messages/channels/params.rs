@@ -32,6 +32,15 @@ impl<C: Channel> ChannelData<'_, C> {
     }
 }
 
+impl<'a, C: Channel> Clone for ChannelData<'a, C> {
+    fn clone(&self) -> ChannelData<'a, C> {
+        Self {
+            registration: self.registration,
+            phantom: PhantomData,
+        }
+    }
+}
+
 pub struct ChannelDataState {
     // Directly use the State type from the SystemParam implementation
     // This avoids type errors if it's changed in future. It shouldn't, but eh.
