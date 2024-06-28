@@ -42,7 +42,7 @@ where
     C: Channel,
 {
     type State = ChannelDataState;
-    type Item<'world, 'state> = Self;
+    type Item<'world, 'state> = ChannelData<'world, C>;
 
     fn init_state(world: &mut World, system_meta: &mut SystemMeta) -> Self::State {
         let res_state = <Res<ChannelRegistryFinished> as SystemParam>::init_state(world, system_meta);
@@ -57,18 +57,16 @@ where
         world: UnsafeWorldCell<'world>,
         change_tick: Tick,
     ) -> Self::Item<'world, 'state> {
-        let registry = <Res<ChannelRegistryFinished> as SystemParam>::get_param(
+        let registry = <Res<'world, ChannelRegistryFinished> as SystemParam>::get_param(
             &mut state.res_state,
             system_meta,
             world,
             change_tick
-        );
+        ).into_inner();
 
-        todo!()
-
-        // return ChannelData::<'state> {
-        //     registration: registry.get_registration(state.channel).unwrap(),
-        //     phantom: PhantomData,
-        // }
+        return ChannelData {
+            registration: registry.get_registration(state.channel).unwrap(),
+            phantom: PhantomData,
+        }
     }
 }
