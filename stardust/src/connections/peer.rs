@@ -40,7 +40,7 @@ pub enum PeerLifestage {
     /// This step may be skipped and peers will jump directly to the `Closed` stage from any other variant.
     Closing,
 
-    /// The connection is closed, and the entity will soon be despawned automatically.
+    /// The connection is closed.
     Closed,
 }
 

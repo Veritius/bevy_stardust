@@ -3,7 +3,8 @@
 use bevy::prelude::*;
 use crate::prelude::*;
 use crate::messages::channels;
-use crate::diagnostics::NetworkPerformanceReduction;
+use crate::connections::*;
+use crate::diagnostics::*;
 
 /// The Stardust multiplayer plugin.
 /// Adds the core functionality of Stardust, but does not add a transport layer.
@@ -17,7 +18,10 @@ impl Plugin for StardustPlugin {
         app.register_type::<Peer>();
         app.register_type::<PeerUid>();
         app.register_type::<PeerLifestage>();
+
+        // Register diagnostic types
         app.register_type::<NetworkPerformanceReduction>();
+        app.register_type::<PeerStats>();
 
         // Register channel types
         app.register_type::<ChannelId>();
@@ -43,7 +47,6 @@ impl Plugin for StardustPlugin {
         channels::plugin_build(app);
 
         // Add systems
-        app.add_systems(Last, crate::connections::systems::despawn_closed_connections_system);
         app.add_systems(PostUpdate, (
             crate::connections::clear_message_queues_system::<Outgoing>,
             crate::connections::clear_message_queues_system::<Incoming>,
