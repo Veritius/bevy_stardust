@@ -1,5 +1,7 @@
 use std::any::Any;
 use bevy::prelude::*;
+use crate::prelude::VarInt;
+
 use super::ChannelRegistry;
 
 /// Types that can be used to identify channels within the type system.
@@ -38,12 +40,6 @@ impl From<u32> for ChannelId {
     }
 }
 
-impl From<[u8;4]> for ChannelId {
-    fn from(value: [u8;4]) -> Self {
-        Self(u32::from_be_bytes(value))
-    }
-}
-
 impl From<ChannelId> for u32 {
     fn from(value: ChannelId) -> Self {
         value.0
@@ -56,9 +52,29 @@ impl From<ChannelId> for usize {
     }
 }
 
+impl From<[u8;4]> for ChannelId {
+    fn from(value: [u8;4]) -> Self {
+        Self(u32::from_be_bytes(value))
+    }
+}
+
 impl From<ChannelId> for [u8;4] {
     fn from(value: ChannelId) -> Self {
         value.0.to_be_bytes()
+    }
+}
+
+impl From<VarInt> for ChannelId {
+    #[inline]
+    fn from(value: VarInt) -> Self {
+        value.into()
+    }
+}
+
+impl From<ChannelId> for VarInt {
+    #[inline]
+    fn from(value: ChannelId) -> Self {
+        VarInt::from_u32(value.0)
     }
 }
 
