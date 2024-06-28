@@ -8,7 +8,7 @@ use super::Peer;
 /// [`PeerMessages<D>`] has a generic `D`, which defines its [direction].
 /// 
 /// [`PeerMessages<D>`] components are cleared automatically in the [`NetworkSend::Clear`] system set.
-/// Unread messages will be lost unless the [`Message`] objects are cloned.
+/// Unread messages will be discarded unless the [`Message`] objects are cloned.
 /// 
 /// [peer entity]: crate::connections
 /// [direction]: crate::messages::NetDirection
