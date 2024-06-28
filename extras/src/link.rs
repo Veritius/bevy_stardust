@@ -6,7 +6,7 @@
 
 use std::sync::{mpsc::{channel, Receiver, Sender, TryRecvError}, Mutex};
 use bevy::prelude::*;
-use crate::prelude::*;
+use bevy_stardust::prelude::*;
 
 /// Adds a simple transport plugin for apps part of the same process.
 /// See the [top level documentation](self) for more information.

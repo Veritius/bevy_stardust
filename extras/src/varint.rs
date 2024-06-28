@@ -1,5 +1,8 @@
+//! Variable length integers, for efficient encoding of integers.
+
 use std::fmt::{Debug, Display};
-use bytes::{Buf, BufMut};
+use bevy_stardust::messages::bytes::{Buf, BufMut};
+use bevy_stardust::prelude::*;
 
 /// A variable length integer that can store values up to `(2^62)-1`.
 /// 
@@ -107,6 +110,13 @@ impl TryFrom<u64> for VarInt {
     }
 }
 
+impl From<VarInt> for u64 {
+    #[inline]
+    fn from(value: VarInt) -> Self {
+        value.0
+    }
+}
+
 impl From<u32> for VarInt {
     #[inline]
     fn from(value: u32) -> Self {
@@ -114,10 +124,17 @@ impl From<u32> for VarInt {
     }
 }
 
-impl From<VarInt> for u64 {
+impl From<VarInt> for ChannelId {
     #[inline]
     fn from(value: VarInt) -> Self {
-        value.0
+        value.into()
+    }
+}
+
+impl From<ChannelId> for VarInt {
+    #[inline]
+    fn from(value: ChannelId) -> Self {
+        VarInt::from_u32(value.into())
     }
 }
 

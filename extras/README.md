@@ -1,0 +1,2 @@
+# bevy_stardust_extras
+Miscellaneous functionality.
