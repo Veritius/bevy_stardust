@@ -1,10 +1,15 @@
 use std::marker::PhantomData;
 use bevy::prelude::*;
-use crate::messages::{ChannelId, ChannelIter, ChannelMessage, Message, MessageIter, MessageQueue, NetDirectionType};
+use crate::prelude::*;
+use crate::messages::*;
 use super::Peer;
 
 /// A message queue for a [peer entity], exposing a subset of [`MessageQueue`]'s API.
-/// The generic `D` defines its [direction].
+/// 
+/// [`PeerMessages<D>`] has a generic `D`, which defines its [direction].
+/// 
+/// [`PeerMessages<D>`] components are cleared automatically in the [`NetworkSend::Clear`] system set.
+/// Unread messages will be lost unless the [`Message`] objects are cloned.
 /// 
 /// [peer entity]: crate::connections
 /// [direction]: crate::messages::NetDirection
