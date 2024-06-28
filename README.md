@@ -50,10 +50,9 @@ use bevy::{prelude::*, app::{ScheduleRunnerPlugin, MainSchedulePlugin}};
 use bevy_stardust::prelude::*;
 
 // Channels are accessed with types in the type system.
-// Simply put, you just need to create simple types like this.
+// Any type that is Any + Send + Sync is usable in Stardust.
+// Simply put, you just need to create a field-less struct like this.
 // You can use Rust's privacy system to control channel access.
-// Channels must also implement TypePath: this is easy to derive.
-#[derive(TypePath)]
 struct MyChannel;
 
 fn main() {
