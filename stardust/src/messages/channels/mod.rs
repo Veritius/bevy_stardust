@@ -97,9 +97,9 @@
 //! # Advanced channels
 //! Only compile-time information is used from channel types.
 //! Your types will never be instantiated. While most often,
-//! you will use ZSTs like unit-like structs or zero-variant enums,
-//! any type that implements `Channel` can be used.
+//! you will use a zero-sized newtype like a field-less struct.
 //! 
+//! ## Reusing types
 //! Let's say you have an event called `MovementEvent`, that is
 //! used to inform systems of player movements. If you want to
 //! send this event to other peers, you could create a new type
