@@ -1,6 +1,6 @@
 //! The channel registry.
 
-use std::{any::TypeId, collections::BTreeMap, ops::Deref, sync::Arc};
+use std::{any::{type_name, TypeId}, collections::BTreeMap, ops::Deref, sync::Arc};
 use bevy::{ecs::system::SystemParam, prelude::*};
 use crate::prelude::ChannelConfiguration;
 use super::{id::{Channel, ChannelId}, ToChannelId};
@@ -95,7 +95,7 @@ impl ChannelRegistry {
         
         // Check the channel doesn't already exist
         let type_id = TypeId::of::<C>();
-        let type_path = C::type_path();
+        let type_name = type_name::<C>();
         if self.channel_type_ids.get(&type_id).is_some() {
             panic!("A channel was registered twice: {}", std::any::type_name::<C>());
         }
@@ -107,7 +107,7 @@ impl ChannelRegistry {
         self.channel_data.push(Registration {
             metadata: ChannelMetadata {
                 type_id,
-                type_path,
+                type_name,
                 channel_id,
             },
 
@@ -170,8 +170,9 @@ pub struct ChannelMetadata {
     /// The channel's `TypeId`.
     pub type_id: TypeId,
 
-    /// The channel's `TypePath` (from `bevy::reflect`)
-    pub type_path: &'static str,
+    /// The channel's type name, from the `Any` trait.
+    /// This is only useful for debugging, and is not stable across compilation.
+    pub type_name: &'static str,
 
     /// The channel's sequential ID assigned by the registry.
     pub channel_id: ChannelId,

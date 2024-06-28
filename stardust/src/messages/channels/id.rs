@@ -1,11 +1,12 @@
+use std::any::Any;
 use bevy::prelude::*;
 use super::ChannelRegistry;
 
 /// Types that can be used to identify channels within the type system.
 /// Once registered to the `App`, this type has a [`ChannelId`] assigned to it.
-pub trait Channel: TypePath + Send + Sync + 'static {}
+pub trait Channel: Any + Send + Sync {}
 
-impl<T: TypePath + Send + Sync + 'static> Channel for T {}
+impl<T: Any + Send + Sync> Channel for T {}
 
 /// A unique identifier for a channel, generated during application setup.
 /// 
@@ -78,11 +79,5 @@ impl ToChannelId for std::any::TypeId {
     #[inline]
     fn to_channel_id(&self, registry: impl AsRef<ChannelRegistry>) -> Option<ChannelId> {
         registry.as_ref().channel_type_ids.get(&self).cloned()
-    }
-}
-
-impl ToChannelId for &dyn bevy::reflect::Reflect {
-    fn to_channel_id(&self, registry: impl AsRef<ChannelRegistry>) -> Option<ChannelId> {
-        self.type_id().to_channel_id(registry)
     }
 }

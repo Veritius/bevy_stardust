@@ -27,14 +27,10 @@
 //! # Adding channels
 //! Channels are accessed using the type system. You can use any type,
 //! as long as it implements [`Channel`]. Since `Channel` is automatically
-//! implemented for any type that is `TypePath + Send + Sync + 'static`,
-//! in almost all cases you just have to derive `TypePath`.
+//! implemented for any type that is `Any + Send + Sync`, you can just
+//! define a new struct with no fields.
 //! 
 //! ```no_run
-//! # use bevy::prelude::*;
-//! # use bevy_stardust::prelude::*;
-//! #
-//! #[derive(TypePath)]
 //! pub struct MyChannel;
 //! ```
 //! 
@@ -45,7 +41,6 @@
 //! to understand what each field does, and its implications for your code.
 //! 
 //! ```no_run
-//! # use bevy::prelude::*;
 //! # use bevy_stardust::prelude::*;
 //! # fn _p() {
 //! let config = ChannelConfiguration {
@@ -71,7 +66,6 @@
 //! # use bevy::prelude::*;
 //! # use bevy_stardust::prelude::*;
 //! #
-//! #[derive(TypePath)]
 //! pub struct MyChannel;
 //! 
 //! fn main() {
@@ -115,7 +109,7 @@
 //! # use bevy::prelude::*;
 //! # use bevy_stardust::prelude::*;
 //! #
-//! #[derive(Event, TypePath)]
+//! #[derive(Event)]
 //! struct MovementEvent {
 //!     change: Vec3,
 //! }
@@ -146,11 +140,9 @@
 //! You can also use generic type parameters as an organisational tool.
 //! As long as the type still implements `Channel`, it's just fine!
 //! ```no_run
-//! # use bevy::prelude::*;
 //! # use bevy_stardust::prelude::*;
 //! # use std::marker::PhantomData;
 //! #
-//! #[derive(TypePath)]
 //! pub struct MyGenericChannel<C: Channel>(PhantomData<C>);
 //! ```
 
