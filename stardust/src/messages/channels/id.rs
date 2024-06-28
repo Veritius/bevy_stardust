@@ -62,8 +62,8 @@ impl From<ChannelId> for [u8;4] {
 }
 
 /// Types that can be used to access channel data in a channel registry.
-pub trait ToChannelId: sealed::Sealed {
-    /// Convert the type to a `ChannelId`
+pub trait ToChannelId {
+    /// Convert the type to a `ChannelId`.
     fn to_channel_id(&self, registry: impl AsRef<ChannelRegistry>) -> Option<ChannelId>;
 }
 
@@ -75,6 +75,7 @@ impl ToChannelId for ChannelId {
 }
 
 impl ToChannelId for std::any::TypeId {
+    #[inline]
     fn to_channel_id(&self, registry: impl AsRef<ChannelRegistry>) -> Option<ChannelId> {
         registry.as_ref().channel_type_ids.get(&self).cloned()
     }
@@ -84,11 +85,4 @@ impl ToChannelId for &dyn bevy::reflect::Reflect {
     fn to_channel_id(&self, registry: impl AsRef<ChannelRegistry>) -> Option<ChannelId> {
         self.type_id().to_channel_id(registry)
     }
-}
-
-mod sealed {
-    pub trait Sealed {}
-    impl Sealed for super::ChannelId {}
-    impl Sealed for std::any::TypeId {}
-    impl Sealed for &dyn bevy::reflect::Reflect {}
 }
