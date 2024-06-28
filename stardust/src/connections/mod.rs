@@ -22,7 +22,6 @@
 
 mod messages;
 mod peer;
-mod security;
 mod stats;
 
 pub(crate) mod systems;
@@ -32,5 +31,4 @@ pub mod events;
 
 pub use messages::*;
 pub use peer::*;
-pub use security::*;
 pub use stats::{PeerRtt, PeerStats};

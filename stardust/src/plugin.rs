@@ -17,7 +17,6 @@ impl Plugin for StardustPlugin {
         app.register_type::<Peer>();
         app.register_type::<PeerUid>();
         app.register_type::<PeerLifestage>();
-        app.register_type::<NetworkSecurity>();
         app.register_type::<NetworkPerformanceReduction>();
 
         // Register channel types
