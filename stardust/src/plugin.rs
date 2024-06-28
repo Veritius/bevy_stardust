@@ -41,7 +41,7 @@ impl Plugin for StardustPlugin {
         crate::scheduling::configure_scheduling(app);
 
         // Setup channels
-        channels::build_channels(app);
+        channels::plugin_build(app);
 
         // Add systems
         app.add_systems(Last, crate::connections::systems::despawn_closed_connections_system);
@@ -51,11 +51,8 @@ impl Plugin for StardustPlugin {
         ).in_set(NetworkSend::Clear));
     }
 
-    fn finish(&self, app: &mut App) {
-        // Log because of ordering stuff
-        debug!("{} finished", self.name());
-
+    fn cleanup(&self, app: &mut App) {
         // Finish channels
-        channels::finish_channels(app);
+        channels::plugin_cleanup(app);
     }
 }

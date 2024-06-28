@@ -7,15 +7,15 @@ use super::{id::{Channel, ChannelId}, ToChannelId};
 
 /// Access to registered channels and channel data.
 /// 
-/// This is only available after [`StardustPlugin`]`::`[`finish`] is called.
-/// Attempts to call before this point will cause a panic.
+/// This is only available after [`StardustPlugin`]`::`[`cleanup`] is called.
+/// Attempts to access this type before this point will cause a panic.
 /// 
 /// For asynchronous contexts, [`clone_arc`](Self::clone_arc) can be used
 /// to get a reference to the registry that will exist longer than the system.
 /// This can be used in the [`ComputeTaskPool`] or [`AsyncComputeTaskPool`].
 /// 
 /// [`StardustPlugin`]: crate::plugin::StardustPlugin
-/// [`finish`]: bevy::app::Plugin::finish
+/// [`cleanup`]: bevy::app::Plugin::cleanup
 /// [`ComputeTaskPool`]: bevy::tasks::ComputeTaskPool
 /// [`AsyncComputeTaskPool`]: bevy::tasks::AsyncComputeTaskPool
 #[derive(SystemParam)]

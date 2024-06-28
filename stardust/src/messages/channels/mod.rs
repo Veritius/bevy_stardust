@@ -90,7 +90,7 @@
 //! ```
 //! 
 //! Note that channels must be added *after* [`StardustPlugin`] is added,
-//! and *before* `StardustPlugin` [finishes][Plugin::finish]. Channel
+//! and *before* `StardustPlugin` [cleans up][Plugin::cleanup]. Channel
 //! insertion order also matters: you must make sure all calls to
 //! [`add_channel`][add_channel] are in a deterministic order.
 //! This includes channels registered by plugins.
@@ -98,7 +98,6 @@
 //! 
 //! [messages]: crate::messages
 //! [`StardustPlugin`]: crate::plugin::StardustPlugin
-//! [Plugin::finish]: bevy::prelude::Plugin::finish
 //! [add_channel]: ChannelSetupAppExt::add_channel
 //! 
 //! # Advanced channels
@@ -167,11 +166,11 @@ pub use extension::*;
 
 use bevy::prelude::*;
 
-pub(crate) fn build_channels(app: &mut App) {
+pub(crate) fn plugin_build(app: &mut App) {
     app.insert_resource(ChannelRegistryBuilder(ChannelRegistry::new()));
 }
 
-pub(crate) fn finish_channels(app: &mut App) {
+pub(crate) fn plugin_cleanup(app: &mut App) {
     let mut builder = app.world.remove_resource::<ChannelRegistryBuilder>().unwrap();
     builder.0.channel_data.shrink_to_fit();
     app.world.insert_resource(builder.finish());
