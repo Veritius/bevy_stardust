@@ -153,10 +153,10 @@ mod params;
 mod registry;
 
 pub use config::{ChannelConfiguration, ChannelConsistency};
-pub use id::*;
+pub use id::{Channel, ChannelId, ToChannelId};
 pub use registry::{Channels, ChannelRegistry, ChannelMetadata};
 pub use params::ChannelData;
-pub use extension::*;
+pub use extension::ChannelSetupAppExt;
 
 use bevy::prelude::*;
 use registry::ChannelRegistryBuilder;
