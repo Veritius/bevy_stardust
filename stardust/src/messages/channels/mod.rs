@@ -27,8 +27,8 @@
 //! # Adding channels
 //! Channels are accessed using the type system. You can use any type,
 //! as long as it implements [`Channel`]. Since `Channel` is automatically
-//! implemented for any type that is `Any + Send + Sync`, you can just
-//! define a new struct with no fields.
+//! implemented for any type that implements `Any`, you can simply define
+//! a new struct with no fields, or reuse another type.
 //! 
 //! ```no_run
 //! pub struct MyChannel;

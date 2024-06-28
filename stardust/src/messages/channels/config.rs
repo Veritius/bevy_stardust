@@ -1,7 +1,3 @@
-//! Channel configuration.
-//! 
-//! All settings are not definitive, but hints to transport layers as how to treat channels.
-
 use bevy::reflect::Reflect;
 
 /// Configuration for a channel.

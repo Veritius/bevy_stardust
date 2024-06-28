@@ -4,9 +4,9 @@ use super::ChannelRegistry;
 
 /// Types that can be used to identify channels within the type system.
 /// Once registered to the `App`, this type has a [`ChannelId`] assigned to it.
-pub trait Channel: Any + Send + Sync {}
+pub trait Channel: Any {}
 
-impl<T: Any + Send + Sync> Channel for T {}
+impl<T: Any> Channel for T {}
 
 /// A unique identifier for a channel, generated during application setup.
 /// 
