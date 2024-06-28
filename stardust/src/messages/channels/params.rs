@@ -3,10 +3,16 @@ use bevy::ecs::{component::Tick, system::{SystemMeta, SystemParam}, world::unsaf
 use super::registry::*;
 use super::*;
 
-/// A `SystemParam` that caches data about channel `C`.
+/// A `SystemParam` that provides rapid, cached access to data about channel `C`.
+///
+/// Unlike [`Channels`], `ChannelData` accesses data when the system is run by the scheduler.
+/// The data that `Channels` returns is cached, allowing fast repeat access.
+/// Using `ChannelData` is more convenient if `C` is known at compile time.
 /// 
-/// If `C` is known at compile time, this is preferable to using [`Channels`].
-/// If channel `C` is not registered at initialisation, a panic will occur.
+/// # Panics
+/// Panics when used as a [`SystemParam`] if `C` is not registered.
+/// 
+/// If `C` may not be registered, use [`Channels`] instead.
 pub struct ChannelData<'a, C: Channel> {
     registration: &'a Registration,
     phantom: PhantomData<C>,
