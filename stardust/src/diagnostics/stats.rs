@@ -11,6 +11,7 @@ use bevy::prelude::*;
 /// RTT is tracked in its own component, called [`PeerRtt`].
 /// 
 /// [peer entities]: crate::connections
+/// [`PeerRtt`]: crate::connections::PeerRtt
 #[derive(Debug, Default, Clone, Component, Reflect)]
 #[reflect(Default, Component)]
 #[non_exhaustive]
