@@ -3,7 +3,10 @@ use bevy::ecs::{component::Tick, system::{SystemMeta, SystemParam}, world::unsaf
 use super::registry::*;
 use super::*;
 
-/// A `SystemParam` that gives shorthand access to data about the channel `C`.
+/// A `SystemParam` that caches data about channel `C`.
+/// 
+/// If `C` is known at compile time, this is preferable to using [`Channels`].
+/// If channel `C` is not registered at initialisation, a panic will occur.
 pub struct ChannelData<'a, C: Channel> {
     registration: &'a Registration,
     phantom: PhantomData<C>,
