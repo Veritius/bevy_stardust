@@ -1,6 +1,5 @@
 use std::marker::PhantomData;
 use bevy::prelude::*;
-use crate::prelude::*;
 use crate::messages::*;
 use super::Peer;
 
@@ -13,13 +12,14 @@ use super::Peer;
 /// 
 /// [peer entity]: crate::connections
 /// [direction]: crate::messages::NetDirection
+/// [`NetworkSend::Clear`]: crate::scheduling::NetworkSend::Clear
 #[derive(Default, Component)]
-pub struct PeerMessages<D: NetDirectionType> {
+pub struct PeerMessages<D: MessageDirection> {
     inner: MessageQueue,
     phantom: PhantomData<D>,
 }
 
-impl<D: NetDirectionType> PeerMessages<D> {
+impl<D: MessageDirection> PeerMessages<D> {
     /// Creates a new [`PeerMessages<D>`].
     pub fn new() -> Self {
         Self {
@@ -79,7 +79,7 @@ impl<D: NetDirectionType> PeerMessages<D> {
     }
 }
 
-impl<'a, D: NetDirectionType> IntoIterator for &'a PeerMessages<D> {
+impl<'a, D: MessageDirection> IntoIterator for &'a PeerMessages<D> {
     type Item = <&'a MessageQueue as IntoIterator>::Item;
     type IntoIter = <&'a MessageQueue as IntoIterator>::IntoIter;
 
@@ -89,7 +89,7 @@ impl<'a, D: NetDirectionType> IntoIterator for &'a PeerMessages<D> {
     }
 }
 
-pub(crate) fn clear_message_queues_system<D: NetDirectionType>(
+pub(crate) fn clear_message_queues_system<D: MessageDirection>(
     mut instances: Query<&mut PeerMessages<D>, With<Peer>>,
 ) {
     for mut messages in instances.iter_mut() {

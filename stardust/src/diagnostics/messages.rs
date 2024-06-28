@@ -22,7 +22,7 @@ impl MessageCountDiagnosticsPlugin {
     pub const OUTGOING_COUNT: DiagnosticPath = DiagnosticPath::const_new("net/core/messages/outgoing");
 }
 
-fn diagnostic_system<D: NetDirectionType>(
+fn diagnostic_system<D: MessageDirection>(
     mut diagnostics: Diagnostics,
     query: Query<&PeerMessages<D>, With<Peer>>,
 ) {
