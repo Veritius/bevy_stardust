@@ -1,23 +1,31 @@
 use std::{any::TypeId, marker::PhantomData};
 use bevy::ecs::{component::Tick, system::{SystemMeta, SystemParam}, world::unsafe_world_cell::UnsafeWorldCell};
+use super::registry::*;
 use super::*;
 
 /// A `SystemParam` that gives shorthand access to data about the channel `C`.
-pub struct ChannelData<'w, C: Channel> {
-    id: ChannelId,
-    config: &'w ChannelConfiguration,
+pub struct ChannelData<'a, C: Channel> {
+    registration: &'a Registration,
     phantom: PhantomData<C>,
 }
 
 impl<C: Channel> ChannelData<'_, C> {
     /// Returns the [`ChannelId`] assigned to `C`.
-    pub fn id(&mut self) -> ChannelId {
-        todo!()
+    #[inline]
+    pub fn id(&self) -> ChannelId {
+        self.metadata().channel_id
+    }
+
+    /// Returns the [`ChannelMetadata`] of channel `C`.
+    #[inline]
+    pub fn metadata(&self) -> &ChannelMetadata {
+        &self.registration.metadata
     }
 
     /// Returns the [`ChannelConfiguration`] of channel `C`.
-    pub fn config(&mut self) -> &ChannelConfiguration {
-        todo!()
+    #[inline]
+    pub fn config(&self) -> &ChannelConfiguration {
+        &self.registration.config
     }
 }
 
@@ -57,5 +65,10 @@ where
         );
 
         todo!()
+
+        // return ChannelData::<'state> {
+        //     registration: registry.get_registration(state.channel).unwrap(),
+        //     phantom: PhantomData,
+        // }
     }
 }
