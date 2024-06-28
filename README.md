@@ -24,13 +24,6 @@ You can use any transport layer you want. Use UDP, TCP, QUIC, HTTP, some homebre
 
 You can use any replication or extra features you want. If you prefer a specific crate for replication, it's really easy to integrate it into Stardust, as long as it has some kind of API for taking in and outputting bytes.
 
-## Planned extensions
-The following features are planned to be created as additional crates, as part of the overall project.
-
-- Replication plugin
-- UDP, QUIC, and WebTransport plugins
-- Real time voice plugin
-
 ## Usage
 | Bevy | Stardust |
 | ---- | -------- |
@@ -135,6 +128,23 @@ fn read_words_system(
     }
 }
 ```
+
+## Related crates
+### Existing
+The following crates are parts of the project that are out of scope for the `bevy_stardust` crate, such as transport layers.
+
+| Crate                  | Description                 |
+|------------------------|-----------------------------|
+| `bevy_stardust_extras` | A collection of misc. tools |
+
+### Planned
+The following crates are planned to be implemented as part of the overall project, but aren't done yet. They're also too significant or too different to end up in `bevy_stardust` or `bevy_stardust_extras`.
+
+| Crate                     | Description              |
+|---------------------------|--------------------------|
+| `bevy_stardust_quic`      | QUIC transport layer     |
+| `bevy_stardust_voip`      | Voice chat plugin        |
+| `bevy_stardust_replicate` | State replication plugin |
 
 ## License
 bevy_stardust is free and open source software. It's licensed under:
