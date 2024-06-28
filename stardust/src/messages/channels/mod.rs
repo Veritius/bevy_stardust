@@ -172,6 +172,7 @@ pub(crate) fn build_channels(app: &mut App) {
 }
 
 pub(crate) fn finish_channels(app: &mut App) {
-    let builder = app.world.remove_resource::<ChannelRegistryBuilder>().unwrap();
+    let mut builder = app.world.remove_resource::<ChannelRegistryBuilder>().unwrap();
+    builder.0.channel_data.shrink_to_fit();
     app.world.insert_resource(builder.finish());
 }
