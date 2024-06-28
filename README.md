@@ -131,7 +131,7 @@ fn read_words_system(
 
 ## Related crates
 ### Existing
-The following crates are parts of the project that are out of scope for the `bevy_stardust` crate, such as transport layers.
+The following crates are parts of the project that are out of scope for the `bevy_stardust` crate, and are distributed separately, such as transport layers.
 
 | Crate                  | Description                 |
 |------------------------|-----------------------------|
