@@ -47,8 +47,9 @@ fn main() {
             write_system::<MyChannelC>,
         ));
 
-        // Manually invoke finish as this is a subapp.
+        // Manually invoke finish and cleanup as this is a subapp.
         app.finish();
+        app.cleanup();
     }
 
     #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, AppLabel)]
