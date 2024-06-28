@@ -20,7 +20,7 @@ pub enum NetDirection {
 /// 
 /// This is a [sealed trait] implemented by two [empty enums], [`Outgoing`] and [`Incoming`].
 /// These are intended to be used exclusively within the type system, such as on [`PeerMessages<D>`].
-/// This allows components to have 'directional' variations to indicate their role in message flow.
+/// This allows types to have 'directional' variations to indicate their role in message flow.
 /// 
 /// The enum [`NetDirection`] is useful to carry this information at runtime.
 /// It is also returned by any `MessageDirection` implementor with the `net_dir` function.
