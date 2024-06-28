@@ -1,7 +1,7 @@
 use std::{net::SocketAddr, time::Instant};
 use bevy::prelude::*;
 
-/// An active connection to a remote peer, as well as additional 
+/// A component for entities that represent a virtual connection.
 #[derive(Debug, Component, Reflect)]
 #[reflect(Debug, Component)]
 pub struct Peer {
