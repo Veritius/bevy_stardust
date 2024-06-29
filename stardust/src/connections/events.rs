@@ -8,7 +8,10 @@ macro_rules! dir_comment {
     (a2t) => { "\n\nThis is sent by application systems, and read by transport layers." };
 }
 
-/// Sent when a peer begins to connect.
+/// Sent by transport layers when a peer is connecting.
+/// 
+/// This event should be "followed up" by another event,
+/// such as [`PeerConnectedEvent`] or [`PeerDisconnectedEvent`].
 #[doc = dir_comment!(t2a)]
 #[derive(Event)]
 pub struct PeerConnectingEvent {
@@ -16,7 +19,10 @@ pub struct PeerConnectingEvent {
     pub peer: Entity,
 }
 
-/// Sent when a peer finishes connecting.
+/// Sent by transport layers when a peer has connected.
+/// 
+/// This may be sent after [`PeerConnectingEvent`],
+/// but can also occur on its own without any preceding events.
 #[doc = dir_comment!(t2a)]
 #[derive(Event)]
 pub struct PeerConnectedEvent {
@@ -24,7 +30,7 @@ pub struct PeerConnectedEvent {
     pub peer: Entity,
 }
 
-/// Sent by the application to disconnect a peer.
+/// Sent by the application to tell a transport layer to disconnect a peer.
 #[doc = dir_comment!(a2t)]
 #[derive(Debug, Clone, Event)]
 pub struct DisconnectPeerEvent {
@@ -44,10 +50,10 @@ pub struct DisconnectPeerEvent {
     pub force: bool,
 }
 
-/// Sent when a peer starts to disconnect.
+/// Sent by transport layers when a peer begins disconnecting.
 /// 
-/// Doesn't contain any information about why the disconnect is occurring.
-/// For that, wait for the [`PeerDisconnectedEvent`] event.
+/// This event should be followed up with [`PeerDisconnectedEvent`],
+/// which includes the reason for the disconnection.
 #[doc = dir_comment!(t2a)]
 #[derive(Debug, Clone, Event)]
 pub struct PeerDisconnectingEvent {
@@ -55,7 +61,10 @@ pub struct PeerDisconnectingEvent {
     pub peer: Entity,
 }
 
-/// Sent when a peer is disconnected.
+/// Sent by transport layers when a peer is fully disconnected.
+/// 
+/// This may occur after [`PeerConnectingEvent`] or after [`PeerDisconnectingEvent`],
+/// but can also occur on its own without any preceding events.
 #[doc = dir_comment!(t2a)]
 #[derive(Debug, Clone, Event)]
 pub struct PeerDisconnectedEvent {
