@@ -165,7 +165,7 @@ impl StreamReader {
                             Ok(v) => v,
                             Err(_) => return None,
                         };
-        
+
                         match header {
                             StreamOpenHeader::StardustReliable { channel } => {
                                 // Ensure it's a valid channel id
