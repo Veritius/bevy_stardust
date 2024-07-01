@@ -1,11 +1,10 @@
-use std::{collections::BTreeMap, sync::Mutex, time::{Duration, Instant}};
-use anyhow::{bail, Result};
+use std::{sync::Mutex, time::{Duration, Instant}};
+use anyhow::Result;
 use bevy::prelude::*;
 use bevy_stardust::{connections::PeerAddress, prelude::*};
 use bytes::Bytes;
 use endpoints::perform_transmit;
-use quinn_proto::{coding::Codec, Connection, ConnectionHandle, ConnectionStats, Dir, Event as AppEvent, FinishError, StreamEvent, StreamId, VarInt, WriteError};
-use streams::{FramedWriter, StreamOpenHeader, StreamReaderSegment, StreamReader};
+use quinn_proto::{Connection, ConnectionHandle, ConnectionStats, Event as AppEvent, StreamEvent, VarInt};
 use crate::*;
 
 /// A QUIC connection, attached to an endpoint.
@@ -18,10 +17,6 @@ pub struct QuicConnection {
     pub(crate) owner: Entity,
     pub(crate) handle: ConnectionHandle,
     pub(crate) inner: Box<Connection>,
-
-    channel_streams: BTreeMap<ChannelId, StreamId>,
-    framed_readers: BTreeMap<StreamId, StreamReader>,
-    framed_writers: BTreeMap<StreamId, FramedWriter>,
 }
 
 impl QuicConnection {
@@ -34,10 +29,6 @@ impl QuicConnection {
             owner,
             handle,
             inner,
-
-            channel_streams: BTreeMap::new(),
-            framed_readers: BTreeMap::new(),
-            framed_writers: BTreeMap::new(),
         }
     }
 
@@ -58,33 +49,6 @@ impl QuicConnection {
     /// Returns the full collection of statistics for the connection.
     pub fn stats(&self) -> ConnectionStats {
         self.inner.stats()
-    }
-
-    /// Closes a stream used to send Stardust messages, releasing some resources.
-    /// This is useful as an optimisation for channels that are never used after a certain point.
-    /// If the channel continues to be used, a new stream will be opened.
-    pub fn close_stardust_stream(&mut self, channel: ChannelId) -> Result<()> {
-        if let Some(stream_id) = self.channel_streams.get(&channel) {
-            // Check if the framed writer has any data in it
-            if let Some(writer) = self.framed_writers.get(stream_id) {
-                if writer.unsent() != 0 { bail!("Stream had unsent framed messages"); }
-                self.framed_writers.remove(stream_id);
-            }
-
-            // Try to close the stream
-            match self.inner.send_stream(*stream_id).finish() {
-                Ok(()) => {},
-                Err(FinishError::ClosedStream) => {},
-                Err(FinishError::Stopped(code)) => bail!("Stream was stopped by remote: {code}"),
-            }
-
-            // Remove from map
-            self.channel_streams.remove(&channel);
-            return Ok(())
-        } else {
-            // No work to do
-            return Ok(())
-        }
     }
 }
 
@@ -184,9 +148,6 @@ pub(crate) fn connection_event_handler_system(
         // Split borrows
         let connection = connection.as_mut();
         let inner = connection.inner.as_mut();
-        let channel_streams = &mut connection.channel_streams;
-        let framed_readers = &mut connection.framed_readers;
-        let framed_writers = &mut connection.framed_writers;
 
         // Poll as many events as possible from the handler
         while let Some(event) = inner.poll() { match event {
@@ -246,107 +207,14 @@ pub(crate) fn connection_event_handler_system(
             },
 
             AppEvent::Stream(event) => match event {
-                StreamEvent::Opened { dir } => {
-                    // Accept the stream
-                    let stream_id = inner.streams().accept(dir).unwrap();
-                    framed_readers.insert(stream_id, StreamReader::default());
-                },
+                StreamEvent::Opened { dir } => todo!(),
 
-                StreamEvent::Readable { id } => {
-                    if let Some(reader) = framed_readers.get_mut(&id) {
-                        // Read chunks from the stream into the table
-                        let mut stream = inner.recv_stream(id);
-                        match stream.read(true) {
-                            // A chunk iterator is available
-                            Ok(mut chunks) => {
-                                // Try to read as many chunks as possible
-                                loop { match chunks.next(1024) {
-                                    // A chunk of data is readable
-                                    Ok(Some(chunk)) => {
-                                        // Push to the reader
-                                        reader.push(chunk.bytes);
-                                    },
+                StreamEvent::Readable { id } => todo!(),
 
-                                    // We've run out of chunks to read
-                                    Ok(None) => break,
-
-                                    // Error while reading chunks
-                                    Err(_) => break,
-                                }}
-
-                                // MUST_USE: We poll sends anyway
-                                let _ = chunks.finalize();
-                            },
-
-                            // Error encountered when reading stream
-                            Err(error) => todo!(),
-                        }
-
-                        // Try to read any available frames
-                        for item in reader.iter(config.maximum_framed_message_length) {
-                            match item {
-                                // A chunk of data was read
-                                Ok(StreamReaderSegment::Stardust { channel, payload }) => {
-                                    if let Some(ref mut incoming) = incoming {
-                                        incoming.push_one(ChannelMessage {
-                                            channel,
-                                            payload: payload.into(),
-                                        });
-                                    }
-                                },
-
-                                // Error while reading
-                                Err(err) => todo!(),
-                            }
-                        }
-                    }
-                },
-
-                StreamEvent::Writable { id } => {
-                    // If the stream is writable, check to see if there's any messages waiting
-                    if let Some(writer) = framed_writers.get_mut(&id) {
-                        let mut stream = inner.send_stream(id);
-                        match writer.write(&mut stream) {
-                            Ok(_) => {},
-                            Err(error) => {
-                                // If it errors, dump the messages
-                                debug!("Error while writing framed messages on stream {id}: {error}");
-                                framed_writers.remove(&id);
-                                continue;
-                            },
-                        }
-
-                        // If the writer is out of frames, remove it
-                        if writer.unsent() == 0 {
-                            framed_writers.remove(&id);
-                            continue;
-                        }
-                    }
-                },
+                StreamEvent::Writable { id } => todo!(),
 
                 StreamEvent::Finished { id } |
-                StreamEvent::Stopped { id, error_code: _ } => {
-                    // Stopping a stream discards all data
-                    // as it is a reset, not a finish.
-                    framed_writers.remove(&id);
-                    framed_readers.remove(&id);
-
-                    // Find the channel id by the stream id
-                    // This is an expensive operation but it won't happen often (probably)
-                    let cid = channel_streams
-                        .iter()
-                        .find(|(_, sid)| **sid == id)
-                        .map(|(cid, _)| cid)
-                        .copied();
-
-                    // Remove the channel ID from the map
-                    if let Some(cid) = cid {
-                        channel_streams.remove(&cid);
-                    }
-
-                    // Log the stream removal
-                    debug!("Stream {id} was stopped or finished");
-                }
+                StreamEvent::Stopped { id, error_code: _ } => todo!(),
 
                 // We don't care about this
                 StreamEvent::Available { dir: _ } => {},
@@ -371,19 +239,12 @@ pub(crate) fn connection_message_sender_system(
         let trace_span = trace_span!("Queuing message sends", connection=?entity);
         let _entered = trace_span.entered();
 
-        // Tiny scratch space for some operations
-        let mut scr = Vec::with_capacity(4);
-
         // Split borrows
         let connection = connection.as_mut();
         let inner = connection.inner.as_mut();
-        let channel_streams = &mut connection.channel_streams;
-        let framed_writers = &mut connection.framed_writers;
 
         // Iterate over all channels
-        'outgoing: for (channel, messages) in outgoing.iter() {
-            scr.clear();
-
+        for (channel, messages) in outgoing.iter() {
             // Get the channel data
             let config = match channels.config(channel) {
                 Some(channel_data) => channel_data,
@@ -402,68 +263,7 @@ pub(crate) fn connection_message_sender_system(
 
                 ReliableUnordered => {},
 
-                ReliableOrdered => {
-                    // Get the stream ID of this channel
-                    let (stream_id, mut stream) = match channel_streams.get(&channel) {
-                        Some(stream_id) => {
-                            (*stream_id, inner.send_stream(*stream_id))
-                        },
-                        None => {
-                            // Wasn't in the map, we have to open a new stream
-                            let stream_id = inner.streams().open(Dir::Uni).unwrap();
-                            channel_streams.insert(channel, stream_id);
-                            (stream_id, inner.send_stream(stream_id))
-                        },
-                    };
-
-                    // Try to get a writer from the writer map
-                    match framed_writers.get_mut(&stream_id) {
-                        // If there's a writer in the map, it means there are
-                        // unsent messages, so we add messages to the writer's queue
-                        Some(writer) => {
-                            // Queue all messages in the writer
-                            for message in messages {
-                                writer.queue_framed(message.into());
-                            }
-                        },
-
-                        // If there's no writer in the map, it means
-                        // there are no messages queued, so we need a
-                        // new FramedWriter instance
-                        None => {
-                            // New instance of a FramedWriter
-                            let mut writer = FramedWriter::new();
-
-                            // Encode a header for the new stream
-                            StreamOpenHeader::StardustReliable { channel: VarInt::from_u32(channel.into()) }.encode(&mut scr);
-                            writer.queue_raw(Bytes::copy_from_slice(&scr));
-
-                            // Queue all messages in the writer
-                            for message in messages {
-                                writer.queue_framed(message.into());
-
-                                // Try to send in the stream
-                                let wresult = writer.write(&mut stream);
-                                match (wresult, writer.unsent()) {
-                                    // Writer done, move on
-                                    (Ok(_), 0) => { continue },
-
-                                    // Writer not done, add to map
-                                    (Ok(_), _) => {
-                                        framed_writers.insert(stream_id, writer);
-                                        continue 'outgoing; // Skip this channel
-                                    },
-
-                                    (Err(WriteError::Stopped(_code)), _) => { todo!() },
-                                    (Err(WriteError::ClosedStream), _) => { todo!() },
-
-                                    // Doesn't happen, FramedWriter handles it
-                                    (Err(WriteError::Blocked), _) => unreachable!(),
-                                }
-                            }
-                        }
-                    }
-                },
+                ReliableOrdered => {},
 
                 _ => unimplemented!()
             }
