@@ -1,5 +1,7 @@
+use std::cmp::Ordering;
+
 use bevy::utils::smallvec::SmallVec;
-use bytes::{Bytes, BytesMut};
+use bytes::{Buf, Bytes, BytesMut};
 use quinn_proto::{coding::Codec, VarInt, WriteError};
 use crate::streams::{StreamWrite, StreamWriteOutcome};
 
@@ -59,5 +61,71 @@ impl FramedWriter {
         }
 
         return Ok(total);
+    }
+}
+
+pub(crate) struct FramedReader {
+    queue: SmallVec<[Bytes; 2]>,
+}
+
+impl FramedReader {
+    pub fn recv(&mut self, chunk: Bytes) {
+        self.queue.push(chunk)
+    }
+
+    pub fn read(&mut self) -> Result<Bytes, ()> {
+        todo!()
+    }
+}
+
+struct QueueBuf<'a> {
+    remaining: usize,
+    cursor: usize,
+    index: usize,
+    inner: &'a [Bytes],
+}
+
+impl<'a> QueueBuf<'a> {
+    fn new(inner: &'a [Bytes]) -> QueueBuf<'a> {
+        Self {
+            remaining: inner.iter().map(|v| v.len()).sum(),
+            cursor: 0,
+            index: 0,
+            inner,
+        }
+    }
+}
+
+impl<'a> Buf for QueueBuf<'a> {
+    #[inline]
+    fn remaining(&self) -> usize {
+        self.remaining
+    }
+
+    #[inline]
+    fn chunk(&self) -> &'a [u8] {
+        &self.inner[self.index][self.cursor..]
+    }
+
+    fn advance(&mut self, cnt: usize) {
+        if cnt > self.remaining { panic!("Overran buffer"); }
+        self.remaining -= cnt;
+
+        let sel = &self.inner[self.index];
+        match (self.cursor + cnt).cmp(&sel.len()) {
+            Ordering::Less => {
+                self.cursor += cnt;
+            },
+
+            Ordering::Equal => {
+                self.cursor = 0;
+                self.index += 1;
+            },
+
+            Ordering::Greater => {
+                self.cursor = cnt - sel.len();
+                self.index += 1;
+            },
+        }
     }
 }
