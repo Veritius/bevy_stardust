@@ -158,6 +158,7 @@ pub(crate) fn connection_event_handler_system(
                 // Add the necessary components
                 commands.lock().unwrap().entity(entity).insert((
                     Peer::new(),
+                    PeerRtt(inner.rtt()),
                     PeerAddress(inner.remote_address()),
                     PeerMessages::<Incoming>::new(),
                     PeerMessages::<Outgoing>::new(),
