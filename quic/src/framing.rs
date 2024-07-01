@@ -205,11 +205,37 @@ mod tests {
     use super::*;
 
     #[test]
-    fn write_read_test() {
+    fn reader_limit_test() {
         // Very generic config
         const CONFIG: QuicConfig = QuicConfig {
             maximum_transport_units: usize::MAX,
             maximum_framed_message_length: 64,
+            maximum_buffered_frame_data: usize::MAX,
+        };
+
+        // Create a stream with an intentionally wrong length prefix
+        let mut stream = BytesMut::with_capacity(128);
+        VarInt::from_u32(1024).encode(&mut stream);
+        stream.extend_from_slice(b"Hello, world!");
+        let stream = stream.freeze();
+
+        // Create a new reader
+        let mut reader = FramedReader::new();
+        reader.push(stream);
+
+        // The reader should recognise the prefix is too long
+        match reader.read(&CONFIG) {
+            FramedReaderOutcome::Error => {},
+            _ => panic!(),
+        }
+    }
+
+    #[test]
+    fn write_read_test() {
+        // Very generic config
+        const CONFIG: QuicConfig = QuicConfig {
+            maximum_transport_units: usize::MAX,
+            maximum_framed_message_length: usize::MAX,
             maximum_buffered_frame_data: usize::MAX,
         };
 
