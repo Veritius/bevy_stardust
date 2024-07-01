@@ -4,7 +4,9 @@
 mod connections;
 mod datagrams;
 mod endpoints;
+mod framing;
 mod plugin;
+mod streams;
 
 pub use plugin::*;
 pub use connections::QuicConnection;
