@@ -1,7 +1,7 @@
 use std::mem::swap as mem_swap;
 use bevy::utils::smallvec::SmallVec;
-use bytes::{BufMut, Bytes, BytesMut};
-use quinn_proto::{SendStream, WriteError};
+use bytes::{Buf, BufMut, Bytes, BytesMut};
+use quinn_proto::{SendStream, VarInt, WriteError, coding::Codec};
 
 pub(crate) trait StreamWrite {
     fn write(&mut self, data: &[u8]) -> StreamWriteOutcome;
@@ -87,5 +87,53 @@ impl StreamWriter {
         swap.extend(drain);
         mem_swap(&mut self.queue, &mut swap);
         return Ok(total);
+    }
+}
+
+pub(crate) enum StreamOpenHeader {
+    StardustPersistent {
+        channel: u32,
+    },
+
+    StardustTransient {
+        channel: u32,
+    },
+}
+
+impl StreamOpenHeader {
+    pub fn decode<B: Buf>(buf: &mut B) -> Result<Self, ()> {
+        let ident = VarInt::decode(buf).map_err(|_| ())?.into_inner();
+
+        fn decode<B: Buf, T: TryFrom<u64>>(buf: &mut B) -> Result<u32, ()> {
+            let varint = VarInt::decode(buf).map_err(|_| ())?.into_inner();
+            let value = u32::try_from(varint).map_err(|_| ())?;
+            return Ok(value);
+        }
+
+        match ident {
+            0 => Ok(StreamOpenHeader::StardustPersistent {
+                channel: decode::<B, u32>(buf)?,
+            }),
+
+            1 => Ok(Self::StardustTransient {
+                channel: decode::<B, u32>(buf)?,
+            }),
+
+            _ => Err(()),
+        }
+    }
+
+    pub fn encode<B: BufMut>(&self, buf: &mut B) {
+        match self {
+            StreamOpenHeader::StardustPersistent { channel } => {
+                VarInt::from_u32(0).encode(buf);
+                VarInt::from_u32(*channel).encode(buf);
+            },
+
+            StreamOpenHeader::StardustTransient { channel } => {
+                VarInt::from_u32(1).encode(buf);
+                VarInt::from_u32(*channel).encode(buf);
+            },
+        }
     }
 }
