@@ -1,3 +1,4 @@
+use bytes::{BufMut, BytesMut};
 use quinn_proto::{SendStream, WriteError};
 
 pub(crate) trait StreamWrite {
@@ -8,6 +9,13 @@ pub(crate) enum StreamWriteOutcome {
     Complete,
     Partial(usize),
     Error(WriteError),
+}
+
+impl StreamWrite for BytesMut {
+    fn write(&mut self, data: &[u8]) -> StreamWriteOutcome {
+        self.put(data);
+        StreamWriteOutcome::Complete
+    }
 }
 
 impl StreamWrite for SendStream<'_> {
