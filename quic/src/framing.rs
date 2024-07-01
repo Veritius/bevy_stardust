@@ -199,3 +199,66 @@ impl<'a> Buf for QueueBuf<'a> {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn write_read_test() {
+        // Very generic config
+        const CONFIG: QuicConfig = QuicConfig {
+            maximum_transport_units: usize::MAX,
+            maximum_framed_message_length: 64,
+            maximum_buffered_frame_data: usize::MAX,
+        };
+
+        // The message we'll be using
+        const MESSAGE: &[u8] = b"Hello, world!";
+
+        // Create a new reader
+        let mut reader = FramedReader::new();
+
+        // Nothing in the queue
+        match reader.read(&CONFIG) {
+            FramedReaderOutcome::Waiting => {},
+            _ => panic!(),
+        }
+
+        // Write a new message to a stream for testing
+        let mut stream = BytesMut::with_capacity(128);
+        let mut writer = FramedWriter::new();
+        writer.queue(Bytes::from_static(&MESSAGE));
+        writer.write(&mut stream).unwrap();
+        let stream = stream.freeze();
+
+        // Simplest case for the reader
+        reader.push(stream.clone());
+        match reader.read(&CONFIG) {
+            FramedReaderOutcome::Message(message) => assert_eq!(&message[..], MESSAGE),
+            _ => panic!(),
+        }
+
+        // The frame is broken into two chunks but fully present
+        reader.push(stream.slice(..6));
+        reader.push(stream.slice(6..));
+        match reader.read(&CONFIG) {
+            FramedReaderOutcome::Message(message) => assert_eq!(&message[..], MESSAGE),
+            _ => panic!(),
+        }
+
+        // The frame is not yet fully present
+        reader.push(stream.slice(..8));
+        match reader.read(&CONFIG) {
+            FramedReaderOutcome::Waiting => {},
+            _ => panic!(),
+        }
+
+        // The frame is now fully present
+        reader.push(stream.slice(8..));
+        match reader.read(&CONFIG) {
+            FramedReaderOutcome::Message(message) => assert_eq!(&message[..], MESSAGE),
+            _ => panic!(),
+        }
+    }
+}
