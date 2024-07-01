@@ -1,9 +1,9 @@
+use std::mem::swap as mem_swap;
 use std::cmp::Ordering;
-
 use bevy::utils::smallvec::SmallVec;
 use bytes::{Buf, Bytes, BytesMut};
 use quinn_proto::{coding::Codec, VarInt, WriteError};
-use crate::streams::{StreamWrite, StreamWriteOutcome};
+use crate::{streams::{StreamWrite, StreamWriteOutcome}, QuicConfig};
 
 pub(crate) struct FramedWriter {
     queue: SmallVec<[Bytes; 2]>,
@@ -47,19 +47,19 @@ impl FramedWriter {
                 // A block error means we must stop writing
                 StreamWriteOutcome::Error(WriteError::Blocked) => {
                     swap.push(bytes);
-                    swap.extend(drain);
                     break;
                 }
 
                 // An error means the stream can no longer be written to
                 StreamWriteOutcome::Error(err) => {
                     swap.push(bytes);
-                    swap.extend(drain);
                     return Err(err)
                 },
             }
         }
 
+        swap.extend(drain);
+        mem_swap(&mut self.queue, &mut swap);
         return Ok(total);
     }
 }
@@ -69,13 +69,62 @@ pub(crate) struct FramedReader {
 }
 
 impl FramedReader {
+    #[inline]
     pub fn recv(&mut self, chunk: Bytes) {
         self.queue.push(chunk)
     }
 
-    pub fn read(&mut self) -> Result<Bytes, ()> {
-        todo!()
+    pub fn read(&mut self, config: &QuicConfig) -> FramedReaderOutcome {
+        // Create a non-contiguous Buf implementor for the queue
+        let mut reader = QueueBuf::new(&self.queue);
+
+        // Decode the length of the reader
+        let length = match VarInt::decode(&mut reader) {
+            Ok(v) => v.into_inner() as usize,
+            Err(_) => return FramedReaderOutcome::Waiting,
+        };
+
+        // Prevents a denial of service attack
+        if length > config.maximum_framed_message_length {
+            return FramedReaderOutcome::Error;
+        }
+
+        // Check if the reader has the full message
+        if reader.remaining() < length {
+            return FramedReaderOutcome::Waiting;
+        }
+
+        // Copy the message to its own contiguous allocation
+        // This is necessary since the reader is non-contiguous
+        let payload = reader.copy_to_bytes(length);
+
+        // Variables for the commit operation
+        let mut consumed = reader.consumed();
+        let mut swap: SmallVec<[Bytes; 2]> = SmallVec::with_capacity(self.queue.len());
+        let mut drain = self.queue.drain(..);
+
+        // 'Commit', ensuring we don't read the same data twice
+        while consumed > 0 {
+            let f = drain.next().unwrap();
+            consumed -= f.len();
+
+            if f.len() >= consumed { continue; }
+            swap.push(f.slice(consumed..));
+        }
+
+        // Return the queue back
+        swap.extend(drain);
+        mem_swap(&mut self.queue, &mut swap);
+
+        // Return the message (success)
+        return FramedReaderOutcome::Message(payload);
     }
+}
+
+pub(crate) enum FramedReaderOutcome {
+    Message(Bytes),
+    Waiting,
+    Error,
 }
 
 struct QueueBuf<'a> {
@@ -93,6 +142,11 @@ impl<'a> QueueBuf<'a> {
             index: 0,
             inner,
         }
+    }
+
+    fn consumed(&self) -> usize {
+        let initial: usize = self.inner.iter().map(|v| v.len()).sum();
+        return initial - self.remaining;
     }
 }
 
