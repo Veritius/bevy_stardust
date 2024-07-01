@@ -118,10 +118,14 @@ impl FramedReader {
         // 'Commit', ensuring we don't read the same data twice
         while consumed > 0 {
             let f = drain.next().unwrap();
-            consumed -= f.len();
 
-            if f.len() >= consumed { continue; }
+            if consumed >= f.len() {
+                consumed -= f.len(); 
+                continue;
+            }
+
             swap.push(f.slice(consumed..));
+            consumed -= f.len();
         }
 
         // Return the queue back
