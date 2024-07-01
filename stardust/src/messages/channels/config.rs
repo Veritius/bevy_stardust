@@ -38,6 +38,12 @@ pub struct ChannelConfiguration {
 /// that messages in the channel will be received in a specified order,
 /// relative to the order they were sent in. Messages are only ordered
 /// against other messages in the same channel.
+/// 
+/// Sequencing is related to ordering, but discards older messages when
+/// an out-of-order transmission occurs. If the messages `[1,2,3,4,5]` is
+/// received in order, the application sees `[1,2,3,4,5]`. However, if the
+/// messages are received in the order `[1,3,2,5,4]`, the application will
+/// only see the messages `[1,3,5]`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Reflect)]
 #[reflect(Debug, PartialEq, Hash)]
 #[non_exhaustive]
@@ -52,11 +58,11 @@ pub enum ChannelConsistency {
     UnreliableUnordered,
 
     /// Messages lost in transport will not be resent.
-    /// Only messages that were sent after the last received message
-    /// are added to the queue. Messages that were sent before are dropped.
+    /// If messages are not received in order, only the most
+    /// recent messages will be stored, discarding old messages.
     /// 
     /// Useful for messages that are used to update something
-    /// each tick, where only the most recent value matters,
+    /// each tick, where only the most recent values matter,
     /// such as player position in a shooter.
     UnreliableSequenced,
 
