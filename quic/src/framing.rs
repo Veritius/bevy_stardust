@@ -296,7 +296,7 @@ mod tests {
         reader.push(stream.slice(7..12));
         reader.push(stream.slice(12..));
         match reader.read(&CONFIG) {
-            FramedReaderOutcome::Waiting => {},
+            FramedReaderOutcome::Message(message) => assert_eq!(&message[..], MESSAGE),
             _ => panic!(),
         }
     }
