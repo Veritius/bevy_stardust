@@ -10,6 +10,12 @@ pub(crate) struct FramedWriter {
 }
 
 impl FramedWriter {
+    pub fn new() -> Self {
+        Self {
+            queue: SmallVec::new(),
+        }
+    }
+
     pub fn queue(&mut self, message: Bytes) {
         // Framed message length header
         let mut buf = BytesMut::with_capacity(4);
@@ -69,6 +75,12 @@ pub(crate) struct FramedReader {
 }
 
 impl FramedReader {
+    pub fn new() -> Self {
+        Self {
+            queue: SmallVec::new(),
+        }
+    }
+
     #[inline]
     pub fn recv(&mut self, chunk: Bytes) {
         self.queue.push(chunk)
