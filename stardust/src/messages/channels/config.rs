@@ -55,8 +55,8 @@ pub enum ChannelConsistency {
     /// Only messages that were sent after the last received message
     /// are added to the queue. Messages that were sent before are dropped.
     /// 
-    /// Useful for messages that can occasionally be lost,
-    /// but are used to keep things up-to-date,
+    /// Useful for messages that are used to update something
+    /// each tick, where only the most recent value matters,
     /// such as player position in a shooter.
     UnreliableSequenced,
 
