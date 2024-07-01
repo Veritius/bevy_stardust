@@ -39,39 +39,34 @@ impl QuicConnection {
 
 #[derive(Debug, Clone, Copy)]
 pub(crate) enum DisconnectCode {
-    Invalid,
-
     Unspecified,
     AppDisconnect,
     NotListening,
 }
 
-impl From<VarInt> for DisconnectCode {
-    fn from(value: VarInt) -> Self {
+impl TryFrom<VarInt> for DisconnectCode {
+    type Error = ();
+
+    fn try_from(value: VarInt) -> Result<Self, Self::Error> {
         use DisconnectCode::*;
-        match u64::from(value) {
+        Ok(match u64::from(value) {
             0 => Unspecified,
             1 => AppDisconnect,
             2 => NotListening,
 
-            _ => Invalid,
-        }
+            _ => return Err(()),
+        })
     }
 }
 
-impl TryFrom<DisconnectCode> for VarInt {
-    type Error = ();
-
-    fn try_from(value: DisconnectCode) -> Result<Self, Self::Error> {
+impl From<DisconnectCode> for VarInt {
+    fn from(value: DisconnectCode) -> Self {
         use DisconnectCode::*;
-        return Ok(VarInt::from_u32(match value {
-            // Special case: this variant can't be sent
-            Invalid => { return Err(()) },
-
+        VarInt::from_u32(match value {
             Unspecified => 0,
             AppDisconnect => 1,
             NotListening => 2,
-        }));
+        })
     }
 }
 
@@ -223,6 +218,24 @@ pub(crate) fn connection_event_handler_system(
             AppEvent::HandshakeDataReady => {},
         }}
     });
+}
+
+pub(crate) fn connection_disconnect_system(
+    mut dc_requests: EventReader<DisconnectPeerEvent>,
+    mut dc_occurred: EventWriter<PeerDisconnectingEvent>,
+    mut connections: Query<&mut QuicConnection>,
+) {
+    for req in dc_requests.read() {
+        if let Ok(mut connection) = connections.get_mut(req.peer) {
+            connection.inner.close(
+                Instant::now(),
+                DisconnectCode::Unspecified.into(),
+                Bytes::new(),
+            );
+
+            dc_occurred.send(PeerDisconnectingEvent { peer: req.peer });
+        }
+    }
 }
 
 pub(crate) fn connection_message_sender_system(

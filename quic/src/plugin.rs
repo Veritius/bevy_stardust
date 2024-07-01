@@ -20,6 +20,7 @@ impl Plugin for QuicPlugin {
         ).chain().in_set(NetworkRecv::Receive));
 
         app.add_systems(PostUpdate, (
+            connection_disconnect_system,
             connection_message_sender_system,
             connection_datagram_send_system,
             connection_endpoint_events_system,
