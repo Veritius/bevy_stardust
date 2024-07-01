@@ -286,5 +286,18 @@ mod tests {
             FramedReaderOutcome::Message(message) => assert_eq!(&message[..], MESSAGE),
             _ => panic!(),
         }
+
+        // An extremely fragmented frame
+        // This is the worst case scenario
+        reader.push(stream.slice(0..1));
+        reader.push(stream.slice(1..3));
+        reader.push(stream.slice(3..4));
+        reader.push(stream.slice(4..7));
+        reader.push(stream.slice(7..12));
+        reader.push(stream.slice(12..));
+        match reader.read(&CONFIG) {
+            FramedReaderOutcome::Waiting => {},
+            _ => panic!(),
+        }
     }
 }
