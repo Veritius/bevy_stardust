@@ -82,7 +82,7 @@ impl FramedReader {
     }
 
     #[inline]
-    pub fn recv(&mut self, chunk: Bytes) {
+    pub fn push(&mut self, chunk: Bytes) {
         self.queue.push(chunk)
     }
 
