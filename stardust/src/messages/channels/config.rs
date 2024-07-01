@@ -70,7 +70,7 @@ pub enum ChannelConsistency {
     /// They are added to the queue in the order they're received,
     /// which may be different to the order they were sent in.
     /// 
-    /// Useful for message that must be received,
+    /// Useful for messages that must be received,
     /// but don't have any ordering requirements,
     /// such as inventory updates in a survival game.
     ReliableUnordered,
