@@ -16,6 +16,7 @@ impl Plugin for QuicPlugin {
             endpoint_datagram_recv_system,
             connection_endpoint_events_system,
             connection_event_handler_system,
+            connection_update_rtt_system,
         ).chain().in_set(NetworkRecv::Receive));
 
         app.add_systems(PostUpdate, (

@@ -1,8 +1,7 @@
-use std::{sync::Mutex, time::{Duration, Instant}};
+use std::{sync::Mutex, time::Instant};
 use anyhow::Result;
 use bevy::prelude::*;
-use bevy_stardust::{connections::PeerAddress, prelude::*};
-use bytes::Bytes;
+use bevy_stardust::{connections::{PeerAddress, PeerRtt}, prelude::*};
 use endpoints::perform_transmit;
 use quinn_proto::{Connection, ConnectionHandle, ConnectionStats, Event as AppEvent, StreamEvent, VarInt};
 use crate::*;
@@ -30,20 +29,6 @@ impl QuicConnection {
             handle,
             inner,
         }
-    }
-
-    /// Begins closing the connection.
-    pub fn close(&mut self, reason: Bytes) {
-        self.inner.close(
-            Instant::now(),
-            DisconnectCode::AppDisconnect.try_into().unwrap(),
-            reason
-        );
-    }
-
-    /// Returns the current best estimate of the connection's round-trip time.
-    pub fn rtt(&self) -> Duration {
-        self.inner.rtt()
     }
 
     /// Returns the full collection of statistics for the connection.
@@ -88,6 +73,16 @@ impl TryFrom<DisconnectCode> for VarInt {
             NotListening => 2,
         }));
     }
+}
+
+pub(crate) fn connection_update_rtt_system(
+    mut query: Query<(&QuicConnection, &mut PeerRtt)>,
+) {
+    query.par_iter_mut().for_each(|(conn, mut rtt)| {
+        let lrtt = conn.inner.rtt();
+        if lrtt == rtt.0 { return };
+        rtt.0 = lrtt;
+    });
 }
 
 pub(crate) fn connection_endpoint_events_system(
