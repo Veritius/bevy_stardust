@@ -70,6 +70,13 @@ impl From<Message> for Bytes {
     }
 }
 
+impl AsRef<[u8]> for Message {
+    #[inline]
+    fn as_ref(&self) -> &[u8] {
+        &self.0[..]
+    }
+}
+
 impl Deref for Message {
     type Target = [u8];
 
@@ -110,5 +117,12 @@ impl From<(ChannelId, Bytes)> for ChannelMessage {
             channel: value.0,
             payload: Message::from_bytes(value.1),
         }
+    }
+}
+
+impl AsRef<[u8]> for ChannelMessage {
+    #[inline]
+    fn as_ref(&self) -> &[u8] {
+        self.payload.as_ref()
     }
 }
