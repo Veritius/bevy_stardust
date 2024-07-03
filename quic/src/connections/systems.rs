@@ -168,7 +168,7 @@ pub(crate) fn connection_event_handler_system(
 
                             match incoming {
                                 Some(ref mut queue) => queue.push_channel(channel, iter),
-                                None => pending.push_channel(channel, iter),
+                                None => pending.extend(iter.map(|payload| ChannelMessage { channel, payload })),
                             };
                         },
                     }
@@ -205,9 +205,9 @@ pub(crate) fn connection_dump_pending_system(
     mut connections: Query<(&mut QuicConnection, &mut PeerMessages<Incoming>)>,
 ) {
     connections.par_iter_mut().for_each(|(mut connection, mut incoming)| {
-        if connection.pending.count() == 0 { return; }
-        connection.pending.iter().for_each(|(c,i)| incoming.push_channel(c, i));
-        connection.pending.empty();
+        if connection.pending.len() == 0 { return; }
+        incoming.push_many(connection.pending.drain(..));
+        connection.pending.shrink_to(0);
     });
 }
 

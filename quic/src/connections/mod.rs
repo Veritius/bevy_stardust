@@ -1,8 +1,8 @@
 mod systems;
 
-use bevy_stardust::messages::{ChannelId, MessageQueue};
 pub(crate) use systems::*;
 
+use bevy_stardust::messages::{ChannelId, ChannelMessage};
 use bevy::{prelude::*, utils::hashbrown::HashMap};
 use quinn_proto::{Connection, ConnectionHandle, ConnectionStats, StreamId};
 use crate::streams::{Send as StSend, Recv as StRecv};
@@ -18,11 +18,12 @@ pub struct QuicConnection {
     pub(crate) handle: ConnectionHandle,
     pub(crate) inner: Box<Connection>,
 
-    channels: HashMap<ChannelId, StreamId>,
-    senders: HashMap<StreamId, Box<StSend>>,
     readers: HashMap<StreamId, Box<StRecv>>,
 
-    pending: MessageQueue,
+    channels: HashMap<ChannelId, StreamId>,
+    senders: HashMap<StreamId, Box<StSend>>,
+
+    pending: Vec<ChannelMessage>,
 }
 
 impl QuicConnection {
@@ -36,11 +37,12 @@ impl QuicConnection {
             handle,
             inner,
 
-            channels: HashMap::new(),
-            senders: HashMap::new(),
             readers: HashMap::new(),
 
-            pending: MessageQueue::new(),
+            channels: HashMap::new(),
+            senders: HashMap::new(),
+
+            pending: Vec::new(),
         }
     }
 
