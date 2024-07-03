@@ -1,5 +1,6 @@
 mod systems;
 
+use bevy_stardust::messages::ChannelId;
 pub(crate) use systems::*;
 
 use bevy::{prelude::*, utils::hashbrown::HashMap};
@@ -17,6 +18,7 @@ pub struct QuicConnection {
     pub(crate) handle: ConnectionHandle,
     pub(crate) inner: Box<Connection>,
 
+    channels: HashMap<ChannelId, StreamId>,
     senders: HashMap<StreamId, Box<StSend>>,
     readers: HashMap<StreamId, Box<StRecv>>,
 }
@@ -32,6 +34,7 @@ impl QuicConnection {
             handle,
             inner,
 
+            channels: HashMap::new(),
             senders: HashMap::new(),
             readers: HashMap::new(),
         }

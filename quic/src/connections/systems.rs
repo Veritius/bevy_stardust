@@ -3,8 +3,8 @@ use anyhow::Result;
 use bevy::prelude::*;
 use bevy_stardust::{connections::{PeerAddress, PeerRtt}, prelude::*};
 use endpoints::perform_transmit;
-use quinn_proto::{Connection, ConnectionHandle, ConnectionStats, Event as AppEvent, StreamEvent, VarInt};
-use streams::{Recv, StreamReader, StreamWriter};
+use quinn_proto::{Connection, ConnectionHandle, ConnectionStats, Dir, Event as AppEvent, StreamEvent, VarInt};
+use streams::{Recv, Send, StreamReader, StreamWriter};
 use crate::*;
 
 pub(crate) fn connection_update_rtt_system(
@@ -225,6 +225,8 @@ pub(crate) fn connection_message_sender_system(
         // Split borrows
         let connection = connection.as_mut();
         let inner = connection.inner.as_mut();
+        let channel_map = &mut connection.channels;
+        let senders = &mut connection.senders;
 
         // Iterate over all channels
         for (channel, messages) in outgoing.iter() {
@@ -246,7 +248,32 @@ pub(crate) fn connection_message_sender_system(
 
                 ReliableUnordered => {},
 
-                ReliableOrdered => {},
+                ReliableOrdered => {
+                    // Get the ID of the channel
+                    let id = channel_map.entry(channel).or_insert_with(|| {
+                        inner.streams().open(Dir::Uni).unwrap()
+                    }).clone();
+
+                    // Get the sender queue
+                    let send = senders.entry(id).or_insert_with(|| {
+                        Box::new(Send::new(streams::StreamHeader::Stardust {
+                            channel: channel.into()
+                        }))
+                    }).as_mut();
+
+                    // Put all messages into the sender
+                    for message in messages {
+                        send.push(message.into());
+                    }
+
+                    // Try to write as much as possible to the stream
+                    let mut stream = inner.send_stream(id);
+                    match send.write(&mut stream) {
+                        Ok(_) => {},
+
+                        Err(_) => todo!(),
+                    }
+                },
 
                 _ => unimplemented!()
             }
