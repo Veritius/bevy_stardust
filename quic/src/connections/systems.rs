@@ -4,6 +4,7 @@ use bevy::prelude::*;
 use bevy_stardust::{connections::{PeerAddress, PeerRtt}, prelude::*};
 use endpoints::perform_transmit;
 use quinn_proto::{Connection, ConnectionHandle, ConnectionStats, Event as AppEvent, StreamEvent, VarInt};
+use streams::{Recv, StreamReader, StreamWriter};
 use crate::*;
 
 pub(crate) fn connection_update_rtt_system(
@@ -74,6 +75,8 @@ pub(crate) fn connection_event_handler_system(
         // Split borrows
         let connection = connection.as_mut();
         let inner = connection.inner.as_mut();
+        let readers = &mut connection.readers;
+        let senders = &mut connection.senders;
 
         // Poll as many events as possible from the handler
         while let Some(event) = inner.poll() { match event {
@@ -134,11 +137,46 @@ pub(crate) fn connection_event_handler_system(
             },
 
             AppEvent::Stream(event) => match event {
-                StreamEvent::Opened { dir } => todo!(),
+                StreamEvent::Opened { dir } => {
+                    let id = inner.streams().accept(dir).unwrap();
+                    readers.insert(id, Box::new(Recv::new()));
+                },
 
-                StreamEvent::Readable { id } => todo!(),
+                StreamEvent::Readable { id } => {
+                    let mut stream = inner.recv_stream(id);
+                    let recv = readers.get_mut(&id).unwrap().as_mut();
 
-                StreamEvent::Writable { id } => todo!(),
+                    match stream.read(true) {
+                        Ok(mut chunks) => {
+                            if let Err(err) = recv.read_from(&mut chunks) {
+                                todo!()
+                            }
+                        },
+
+                        Err(err) => todo!(),
+                    };
+
+                    match recv.poll(&config) {
+                        streams::RecvOutput::Nothing => {},
+
+                        streams::RecvOutput::Stardust(recv) => {
+                            let channel: ChannelId = recv.channel().into();
+                            let incoming = incoming.as_mut().unwrap();
+                            incoming.push_channel(channel, recv.map(|b| Message::from_bytes(b)));
+                        },
+                    }
+                },
+
+                StreamEvent::Writable { id } => {
+                    let mut stream = inner.send_stream(id);
+                    let send = senders.get_mut(&id).unwrap().as_mut();
+
+                    match send.write(&mut stream) {
+                        Ok(_) => {},
+
+                        Err(_) => todo!(),
+                    }
+                },
 
                 StreamEvent::Finished { id } |
                 StreamEvent::Stopped { id, error_code: _ } => todo!(),
