@@ -3,16 +3,16 @@ use std::cmp::Ordering;
 use bevy::utils::smallvec::SmallVec;
 use bytes::{Buf, Bytes, BytesMut};
 use quinn_proto::{coding::Codec, VarInt, WriteError};
-use crate::{streams::{StreamWrite, StreamWriter}, QuicConfig};
+use crate::{streams::{StreamWriteError, ChunkQueueWriter, WritableStream, StreamWriter}, QuicConfig};
 
 pub(crate) struct FramedWriter {
-    queue: StreamWriter,
+    queue: ChunkQueueWriter,
 }
 
 impl FramedWriter {
     pub fn new() -> Self {
         Self {
-            queue: StreamWriter::new(),
+            queue: ChunkQueueWriter::new(),
         }
     }
 
@@ -27,9 +27,9 @@ impl FramedWriter {
     }
 
     #[inline]
-    pub fn write<S>(&mut self, stream: &mut S) -> Result<usize, WriteError>
+    pub fn write<S>(&mut self, stream: &mut S) -> Result<usize, StreamWriteError>
     where
-        S: StreamWrite,
+        S: WritableStream,
     {
         self.queue.write(stream)
     }
