@@ -1,10 +1,9 @@
 use std::{sync::Mutex, time::Instant};
-use anyhow::Result;
 use bevy::prelude::*;
 use bevy_stardust::{connections::{PeerAddress, PeerRtt}, prelude::*};
 use endpoints::perform_transmit;
-use quinn_proto::{Connection, ConnectionHandle, ConnectionStats, Dir, Event as AppEvent, StreamEvent, VarInt};
-use streams::{Recv, Send, StreamReader, StreamWriter};
+use quinn_proto::{Dir, Event as AppEvent, StreamEvent, VarInt};
+use streams::{Recv, Send, SendInit, StreamReader, StreamWriter};
 use crate::*;
 
 pub(crate) fn connection_update_rtt_system(
@@ -179,9 +178,15 @@ pub(crate) fn connection_event_handler_system(
                     let send = senders.get_mut(&id).unwrap().as_mut();
 
                     match send.write(&mut stream) {
-                        Ok(_) => {},
+                        streams::StreamWriteOutcome::Complete => {
+                            // Transient senders are removed
+                            if !send.transient() { continue }
+                            let _ = stream.finish();
+                            senders.remove(&id);
+                        },
 
-                        Err(_) => todo!(),
+                        streams::StreamWriteOutcome::Error(_) => todo!(),
+                        _ => todo!(),
                     }
                 },
 
@@ -263,7 +268,36 @@ pub(crate) fn connection_message_sender_system(
 
                 UnreliableSequenced => {},
 
-                ReliableUnordered => {},
+                ReliableUnordered => {
+                    for message in messages {
+                        // Open a new outgoing channel
+                        let id = inner.streams().open(Dir::Uni).unwrap();
+
+                        // Create a new sender
+                        let mut send = Send::new(SendInit::StardustTransient { channel: channel.into() });
+
+                        // Add the message
+                        send.push(message.into());
+
+                        // Try to write as much as possible to the stream
+                        let mut stream = inner.send_stream(id);
+                        match send.write(&mut stream) {
+                            // The entire send buffer was written
+                            streams::StreamWriteOutcome::Complete => {
+                                stream.finish().unwrap();
+                            },
+
+                            // Only a portion of the send buffer was written
+                            streams::StreamWriteOutcome::Partial(_) |
+                            streams::StreamWriteOutcome::Blocked => {
+                                let boxed = Box::new(send);
+                                senders.insert(id, boxed);
+                            },
+
+                            streams::StreamWriteOutcome::Error(_) => todo!(),
+                        }
+                    }
+                },
 
                 ReliableOrdered => {
                     // Get the ID of the channel
@@ -273,9 +307,7 @@ pub(crate) fn connection_message_sender_system(
 
                     // Get the sender queue
                     let send = senders.entry(id).or_insert_with(|| {
-                        Box::new(Send::new(streams::StreamHeader::Stardust {
-                            channel: channel.into()
-                        }))
+                        Box::new(Send::new(SendInit::StardustPersistent { channel: channel.into() }))
                     }).as_mut();
 
                     // Put all messages into the sender
@@ -286,9 +318,8 @@ pub(crate) fn connection_message_sender_system(
                     // Try to write as much as possible to the stream
                     let mut stream = inner.send_stream(id);
                     match send.write(&mut stream) {
-                        Ok(_) => {},
-
-                        Err(_) => todo!(),
+                        streams::StreamWriteOutcome::Error(_) => todo!(),
+                        _ => todo!(),
                     }
                 },
 

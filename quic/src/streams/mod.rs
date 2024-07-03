@@ -6,7 +6,7 @@ mod send;
 
 pub(crate) use header::StreamHeader;
 pub(crate) use recv::{Recv, RecvOutput, StardustRecv};
-pub(crate) use send::Send;
+pub(crate) use send::{Send, SendInit};
 
 use bytes::Bytes;
 
@@ -17,7 +17,7 @@ pub(crate) trait WritableStream {
 
 /// A type that writes data to a stream.
 pub(crate) trait StreamWriter {
-    fn write<S: WritableStream>(&mut self, stream: &mut S) -> Result<usize, StreamWriteError>;
+    fn write<S: WritableStream>(&mut self, stream: &mut S) -> StreamWriteOutcome;
 }
 
 /// The outcome of attempting to write to the stream.
