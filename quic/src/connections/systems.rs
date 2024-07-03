@@ -201,6 +201,16 @@ pub(crate) fn connection_event_handler_system(
     });
 }
 
+pub(crate) fn connection_dump_pending_system(
+    mut connections: Query<(&mut QuicConnection, &mut PeerMessages<Incoming>)>,
+) {
+    connections.par_iter_mut().for_each(|(mut connection, mut incoming)| {
+        if connection.pending.count() == 0 { return; }
+        connection.pending.iter().for_each(|(c,i)| incoming.push_channel(c, i));
+        connection.pending.empty();
+    });
+}
+
 pub(crate) fn connection_disconnect_system(
     mut dc_requests: EventReader<DisconnectPeerEvent>,
     mut dc_occurred: EventWriter<PeerDisconnectingEvent>,
