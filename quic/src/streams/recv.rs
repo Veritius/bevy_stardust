@@ -1,6 +1,7 @@
 use std::collections::VecDeque;
-use bytes::Bytes;
+use bytes::{Buf, Bytes};
 use commitbuf::CommitBuf;
+use quinn_proto::{VarInt, coding::Codec};
 use super::*;
 use crate::*;
 
@@ -40,7 +41,7 @@ impl Recv {
         }
     }
 
-    pub fn poll(&mut self, config: &QuicConfig) -> RecvOutput {
+    pub fn poll<'a>(&'a mut self, config: &'a QuicConfig) -> RecvOutput<'a> {
         if self.state.is_nothing() {
             if self.queue.len() == 0 { return RecvOutput::Nothing }
             let mut read = CommitBuf::new(&mut self.queue);
@@ -62,6 +63,7 @@ impl Recv {
 
             RecvState::Stardust { channel } => RecvOutput::Stardust(StardustRecv {
                 queue: &mut self.queue,
+                limit: config.maximum_framed_message_length,
                 channel,
             })
         }
@@ -93,6 +95,7 @@ pub(crate) enum RecvOutput<'a> {
 
 pub(crate) struct StardustRecv<'a> {
     queue: &'a mut VecDeque<Bytes>,
+    limit: usize,
     channel: u32,
 }
 
@@ -106,6 +109,18 @@ impl<'a> Iterator for StardustRecv<'a> {
     type Item = Bytes;
 
     fn next(&mut self) -> Option<Self::Item> {
-        todo!()
+        let mut read = CommitBuf::new(&mut self.queue);
+        let length = VarInt::decode(&mut read).ok()?.into_inner() as usize;
+
+        if length > self.limit {
+            todo!()
+        }
+
+        if length > read.remaining() { return None; }
+
+        let payload = read.copy_to_bytes(length);
+        read.commit();
+
+        return Some(payload);
     }
 }
