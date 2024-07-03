@@ -4,7 +4,6 @@
 mod connections;
 mod datagrams;
 mod endpoints;
-mod framing;
 mod plugin;
 mod streams;
 
