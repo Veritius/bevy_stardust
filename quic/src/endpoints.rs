@@ -1,7 +1,6 @@
 use std::{io::ErrorKind, net::{SocketAddr, UdpSocket}, sync::Arc, time::Instant};
 use anyhow::Result;
 use bevy::{prelude::*, utils::HashMap};
-use bevy_stardust::prelude::*;
 use bytes::BytesMut;
 use quinn_proto::{ClientConfig, ConnectionHandle, DatagramEvent, Endpoint, EndpointConfig, ServerConfig, Transmit};
 use crate::{QuicConfig, QuicConnection};
@@ -81,12 +80,8 @@ impl QuicEndpoint {
         let (handle, connection) = self.inner.connect(Instant::now(), config, remote, server_name)?;
 
         // Spawn the connection entity
-        let connection = QuicConnection::new(entity, handle, Box::new(connection));
-        let entity = commands.spawn((
-            connection,
-            PeerMessages::<Outgoing>::new(),
-            PeerMessages::<Incoming>::new(),
-        )).id();
+        let component = QuicConnection::new(entity, handle, Box::new(connection));
+        let entity = commands.spawn(component).id();
 
         // Add the entity ids to the map
         self.entities.insert(handle, entity);
@@ -188,17 +183,12 @@ pub(crate) fn endpoint_datagram_recv_system(
                                         // Spawn the connection entity
                                         let connection = Box::new(connection);
                                         let entity = commands.command_scope(move |mut commands| {
-                                            let connection = QuicConnection::new(
+                                            let component = QuicConnection::new(
                                                 entity,
                                                 handle,
                                                 connection
                                             );
-
-                                            commands.spawn((
-                                                connection,
-                                                PeerMessages::<Outgoing>::new(),
-                                                PeerMessages::<Incoming>::new(),
-                                            )).id()
+                                            commands.spawn(component).id()
                                         });
 
                                         // Add the entity ids to the map
