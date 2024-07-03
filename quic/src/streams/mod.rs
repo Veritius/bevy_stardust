@@ -1,7 +1,9 @@
-use std::mem::swap as mem_swap;
-use bevy::utils::smallvec::SmallVec;
-use bytes::{Buf, BufMut, Bytes, BytesMut};
-use quinn_proto::{coding::Codec, Chunks, SendStream, VarInt, WriteError};
+mod queues;
+
+pub(crate) use queues::ChunkQueueWriter;
+
+use bytes::{BufMut, Bytes, BytesMut};
+use quinn_proto::{Chunks, SendStream, WriteError};
 use crate::QuicConfig;
 
 // #############################
@@ -131,116 +133,6 @@ impl ReadableStream for Chunks<'_> {
             Err(error) => match error {
                 quinn_proto::ReadError::Blocked => StreamReadOutcome::Blocked,
                 quinn_proto::ReadError::Reset(code) => StreamReadOutcome::Error(StreamReadError::Reset(code.into_inner())),
-            },
-        }
-    }
-}
-
-pub(crate) struct ChunkQueueWriter {
-    queue: SmallVec<[Bytes; 2]>,
-}
-
-impl ChunkQueueWriter {
-    pub fn new() -> Self {
-        Self {
-            queue: SmallVec::new(),
-        }
-    }
-
-    #[inline]
-    pub fn queue(&mut self, message: Bytes) {
-        self.queue.push(message);
-    }
-}
-
-impl StreamWriter for ChunkQueueWriter {
-    fn write<S>(&mut self, stream: &mut S) -> Result<usize, StreamWriteError>
-    where
-        S: WritableStream,
-    {
-        let mut total = 0;
-        let mut swap: SmallVec<[Bytes; 2]> = SmallVec::with_capacity(self.queue.len());
-        let mut drain = self.queue.drain(..);
-
-        while let Some(bytes) = drain.next() {
-            match stream.write(bytes.clone()) {
-                // A complete write means we can try again
-                StreamWriteOutcome::Complete => {
-                    total += bytes.len();
-                    continue;
-                },
-
-                // A partial write means we have to stop
-                StreamWriteOutcome::Partial(written) => {
-                    total += written;
-                    let bytes = bytes.slice(written..);
-                    swap.push(bytes);
-                    continue;
-                },
-
-                // A block error means we must stop writing
-                StreamWriteOutcome::Blocked => {
-                    swap.push(bytes);
-                    break;
-                }
-
-                // An error means the stream can no longer be written to
-                StreamWriteOutcome::Error(err) => {
-                    swap.push(bytes);
-                    return Err(err)
-                },
-            }
-        }
-
-        swap.extend(drain);
-        mem_swap(&mut self.queue, &mut swap);
-        return Ok(total);
-    }
-}
-
-pub(crate) enum StreamOpenHeader {
-    StardustPersistent {
-        channel: u32,
-    },
-
-    StardustTransient {
-        channel: u32,
-    },
-}
-
-impl StreamOpenHeader {
-    pub fn decode<B: Buf>(buf: &mut B) -> Result<Self, ()> {
-        let ident = VarInt::decode(buf).map_err(|_| ())?.into_inner();
-
-        fn decode<B: Buf, T: TryFrom<u64>>(buf: &mut B) -> Result<u32, ()> {
-            let varint = VarInt::decode(buf).map_err(|_| ())?.into_inner();
-            let value = u32::try_from(varint).map_err(|_| ())?;
-            return Ok(value);
-        }
-
-        match ident {
-            0 => Ok(StreamOpenHeader::StardustPersistent {
-                channel: decode::<B, u32>(buf)?,
-            }),
-
-            1 => Ok(Self::StardustTransient {
-                channel: decode::<B, u32>(buf)?,
-            }),
-
-            _ => Err(()),
-        }
-    }
-
-    pub fn encode<B: BufMut>(&self, buf: &mut B) {
-        match self {
-            StreamOpenHeader::StardustPersistent { channel } => {
-                VarInt::from_u32(0).encode(buf);
-                VarInt::from_u32(*channel).encode(buf);
-            },
-
-            StreamOpenHeader::StardustTransient { channel } => {
-                VarInt::from_u32(1).encode(buf);
-                VarInt::from_u32(*channel).encode(buf);
             },
         }
     }
