@@ -1,7 +1,7 @@
 use std::fmt::Debug;
 use anyhow::bail;
 use bytes::{BufMut, Bytes};
-use unbytes::{EndOfInput, Reader};
+use unbytes::*;
 use crate::{connection::reliability::AckMemory, sequences::SequenceId};
 use super::{codes::HandshakeResponseCode, AppVersion};
 
@@ -48,7 +48,7 @@ pub(super) enum ListenerHello {
 
 impl HandshakeMessage for ListenerHello {
     fn recv(reader: &mut Reader) -> Result<Self, EndOfInput> {
-        let code: HandshakeResponseCode = reader.read_u16()?.into();
+        let code: HandshakeResponseCode = u16::decode_be(reader.as_mut())?.into();
 
         if code != HandshakeResponseCode::Continue {
             return Ok(Self::Rejected(Rejection { code, message: Bytes::new() }));
@@ -57,8 +57,8 @@ impl HandshakeMessage for ListenerHello {
         return Ok(Self::Accepted {
             tpt_ver: AppVersion::from_bytes(reader)?,
             app_ver: AppVersion::from_bytes(reader)?,
-            ack_seq: SequenceId::from(reader.read_u16()?),
-            ack_bits: u16_to_ack_mem(reader.read_u16()?),
+            ack_seq: SequenceId::from(u16::decode_be(reader.as_mut())?),
+            ack_bits: u16_to_ack_mem(u16::decode_be(reader.as_mut())?),
         });
     }
 
@@ -100,15 +100,15 @@ pub(super) enum InitiatorFinish {
 
 impl HandshakeMessage for InitiatorFinish {
     fn recv(reader: &mut Reader) -> Result<Self, EndOfInput> {
-        let code: HandshakeResponseCode = reader.read_u16()?.into();
+        let code: HandshakeResponseCode = u16::decode_be(reader.as_mut())?.into();
 
         if code != HandshakeResponseCode::Continue {
             return Ok(Self::Rejected(Rejection { code, message: Bytes::new() }));
         }
 
         return Ok(Self::Accepted {
-            ack_seq: SequenceId::from(reader.read_u16()?),
-            ack_bits: u16_to_ack_mem(reader.read_u16()?),
+            ack_seq: SequenceId::from(u16::decode_be(reader.as_mut())?),
+            ack_bits: u16_to_ack_mem(u16::decode_be(reader.as_mut())?),
         });
     }
 

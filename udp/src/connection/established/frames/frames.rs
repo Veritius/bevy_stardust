@@ -1,7 +1,7 @@
 use std::{cmp::Ordering, ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign}, time::Instant};
 use bevy_stardust_extras::varint::VarInt;
 use bytes::{BufMut, Bytes};
-use unbytes::{EndOfInput, Reader};
+use unbytes::*;
 use crate::sequences::SequenceId;
 
 #[derive(Debug, Clone)]
@@ -15,7 +15,7 @@ pub(crate) struct RecvFrame {
 impl RecvFrame {
     pub(super) fn read(reader: &mut Reader) -> Result<Self, FrameReadError> {
         // Get the byte for frame flags
-        let flags: FrameFlags = reader.read_u8()
+        let flags: FrameFlags = reader.read::<u8>()
         .map_err(|_| FrameReadError::UnexpectedEnd)?
         .into();
 
@@ -30,7 +30,7 @@ impl RecvFrame {
 
         // Parse the frame header type
         let ftype: FrameType = reader
-        .read_u8()
+        .read::<u8>()
         .map_err(|_| FrameReadError::UnexpectedEnd)?
         .try_into()
         .map_err(|_| FrameReadError::UnknownFrameType)?;
@@ -44,14 +44,16 @@ impl RecvFrame {
         // Get the frame channel ordering if present
         let order = match has_order {
             false => None,
-            true => Some(reader.read_u16()
+            true => Some(u16::decode_be(reader.as_mut())
                 .map_err(|_| FrameReadError::UnexpectedEnd)?.into()),
         };
 
         // Return a payload object, or make an empty one if there is no payload
         let payload = if no_payload { Bytes::new() } else {
             // Read the length of the packet
-            let len: u64 = todo!();
+            let len: u64 = VarInt::read(&mut reader.may_panic())
+            .map_err(|_| FrameReadError::UnexpectedEnd)?
+            .into();
 
             // Read the next few bytes as per len
             reader.read_bytes(len as usize)

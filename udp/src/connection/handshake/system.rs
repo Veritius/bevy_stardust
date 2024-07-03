@@ -1,7 +1,7 @@
 use bevy::{prelude::*, utils::hashbrown::HashSet};
 use bevy_stardust::{connections::PeerAddress, prelude::*};
 use bytes::BufMut;
-use unbytes::Reader;
+use unbytes::*;
 use crate::{connection::{established::Established, PotentialNewPeer}, endpoint::ConnectionOwnershipToken, plugin::PluginConfiguration, sequences::SequenceId, version::{BANNED_MINOR_VERSIONS, TRANSPORT_VERSION_DATA}};
 use self::messages::*;
 use super::*;
@@ -23,7 +23,7 @@ pub(in crate::connection) fn potential_incoming_system(
 
         // Parse their message. We can unwrap since we checked length before.
         let mut reader = Reader::new(event.payload.clone());
-        let seq_idt: SequenceId = reader.read_u16().unwrap().into();
+        let seq_idt: SequenceId = u16::decode_be(&mut reader).unwrap().into();
         let hello = InitiatorHello::recv(&mut reader).unwrap();
 
         // Get the endpoint that sent this event
@@ -86,7 +86,7 @@ pub(in crate::connection) fn handshake_polling_system(
             if reader.remaining() < 4 { continue }
 
             // Read the packet sequence identifier
-            let seq: SequenceId = reader.read_u16().unwrap().into();
+            let seq: SequenceId = u16::decode_be(&mut reader).unwrap().into();
 
             // Special checks for different packets
             // Some packets require different handling of their sequence id

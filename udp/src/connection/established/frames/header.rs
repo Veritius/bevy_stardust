@@ -1,6 +1,6 @@
 use std::ops::{BitOr, BitOrAssign, BitAnd, BitAndAssign};
 use bytes::BufMut;
-use unbytes::{EndOfInput, Reader};
+use unbytes::*;
 use crate::{connection::reliability::AckMemory, sequences::SequenceId};
 
 pub(in super::super) enum PacketHeader {
@@ -28,12 +28,12 @@ impl PacketHeader {
         // This value is only present in reliable frames
         // We use a default value if not reliable, and just don't use it
         let seq = match is_reliable {
-            true => SequenceId(reader.read_u16().map_err(|_| PacketReadError::UnexpectedEnd)?),
+            true => SequenceId(u16::decode_be(reader.as_mut()).map_err(|_| PacketReadError::UnexpectedEnd)?),
             false => SequenceId::default(),
         };
 
         // These reliability values are always present
-        let ack = SequenceId(reader.read_u16()
+        let ack = SequenceId(u16::decode_be(reader.as_mut())
             .map_err(|_| PacketReadError::UnexpectedEnd)?);
         let bits = AckMemory::from_slice(reader.read_slice(bitlen)
             .map_err(|_| PacketReadError::UnexpectedEnd)?).unwrap();
