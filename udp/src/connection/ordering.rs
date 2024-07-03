@@ -1,5 +1,5 @@
 use std::{cmp::Ordering, collections::BTreeMap, fmt::Debug};
-use bevy_stardust::channels::{ChannelData, ChannelId, OrderingGuarantee};
+use bevy_stardust::{messages::channels::ChannelId, prelude::{ChannelConfiguration, ChannelConsistency}};
 use bytes::Bytes;
 use crate::sequences::SequenceId;
 
@@ -15,14 +15,14 @@ impl OrderingManager {
         }
     }
 
-    pub fn get(&mut self, channel: &ChannelData) -> &mut OrderedMessages {
+    pub fn get(&mut self, channel: ChannelId, config: &ChannelConfiguration) -> &mut OrderedMessages {
         self.stardust_messages
-        .entry(channel.channel_id)
+        .entry(channel)
         .or_insert_with(|| {
-            match channel.ordered {
-                OrderingGuarantee::Sequenced => OrderedMessages::sequenced(),
-                OrderingGuarantee::Ordered => OrderedMessages::ordered(),
-                OrderingGuarantee::Unordered => panic!("Can't make an OrderedMessages for an unordered channel"),
+            match config.consistency {
+                ChannelConsistency::ReliableOrdered => OrderedMessages::ordered(),
+                ChannelConsistency::UnreliableSequenced => OrderedMessages::sequenced(),
+                _ => panic!("Can't make an OrderedMessages for an unordered channel"),
             }
         })
     }

@@ -42,7 +42,7 @@ pub(in crate::connection) struct DisconnectEstablishedPeerEvent {
 pub(in crate::connection) fn established_close_events_system(
     mut transport_events: EventReader<DisconnectEstablishedPeerEvent>,
     mut stardust_events: EventReader<DisconnectPeerEvent>,
-    mut connections: Query<(Entity, &mut Established, Option<&mut NetworkPeerLifestage>), With<Connection>>,
+    mut connections: Query<(Entity, &mut Established, Option<&mut PeerLifestage>), With<Connection>>,
 ) {
     let mut processed_map = EntityHashSet::default();
     let iter = transport_events.read().map(|f| &f.inner).chain(stardust_events.read());
@@ -56,7 +56,7 @@ pub(in crate::connection) fn established_close_events_system(
             if established.closing.is_some() { continue } // Already closing
             debug!("Closing connection with {entity:?}");
 
-            established.closing = Some(Closing::new(CloseOrigin::Local, event.reason.clone()));
+            established.closing = Some(Closing::new(CloseOrigin::Local, None));
             established.builder.put(SendFrame {
                 priority: u32::MAX,
                 time: Instant::now(),
@@ -68,7 +68,7 @@ pub(in crate::connection) fn established_close_events_system(
             });
 
             if let Some(mut lifestage) = lifestage {
-                *lifestage = NetworkPeerLifestage::Closing;
+                *lifestage = PeerLifestage::Closing;
             }
         }
     }
@@ -95,7 +95,7 @@ pub(in crate::connection) fn established_closing_write_system(
 
 pub(in crate::connection) fn established_close_despawn_system(
     mut commands: Commands,
-    mut connections: Query<(Entity, &Connection, &Established, Option<&mut NetworkPeerLifestage>)>,
+    mut connections: Query<(Entity, &Connection, &Established, Option<&mut PeerLifestage>)>,
     mut endpoints: Query<&mut Endpoint>,
     mut events: EventWriter<PeerDisconnectedEvent>,
 ) {
@@ -128,9 +128,13 @@ pub(in crate::connection) fn established_close_despawn_system(
         }
 
         if let Some(mut lifestage) = lifestage {
-            *lifestage = NetworkPeerLifestage::Closed;
+            *lifestage = PeerLifestage::Closed;
         }
 
-        events.send(PeerDisconnectedEvent { peer, reason: closing.reason.clone() });
+        events.send(PeerDisconnectedEvent {
+            peer,
+            reason: DisconnectReason::Unspecified,
+            comment: None
+        });
     }
 }

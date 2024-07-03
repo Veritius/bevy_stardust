@@ -1,9 +1,9 @@
 use std::{mem::swap, time::Instant};
 use bevy::prelude::*;
+use bevy_stardust_extras::varint::VarInt;
 use bytes::Bytes;
 use closing::CloseOrigin;
 use frames::frames::{FrameType, SendFrame};
-use crate::varint::VarInt;
 use super::*;
 
 pub(super) struct ControlFrame {
@@ -21,7 +21,7 @@ impl TryFrom<VarInt> for ControlFrameIdent {
 
     fn try_from(value: VarInt) -> Result<Self, Self::Error> {
         use ControlFrameIdent::*;
-        let c = u32::try_from(value)?;
+        let c = <VarInt as Into<u64>>::into(value) as u32;
         Ok(match c {
             0 => BeginClose,
             1 => FullyClose,

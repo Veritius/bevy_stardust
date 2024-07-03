@@ -1,6 +1,6 @@
 use std::io;
 use bevy::prelude::*;
-use bevy_stardust::connections::NetworkPerformanceReduction;
+use bevy_stardust::diagnostics::NetworkPerformanceReduction;
 use crate::prelude::*;
 
 // Sends packets to UDP sockets

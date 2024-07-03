@@ -1,6 +1,7 @@
 use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4, ToSocketAddrs};
 use anyhow::{Context, Result};
 use bevy::{prelude::*, ecs::{entity::Entities, system::SystemParam}};
+use bevy_stardust::diagnostics::NetworkPerformanceReduction;
 use crate::{connection::OutgoingHandshakeBundle, endpoint::{ConnectionOwnershipToken, Endpoint}};
 
 /// A SystemParam that lets you create [`Endpoints`](Endpoint) and open outgoing [`Connections`](Connection).
@@ -83,7 +84,7 @@ impl UdpManager<'_, '_> {
         let id = commands.spawn(OutgoingHandshakeBundle::new(endpoint_id, address)).id();
 
         // TODO: This is added for debugging, remove this
-        commands.entity(id).insert(bevy_stardust::connections::NetworkPerformanceReduction {
+        commands.entity(id).insert(NetworkPerformanceReduction {
             packet_drop_chance: 0.5,
             packet_mangle_chance: 0.0,
             transmit_delay_millis: 0,

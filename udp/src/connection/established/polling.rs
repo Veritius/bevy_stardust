@@ -1,12 +1,13 @@
 use bevy::prelude::*;
 use bevy_stardust::prelude::*;
+use bevy_stardust_extras::varint::VarInt;
 use crate::{connection::{established::control::ControlFrameIdent, ordering::{OrderedMessage, OrderingManager}}, plugin::PluginConfiguration, prelude::*};
 use super::{control::ControlFrame, frames::{frames::{FrameType, RecvFrame}, reader::PacketReaderContext}, Established};
 
 pub(in crate::connection) fn established_reading_system(
-    registry: Res<ChannelRegistry>,
+    registry: Channels,
     config: Res<PluginConfiguration>,
-    mut connections: Query<(&mut Connection, &mut Established, &mut NetworkMessages<Incoming>)>,
+    mut connections: Query<(&mut Connection, &mut Established, &mut PeerMessages<Incoming>)>,
 ) {
     connections.par_iter_mut().for_each(|(
         mut connection,
@@ -91,35 +92,39 @@ pub(in crate::connection) fn established_reading_system(
 
 fn handle_stardust_frame(
     frame: RecvFrame,
-    registry: &ChannelRegistryInner,
+    registry: &Channels,
     orderings: &mut OrderingManager,
-    messages: &mut NetworkMessages<Incoming>,
+    messages: &mut PeerMessages<Incoming>,
 ) -> Result<(), u16> {
     let varint = frame.ident.ok_or(256u16)?;
-    let integer: u32 = varint.try_into().map_err(|_| 128u16)?;
+    let integer: u32 = <VarInt as Into<u64>>::into(varint) as u32;
     let channel: ChannelId = ChannelId::from(integer);
 
-    let channel_data = registry.channel_config(channel).ok_or(256u16)?;
+    let channel_data = registry.config(channel).ok_or(256u16)?;
 
     // If the message is unordered, push it as follows
-    if channel_data.ordered == OrderingGuarantee::Unordered {
-        messages.push(channel, frame.payload);
+    if !channel_data.consistency.is_ordered() {
+        messages.push_one(ChannelMessage {
+            channel,
+            payload: frame.payload.into(),
+        });
+
         return Ok(());
     }
 
-    let ordering = orderings.get(channel_data);
+    let ordering = orderings.get(channel, channel_data);
     let sequence = frame.order.ok_or(128u16)?;
 
     let message = ordering.recv(OrderedMessage { sequence, payload: frame.payload });
 
     if let Some(iter) = ordering.drain_available() {
         for message in iter {
-            messages.push(channel, message.payload);
+            messages.push_one((channel, message.payload).into());
         }
     }
 
     if let Some(message) = message {
-        messages.push(channel, message.payload);
+        messages.push_one((channel, message.payload).into());
     }
 
     return Ok(());

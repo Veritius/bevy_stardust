@@ -8,7 +8,6 @@ mod manager;
 mod plugin;
 mod schedule;
 mod sequences;
-mod varint;
 
 pub mod diagnostics;
 

@@ -105,11 +105,11 @@ impl Plugin for UdpTransportPlugin {
         app.configure_sets(PreUpdate, PreUpdateSet::PacketRead
             .before(PreUpdateSet::TickEstablished)
             .before(PreUpdateSet::HandleUnknown)
-            .in_set(NetworkRead::Receive)
+            .in_set(NetworkRecv::Receive)
         );
 
         app.configure_sets(PreUpdate, PreUpdateSet::TickEstablished
-            .in_set(NetworkRead::Receive));
+            .in_set(NetworkRecv::Receive));
 
         app.configure_sets(PostUpdate, PostUpdateSet::PacketSend
             .after(PostUpdateSet::FramePacking)
@@ -117,7 +117,7 @@ impl Plugin for UdpTransportPlugin {
             .before(PostUpdateSet::CloseEndpoints)
             .before(PostUpdateSet::CloseConnections)
             .before(PostUpdateSet::UpdateStatistics)
-            .in_set(NetworkWrite::Send)
+            .in_set(NetworkSend::Transmit)
         );
 
         crate::endpoint::add_system(app);

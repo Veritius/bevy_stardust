@@ -2,8 +2,8 @@ mod codes;
 mod messages;
 mod system;
 
+use bevy_stardust::connections::Peer;
 use bytes::Bytes;
-use bevy_stardust::connections::NetworkPeer;
 use std::{net::SocketAddr, time::{Duration, Instant}};
 use bevy::prelude::*;
 use crate::prelude::*;
@@ -71,7 +71,7 @@ struct Termination {
 pub(crate) struct OutgoingHandshakeBundle {
     pub connection: Connection,
     handshake: Handshaking,
-    peercomp: NetworkPeer,
+    peercomp: Peer,
 }
 
 impl OutgoingHandshakeBundle {
@@ -92,7 +92,7 @@ impl OutgoingHandshakeBundle {
                 direction: Direction::Initiator,
                 reliability: ReliabilityState::new(),
             },
-            peercomp: NetworkPeer::new(),
+            peercomp: Peer::new(),
         }
     }
 }

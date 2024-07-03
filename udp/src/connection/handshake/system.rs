@@ -1,5 +1,5 @@
 use bevy::{prelude::*, utils::hashbrown::HashSet};
-use bevy_stardust::prelude::*;
+use bevy_stardust::{connections::PeerAddress, prelude::*};
 use bytes::BufMut;
 use unbytes::Reader;
 use crate::{connection::{established::Established, PotentialNewPeer}, endpoint::ConnectionOwnershipToken, plugin::PluginConfiguration, sequences::SequenceId, version::{BANNED_MINOR_VERSIONS, TRANSPORT_VERSION_DATA}};
@@ -62,10 +62,9 @@ pub(in crate::connection) fn potential_incoming_system(
                 direction: Direction::Listener,
                 reliability,
             },
-            NetworkPeer::new(),
-            NetworkPeerLifestage::Handshaking,
-            NetworkPeerAddress(event.address),
-            NetworkSecurity::Unauthenticated,
+            Peer::new(),
+            PeerLifestage::Handshaking,
+            PeerAddress(event.address),
         )).id();
 
         // SAFETY: We can guarantee this peer is only added once here since we check earlier
@@ -183,7 +182,7 @@ pub(in crate::connection) fn handshake_polling_system(
 
 pub(in crate::connection) fn handshake_events_system(
     mut events: EventReader<DisconnectPeerEvent>,
-    mut connections: Query<(&mut Handshaking, Option<&mut NetworkPeerLifestage>), With<Connection>>,
+    mut connections: Query<(&mut Handshaking, Option<&mut PeerLifestage>), With<Connection>>,
 ) {
     for event in events.read() {
         // The error case means that the entity is a network peer we don't control
@@ -193,11 +192,11 @@ pub(in crate::connection) fn handshake_events_system(
                 _ => {
                     handshaking.state = HandshakeState::Terminated(Termination {
                         code: HandshakeResponseCode::ApplicationCloseEvent,
-                        reason: event.reason.clone(),
+                        reason: None,
                     });
 
                     if let Some(mut lifestage) = lifestage {
-                        *lifestage = NetworkPeerLifestage::Closing;
+                        *lifestage = PeerLifestage::Closing;
                     }
                 },
             }
@@ -278,7 +277,7 @@ pub(in crate::connection) fn handshake_sending_system(
 pub(in crate::connection) fn handshake_confirm_system(
     mut commands: Commands,
     mut endpoints: Query<&mut Endpoint>,
-    mut connections: Query<(Entity, &Connection, &Handshaking, Option<&mut NetworkPeerLifestage>)>,
+    mut connections: Query<(Entity, &Connection, &Handshaking, Option<&mut PeerLifestage>)>,
 ) {
     for (entity, connection, handshake, lifestage) in connections.iter_mut() {
         match &handshake.state {
@@ -290,12 +289,12 @@ pub(in crate::connection) fn handshake_confirm_system(
                 .remove::<Handshaking>()
                 .insert((
                     Established::new(handshake.reliability.clone()),
-                    NetworkMessages::<Incoming>::new(),
-                    NetworkMessages::<Outgoing>::new(),
+                    PeerMessages::<Incoming>::new(),
+                    PeerMessages::<Outgoing>::new(),
                 ));
 
                 if let Some(mut lifestage) = lifestage {
-                    *lifestage = NetworkPeerLifestage::Established;
+                    *lifestage = PeerLifestage::Established;
                 }
             },
 
@@ -304,7 +303,7 @@ pub(in crate::connection) fn handshake_confirm_system(
                 commands.entity(entity).despawn();
                 
                 if let Some(mut lifestage) = lifestage {
-                    *lifestage = NetworkPeerLifestage::Closed;
+                    *lifestage = PeerLifestage::Closed;
                 }
 
                 if let Ok(mut endpoint) = endpoints.get_mut(connection.owning_endpoint) {

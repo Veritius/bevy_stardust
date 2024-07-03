@@ -1,6 +1,8 @@
 use std::time::Instant;
 use bevy::prelude::*;
 use bevy_stardust::prelude::*;
+use bevy_stardust_extras::varint::VarInt;
+use bytes::BufMut;
 use smallvec::SmallVec;
 use super::frames::builder::PacketBuilderContext;
 use super::frames::frames::{FrameType, SendFrame};
@@ -8,7 +10,6 @@ use super::frames::header::PacketHeader;
 use crate::plugin::PluginConfiguration;
 use crate::prelude::*;
 use crate::sequences::SequenceId;
-use crate::varint::VarInt;
 use super::Established;
 
 pub(in crate::connection) fn established_resend_system(
@@ -72,9 +73,9 @@ pub(in crate::connection) fn established_resend_system(
 }
 
 pub(in crate::connection) fn established_writing_system(
-    registry: Res<ChannelRegistry>,
+    registry: Channels,
     config: Res<PluginConfiguration>,
-    mut connections: Query<(&mut Connection, &mut Established, &NetworkMessages<Outgoing>)>,
+    mut connections: Query<(&mut Connection, &mut Established, &PeerMessages<Outgoing>)>,
 ) {
     // Iterate all peers in parallel
     connections.par_iter_mut().for_each(|(mut connection, mut established, messages)| {
@@ -102,22 +103,22 @@ pub(in crate::connection) fn established_writing_system(
             // Iterate over all channels
             for (channel, messages) in messages.iter() {
                 // Get channel data from the registry
-                let channel_data = registry.channel_config(channel)
+                let config = registry.config(channel)
                     .expect(&format!("Message sent on nonexistent channel {channel:?}"));
 
                 // Store some data about the channel so we don't repeat ourselves
-                let is_ordered = channel_data.ordered != OrderingGuarantee::Unordered;
-                let is_reliable = channel_data.reliable == ReliabilityGuarantee::Reliable;
+                let is_ordered = config.consistency.is_ordered();
+                let is_reliable = config.consistency.is_reliable();
                 let channel_varint: VarInt = Into::<u32>::into(channel).into();
 
                 // Get a new ordering if necessary
                 let mut orderings = match is_ordered {
-                    true => Some(orderings.get(channel_data)),
+                    true => Some(orderings.get(channel, config)),
                     false => None,
                 };
 
                 // Iterate over all messages
-                for message in messages.iter().cloned() {
+                for message in messages {
                     // If the channel is ordered, give it an ordering sequence
                     let order = match is_ordered {
                         true => Some(orderings.as_mut().unwrap().advance()),
@@ -126,13 +127,13 @@ pub(in crate::connection) fn established_writing_system(
 
                     // Construct the frame data
                     let frame = SendFrame {
-                        priority: channel_data.priority,
+                        priority: config.priority,
                         time: start,
                         ftype: FrameType::Stardust,
                         reliable: is_reliable,
                         order,
                         ident: Some(channel_varint),
-                        payload: message,
+                        payload: message.into(),
                     };
 
                     // Add it to the builder
