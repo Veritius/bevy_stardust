@@ -26,9 +26,7 @@ pub fn setup_app() -> App {
     app.add_plugins(StardustPlugin);
 
     app.add_channel::<MyChannel>(ChannelConfiguration {
-        reliable: ReliabilityGuarantee::Reliable,
-        ordered: OrderingGuarantee::Ordered,
-        fragmented: false,
+        consistency: ChannelConsistency::ReliableOrdered,
         priority: 0xFF,
     });
 
@@ -51,17 +49,19 @@ static GREEK_ALPHABET: &[&str] = &[
 ];
 
 fn send_and_recv_system(
-    registry: Res<ChannelRegistry>,
-    mut peers: Query<(Entity, &NetworkMessages<Incoming>, &mut NetworkMessages<Outgoing>), With<NetworkPeer>>,
+    channels: Channels,
+    mut peers: Query<(Entity, &PeerMessages<Incoming>, &mut PeerMessages<Outgoing>), With<Peer>>,
 ) {
     for (peer, incoming, mut outgoing) in peers.iter_mut() {
         // Get the ID for our channel
-        let id = registry.channel_id(std::any::TypeId::of::<MyChannel>()).unwrap();
+        let id = channels.id(std::any::TypeId::of::<MyChannel>()).unwrap();
 
         // Read all messages
-        for message in incoming.get(id) {
-            let message = std::str::from_utf8(&message).unwrap();
-            tracing::info!("Received a message from {peer:?}: {message}");
+        for (channel, messages) in incoming {
+            for message in messages {
+                let message = std::str::from_utf8(&message).unwrap();
+                tracing::info!("Received a message from {peer:?} on channel {channel:?}: {message}");
+            };
         }
 
         // Compose a message of random Greek words
@@ -72,6 +72,9 @@ fn send_and_recv_system(
 
         // Send it to the peer
         tracing::info!("Sent a message to {peer:?}: {string}");
-        outgoing.push(id, Bytes::from(string));
+        outgoing.push_one(ChannelMessage {
+            channel: id,
+            payload: Bytes::from(string).into(),
+        });
     }
 }

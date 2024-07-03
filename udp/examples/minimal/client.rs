@@ -16,14 +16,15 @@ fn main() {
     });
 
     app.add_systems(Update, |
-        peers: Query<(Entity, &NetworkPeer)>,
+        peers: Query<(Entity, &Peer)>,
         mut events: EventWriter<DisconnectPeerEvent>,
     | {
         for (id, comp) in peers.iter() {
             if comp.joined.elapsed() > DISCONNECT_TIME {
                 events.send(DisconnectPeerEvent {
                     peer: id,
-                    reason: None,
+                    reason: DisconnectReason::Unspecified,
+                    comment: None,
                     force: false,
                 });
             }

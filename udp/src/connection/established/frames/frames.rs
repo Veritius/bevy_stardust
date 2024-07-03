@@ -38,8 +38,7 @@ impl RecvFrame {
         // Get the frame channel id if present
         let ident = match has_ident {
             false => None,
-            true => Some(VarInt::read(todo!())
-                .map_err(|_| FrameReadError::InvalidFrameIdent)?),
+            true => Some(todo!()),
         };
 
         // Get the frame channel ordering if present
@@ -52,9 +51,7 @@ impl RecvFrame {
         // Return a payload object, or make an empty one if there is no payload
         let payload = if no_payload { Bytes::new() } else {
             // Read the length of the packet
-            let len: u64 = VarInt::read(todo!())
-            .map_err(|_| FrameReadError::InvalidFrameLength)?
-            .into();
+            let len: u64 = todo!();
 
             // Read the next few bytes as per len
             reader.read_bytes(len as usize)
