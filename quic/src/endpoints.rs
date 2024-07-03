@@ -1,6 +1,7 @@
 use std::{io::ErrorKind, net::{SocketAddr, UdpSocket}, sync::Arc, time::Instant};
 use anyhow::Result;
 use bevy::{prelude::*, utils::HashMap};
+use bevy_stardust::prelude::*;
 use bytes::BytesMut;
 use quinn_proto::{ClientConfig, ConnectionHandle, DatagramEvent, Endpoint, EndpointConfig, ServerConfig, Transmit};
 use crate::{QuicConfig, QuicConnection};
@@ -80,8 +81,12 @@ impl QuicEndpoint {
         let (handle, connection) = self.inner.connect(Instant::now(), config, remote, server_name)?;
 
         // Spawn the connection entity
-        let component = QuicConnection::new(entity, handle, Box::new(connection));
-        let entity = commands.spawn(component).id();
+        let connection = QuicConnection::new(entity, handle, Box::new(connection));
+        let entity = commands.spawn((
+            connection,
+            PeerMessages::<Outgoing>::new(),
+            PeerMessages::<Incoming>::new(),
+        )).id();
 
         // Add the entity ids to the map
         self.entities.insert(handle, entity);
@@ -183,12 +188,17 @@ pub(crate) fn endpoint_datagram_recv_system(
                                         // Spawn the connection entity
                                         let connection = Box::new(connection);
                                         let entity = commands.command_scope(move |mut commands| {
-                                            let component = QuicConnection::new(
+                                            let connection = QuicConnection::new(
                                                 entity,
                                                 handle,
                                                 connection
                                             );
-                                            commands.spawn(component).id()
+
+                                            commands.spawn((
+                                                connection,
+                                                PeerMessages::<Outgoing>::new(),
+                                                PeerMessages::<Incoming>::new(),
+                                            )).id()
                                         });
 
                                         // Add the entity ids to the map

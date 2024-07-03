@@ -55,7 +55,7 @@ pub(crate) fn connection_endpoint_events_system(
 
 pub(crate) fn connection_event_handler_system(
     config: Res<QuicConfig>,
-    mut connections: Query<(Entity, &mut QuicConnection, Option<&mut PeerLifestage>, Option<&mut PeerMessages<Incoming>>)>,
+    mut connections: Query<(Entity, &mut QuicConnection, &mut PeerMessages<Incoming>, Option<&mut PeerLifestage>)>,
     mut commands: Commands,
     mut endpoints: Query<(Entity, &mut QuicEndpoint)>,
     mut dc_events: EventWriter<PeerDisconnectedEvent>,
@@ -67,7 +67,7 @@ pub(crate) fn connection_event_handler_system(
     let dc_events = Mutex::new(&mut dc_events);
 
     // Iterate all connections in parallel
-    connections.par_iter_mut().for_each(|(entity, mut connection, mut lifestage, mut incoming)| {
+    connections.par_iter_mut().for_each(|(entity, mut connection, mut incoming, mut lifestage)| {
         // Logging stuff
         let trace_span = trace_span!("Handling connection events", connection=?entity);
         let _entered = trace_span.entered();
@@ -94,8 +94,6 @@ pub(crate) fn connection_event_handler_system(
                     Peer::new(),
                     PeerRtt(inner.rtt()),
                     PeerAddress(inner.remote_address()),
-                    PeerMessages::<Incoming>::new(),
-                    PeerMessages::<Outgoing>::new(),
                 ));
             },
 
@@ -163,7 +161,6 @@ pub(crate) fn connection_event_handler_system(
 
                         streams::RecvOutput::Stardust(recv) => {
                             let channel: ChannelId = recv.channel().into();
-                            let incoming = incoming.as_mut().unwrap();
                             incoming.push_channel(channel, recv.map(|b| Message::from_bytes(b)));
                         },
                     }
