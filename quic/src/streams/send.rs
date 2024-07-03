@@ -40,7 +40,7 @@ impl StreamWriter for Send {
         let mut total = 0;
 
         while let Some(bytes) = self.queue.pop_front() {
-            match stream.write(bytes.clone()) {
+            match stream.write_to(bytes.clone()) {
                 // A complete write means we can try again
                 StreamWriteOutcome::Complete => {
                     total += bytes.len();

@@ -11,7 +11,7 @@ pub(crate) struct Recv {
 }
 
 impl StreamReader for Recv {
-    fn read<S: ReadableStream>(&mut self, stream: &mut S) -> Result<usize, StreamReadError> {
+    fn read_from<S: ReadableStream>(&mut self, stream: &mut S) -> Result<usize, StreamReadError> {
         let mut read = 0;
 
         loop {

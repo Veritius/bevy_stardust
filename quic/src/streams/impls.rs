@@ -3,14 +3,14 @@ use quinn_proto::{Chunks, SendStream, WriteError};
 use super::*;
 
 impl WritableStream for BytesMut {
-    fn write(&mut self, data: Bytes) -> StreamWriteOutcome {
+    fn write_to(&mut self, data: Bytes) -> StreamWriteOutcome {
         self.put(data);
         StreamWriteOutcome::Complete
     }
 }
 
 impl WritableStream for SendStream<'_> {
-    fn write(&mut self, data: Bytes) -> StreamWriteOutcome {
+    fn write_to(&mut self, data: Bytes) -> StreamWriteOutcome {
         match self.write_chunks(&mut [data.clone()]) {
             Ok(written) if written.bytes == data.len() => StreamWriteOutcome::Complete,
 

@@ -12,7 +12,7 @@ use bytes::Bytes;
 
 /// A byte stream that can be written to.
 pub(crate) trait WritableStream {
-    fn write(&mut self, data: Bytes) -> StreamWriteOutcome;
+    fn write_to(&mut self, data: Bytes) -> StreamWriteOutcome;
 }
 
 /// A type that writes data to a stream.
@@ -54,7 +54,7 @@ pub(crate) trait ReadableStream {
 
 /// A type that consumes data from a [`ReadableStream`] and handles it internally.
 pub(crate) trait StreamReader {
-    fn read<S: ReadableStream>(&mut self, stream: &mut S) -> Result<usize, StreamReadError>;
+    fn read_from<S: ReadableStream>(&mut self, stream: &mut S) -> Result<usize, StreamReadError>;
 }
 
 /// The outcome of reading from a stream.
