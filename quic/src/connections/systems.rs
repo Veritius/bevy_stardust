@@ -151,6 +151,8 @@ pub(crate) fn connection_event_handler_system(
                             if let Err(err) = recv.read_from(&mut chunks) {
                                 todo!()
                             }
+
+                            let _ = chunks.finalize();
                         },
 
                         Err(err) => todo!(),

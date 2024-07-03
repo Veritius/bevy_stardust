@@ -30,7 +30,7 @@ impl<'a> CommitBuf<'a> {
             }
 
             self.queue.push_front(f.slice(consumed..));
-            consumed -= f.len();
+            break;
         }
     }
 }
