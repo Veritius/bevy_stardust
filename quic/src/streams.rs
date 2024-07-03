@@ -71,30 +71,6 @@ pub(crate) trait ReadableStream {
     fn read(&mut self) -> StreamReadOutcome;
 }
 
-impl ReadableStream for Bytes {
-    fn read(&mut self) -> StreamReadOutcome {
-        if self.len() == 0 { return StreamReadOutcome::Blocked }
-        let cloned = self.clone();
-        *self = self.slice(self.len()..);
-        return StreamReadOutcome::Chunk(cloned)
-    }
-}
-
-impl ReadableStream for Chunks<'_> {
-    fn read(&mut self) -> StreamReadOutcome {
-        match self.next(usize::MAX) {
-            Ok(Some(chunk)) => StreamReadOutcome::Chunk(chunk.bytes),
-
-            Ok(None) => StreamReadOutcome::Finished,
-
-            Err(error) => match error {
-                quinn_proto::ReadError::Blocked => StreamReadOutcome::Blocked,
-                quinn_proto::ReadError::Reset(code) => StreamReadOutcome::Error(StreamReadError::Reset(code.into_inner())),
-            },
-        }
-    }
-}
-
 /// The outcome of reading from a stream.
 pub(crate) enum StreamReadOutcome {
     /// A chunk of data was returned.
@@ -121,6 +97,30 @@ pub(crate) enum StreamReadError {
 
     /// The stream was reset.
     Reset(u64),
+}
+
+impl ReadableStream for Bytes {
+    fn read(&mut self) -> StreamReadOutcome {
+        if self.len() == 0 { return StreamReadOutcome::Blocked }
+        let cloned = self.clone();
+        *self = self.slice(self.len()..);
+        return StreamReadOutcome::Chunk(cloned)
+    }
+}
+
+impl ReadableStream for Chunks<'_> {
+    fn read(&mut self) -> StreamReadOutcome {
+        match self.next(usize::MAX) {
+            Ok(Some(chunk)) => StreamReadOutcome::Chunk(chunk.bytes),
+
+            Ok(None) => StreamReadOutcome::Finished,
+
+            Err(error) => match error {
+                quinn_proto::ReadError::Blocked => StreamReadOutcome::Blocked,
+                quinn_proto::ReadError::Reset(code) => StreamReadOutcome::Error(StreamReadError::Reset(code.into_inner())),
+            },
+        }
+    }
 }
 
 /// A type that consumes data from a [`ReadableStream`] and handles it internally.
