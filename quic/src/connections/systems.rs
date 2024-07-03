@@ -77,6 +77,7 @@ pub(crate) fn connection_event_handler_system(
         let inner = connection.inner.as_mut();
         let readers = &mut connection.readers;
         let senders = &mut connection.senders;
+        let pending = &mut connection.pending;
 
         // Poll as many events as possible from the handler
         while let Some(event) = inner.poll() { match event {
@@ -163,8 +164,12 @@ pub(crate) fn connection_event_handler_system(
 
                         streams::RecvOutput::Stardust(recv) => {
                             let channel: ChannelId = recv.channel().into();
-                            let incoming = incoming.as_mut().unwrap();
-                            incoming.push_channel(channel, recv.map(|b| Message::from_bytes(b)));
+                            let iter = recv.map(|b| Message::from_bytes(b));
+
+                            match incoming {
+                                Some(ref mut queue) => queue.push_channel(channel, iter),
+                                None => pending.push_channel(channel, iter),
+                            };
                         },
                     }
                 },
