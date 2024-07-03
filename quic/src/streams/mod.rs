@@ -1,18 +1,19 @@
+mod impls;
 mod queues;
 
 pub(crate) use queues::ChunkQueueWriter;
 
-use bytes::{BufMut, Bytes, BytesMut};
-use quinn_proto::{Chunks, SendStream, WriteError};
+use bytes::Bytes;
 use crate::QuicConfig;
-
-// #############################
-// ##### Traits and Errors #####
-// #############################
 
 /// A byte stream that can be written to.
 pub(crate) trait WritableStream {
     fn write(&mut self, data: Bytes) -> StreamWriteOutcome;
+}
+
+/// A type that writes data to a stream.
+pub(crate) trait StreamWriter {
+    fn write<S: WritableStream>(&mut self, stream: &mut S) -> Result<usize, StreamWriteError>;
 }
 
 /// The outcome of attempting to write to the stream.
@@ -42,14 +43,14 @@ pub(crate) enum StreamWriteError {
     Closed,
 }
 
-/// A type that writes data to a stream.
-pub(crate) trait StreamWriter {
-    fn write<S: WritableStream>(&mut self, stream: &mut S) -> Result<usize, StreamWriteError>;
-}
-
 /// A byte stream that can be read from.
 pub(crate) trait ReadableStream {
     fn read(&mut self) -> StreamReadOutcome;
+}
+
+/// A type that consumes data from a [`ReadableStream`] and handles it internally.
+pub(crate) trait StreamReader {
+    fn read<S: ReadableStream>(&mut self, stream: &mut S, config: &QuicConfig) -> Result<usize, StreamWriteError>;
 }
 
 /// The outcome of reading from a stream.
@@ -78,62 +79,4 @@ pub(crate) enum StreamReadError {
 
     /// The stream was reset.
     Reset(u64),
-}
-
-/// A type that consumes data from a [`ReadableStream`] and handles it internally.
-pub(crate) trait StreamReader {
-    fn read<S: ReadableStream>(&mut self, stream: &mut S, config: &QuicConfig) -> Result<usize, StreamWriteError>;
-}
-
-// ###########################
-// ##### Implementations #####
-// ###########################
-
-impl WritableStream for BytesMut {
-    fn write(&mut self, data: Bytes) -> StreamWriteOutcome {
-        self.put(data);
-        StreamWriteOutcome::Complete
-    }
-}
-
-impl WritableStream for SendStream<'_> {
-    fn write(&mut self, data: Bytes) -> StreamWriteOutcome {
-        match self.write_chunks(&mut [data.clone()]) {
-            Ok(written) if written.bytes == data.len() => StreamWriteOutcome::Complete,
-
-            Ok(written) => StreamWriteOutcome::Partial(written.bytes),
-
-            Err(WriteError::Blocked) => StreamWriteOutcome::Blocked,
-
-            Err(err) => StreamWriteOutcome::Error(match err {
-                WriteError::Stopped(code) => StreamWriteError::Stopped(code.into_inner()),
-                WriteError::ClosedStream => StreamWriteError::Closed,
-                WriteError::Blocked => unreachable!(),
-            }),
-        }
-    }
-}
-
-impl ReadableStream for Bytes {
-    fn read(&mut self) -> StreamReadOutcome {
-        if self.len() == 0 { return StreamReadOutcome::Blocked }
-        let cloned = self.clone();
-        *self = self.slice(self.len()..);
-        return StreamReadOutcome::Chunk(cloned)
-    }
-}
-
-impl ReadableStream for Chunks<'_> {
-    fn read(&mut self) -> StreamReadOutcome {
-        match self.next(usize::MAX) {
-            Ok(Some(chunk)) => StreamReadOutcome::Chunk(chunk.bytes),
-
-            Ok(None) => StreamReadOutcome::Finished,
-
-            Err(error) => match error {
-                quinn_proto::ReadError::Blocked => StreamReadOutcome::Blocked,
-                quinn_proto::ReadError::Reset(code) => StreamReadOutcome::Error(StreamReadError::Reset(code.into_inner())),
-            },
-        }
-    }
 }
