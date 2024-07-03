@@ -186,7 +186,7 @@ pub(crate) fn connection_event_handler_system(
                         },
 
                         streams::StreamWriteOutcome::Error(_) => todo!(),
-                        _ => todo!(),
+                        _ => {},
                     }
                 },
 
@@ -319,7 +319,7 @@ pub(crate) fn connection_message_sender_system(
                     let mut stream = inner.send_stream(id);
                     match send.write(&mut stream) {
                         streams::StreamWriteOutcome::Error(_) => todo!(),
-                        _ => todo!(),
+                        _ => {},
                     }
                 },
 
