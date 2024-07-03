@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use bevy::utils::HashMap;
 use smallvec::SmallVec;
 use crate::prelude::*;
 
@@ -28,6 +28,13 @@ impl MessageQueue {
         self.index_map
         .iter_mut()
         .for_each(|(_, v)| v.clear())
+    }
+
+    /// Clears all queues and deallocates.
+    pub fn empty(&mut self) {
+        self.clear();
+        self.messages.shrink_to(0);
+        self.index_map.shrink_to(0);
     }
 
     /// Returns the total number of messages stored in the queue.
@@ -167,7 +174,7 @@ impl<'a> IntoIterator for &'a MessageQueue {
 #[derive(Clone)]
 pub struct ChannelIter<'a> {
     messages: &'a [Message],
-    map_iter: std::collections::hash_map::Iter<'a, ChannelId, IdxVec>,
+    map_iter: bevy::utils::hashbrown::hash_map::Iter<'a, ChannelId, IdxVec>,
 }
 
 impl<'a> Iterator for ChannelIter<'a> {
