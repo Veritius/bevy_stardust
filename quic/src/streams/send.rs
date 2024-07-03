@@ -1,35 +1,31 @@
-use std::mem::swap as mem_swap;
-use bevy::utils::smallvec::SmallVec;
+use std::collections::VecDeque;
 use bytes::Bytes;
 use super::*;
 
-pub(crate) struct ChunkQueueWriter {
-    queue: SmallVec<[Bytes; 2]>,
+pub(crate) struct Send {
+    config: SendConfig,
+    queue: VecDeque<Bytes>,
 }
 
-impl ChunkQueueWriter {
-    pub fn new() -> Self {
+impl Send {
+    pub fn new(config: SendConfig) -> Self {
         Self {
-            queue: SmallVec::new(),
+            config,
+            queue: VecDeque::new(),
         }
     }
 
     #[inline]
-    pub fn queue(&mut self, message: Bytes) {
-        self.queue.push(message);
+    pub fn push(&mut self, chunk: Bytes) {
+        todo!()
     }
 }
 
-impl StreamWriter for ChunkQueueWriter {
-    fn write<S>(&mut self, stream: &mut S) -> Result<usize, StreamWriteError>
-    where
-        S: WritableStream,
-    {
+impl StreamWriter for Send {
+    fn write<S: WritableStream>(&mut self, stream: &mut S) -> Result<usize, StreamWriteError> {
         let mut total = 0;
-        let mut swap: SmallVec<[Bytes; 2]> = SmallVec::with_capacity(self.queue.len());
-        let mut drain = self.queue.drain(..);
 
-        while let Some(bytes) = drain.next() {
+        while let Some(bytes) = self.queue.pop_front() {
             match stream.write(bytes.clone()) {
                 // A complete write means we can try again
                 StreamWriteOutcome::Complete => {
@@ -41,26 +37,28 @@ impl StreamWriter for ChunkQueueWriter {
                 StreamWriteOutcome::Partial(written) => {
                     total += written;
                     let bytes = bytes.slice(written..);
-                    swap.push(bytes);
+                    self.queue.push_front(bytes);
                     continue;
                 },
 
                 // A block error means we must stop writing
                 StreamWriteOutcome::Blocked => {
-                    swap.push(bytes);
+                    self.queue.push_front(bytes);
                     break;
                 }
 
                 // An error means the stream can no longer be written to
                 StreamWriteOutcome::Error(err) => {
-                    swap.push(bytes);
+                    self.queue.push_front(bytes);
                     return Err(err)
                 },
             }
         }
 
-        swap.extend(drain);
-        mem_swap(&mut self.queue, &mut swap);
         return Ok(total);
     }
+}
+
+pub(crate) struct SendConfig {
+    pub framed: bool,
 }

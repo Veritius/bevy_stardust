@@ -1,7 +1,6 @@
 mod impls;
-mod queues;
-
-pub(crate) use queues::ChunkQueueWriter;
+mod recv;
+mod send;
 
 use bytes::Bytes;
 use crate::QuicConfig;
