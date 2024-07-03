@@ -1,3 +1,5 @@
+#![allow(unused)]
+
 use std::any::TypeId;
 pub use std::sync::Arc;
 pub use std::net::{UdpSocket, SocketAddr};
