@@ -2,8 +2,9 @@ mod systems;
 
 pub(crate) use systems::*;
 
-use bevy::prelude::*;
-use quinn_proto::{Connection, ConnectionHandle, ConnectionStats};
+use bevy::{prelude::*, utils::hashbrown::HashMap};
+use quinn_proto::{Connection, ConnectionHandle, ConnectionStats, StreamId};
+use crate::streams::{Send as StSend, Recv as StRecv};
 
 /// A QUIC connection, attached to an endpoint.
 /// 
@@ -16,7 +17,8 @@ pub struct QuicConnection {
     pub(crate) handle: ConnectionHandle,
     pub(crate) inner: Box<Connection>,
 
-    machine: ConnectionStateMachine,
+    senders: HashMap<StreamId, Box<StSend>>,
+    readers: HashMap<StreamId, Box<StRecv>>,
 }
 
 impl QuicConnection {
@@ -29,25 +31,14 @@ impl QuicConnection {
             owner,
             handle,
             inner,
-            machine: ConnectionStateMachine::new(),
+
+            senders: HashMap::new(),
+            readers: HashMap::new(),
         }
     }
 
     /// Returns the full collection of statistics for the connection.
     pub fn stats(&self) -> ConnectionStats {
         self.inner.stats()
-    }
-}
-
-/// A state machine wrapping a QUIC connection.
-struct ConnectionStateMachine {
-
-}
-
-impl ConnectionStateMachine {
-    fn new() -> Self {
-        Self {
-
-        }
     }
 }
