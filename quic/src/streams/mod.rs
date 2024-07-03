@@ -50,7 +50,7 @@ pub(crate) trait ReadableStream {
 
 /// A type that consumes data from a [`ReadableStream`] and handles it internally.
 pub(crate) trait StreamReader {
-    fn read<S: ReadableStream>(&mut self, stream: &mut S, config: &QuicConfig) -> Result<usize, StreamWriteError>;
+    fn read<S: ReadableStream>(&mut self, stream: &mut S, config: &QuicConfig) -> Result<usize, StreamReadError>;
 }
 
 /// The outcome of reading from a stream.
@@ -58,13 +58,13 @@ pub(crate) enum StreamReadOutcome {
     /// A chunk of data was returned.
     Chunk(Bytes),
 
-    /// The stream was finished.
-    /// No further data will be returned.
-    Finished,
-
     /// The stream was blocked.
     /// Data may be returned in future calls.
     Blocked,
+
+    /// The stream was finished.
+    /// No further data will be returned.
+    Finished,
 
     // An error was encountered while reading.
     // This variant is fatal and means the stream is unrecoverable.
