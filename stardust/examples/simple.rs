@@ -1,18 +1,12 @@
 use std::any::TypeId;
-
 use bevy::app::{AppLabel, SubApp, ScheduleRunnerPlugin};
 use bevy::log::LogPlugin;
 use bevy::prelude::*;
 use bevy_stardust::prelude::*;
-use bevy_stardust::testing::transport::*;
+use bevy_stardust_extras::link::*;
 
-#[derive(TypePath)]
 struct MyChannelA;
-
-#[derive(TypePath)]
 struct MyChannelB;
-
-#[derive(TypePath)]
 struct MyChannelC;
 
 #[derive(Resource)]
@@ -26,16 +20,14 @@ fn main() {
     right.insert_resource(AppName("Right"));
 
     let (link_left, link_right) = pair();
-    left.world.spawn((NetworkPeer::new(), NetworkMessages::<Incoming>::new(), NetworkMessages::<Outgoing>::new(), link_left));
-    right.world.spawn((NetworkPeer::new(), NetworkMessages::<Incoming>::new(), NetworkMessages::<Outgoing>::new(), link_right));
+    left.world.spawn((Peer::new(), PeerMessages::<Incoming>::new(), PeerMessages::<Outgoing>::new(), link_left));
+    right.world.spawn((Peer::new(), PeerMessages::<Incoming>::new(), PeerMessages::<Outgoing>::new(), link_right));
 
     for app in [&mut left, &mut right] {
         app.add_plugins((StardustPlugin, LinkTransportPlugin));
 
         let config = ChannelConfiguration {
-            reliable: ReliabilityGuarantee::Reliable,
-            ordered: OrderingGuarantee::Ordered,
-            fragmented: false,
+            consistency: ChannelConsistency::ReliableOrdered,
             priority: 0,
         };
 
@@ -50,8 +42,9 @@ fn main() {
             write_system::<MyChannelC>,
         ));
 
-        // Manually invoke finish as this is a subapp.
+        // Manually invoke finish and cleanup as this is a subapp.
         app.finish();
+        app.cleanup();
     }
 
     #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, AppLabel)]
@@ -67,10 +60,10 @@ fn main() {
 
 fn read_system(
     name: Res<AppName>,
-    query: Query<&NetworkMessages<Incoming>, With<NetworkPeer>>,
+    query: Query<&PeerMessages<Incoming>, With<Peer>>,
 ) {
     for incoming in query.iter() {
-        for (channel, queues) in incoming.iter() {
+        for (channel, queues) in incoming {
             for payload in queues {
                 info!("{}: Received a message from a peer on channel {channel:?}: {payload:?}", name.0);
             }
@@ -80,14 +73,17 @@ fn read_system(
 
 fn write_system<C: Channel>(
     name: Res<AppName>,
-    registry: Res<ChannelRegistry>,
-    mut query: Query<&mut NetworkMessages<Outgoing>, With<NetworkPeer>>,
+    channels: Channels,
+    mut query: Query<&mut PeerMessages<Outgoing>, With<Peer>>,
 ) {
     for mut outgoing in query.iter_mut() {
         let rand = fastrand::u128(..);
-        let bytes = Bytes::copy_from_slice(&rand.to_be_bytes()[..]);
+        let bytes = bytes::Bytes::copy_from_slice(&rand.to_be_bytes()[..]);
 
         info!("{}: Sent a message to a peer: {bytes:?}", name.0);
-        outgoing.push(registry.channel_id(TypeId::of::<C>()).unwrap(), bytes);
+        outgoing.push_one(ChannelMessage {
+            channel: channels.id(TypeId::of::<C>()).unwrap(),
+            payload: Message::from_bytes(bytes),
+        });
     }
 }

@@ -1,7 +1,8 @@
 use bevy::prelude::*;
 
-/// Used to intentionally reduce the performance of peers for testing purposes.
-/// If applied to a `NetworkPeer` entity, reduces performance for that peer specifically.
+/// Reduces the performance of I/O entities and types that it is attached to.
+/// This merely instructs transport layers as to what they should do,
+/// and how they handle these values is defined per transport layer.
 #[derive(Debug, Clone, Component, Reflect)]
 #[reflect(Debug, Component)]
 pub struct NetworkPerformanceReduction {
