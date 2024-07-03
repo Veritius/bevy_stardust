@@ -50,6 +50,8 @@ impl Recv {
                 Err(_) => return RecvOutput::Nothing,
             };
 
+            read.commit();
+
             self.state = match header {
                 StreamHeader::Stardust { channel } => RecvState::Stardust { channel },
             }
