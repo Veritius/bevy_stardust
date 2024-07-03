@@ -38,7 +38,8 @@ impl RecvFrame {
         // Get the frame channel id if present
         let ident = match has_ident {
             false => None,
-            true => Some(todo!()),
+            true => Some(VarInt::read(&mut reader.may_panic())
+                .map_err(|_| FrameReadError::UnexpectedEnd)?),
         };
 
         // Get the frame channel ordering if present
