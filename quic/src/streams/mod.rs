@@ -1,6 +1,11 @@
+mod header;
 mod impls;
 mod recv;
 mod send;
+
+pub(crate) use header::StreamHeader;
+pub(crate) use recv::Recv;
+pub(crate) use send::Send;
 
 use bytes::Bytes;
 use crate::QuicConfig;

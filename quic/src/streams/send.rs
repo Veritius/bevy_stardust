@@ -1,23 +1,44 @@
 use std::collections::VecDeque;
-use bytes::Bytes;
+use bytes::{Bytes, BytesMut};
+use header::StreamHeader;
+use quinn_proto::{VarInt, coding::Codec};
 use super::*;
 
 pub(crate) struct Send {
-    config: SendConfig,
+    framed: bool,
     queue: VecDeque<Bytes>,
 }
 
 impl Send {
-    pub fn new(config: SendConfig) -> Self {
-        Self {
-            config,
-            queue: VecDeque::new(),
+    pub fn new(header: StreamHeader) -> Self {
+        let mut queue = VecDeque::with_capacity(1);
+
+        let framed = match header {
+            StreamHeader::Stardust { channel: _ } => true,
+        };
+
+        match header {
+            StreamHeader::Stardust { channel } => {
+                let mut buffer = BytesMut::with_capacity(8);
+
+                VarInt::from_u32(0).encode(&mut buffer);
+                VarInt::from_u32(channel).encode(&mut buffer);
+
+                queue.push_back(buffer.freeze());
+            },
         }
+
+        return Self { framed, queue };
     }
 
-    #[inline]
     pub fn push(&mut self, chunk: Bytes) {
-        todo!()
+        if self.framed {
+            let mut buffer = BytesMut::with_capacity(4);
+            VarInt::from_u64(chunk.len() as u64).unwrap().encode(&mut buffer);
+            self.queue.push_back(buffer.freeze());
+        }
+
+        self.queue.push_back(chunk);
     }
 }
 
@@ -57,8 +78,4 @@ impl StreamWriter for Send {
 
         return Ok(total);
     }
-}
-
-pub(crate) struct SendConfig {
-    pub framed: bool,
 }
