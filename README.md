@@ -136,13 +136,13 @@ The following crates are parts of the project that are out of scope for the `bev
 | Crate                  | Description                 |
 |------------------------|-----------------------------|
 | `bevy_stardust_extras` | A collection of misc. tools |
-| `bevy_stardust_quic`   | QUIC transport layer        |
 
 ### Planned
 The following crates are planned to be implemented as part of the overall project, but aren't done yet. They're also too significant or too different to end up in `bevy_stardust` or `bevy_stardust_extras`.
 
 | Crate                     | Description              |
 |---------------------------|--------------------------|
+| `bevy_stardust_quic`      | QUIC transport layer     |
 | `bevy_stardust_voip`      | Voice chat plugin        |
 | `bevy_stardust_replicate` | State replication plugin |
 

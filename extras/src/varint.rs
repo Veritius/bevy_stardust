@@ -101,6 +101,13 @@ impl VarInt {
     }
 }
 
+impl From<u32> for VarInt {
+    #[inline]
+    fn from(value: u32) -> Self {
+        Self(value as u64)
+    }
+}
+
 impl TryFrom<u64> for VarInt {
     type Error = ();
 
@@ -110,17 +117,31 @@ impl TryFrom<u64> for VarInt {
     }
 }
 
+impl TryFrom<usize> for VarInt {
+    type Error = ();
+
+    fn try_from(value: usize) -> Result<Self, Self::Error> {
+        #[cfg(target_pointer_width="32")]
+        return Ok(Self(value as u64));
+
+        #[cfg(target_pointer_width="64")]
+        (value as u64).try_into()
+    }
+}
+
+impl TryFrom<VarInt> for u32 {
+    type Error = ();
+
+    fn try_from(value: VarInt) -> Result<Self, Self::Error> {
+        if value.0 > u32::MAX as u64 { return Err(()); }
+        return Ok(value.0 as u32);
+    }
+}
+
 impl From<VarInt> for u64 {
     #[inline]
     fn from(value: VarInt) -> Self {
         value.0
-    }
-}
-
-impl From<u32> for VarInt {
-    #[inline]
-    fn from(value: u32) -> Self {
-        Self(value as u64)
     }
 }
 

@@ -1,4 +1,4 @@
-use std::time::Duration;
+use std::{ops::{Deref, DerefMut}, time::Duration};
 use bevy::prelude::*;
 
 /// Round-trip time estimate for [peer entities].
@@ -12,16 +12,18 @@ use bevy::prelude::*;
 #[derive(Debug, Default, Clone, Copy, Component)]
 pub struct PeerRtt(pub Duration);
 
-impl AsRef<Duration> for PeerRtt {
+impl Deref for PeerRtt {
+    type Target = Duration;
+
     #[inline]
-    fn as_ref(&self) -> &Duration {
+    fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
 
-impl AsMut<Duration> for PeerRtt {
+impl DerefMut for PeerRtt {
     #[inline]
-    fn as_mut(&mut self) -> &mut Duration {
+    fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
     }
 }
