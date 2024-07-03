@@ -228,42 +228,4 @@ impl<'a> ExactSizeIterator for MessageIter<'a> {
     fn len(&self) -> usize {
         self.indexes.len()
     }
-
-    /// Resizes all buffers based on `func`.
-    /// 
-    /// `func` takes the current capacity of the buffer as an input,
-    /// and outputs the new size of the buffer. Nothing happens if the two values are equal.
-    /// If the returned value is lesser, the buffer will resize to either the length or the target,
-    /// whichever is greater. If the returned value is greater, the length will be exactly so.
-    pub fn resize(&mut self, func: impl Fn(usize) -> usize) {
-        self.queue_map.iter_mut().for_each(|(_, buf)| {
-            use std::cmp::Ordering;
-
-            let cur_len = buf.len();
-            let new_len = func(cur_len);
-            match new_len.cmp(&cur_len) {
-                Ordering::Equal => {},
-                Ordering::Less => {
-                    buf.shrink_to(new_len);
-                },
-                Ordering::Greater => {
-                    let diff = new_len - cur_len;
-                    buf.reserve(diff);
-                },
-            }
-        });
-    }
-}
-
-impl<D: NetDirectionType> Default for NetworkMessages<D> {
-    #[inline]
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl<D: NetDirectionType> std::fmt::Debug for NetworkMessages<D> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_fmt(format_args!("NetworkMessages<{}>", std::any::type_name::<D>()))
-    }
 }
