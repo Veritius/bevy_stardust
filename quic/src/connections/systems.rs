@@ -6,70 +6,6 @@ use endpoints::perform_transmit;
 use quinn_proto::{Connection, ConnectionHandle, ConnectionStats, Event as AppEvent, StreamEvent, VarInt};
 use crate::*;
 
-/// A QUIC connection, attached to an endpoint.
-/// 
-/// # Safety
-/// This component must always stay in the same [`World`] as it was created in.
-/// Being put into another `World` will lead to undefined behavior.
-#[derive(Component)]
-pub struct QuicConnection {
-    pub(crate) owner: Entity,
-    pub(crate) handle: ConnectionHandle,
-    pub(crate) inner: Box<Connection>,
-}
-
-impl QuicConnection {
-    pub(crate) fn new(
-        owner: Entity,
-        handle: ConnectionHandle,
-        inner: Box<Connection>,
-    ) -> Self {
-        Self {
-            owner,
-            handle,
-            inner,
-        }
-    }
-
-    /// Returns the full collection of statistics for the connection.
-    pub fn stats(&self) -> ConnectionStats {
-        self.inner.stats()
-    }
-}
-
-#[derive(Debug, Clone, Copy)]
-pub(crate) enum DisconnectCode {
-    Unspecified,
-    AppDisconnect,
-    NotListening,
-}
-
-impl TryFrom<VarInt> for DisconnectCode {
-    type Error = ();
-
-    fn try_from(value: VarInt) -> Result<Self, Self::Error> {
-        use DisconnectCode::*;
-        Ok(match u64::from(value) {
-            0 => Unspecified,
-            1 => AppDisconnect,
-            2 => NotListening,
-
-            _ => return Err(()),
-        })
-    }
-}
-
-impl From<DisconnectCode> for VarInt {
-    fn from(value: DisconnectCode) -> Self {
-        use DisconnectCode::*;
-        VarInt::from_u32(match value {
-            Unspecified => 0,
-            AppDisconnect => 1,
-            NotListening => 2,
-        })
-    }
-}
-
 pub(crate) fn connection_update_rtt_system(
     mut query: Query<(&QuicConnection, &mut PeerRtt)>,
 ) {
@@ -229,7 +165,7 @@ pub(crate) fn connection_disconnect_system(
         if let Ok(mut connection) = connections.get_mut(req.peer) {
             connection.inner.close(
                 Instant::now(),
-                DisconnectCode::Unspecified.into(),
+                VarInt::from_u32(0),
                 Bytes::new(),
             );
 
