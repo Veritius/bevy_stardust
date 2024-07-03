@@ -17,16 +17,9 @@ impl Send {
             StreamHeader::Stardust { channel: _ } => true,
         };
 
-        match header {
-            StreamHeader::Stardust { channel } => {
-                let mut buffer = BytesMut::with_capacity(8);
-
-                VarInt::from_u32(0).encode(&mut buffer);
-                VarInt::from_u32(channel).encode(&mut buffer);
-
-                queue.push_back(buffer.freeze());
-            },
-        }
+        let mut buffer = BytesMut::with_capacity(8);
+        header.encode(&mut buffer);
+        queue.push_back(buffer.freeze());
 
         return Self { framed, queue };
     }
