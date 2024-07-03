@@ -4,11 +4,10 @@ mod recv;
 mod send;
 
 pub(crate) use header::StreamHeader;
-pub(crate) use recv::Recv;
+pub(crate) use recv::{Recv, RecvOutput, StardustRecv};
 pub(crate) use send::Send;
 
 use bytes::Bytes;
-use crate::QuicConfig;
 
 /// A byte stream that can be written to.
 pub(crate) trait WritableStream {
@@ -54,7 +53,7 @@ pub(crate) trait ReadableStream {
 
 /// A type that consumes data from a [`ReadableStream`] and handles it internally.
 pub(crate) trait StreamReader {
-    fn read<S: ReadableStream>(&mut self, stream: &mut S, config: &QuicConfig) -> Result<usize, StreamReadError>;
+    fn read<S: ReadableStream>(&mut self, stream: &mut S) -> Result<usize, StreamReadError>;
 }
 
 /// The outcome of reading from a stream.
