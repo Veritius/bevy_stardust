@@ -109,6 +109,7 @@ impl ChannelRegistry {
                 type_id,
                 type_name,
                 channel_id,
+                _hidden: (),
             },
 
             config,
@@ -176,6 +177,8 @@ pub struct ChannelMetadata {
 
     /// The channel's sequential ID assigned by the registry.
     pub channel_id: ChannelId,
+
+    _hidden: (),
 }
 
 pub(super) struct Registration {
