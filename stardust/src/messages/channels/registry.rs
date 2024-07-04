@@ -1,53 +1,9 @@
 //! The channel registry.
 
 use std::{any::{type_name, TypeId}, collections::BTreeMap, ops::Deref, sync::Arc};
-use bevy::{ecs::system::SystemParam, prelude::*};
+use bevy::prelude::*;
 use crate::prelude::ChannelConfiguration;
 use super::{id::{Channel, ChannelId}, ToChannelId};
-
-/// Access to registered channels and channel data.
-/// 
-/// This is only available after [`StardustPlugin`]`::`[`cleanup`] is called.
-/// Attempts to access this type before this point will cause a panic.
-/// 
-/// For asynchronous contexts, [`clone_arc`](Self::clone_arc) can be used
-/// to get a reference to the registry that will exist longer than the system.
-/// This can be used in the [`ComputeTaskPool`] or [`AsyncComputeTaskPool`].
-/// 
-/// [`StardustPlugin`]: crate::plugin::StardustPlugin
-/// [`cleanup`]: bevy::app::Plugin::cleanup
-/// [`ComputeTaskPool`]: bevy::tasks::ComputeTaskPool
-/// [`AsyncComputeTaskPool`]: bevy::tasks::AsyncComputeTaskPool
-#[derive(SystemParam)]
-pub struct Channels<'w> {
-    // This hides the ChannelRegistryFinished type so that it
-    // cannot be removed from the World, which would be bad
-    finished: Res<'w, ChannelRegistryFinished>,
-}
-
-impl<'w> Channels<'w> {
-    /// Returns an `Arc` to the underlying `ChannelRegistry`.
-    /// This allows the registry to be used in asynchronous contexts.
-    pub fn clone_arc(&self) -> Arc<ChannelRegistry> {
-        self.finished.0.clone()
-    }
-}
-
-impl<'a> AsRef<ChannelRegistry> for Channels<'a> {
-    #[inline]
-    fn as_ref(&self) -> &ChannelRegistry {
-        &self.finished.0
-    }
-}
-
-impl<'a> Deref for Channels<'a> {
-    type Target = ChannelRegistry;
-
-    #[inline]
-    fn deref(&self) -> &Self::Target {
-        self.as_ref()
-    }
-}
 
 #[derive(Resource)]
 pub(super) struct ChannelRegistryBuilder(pub ChannelRegistry);
@@ -59,7 +15,7 @@ impl ChannelRegistryBuilder {
 }
 
 #[derive(Resource)]
-pub(super) struct ChannelRegistryFinished(Arc<ChannelRegistry>);
+pub(super) struct ChannelRegistryFinished(pub Arc<ChannelRegistry>);
 
 impl Deref for ChannelRegistryFinished {
     type Target = ChannelRegistry;
