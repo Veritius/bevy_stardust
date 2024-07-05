@@ -1,5 +1,3 @@
-//! Variable length integers, for efficient encoding of integers.
-
 use std::fmt::{Debug, Display};
 use bevy_stardust::messages::bytes::{Buf, BufMut};
 use bevy_stardust::prelude::*;

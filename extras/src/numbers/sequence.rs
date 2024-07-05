@@ -1,5 +1,3 @@
-//! Wrapping sequence values.
-
 use std::{cmp::Ordering, ops::{Add, AddAssign, Sub, SubAssign}};
 
 /// A sequence value that always wraps.
