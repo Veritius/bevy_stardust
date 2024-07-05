@@ -2,6 +2,7 @@ use std::{sync::Mutex, time::Instant};
 use bevy::{prelude::*, utils::HashMap};
 use bevy_stardust::{connections::{PeerAddress, PeerRtt}, prelude::*};
 use bytes::BytesMut;
+use connections::codes::ResetCode;
 use datagrams::{Datagram, DatagramDesequencer, DatagramHeader, DatagramPurpose, DatagramSequencer};
 use endpoints::perform_transmit;
 use quinn_proto::{Connection, Dir, Event as AppEvent, SendDatagramError, StreamEvent, StreamId, VarInt};
@@ -164,7 +165,12 @@ pub(crate) fn connection_event_handler_system(
                             senders.remove(&id);
                         },
 
-                        (streams::StreamWriteOutcome::Error(_), _) => todo!(),
+                        (streams::StreamWriteOutcome::Error(_), _) => {
+                            trace!("Stream reset due to error: ");
+                            let _ = stream.reset(ResetCode::Unspecified.into());
+                            senders.remove(&id);
+                        },
+
                         _ => {},
                     }
                 },
@@ -173,7 +179,12 @@ pub(crate) fn connection_event_handler_system(
                     readers.remove(&id);
                 },
 
-                StreamEvent::Stopped { id, error_code: _ } => todo!(),
+                StreamEvent::Stopped { id, error_code } => {
+                    let code: ResetCode = (error_code.into_inner() as u32).into();
+                    trace!("Remote peer stopped stream: {code}");
+
+                    todo!()
+                },
 
                 // We don't care about this
                 StreamEvent::Available { dir: _ } => {},
