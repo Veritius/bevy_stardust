@@ -71,7 +71,7 @@ impl StreamWriter for Send {
                     written += amt;
                     let bytes = bytes.slice(amt..);
                     self.queue.push_front(bytes);
-                    continue;
+                    break;
                 },
 
                 // A block error means we must stop writing
