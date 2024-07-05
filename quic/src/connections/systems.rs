@@ -1,5 +1,5 @@
 use std::{sync::Mutex, time::Instant};
-use bevy::{ecs::world::CommandQueue, prelude::*};
+use bevy::prelude::*;
 use bevy_stardust::{connections::{PeerAddress, PeerRtt}, prelude::*};
 use endpoints::perform_transmit;
 use quinn_proto::{Dir, Event as AppEvent, StreamEvent, VarInt};
@@ -54,8 +54,8 @@ pub(crate) fn connection_endpoint_events_system(
 
 pub(crate) fn connection_event_handler_system(
     config: Res<QuicConfig>,
+    commands: ParallelCommands,
     mut connections: Query<(Entity, &mut QuicConnection, Option<&mut PeerLifestage>, Option<&mut PeerMessages<Incoming>>)>,
-    mut commands: ParallelCommands,
     mut endpoints: Query<(Entity, &mut QuicEndpoint)>,
     mut dc_events: EventWriter<PeerDisconnectedEvent>,
 ) {
