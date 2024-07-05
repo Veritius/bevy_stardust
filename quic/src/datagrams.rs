@@ -115,7 +115,7 @@ impl DatagramPurpose {
             DatagramPurpose::StardustSequenced { channel, sequence } => {
                 size += VarInt::from_u32(1).len() as usize;
                 size += VarInt::from_u32(*channel).len() as usize;
-                size += VarInt::from_u32(todo!()).len() as usize;
+                size += VarInt::from_u32(sequence.inner()).len() as usize;
             },
         }
 
@@ -129,10 +129,10 @@ impl DatagramPurpose {
                 VarInt::from_u32(*channel).write(buf)?;
             },
 
-            DatagramPurpose::StardustSequenced { channel, sequence: order } => {
+            DatagramPurpose::StardustSequenced { channel, sequence } => {
                 VarInt::from_u32(1).write(buf)?;
                 VarInt::from_u32(*channel).write(buf)?;
-                VarInt::from_u32(todo!()).write(buf)?;
+                VarInt::from_u32(sequence.inner()).write(buf)?;
             },
         }
 
