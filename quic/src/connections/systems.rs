@@ -569,11 +569,7 @@ pub(crate) fn connection_datagram_send_system(
             let _entered = trace_span.entered();
 
             // SAFETY: Endpoints will only access the connections they have created
-            let query_item = unsafe { connections.get_unchecked(*entity) };
-            let mut connection = match query_item {
-                Ok(connection) => connection,
-                Err(err) => todo!(),
-            };
+            let mut connection = unsafe { connections.get_unchecked(*entity) }.unwrap();
 
             // Handle timeouts
             connection.inner.handle_timeout(Instant::now());
