@@ -2,7 +2,6 @@
 #![warn(missing_docs)]
 
 mod connections;
-mod datagrams;
 mod endpoints;
 mod plugin;
 mod streams;
