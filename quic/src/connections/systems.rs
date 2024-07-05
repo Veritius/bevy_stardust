@@ -74,6 +74,7 @@ pub(crate) fn connection_event_handler_system(
         let connection = connection.as_mut();
         let inner = connection.inner.as_mut();
         let readers = &mut connection.readers;
+        let channel_map = &mut connection.channels;
         let senders = &mut connection.senders;
         let pending = &mut connection.pending;
         let desequencers = &mut connection.desequencers;
@@ -183,7 +184,15 @@ pub(crate) fn connection_event_handler_system(
                     let code: ResetCode = (error_code.into_inner() as u32).into();
                     trace!("Remote peer stopped stream: {code}");
 
-                    todo!()
+                    if let Some(sender) = senders.get(&id) {
+                        // Remove from the channel map
+                        if let Some(channel) = sender.channel() {
+                            channel_map.remove(&channel);
+                        }
+
+                        // Remove the sender
+                        senders.remove(&id);
+                    }
                 },
 
                 // We don't care about this

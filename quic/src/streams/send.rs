@@ -1,4 +1,5 @@
 use std::collections::VecDeque;
+use bevy_stardust::messages::ChannelId;
 use bytes::{Bytes, BytesMut};
 use header::StreamHeader;
 use quinn_proto::{VarInt, coding::Codec};
@@ -7,6 +8,7 @@ use super::*;
 pub(crate) struct Send {
     framed: bool,
     transient: bool,
+    channel: Option<ChannelId>,
     queue: VecDeque<Bytes>,
 }
 
@@ -24,6 +26,11 @@ impl Send {
             SendInit::StardustTransient  { channel: _ } => true,
         };
 
+        let channel = match init {
+            SendInit::StardustPersistent { channel } |
+            SendInit::StardustTransient { channel } => Some(channel.into())
+        };
+
         let header = match init {
             SendInit::StardustPersistent { channel } |
             SendInit::StardustTransient  { channel } => StreamHeader::Stardust { channel },
@@ -33,7 +40,7 @@ impl Send {
         header.encode(&mut buffer);
         queue.push_back(buffer.freeze());
 
-        return Self { framed, transient, queue };
+        return Self { framed, transient, channel, queue };
     }
 
     pub fn push(&mut self, chunk: Bytes) {
@@ -48,6 +55,10 @@ impl Send {
 
     pub fn transient(&self) -> bool {
         self.transient
+    }
+
+    pub fn channel(&self) -> Option<ChannelId> {
+        self.channel
     }
 }
 
