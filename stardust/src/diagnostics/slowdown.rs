@@ -8,11 +8,13 @@ use bevy::prelude::*;
 pub struct NetworkPerformanceReduction {
     /// Chance to drop a packet when sending, if the transport is packet-based.
     /// This chance is from `0.0` (never) to `1.0` (always), with `0.5` dropping 50% of the time.
+    #[reflect(@0.0..=1.0)]
     pub packet_drop_chance: f32,
 
     /// Chance to mangle or otherwise invalidate a packet, if the transport is packet based.
     /// This chance is from `0.0` (never) to `1.0` (always), with `0.5` mangling 50% of the time.
     /// The degree to which the packet is mangled is up to the transport layer.
+    #[reflect(@0.0..=1.0)]
     pub packet_mangle_chance: f32,
 
     /// Artificial delay in transmitting, in milliseconds.
