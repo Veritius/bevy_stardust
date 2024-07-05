@@ -1,6 +1,7 @@
 use std::{sync::Mutex, time::Instant};
 use bevy::{prelude::*, utils::HashMap};
 use bevy_stardust::{connections::{PeerAddress, PeerRtt}, prelude::*};
+use datagrams::{Datagram, DatagramPurpose};
 use endpoints::perform_transmit;
 use quinn_proto::{Connection, Dir, Event as AppEvent, StreamEvent, StreamId, VarInt};
 use streams::{Recv, Send, SendInit, StreamReader, StreamWriter};
@@ -55,6 +56,7 @@ pub(crate) fn connection_endpoint_events_system(
 pub(crate) fn connection_event_handler_system(
     config: Res<QuicConfig>,
     commands: ParallelCommands,
+    channels: Channels,
     mut connections: Query<(Entity, &mut QuicConnection, Option<&mut PeerLifestage>, Option<&mut PeerMessages<Incoming>>)>,
     mut endpoints: Query<(Entity, &mut QuicEndpoint)>,
     mut dc_events: EventWriter<PeerDisconnectedEvent>,
@@ -191,7 +193,45 @@ pub(crate) fn connection_event_handler_system(
                 StreamEvent::Available { dir: _ } => {},
             },
 
-            AppEvent::DatagramReceived => todo!(),
+            // Receive as many datagrams as possible
+            AppEvent::DatagramReceived => {
+                let mut datagrams = inner.datagrams();
+                while let Some(mut datagram) = datagrams.recv() {
+                    // Decode the datagram header and related stuff
+                    let datagram = match Datagram::decode(&mut datagram) {
+                        Ok(datagram) => datagram,
+                        Err(err) => {
+                            trace!("Error while decoding datagram: {err:?}");
+                            continue;
+                        },
+                    };
+
+                    match datagram.header.purpose {
+                        DatagramPurpose::StardustUnordered { channel } => {
+                            let channel = ChannelId::from(channel);
+
+                            // Check the channel exists
+                            if !channels.exists(channel) {
+                                todo!();
+                            }
+
+                            // Construct message wrapper type
+                            let message = ChannelMessage {
+                                channel,
+                                payload: datagram.payload.clone().into(),
+                            };
+
+                            match incoming {
+                                Some(ref mut queue) => queue.push_one(message),
+                                None => pending.push(message),
+                            }
+                        },
+
+                        DatagramPurpose::StardustOrdered { channel, order } => todo!(),
+                    }
+                }
+            },
+
             AppEvent::DatagramsUnblocked => todo!(),
 
             // We don't care about this one.
