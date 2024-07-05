@@ -22,7 +22,7 @@ pub fn setup_app() -> App {
         DefaultPlugins.build().disable::<LogPlugin>(),
         LogPlugin {
             filter: "".to_string(),
-            level: bevy::log::Level::TRACE,
+            level: bevy::log::Level::DEBUG,
             custom_layer: |_| None,
         },
         ScheduleRunnerPlugin::run_loop(std::time::Duration::from_millis(200)),
