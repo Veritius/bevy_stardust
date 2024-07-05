@@ -268,6 +268,11 @@ pub(crate) fn connection_message_sender_system(
                 },
             };
 
+            #[inline]
+            fn priority_conv(priority: u32) -> i32 {
+                TryInto::<i32>::try_into(priority).unwrap_or(i32::MAX)
+            }
+
             // Different channels have different config requirements
             use ChannelConsistency::*;
             match config.consistency {
@@ -277,8 +282,10 @@ pub(crate) fn connection_message_sender_system(
 
                 ReliableUnordered => {
                     for message in messages {
-                        // Open a new outgoing channel
+                        // Open a new outgoing, unidirectional stream
                         let id = inner.streams().open(Dir::Uni).unwrap();
+                        let mut stream = inner.send_stream(id);
+                        stream.set_priority(priority_conv(config.priority)).unwrap();
 
                         // Create a new sender
                         let mut send = Send::new(SendInit::StardustTransient { channel: channel.into() });
@@ -287,7 +294,6 @@ pub(crate) fn connection_message_sender_system(
                         send.push(message.into());
 
                         // Try to write as much as possible to the stream
-                        let mut stream = inner.send_stream(id);
                         match send.write(&mut stream) {
                             // The entire send buffer was written
                             streams::StreamWriteOutcome::Complete => {
@@ -309,7 +315,10 @@ pub(crate) fn connection_message_sender_system(
                 ReliableOrdered => {
                     // Get the ID of the channel
                     let id = channel_map.entry(channel).or_insert_with(|| {
-                        inner.streams().open(Dir::Uni).unwrap()
+                        // Open a new outgoing, unidirectional stream
+                        let id = inner.streams().open(Dir::Uni).unwrap();
+                        inner.send_stream(id).set_priority(priority_conv(config.priority)).unwrap();
+                        id
                     }).clone();
 
                     // Get the sender queue
