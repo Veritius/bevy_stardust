@@ -2,11 +2,10 @@ use std::{sync::Mutex, time::Instant};
 use bevy::{prelude::*, utils::HashMap};
 use bevy_stardust::{connections::{PeerAddress, PeerRtt}, prelude::*};
 use bytes::BytesMut;
-use connections::codes::ResetCode;
 use datagrams::{Datagram, DatagramDesequencer, DatagramHeader, DatagramPurpose, DatagramSequencer};
 use endpoints::perform_transmit;
 use quinn_proto::{Connection, Dir, Event as AppEvent, SendDatagramError, StreamEvent, StreamId, VarInt};
-use streams::{Recv, Send, SendInit, StreamReadError, StreamReader, StreamWriter};
+use streams::{Recv, ResetCode, Send, SendInit, StreamReadError, StreamReader, StreamWriter};
 use crate::*;
 
 pub(crate) fn connection_update_rtt_system(

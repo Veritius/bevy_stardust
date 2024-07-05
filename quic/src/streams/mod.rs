@@ -1,9 +1,11 @@
+mod codes;
 mod commitbuf;
 mod header;
 mod impls;
 mod recv;
 mod send;
 
+pub(crate) use codes::ResetCode;
 pub(crate) use header::StreamHeader;
 pub(crate) use recv::{Recv, RecvOutput, StardustRecv};
 pub(crate) use send::{Send, SendInit};
@@ -41,7 +43,7 @@ pub(crate) enum StreamWriteOutcome {
 #[derive(Debug, Clone, Copy)]
 pub(crate) enum StreamWriteError {
     /// The stream was stopped.
-    Stopped(u64),
+    Stopped(ResetCode),
 
     /// The stream was closed (finish or reset).
     Closed,
@@ -82,5 +84,5 @@ pub(crate) enum StreamReadError {
     Closed,
 
     /// The stream was reset.
-    Reset(u64),
+    Reset(ResetCode),
 }

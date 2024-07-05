@@ -19,7 +19,7 @@ impl WritableStream for SendStream<'_> {
             Err(WriteError::Blocked) => StreamWriteOutcome::Blocked,
 
             Err(err) => StreamWriteOutcome::Error(match err {
-                WriteError::Stopped(code) => StreamWriteError::Stopped(code.into_inner()),
+                WriteError::Stopped(code) => StreamWriteError::Stopped(code.into()),
                 WriteError::ClosedStream => StreamWriteError::Closed,
                 WriteError::Blocked => unreachable!(),
             }),
@@ -45,7 +45,7 @@ impl ReadableStream for Chunks<'_> {
 
             Err(error) => match error {
                 quinn_proto::ReadError::Blocked => StreamReadOutcome::Blocked,
-                quinn_proto::ReadError::Reset(code) => StreamReadOutcome::Error(StreamReadError::Reset(code.into_inner())),
+                quinn_proto::ReadError::Reset(code) => StreamReadOutcome::Error(StreamReadError::Reset(code.into())),
             },
         }
     }
