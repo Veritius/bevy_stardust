@@ -32,7 +32,7 @@ impl<T: SeqValue> From<T> for Sequence<T> {
 impl<T: SeqValue> Sequence<T> {
     /// Returns the inner integer value.
     #[inline]
-    pub fn inner(&mut self) -> T {
+    pub fn inner(&self) -> T {
         self.0
     }
 
