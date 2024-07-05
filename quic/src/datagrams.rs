@@ -1,6 +1,5 @@
-use bevy_stardust_extras::numbers::Sequence;
+use bevy_stardust_extras::numbers::{Sequence, VarInt};
 use bytes::{Buf, BufMut, Bytes};
-use quinn_proto::{VarInt, coding::Codec};
 use smallvec::SmallVec;
 
 type Seq = Sequence<u32>;
@@ -53,9 +52,15 @@ pub(crate) struct Datagram {
 }
 
 impl Datagram {
-    pub fn encode<B: BufMut>(&self, buf: &mut B) {
-        self.header.encode(buf);
+    pub fn size(&self) -> usize {
+        self.header.size() + self.payload.len()
+    }
+
+    pub fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), ()> {
+        self.header.encode(buf)?;
+        if buf.remaining_mut() < self.payload.len() { return Err(()); }
         buf.put(self.payload.clone());
+        return Ok(());
     }
 
     pub fn decode<B: Buf>(buf: &mut B) -> Result<Self, ()> {
@@ -71,8 +76,12 @@ pub(crate) struct DatagramHeader {
 }
 
 impl DatagramHeader {
-    pub fn encode<B: BufMut>(&self, buf: &mut B) {
-        self.purpose.encode(buf);
+    pub fn size(&self) -> usize {
+        self.purpose.size()
+    }
+
+    pub fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), ()> {
+        self.purpose.encode(buf)
     }
 
     pub fn decode<B: Buf>(buf: &mut B) -> Result<Self, ()> {
@@ -89,28 +98,49 @@ pub(crate) enum DatagramPurpose {
 
     StardustSequenced {
         channel: u32,
-        order: u32,
+        sequence: Seq,
     },
 }
 
 impl DatagramPurpose {
-    pub fn encode<B: BufMut>(&self, buf: &mut B) {
+    pub fn size(&self) -> usize {
+        let mut size: usize = 0;
+
         match self {
             DatagramPurpose::StardustUnordered { channel } => {
-                VarInt::from_u32(0).encode(buf);
-                VarInt::from_u32(*channel).encode(buf);
+                size += VarInt::from_u32(0).len() as usize;
+                size += VarInt::from_u32(*channel).len() as usize;
             },
 
-            DatagramPurpose::StardustSequenced { channel, order } => {
-                VarInt::from_u32(0).encode(buf);
-                VarInt::from_u32(*channel).encode(buf);
-                VarInt::from_u32(*order).encode(buf);
+            DatagramPurpose::StardustSequenced { channel, sequence } => {
+                size += VarInt::from_u32(1).len() as usize;
+                size += VarInt::from_u32(*channel).len() as usize;
+                size += VarInt::from_u32(todo!()).len() as usize;
             },
         }
+
+        return size;
+    }
+
+    pub fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), ()> {
+        match self {
+            DatagramPurpose::StardustUnordered { channel } => {
+                VarInt::from_u32(0).write(buf)?;
+                VarInt::from_u32(*channel).write(buf)?;
+            },
+
+            DatagramPurpose::StardustSequenced { channel, sequence: order } => {
+                VarInt::from_u32(1).write(buf)?;
+                VarInt::from_u32(*channel).write(buf)?;
+                VarInt::from_u32(todo!()).write(buf)?;
+            },
+        }
+
+        return Ok(())
     }
 
     pub fn decode<B: Buf>(buf: &mut B) -> Result<Self, ()> {
-        let code = decode_varint(buf)?.into_inner();
+        let code = VarInt::read(buf)?.into();
 
         return Ok(match code {
             0 => Self::StardustUnordered {
@@ -119,7 +149,7 @@ impl DatagramPurpose {
 
             1 => Self::StardustSequenced {
                 channel: decode_uint::<B, u32>(buf)?,
-                order: decode_uint::<B, u32>(buf)?
+                sequence: decode_uint::<B, u32>(buf)?.into()
             },
 
             _ => return Err(())
@@ -127,12 +157,8 @@ impl DatagramPurpose {
     }
 }
 
-fn decode_varint<B: Buf>(buf: &mut B) -> Result<VarInt, ()> {
-    VarInt::decode(buf).map_err(|_| ())
-}
-
 fn decode_uint<B: Buf, T: TryFrom<u64>>(buf: &mut B) -> Result<T, ()> {
-    let u64 = decode_varint(buf)?.into_inner();
+    let u64: u64 = VarInt::read(buf)?.into();
     let t = <T as TryFrom<u64>>::try_from(u64).map_err(|_| ())?;
     return Ok(t);
 }

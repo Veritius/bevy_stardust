@@ -1,9 +1,10 @@
 use std::{sync::Mutex, time::Instant};
 use bevy::{prelude::*, utils::HashMap};
 use bevy_stardust::{connections::{PeerAddress, PeerRtt}, prelude::*};
-use datagrams::{Datagram, DatagramPurpose};
+use bytes::BytesMut;
+use datagrams::{Datagram, DatagramHeader, DatagramPurpose, DatagramSequencer};
 use endpoints::perform_transmit;
-use quinn_proto::{Connection, Dir, Event as AppEvent, StreamEvent, StreamId, VarInt};
+use quinn_proto::{Connection, Dir, Event as AppEvent, SendDatagramError, StreamEvent, StreamId, VarInt};
 use streams::{Recv, Send, SendInit, StreamReader, StreamWriter};
 use crate::*;
 
@@ -227,7 +228,7 @@ pub(crate) fn connection_event_handler_system(
                             }
                         },
 
-                        DatagramPurpose::StardustSequenced { channel, order } => todo!(),
+                        DatagramPurpose::StardustSequenced { channel, sequence: order } => todo!(),
                     }
                 }
             },
@@ -321,6 +322,10 @@ pub(crate) fn connection_message_sender_system(
         let inner = connection.inner.as_mut();
         let channel_map = &mut connection.channels;
         let senders = &mut connection.senders;
+        let sequencers = &mut connection.sequencers;
+
+        // Storage for datagrams with an attached priority value
+        let mut queued_datagrams: Vec<(u32, Datagram)> = Vec::new();
 
         // Iterate over all channels
         for (channel, messages) in outgoing.iter() {
@@ -333,12 +338,40 @@ pub(crate) fn connection_message_sender_system(
                 },
             };
 
+            // Save ourselves some work
+            if messages.len() == 0 { continue }
+
             // Different channels have different config requirements
             use ChannelConsistency::*;
             match config.consistency {
-                UnreliableUnordered => {},
+                UnreliableUnordered => {
+                    queued_datagrams.extend(messages.map(|m| (config.priority, Datagram {
+                        header: DatagramHeader {
+                            purpose: DatagramPurpose::StardustUnordered {
+                                channel: channel.into(),
+                            }
+                        },
 
-                UnreliableSequenced => {},
+                        payload: m.into(),
+                    })));
+                },
+
+                UnreliableSequenced => {
+                    let sequencer = sequencers
+                        .entry(channel)
+                        .or_insert_with(|| DatagramSequencer::new());
+
+                    queued_datagrams.extend(messages.map(|m| (config.priority, Datagram {
+                        header: DatagramHeader {
+                            purpose: DatagramPurpose::StardustSequenced {
+                                channel: channel.into(),
+                                sequence: sequencer.next(),
+                            }
+                        },
+
+                        payload: m.into(),
+                    })));
+                },
 
                 ReliableUnordered => {
                     for message in messages {
@@ -404,6 +437,55 @@ pub(crate) fn connection_message_sender_system(
 
                 _ => unimplemented!()
             }
+        }
+
+        // Empty the datagram queue
+        if queued_datagrams.len() > 0 {
+            // Logging stuff
+            let span = trace_span!("Queueing datagrams");
+            span.record("total", queued_datagrams.len());
+            let _entered = span.entered();
+
+            // Sort datagrams by priority
+            trace_span!("Sorting datagrams").in_scope(|| {
+                queued_datagrams.sort_unstable_by_key(|(k, _)| *k);
+            });
+
+            let max_size = inner.datagrams().max_size().unwrap();
+
+            // Send as many datagrams as possible
+            let mut datagrams = inner.datagrams();
+            let mut sends: u32 = 0;
+            for (_, datagram) in queued_datagrams.drain(..) {
+                // Length estimate
+                let len = datagram.size();
+
+                if len > max_size {
+
+                }
+
+                // Create the payload thingy
+                let mut payload = BytesMut::with_capacity(len);
+                datagram.encode(&mut payload).unwrap();
+                let payload = payload.freeze();
+
+                // Send datagrams
+                match datagrams.send(payload, false) {
+                    Ok(_) => {
+                        sends += 1;
+                    },
+
+                    Err(SendDatagramError::Blocked(_)) => break,
+
+                    Err(SendDatagramError::UnsupportedByPeer) => todo!(),
+
+                    Err(SendDatagramError::Disabled) => unimplemented!(),
+                    Err(SendDatagramError::TooLarge) => unimplemented!(),
+                }
+            }
+
+            // Record somes statistics
+            _entered.record("sends", sends);
         }
     });
 }
