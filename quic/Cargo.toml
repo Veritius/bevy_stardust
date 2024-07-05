@@ -23,10 +23,6 @@ path = "../extras"
 [dependencies.bytes]
 version = "1.5.0"
 
-[dependencies.smallvec]
-version = "1.13.2"
-features = ["union", "const_generics"]
-
 [dependencies.anyhow]
 version = "1"
 
