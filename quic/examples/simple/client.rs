@@ -15,6 +15,7 @@ fn main() {
         let socket = UdpSocket::bind(RANDOM_ADDRESS).unwrap();
         let config = Arc::new(EndpointConfig::default());
 
+        // Client TLS configuration
         let client_config = ClientConfig::new(Arc::new(QuicClientConfig::try_from(TlsClientConfig::builder()
             .dangerous()
             .with_custom_certificate_verifier(AlwaysVerify::new())
