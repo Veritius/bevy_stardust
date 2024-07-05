@@ -177,15 +177,14 @@ pub(crate) fn connection_event_handler_system(
                     let mut stream = inner.send_stream(id);
                     let send = senders.get_mut(&id).unwrap().as_mut();
 
-                    match send.write(&mut stream) {
-                        streams::StreamWriteOutcome::Complete => {
-                            // Transient senders are removed
-                            if !send.transient() { continue }
+                    match (send.write(&mut stream), send.transient()) {
+                        // Transient senders are removed when done sending
+                        (streams::StreamWriteOutcome::Complete, true) => {
                             let _ = stream.finish();
                             senders.remove(&id);
                         },
 
-                        streams::StreamWriteOutcome::Error(_) => todo!(),
+                        (streams::StreamWriteOutcome::Error(_), _) => todo!(),
                         _ => {},
                     }
                 },
