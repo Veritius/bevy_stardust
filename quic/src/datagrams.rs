@@ -5,27 +5,19 @@ use smallvec::SmallVec;
 
 type Seq = Sequence<u32>;
 
-pub(crate) struct DatagramOrdering {
-    send_idx: Seq,
+pub(crate) struct DatagramDesequencer {
     waiting: SmallVec<[(Seq, Bytes); 2]>,
 }
 
-impl DatagramOrdering {
+impl DatagramDesequencer {
     pub fn new() -> Self {
         Self {
-            send_idx: Seq::default(),
-            waiting: SmallVec::new(),
+            waiting: SmallVec::default(),
         }
     }
 
     pub fn new_boxed(&self) -> Box<Self> {
         Box::new(Self::new())
-    }
-
-    pub fn next(&mut self) -> Seq {
-        let f = self.send_idx;
-        self.send_idx.increment();
-        return f;
     }
 
     pub fn store(&mut self, seq: Seq, data: Bytes) {
@@ -34,6 +26,24 @@ impl DatagramOrdering {
 
     pub fn drain(&mut self) -> impl Iterator<Item = Bytes> {
         [].into_iter() // TODO
+    }
+}
+
+pub(crate) struct DatagramSequencer {
+    send_idx: Seq,
+}
+
+impl DatagramSequencer {
+    pub fn new() -> Self {
+        Self {
+            send_idx: Seq::default(),
+        }
+    }
+
+    pub fn next(&mut self) -> Seq {
+        let f = self.send_idx;
+        self.send_idx.increment();
+        return f;
     }
 }
 

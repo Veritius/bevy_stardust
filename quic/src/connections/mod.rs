@@ -5,7 +5,7 @@ pub(crate) use systems::*;
 use bevy_stardust::messages::{ChannelId, ChannelMessage};
 use bevy::{prelude::*, utils::hashbrown::HashMap};
 use quinn_proto::{Connection, ConnectionHandle, ConnectionStats, StreamId};
-use crate::{datagrams::DatagramOrdering, streams::{Recv as StRecv, Send as StSend}};
+use crate::{datagrams::{DatagramDesequencer, DatagramSequencer}, streams::{Recv as StRecv, Send as StSend}};
 
 /// A QUIC connection, attached to an endpoint.
 /// 
@@ -19,10 +19,11 @@ pub struct QuicConnection {
     pub(crate) inner: Box<Connection>,
 
     readers: HashMap<StreamId, Box<StRecv>>,
-    orderings: HashMap<ChannelId, Box<DatagramOrdering>>,
+    desequencers: HashMap<ChannelId, Box<DatagramDesequencer>>,
 
     channels: HashMap<ChannelId, StreamId>,
     senders: HashMap<StreamId, Box<StSend>>,
+    sequencers: HashMap<ChannelId, DatagramSequencer>,
 
     pending: Vec<ChannelMessage>,
 }
@@ -39,10 +40,11 @@ impl QuicConnection {
             inner,
 
             readers: HashMap::new(),
-            orderings: HashMap::new(),
+            desequencers: HashMap::new(),
 
             channels: HashMap::new(),
             senders: HashMap::new(),
+            sequencers: HashMap::default(),
 
             pending: Vec::new(),
         }
