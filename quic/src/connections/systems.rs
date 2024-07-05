@@ -38,11 +38,7 @@ pub(crate) fn connection_endpoint_events_system(
             let _entered = trace_span.entered();
 
             // SAFETY: Endpoints will only access the connections they have created
-            let query_item = unsafe { connections.get_unchecked(*entity) };
-            let mut connection = match query_item {
-                Ok(connection) => connection,
-                Err(err) => todo!(),
-            };
+            let mut connection = unsafe { connections.get_unchecked(*entity) }.unwrap();
 
             // Extract all endpoint events and give them to the endpoint
             while let Some(event) = connection.inner.poll_endpoint_events() {
@@ -85,7 +81,7 @@ pub(crate) fn connection_event_handler_system(
         while let Some(event) = inner.poll() { match event {
             AppEvent::Connected => {
                 // Log this to the console
-                info!("Connection {entity:?} finished handshake");
+                info!("Connection {entity} finished handshake");
 
                 // Set their lifestage to Established.
                 if let Some(ref mut lifestage) = lifestage {
@@ -106,7 +102,7 @@ pub(crate) fn connection_event_handler_system(
 
             AppEvent::ConnectionLost { reason } => {
                 // Log this to the console
-                info!("Connection {entity:?} lost: {reason}");
+                info!("Connection {entity} lost: {reason}");
 
                 // Set their lifestage to Closed.
                 if let Some(ref mut lifestage) = lifestage {
@@ -115,20 +111,10 @@ pub(crate) fn connection_event_handler_system(
 
                 // Fetch the endpoint component
                 let mut endpoints = endpoints.lock().unwrap();
-                let (_, mut endpoint) = match endpoints.get_mut(connection.owner) {
-                    Ok(endpoint) => endpoint,
-                    Err(_) => todo!(),
-                };
+                let (_, mut endpoint) = endpoints.get_mut(connection.owner).unwrap();
 
                 // Remove the entity id from the map
-                match endpoint.entities.remove(&connection.handle) {
-                    Some(_) => {},
-                    None => todo!(),
-                }
-
-                // Manually drop the lock to release it early
-                // This probably doesn't make any difference but whatever
-                drop(endpoints);
+                endpoint.entities.remove(&connection.handle);
 
                 // Queue the entity to be despawned
                 commands.command_scope(|mut commands| {

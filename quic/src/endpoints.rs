@@ -171,7 +171,7 @@ pub(crate) fn endpoint_datagram_recv_system(
                                     Some(v) => *v,
                                     None => {
                                         error!("Connection {handle:?} had no associated entity");
-                                        todo!(); // continue;
+                                        continue;
                                     },
                                 };
 
