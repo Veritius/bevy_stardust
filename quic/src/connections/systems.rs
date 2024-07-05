@@ -1,8 +1,8 @@
 use std::{sync::Mutex, time::Instant};
-use bevy::prelude::*;
+use bevy::{prelude::*, utils::HashMap};
 use bevy_stardust::{connections::{PeerAddress, PeerRtt}, prelude::*};
 use endpoints::perform_transmit;
-use quinn_proto::{Dir, Event as AppEvent, StreamEvent, VarInt};
+use quinn_proto::{Connection, Dir, Event as AppEvent, StreamEvent, StreamId, VarInt};
 use streams::{Recv, Send, SendInit, StreamReader, StreamWriter};
 use crate::*;
 
@@ -143,38 +143,24 @@ pub(crate) fn connection_event_handler_system(
                 StreamEvent::Opened { dir } => {
                     let id = inner.streams().accept(dir).unwrap();
                     readers.insert(id, Box::new(Recv::new()));
+
+                    stream_read(
+                        &config,
+                        id,
+                        inner,
+                        readers,
+                        &mut incoming,
+                        pending,
+                    );
                 },
 
-                StreamEvent::Readable { id } => {
-                    let mut stream = inner.recv_stream(id);
-                    let recv = readers.get_mut(&id).unwrap().as_mut();
-
-                    match stream.read(true) {
-                        Ok(mut chunks) => {
-                            if let Err(err) = recv.read_from(&mut chunks) {
-                                todo!()
-                            }
-
-                            let _ = chunks.finalize();
-                        },
-
-                        Err(err) => todo!(),
-                    };
-
-                    match recv.poll(&config) {
-                        streams::RecvOutput::Nothing => {},
-
-                        streams::RecvOutput::Stardust(recv) => {
-                            let channel: ChannelId = recv.channel().into();
-                            let iter = recv.map(|b| Message::from_bytes(b));
-
-                            match incoming {
-                                Some(ref mut queue) => queue.push_channel(channel, iter),
-                                None => pending.extend(iter.map(|payload| ChannelMessage { channel, payload })),
-                            };
-                        },
-                    }
-                },
+                StreamEvent::Readable { id } => stream_read(
+                    &config,
+                    id, inner,
+                    readers,
+                    &mut incoming,
+                    pending,
+                ),
 
                 StreamEvent::Writable { id } => {
                     let mut stream = inner.send_stream(id);
@@ -212,6 +198,44 @@ pub(crate) fn connection_event_handler_system(
             AppEvent::HandshakeDataReady => {},
         }}
     });
+
+    fn stream_read<'a>(
+        config: &QuicConfig,
+        id: StreamId,
+        inner: &mut Connection,
+        readers: &mut HashMap<StreamId, Box<Recv>>,
+        incoming: &mut Option<Mut<'a, PeerMessages<Incoming>>>,
+        pending: &mut Vec<ChannelMessage>,
+    ) {
+        let mut stream = inner.recv_stream(id);
+        let recv = readers.get_mut(&id).unwrap().as_mut();
+
+        match stream.read(true) {
+            Ok(mut chunks) => {
+                if let Err(err) = recv.read_from(&mut chunks) {
+                    todo!()
+                }
+
+                let _ = chunks.finalize();
+            },
+
+            Err(err) => todo!(),
+        };
+
+        match recv.poll(&config) {
+            streams::RecvOutput::Nothing => {},
+
+            streams::RecvOutput::Stardust(recv) => {
+                let channel: ChannelId = recv.channel().into();
+                let iter = recv.map(|b| Message::from_bytes(b));
+
+                match incoming {
+                    Some(ref mut queue) => queue.push_channel(channel, iter),
+                    None => pending.extend(iter.map(|payload| ChannelMessage { channel, payload })),
+                };
+            },
+        }
+    }
 }
 
 pub(crate) fn connection_dump_pending_system(

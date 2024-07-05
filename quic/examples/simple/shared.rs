@@ -30,7 +30,7 @@ pub fn setup_app() -> App {
     ));
 
     app.add_channel::<SimpleChannel>(ChannelConfiguration {
-        consistency: ChannelConsistency::ReliableOrdered,
+        consistency: ChannelConsistency::ReliableUnordered,
         priority: 0,
     });
 
