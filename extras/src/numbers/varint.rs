@@ -206,7 +206,7 @@ fn varint_encoding() {
 #[cfg(feature="octs")]
 mod octs {
     use super::VarInt;
-    use octs::{Encode, EncodeLen, Decode};
+    use octs::{Encode, EncodeLen, FixedEncodeLenHint, Decode};
 
     impl Encode for VarInt {
         type Error = ();
@@ -220,6 +220,11 @@ mod octs {
         fn encode_len(&self) -> usize {
             self.len() as usize
         }
+    }
+
+    impl FixedEncodeLenHint for VarInt {
+        const MAX_ENCODE_LEN: usize = 8;
+        const MIN_ENCODE_LEN: usize = 1;
     }
 
     impl Decode for VarInt {
