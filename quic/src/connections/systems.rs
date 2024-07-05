@@ -268,11 +268,6 @@ pub(crate) fn connection_message_sender_system(
                 },
             };
 
-            #[inline]
-            fn priority_conv(priority: u32) -> i32 {
-                TryInto::<i32>::try_into(priority).unwrap_or(i32::MAX)
-            }
-
             // Different channels have different config requirements
             use ChannelConsistency::*;
             match config.consistency {
@@ -285,7 +280,7 @@ pub(crate) fn connection_message_sender_system(
                         // Open a new outgoing, unidirectional stream
                         let id = inner.streams().open(Dir::Uni).unwrap();
                         let mut stream = inner.send_stream(id);
-                        stream.set_priority(priority_conv(config.priority)).unwrap();
+                        stream.set_priority(map_priority_value(config.priority)).unwrap();
 
                         // Create a new sender
                         let mut send = Send::new(SendInit::StardustTransient { channel: channel.into() });
@@ -317,7 +312,7 @@ pub(crate) fn connection_message_sender_system(
                     let id = channel_map.entry(channel).or_insert_with(|| {
                         // Open a new outgoing, unidirectional stream
                         let id = inner.streams().open(Dir::Uni).unwrap();
-                        inner.send_stream(id).set_priority(priority_conv(config.priority)).unwrap();
+                        inner.send_stream(id).set_priority(map_priority_value(config.priority)).unwrap();
                         id
                     }).clone();
 
@@ -391,4 +386,9 @@ pub(crate) fn connection_datagram_send_system(
             _entered.record("sends", send_count);
         }
     });
+}
+
+#[inline]
+fn map_priority_value(priority: u32) -> i32 {
+    TryInto::<i32>::try_into(priority).unwrap_or(i32::MAX)
 }
