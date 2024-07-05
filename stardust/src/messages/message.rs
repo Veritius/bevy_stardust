@@ -36,6 +36,12 @@ impl Message {
         self.0.is_empty()
     }
 
+    /// Returns the message as a slice of bytes.
+    #[inline]
+    pub fn as_slice(&self) -> &[u8] {
+        &self.0
+    }
+
     /// Attempts to read the message as a string slice.
     /// 
     /// This fails if the message is not valid UTF-8.
@@ -54,6 +60,17 @@ impl Message {
         Self(bytes)
     }
 
+    /// Create a [`Message`] from a static slice of bytes.
+    #[inline]
+    pub const fn from_static(slc: &'static [u8]) -> Self {
+        Self::from_bytes(Bytes::from_static(slc))
+    }
+
+    /// Create a [`Message`] from a static string slice.
+    #[inline]
+    pub const fn from_static_str(str: &'static str) -> Self {
+        Self::from_static(str.as_bytes())
+    }
 }
 
 impl From<Bytes> for Message {
