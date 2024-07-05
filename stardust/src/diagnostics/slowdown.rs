@@ -1,3 +1,4 @@
+use std::time::Duration;
 use bevy::prelude::*;
 
 /// Reduces the performance of I/O entities and types that it is attached to.
@@ -11,13 +12,17 @@ pub struct NetworkPerformanceReduction {
     #[reflect(@0.0..=1.0)]
     pub packet_drop_chance: f32,
 
-    /// Chance to mangle or otherwise invalidate a packet, if the transport is packet based.
-    /// This chance is from `0.0` (never) to `1.0` (always), with `0.5` mangling 50% of the time.
-    /// The degree to which the packet is mangled is up to the transport layer.
-    #[reflect(@0.0..=1.0)]
-    pub packet_mangle_chance: f32,
+    /// Controls the **minimum** RTT that will be used, based on the transport layer's estimates.
+    /// If the peer would have a lesser RTT, an artificial delay is added to increase it.
+    /// This is good for simulating connections with extremely high latency.
+    pub simulate_rtt: Duration,
+}
 
-    /// Artificial delay in transmitting, in milliseconds.
-    /// 1000 milliseconds is the same as one second.
-    pub transmit_delay_millis: u32,
+impl Default for NetworkPerformanceReduction {
+    fn default() -> Self {
+        Self {
+            packet_drop_chance: 0.0,
+            simulate_rtt: Duration::ZERO,
+        }
+    }
 }
