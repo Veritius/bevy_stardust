@@ -232,7 +232,7 @@ pub(crate) fn connection_event_handler_system(
 
                             // Check the channel exists
                             if !channels.exists(channel) {
-                                todo!();
+                                trace!(?channel, "Datagram had nonexistent channel id");
                             }
 
                             // Construct message wrapper type
@@ -252,7 +252,7 @@ pub(crate) fn connection_event_handler_system(
 
                             // Check the channel exists
                             if !channels.exists(channel) {
-                                todo!()
+                                trace!(?channel, "Datagram had nonexistent channel id");
                             }
 
                             // Get the desequencer value
