@@ -17,15 +17,20 @@ impl StreamHeader {
         }
     }
 
-    pub fn decode<B: Buf>(buffer: &mut B) -> Result<Self, ()> {
-        let code = VarInt::decode(buffer).map_err(|_| ())?;
+    pub fn decode<B: Buf>(buffer: &mut B) -> Result<Self, StreamHeaderDecodeError> {
+        let code = VarInt::decode(buffer).map_err(|_| StreamHeaderDecodeError::EndOfInput)?;
 
         match code.into_inner() {
             0 => Ok(Self::Stardust {
-                channel: VarInt::decode(buffer).map_err(|_| ())?.into_inner() as u32,
+                channel: VarInt::decode(buffer).map_err(|_| StreamHeaderDecodeError::EndOfInput)?.into_inner() as u32,
             }),
 
-            _ => Err(todo!()),
+            _ => Err(StreamHeaderDecodeError::UnknownCode),
         }
     }
+}
+
+pub(crate) enum StreamHeaderDecodeError {
+    EndOfInput,
+    UnknownCode,
 }
