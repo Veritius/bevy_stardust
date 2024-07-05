@@ -2,4 +2,5 @@
 #![warn(missing_docs)]
 
 pub mod link;
+pub mod sequence;
 pub mod varint;
