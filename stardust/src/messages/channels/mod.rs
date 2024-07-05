@@ -166,7 +166,8 @@ pub(crate) fn plugin_build(app: &mut App) {
 }
 
 pub(crate) fn plugin_cleanup(app: &mut App) {
-    let mut builder = app.world.remove_resource::<ChannelRegistryBuilder>().unwrap();
+    let world = app.world_mut();
+    let mut builder = world.remove_resource::<ChannelRegistryBuilder>().unwrap();
     builder.0.channel_data.shrink_to_fit();
-    app.world.insert_resource(builder.finish());
+    world.insert_resource(builder.finish());
 }
