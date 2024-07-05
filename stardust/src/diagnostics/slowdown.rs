@@ -5,7 +5,7 @@ use bevy::prelude::*;
 /// This merely instructs transport layers as to what they should do,
 /// and how they handle these values is defined per transport layer.
 #[derive(Debug, Clone, Component, Reflect)]
-#[reflect(Debug, Component)]
+#[reflect(Debug, Default, Component)]
 pub struct NetworkPerformanceReduction {
     /// Chance to drop a packet when sending, if the transport is packet-based.
     /// This chance is from `0.0` (never) to `1.0` (always), with `0.5` dropping 50% of the time.
