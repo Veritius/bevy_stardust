@@ -204,3 +204,31 @@ fn varint_encoding() {
         bytes.clear();
     }
 }
+
+#[cfg(feature="octs")]
+mod octs {
+    use super::VarInt;
+    use octs::{Encode, EncodeLen, Decode};
+
+    impl Encode for VarInt {
+        type Error = ();
+
+        fn encode(&self, dst: &mut impl octs::Write) -> Result<(), octs::BufTooShortOr<Self::Error>> {
+            self.write(dst).map_err(|_| octs::BufTooShortOr::TooShort)
+        }
+    }
+
+    impl EncodeLen for VarInt {
+        fn encode_len(&self) -> usize {
+            self.len() as usize
+        }
+    }
+
+    impl Decode for VarInt {
+        type Error = ();
+
+        fn decode(src: &mut impl octs::Read) -> Result<Self, octs::BufTooShortOr<Self::Error>> {
+            VarInt::read(src).map_err(|_| octs::BufTooShortOr::TooShort)
+        }
+    }
+}
