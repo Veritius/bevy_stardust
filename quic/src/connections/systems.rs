@@ -1,5 +1,5 @@
 use std::{sync::Mutex, time::Instant};
-use bevy::prelude::*;
+use bevy::{ecs::world::CommandQueue, prelude::*};
 use bevy_stardust::{connections::{PeerAddress, PeerRtt}, prelude::*};
 use endpoints::perform_transmit;
 use quinn_proto::{Dir, Event as AppEvent, StreamEvent, VarInt};
@@ -55,13 +55,12 @@ pub(crate) fn connection_endpoint_events_system(
 pub(crate) fn connection_event_handler_system(
     config: Res<QuicConfig>,
     mut connections: Query<(Entity, &mut QuicConnection, Option<&mut PeerLifestage>, Option<&mut PeerMessages<Incoming>>)>,
-    mut commands: Commands,
+    mut commands: ParallelCommands,
     mut endpoints: Query<(Entity, &mut QuicEndpoint)>,
     mut dc_events: EventWriter<PeerDisconnectedEvent>,
 ) {
     // Wrap the commands queue, query and eventwriter in a mutex so we can use them in parallel
     // Accesses (should be) infrequent enough that this is fine.
-    // let commands = Mutex::new(&mut commands);
     let endpoints = Mutex::new(&mut endpoints);
     let dc_events = Mutex::new(&mut dc_events);
 
@@ -90,13 +89,15 @@ pub(crate) fn connection_event_handler_system(
                 }
 
                 // Add the necessary components
-                // commands.lock().unwrap().entity(entity).insert((
-                //     Peer::new(),
-                //     PeerRtt(inner.rtt()),
-                //     PeerAddress(inner.remote_address()),
-                //     PeerMessages::<Incoming>::new(),
-                //     PeerMessages::<Outgoing>::new(),
-                // ));
+                commands.command_scope(|mut commands| {
+                    commands.entity(entity).insert((
+                        Peer::new(),
+                        PeerRtt(inner.rtt()),
+                        PeerAddress(inner.remote_address()),
+                        PeerMessages::<Incoming>::new(),
+                        PeerMessages::<Outgoing>::new(),
+                    ));
+                });
             },
 
             AppEvent::ConnectionLost { reason } => {
@@ -126,7 +127,9 @@ pub(crate) fn connection_event_handler_system(
                 drop(endpoints);
 
                 // Queue the entity to be despawned
-                // commands.lock().unwrap().entity(entity).despawn();
+                commands.command_scope(|mut commands| {
+                    commands.entity(entity).despawn()
+                });
 
                 // Notify other systems of the disconnection
                 dc_events.lock().unwrap().send(PeerDisconnectedEvent {
