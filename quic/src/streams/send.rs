@@ -97,5 +97,5 @@ impl StreamWriter for Send {
 
 pub(crate) enum SendInit {
     StardustPersistent { channel: u32 },
-    StardustTransient  { channel: u32},
+    StardustTransient  { channel: u32 },
 }
