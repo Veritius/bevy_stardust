@@ -56,13 +56,13 @@ fn send_recv_message_system(
         let iter = incoming.iter().flat_map(|(c, m)| m.map(move |v| (c, v)));
         for (channel, message) in iter {
             let str = std::str::from_utf8(&message[..]).unwrap();
-            info!("Received message from {entity:?} on channel {channel:?}: {str}")
+            info!("Received message from {entity} on channel {channel:?}: {str}")
         }
 
         // Send a message
         let channel = channels.id(TypeId::of::<SimpleChannel>()).unwrap();
         let message = format!("This is message {}", *increment);
-        info!("Sending message to {entity:?} on channel {channel:?}: {message}");
+        info!("Sending message to {entity} on channel {channel:?}: {message}");
         let payload = Message::from(Bytes::from(message));
         outgoing.push_one(ChannelMessage { channel, payload });
         *increment += 1;

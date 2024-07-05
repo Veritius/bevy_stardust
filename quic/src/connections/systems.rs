@@ -183,6 +183,7 @@ pub(crate) fn connection_event_handler_system(
                     match (send.write(&mut stream), send.transient()) {
                         // Transient senders are removed when done sending
                         (streams::StreamWriteOutcome::Complete, true) => {
+                            trace!("Closed transient stream {id}");
                             let _ = stream.finish();
                             senders.remove(&id);
                         },
@@ -281,6 +282,7 @@ pub(crate) fn connection_message_sender_system(
                         let id = inner.streams().open(Dir::Uni).unwrap();
                         let mut stream = inner.send_stream(id);
                         stream.set_priority(map_priority_value(config.priority)).unwrap();
+                        trace!(?channel, stream=?id, "Opened stream for reliable unordered messages");
 
                         // Create a new sender
                         let mut send = Send::new(SendInit::StardustTransient { channel: channel.into() });
@@ -313,6 +315,7 @@ pub(crate) fn connection_message_sender_system(
                         // Open a new outgoing, unidirectional stream
                         let id = inner.streams().open(Dir::Uni).unwrap();
                         inner.send_stream(id).set_priority(map_priority_value(config.priority)).unwrap();
+                        trace!(?channel, stream=?id, "Opened stream for reliable ordered messages");
                         id
                     }).clone();
 

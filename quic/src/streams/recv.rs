@@ -1,4 +1,5 @@
 use std::collections::VecDeque;
+use bevy::log::trace;
 use bytes::{Buf, Bytes};
 use commitbuf::CommitBuf;
 use quinn_proto::{VarInt, coding::Codec};
@@ -54,7 +55,10 @@ impl Recv {
             read.commit();
 
             self.state = match header {
-                StreamHeader::Stardust { channel } => RecvState::Stardust { channel },
+                StreamHeader::Stardust { channel } => {
+                    trace!(channel, "Received stream for Stardust messages");
+                    RecvState::Stardust { channel }
+                },
             }
         }
 
