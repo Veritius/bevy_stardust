@@ -278,7 +278,7 @@ pub(crate) fn connection_event_handler_system(
                 }
             },
 
-            AppEvent::DatagramsUnblocked => todo!(),
+            AppEvent::DatagramsUnblocked => {},
 
             // We don't care about this one.
             AppEvent::HandshakeDataReady => {},
@@ -449,7 +449,10 @@ pub(crate) fn connection_message_sender_system(
                                 senders.insert(id, boxed);
                             },
 
-                            streams::StreamWriteOutcome::Error(_) => todo!(),
+                            streams::StreamWriteOutcome::Error(err) => {
+                                trace!(stream=?id, "Stream send failed: {err:?}");
+                                continue;
+                            },
                         }
                     }
                 },
@@ -477,7 +480,11 @@ pub(crate) fn connection_message_sender_system(
                     // Try to write as much as possible to the stream
                     let mut stream = inner.send_stream(id);
                     match send.write(&mut stream) {
-                        streams::StreamWriteOutcome::Error(_) => todo!(),
+                        streams::StreamWriteOutcome::Error(err) => {
+                            trace!(stream=?id, "Stream send failed: {err:?}");
+                            continue;
+                        },
+
                         _ => {},
                     }
                 },
