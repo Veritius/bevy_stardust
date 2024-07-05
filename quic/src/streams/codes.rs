@@ -1,12 +1,14 @@
 #[derive(Debug, Clone, Copy)]
 pub(crate) enum ResetCode {
     Unspecified,
+    Violation,
 }
 
 impl From<u32> for ResetCode {
     fn from(value: u32) -> Self {
         match value {
             0 => Self::Unspecified,
+            1 => Self::Violation,
 
             _ => Self::Unspecified,
         }
@@ -17,6 +19,7 @@ impl From<ResetCode> for u32 {
     fn from(value: ResetCode) -> Self {
         match value {
             ResetCode::Unspecified => 0,
+            ResetCode::Violation => 1,
         }
     }
 }
@@ -39,6 +42,7 @@ impl std::fmt::Display for ResetCode {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(match self {
             ResetCode::Unspecified => "unspecified or unknown",
+            ResetCode::Violation => "unspecified violation",
         })
     }
 }

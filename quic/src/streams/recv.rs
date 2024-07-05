@@ -1,5 +1,6 @@
 use std::collections::VecDeque;
 use bevy::log::trace;
+use bevy_stardust::messages::Message;
 use bytes::{Buf, Bytes};
 use commitbuf::CommitBuf;
 use quinn_proto::{VarInt, coding::Codec};
@@ -110,21 +111,31 @@ impl StardustRecv<'_> {
 }
 
 impl<'a> Iterator for StardustRecv<'a> {
-    type Item = Bytes;
+    type Item = Result<Message, StardustRecvError>;
 
     fn next(&mut self) -> Option<Self::Item> {
         let mut read = CommitBuf::new(&mut self.queue);
-        let length = VarInt::decode(&mut read).ok()?.into_inner() as usize;
+        let length = match VarInt::decode(&mut read) {
+            Ok(v) => v.into_inner() as usize,
+            Err(_) => return None,
+        };
 
         if length > self.limit {
-            todo!()
+            return Some(Err(StardustRecvError::ExceededLimit))
         }
 
-        if length > read.remaining() { return None; }
+        if length > read.remaining() {
+            return None;
+        }
 
         let payload = read.copy_to_bytes(length);
         read.commit();
 
-        return Some(payload);
+        return Some(Ok(payload.into()));
     }
+}
+
+#[derive(Debug)]
+pub(crate) enum StardustRecvError {
+    ExceededLimit,
 }

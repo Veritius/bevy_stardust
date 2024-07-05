@@ -5,7 +5,7 @@ use bytes::BytesMut;
 use datagrams::{Datagram, DatagramDesequencer, DatagramHeader, DatagramPurpose, DatagramSequencer};
 use endpoints::perform_transmit;
 use quinn_proto::{Connection, Dir, Event as AppEvent, SendDatagramError, StreamEvent, StreamId, VarInt};
-use streams::{Recv, ResetCode, Send, SendInit, StreamReadError, StreamReader, StreamWriter};
+use streams::{Recv, ResetCode, Send, SendInit, StardustRecvError, StreamReadError, StreamReader, StreamWriter};
 use crate::*;
 
 pub(crate) fn connection_update_rtt_system(
@@ -147,6 +147,13 @@ pub(crate) fn connection_event_handler_system(
 
                         Err(err) => {
                             trace!(stream=?id, "Error while reading stream: {err:?}");
+
+                            match err {
+                                ReadFnError::Stream(StreamReadError::Closed) => {},
+                                ReadFnError::Stream(StreamReadError::Reset(_code)) => {},
+                                ReadFnError::Stardust(StardustRecvError::ExceededLimit) => { let _ = inner.recv_stream(id).stop(ResetCode::Violation.into()); },
+                            };
+
                             readers.remove(&id);
                         },
                     }
@@ -154,7 +161,8 @@ pub(crate) fn connection_event_handler_system(
 
                 StreamEvent::Readable { id } => match stream_read(
                     &config,
-                    id, inner,
+                    id,
+                    inner,
                     readers,
                     &mut incoming,
                     pending,
@@ -163,6 +171,13 @@ pub(crate) fn connection_event_handler_system(
 
                     Err(err) => {
                         trace!(stream=?id, "Error while reading stream: {err:?}");
+
+                        match err {
+                            ReadFnError::Stream(StreamReadError::Closed) => {},
+                            ReadFnError::Stream(StreamReadError::Reset(_code)) => {},
+                            ReadFnError::Stardust(StardustRecvError::ExceededLimit) => { let _ = inner.recv_stream(id).stop(ResetCode::Violation.into()); },
+                        };
+
                         readers.remove(&id);
                     },
                 },
@@ -291,18 +306,18 @@ pub(crate) fn connection_event_handler_system(
         readers: &mut HashMap<StreamId, Box<Recv>>,
         incoming: &mut Option<Mut<'a, PeerMessages<Incoming>>>,
         pending: &mut Vec<ChannelMessage>,
-    ) -> Result<(), StreamReadError> {
+    ) -> Result<(), ReadFnError> {
         let mut stream = inner.recv_stream(id);
         let recv = readers.get_mut(&id).unwrap().as_mut();
 
         match stream.read(true) {
             Ok(mut chunks) => {
-                recv.read_from(&mut chunks)?;
+                recv.read_from(&mut chunks).map_err(|e| ReadFnError::Stream(e))?;
                 let _ = chunks.finalize();
             },
 
             Err(err) => return Err(match err {
-                quinn_proto::ReadableError::ClosedStream => StreamReadError::Closed,
+                quinn_proto::ReadableError::ClosedStream => ReadFnError::Stream(StreamReadError::Closed),
                 quinn_proto::ReadableError::IllegalOrderedRead => unimplemented!(),
             }),
         };
@@ -312,16 +327,32 @@ pub(crate) fn connection_event_handler_system(
 
             streams::RecvOutput::Stardust(recv) => {
                 let channel: ChannelId = recv.channel().into();
-                let iter = recv.map(|b| Message::from_bytes(b));
 
-                match incoming {
-                    Some(ref mut queue) => queue.push_channel(channel, iter),
-                    None => pending.extend(iter.map(|payload| ChannelMessage { channel, payload })),
-                };
+                for item in recv {
+                    match item {
+                        Ok(payload) => {
+                            let message = ChannelMessage { channel, payload };
+
+                            // TODO: Improve this
+                            match incoming {
+                                Some(ref mut queue) => queue.push_one(message),
+                                None => pending.push(message),
+                            }
+                        },
+
+                        Err(err) => return Err(ReadFnError::Stardust(err)),
+                    }
+                }
             },
         }
 
         return Ok(())
+    }
+
+    #[derive(Debug)]
+    enum ReadFnError {
+        Stream(StreamReadError),
+        Stardust(StardustRecvError),
     }
 }
 

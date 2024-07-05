@@ -7,7 +7,7 @@ mod send;
 
 pub(crate) use codes::ResetCode;
 pub(crate) use header::StreamHeader;
-pub(crate) use recv::{Recv, RecvOutput, StardustRecv};
+pub(crate) use recv::{Recv, RecvOutput, StardustRecv, StardustRecvError};
 pub(crate) use send::{Send, SendInit};
 
 use bytes::Bytes;
