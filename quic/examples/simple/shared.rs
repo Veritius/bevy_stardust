@@ -4,6 +4,7 @@ use std::any::TypeId;
 pub use std::sync::Arc;
 pub use std::net::{UdpSocket, SocketAddr};
 pub use bevy::prelude::*;
+use bevy::utils::HashMap;
 pub use bevy_stardust::prelude::*;
 pub use bevy_stardust_quic::*;
 
@@ -29,8 +30,25 @@ pub fn setup_app() -> App {
         QuicPlugin,
     ));
 
-    app.add_channel::<SimpleChannel>(ChannelConfiguration {
-        consistency: ChannelConsistency::ReliableUnordered,
+    app.add_channel::<UnreliableUnorderedChannel>(ChannelConfiguration {
+        consistency: ChannelConsistency::UnreliableUnordered,
+        priority: 0,
+    });
+
+    app.add_channel::<UnreliableSequencedChannel>(ChannelConfiguration {
+        consistency: ChannelConsistency::UnreliableSequenced,
+        priority: 0,
+    });
+
+
+    app.add_channel::<ReliableUnorderedChannel>(ChannelConfiguration {
+        consistency: ChannelConsistency::UnreliableUnordered,
+        priority: 0,
+    });
+
+
+    app.add_channel::<ReliableOrderedChannel>(ChannelConfiguration {
+        consistency: ChannelConsistency::ReliableOrdered,
         priority: 0,
     });
 
@@ -39,18 +57,24 @@ pub fn setup_app() -> App {
     return app;
 }
 
-#[derive(TypePath)]
-struct SimpleChannel;
+struct UnreliableUnorderedChannel;
+struct UnreliableSequencedChannel;
+struct ReliableUnorderedChannel;
+struct ReliableOrderedChannel;
 
 fn send_recv_message_system(
     channels: Channels,
-    mut increment: Local<u64>,
+    mut increments: Local<HashMap<ChannelId, u64>>,
     mut peers: Query<(
         Entity,
         &PeerMessages<Incoming>,
         &mut PeerMessages<Outgoing>,
     )>,
 ) {
+    const SEND_CHANCE: f32 = 0.8;
+
+    let mut rng = fastrand::Rng::default();
+
     for (entity, incoming, mut outgoing) in peers.iter_mut() {
         // Read out all messages
         let iter = incoming.iter().flat_map(|(c, m)| m.map(move |v| (c, v)));
@@ -59,13 +83,18 @@ fn send_recv_message_system(
             info!("Received message from {entity} on channel {channel:?}: {str}")
         }
 
-        // Send a message
-        let channel = channels.id(TypeId::of::<SimpleChannel>()).unwrap();
-        let message = format!("This is message {}", *increment);
-        info!("Sending message to {entity} on channel {channel:?}: {message}");
-        let payload = Message::from(Bytes::from(message));
-        outgoing.push_one(ChannelMessage { channel, payload });
-        *increment += 1;
+        // Send messages on each channel
+        for channel in (0..channels.count()).map(|v| ChannelId::from(v)) {
+            let increment = increments.entry(channel).or_insert(0);
+
+            for _ in (0..rng.u32(0..4)) {
+                let message = format!("This is message {}", *increment);
+                info!("Sending message to {entity} on channel {channel:?}: {message}");
+                let payload = Message::from(Bytes::from(message));
+                outgoing.push_one(ChannelMessage { channel, payload });
+                *increment += 1;
+            }
+        }
     }
 }
 

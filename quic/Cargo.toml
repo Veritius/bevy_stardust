@@ -35,6 +35,9 @@ version = "0.23.5"
 [dev-dependencies.rustls-pemfile]
 version = "2"
 
+[dev-dependencies.fastrand]
+version = "2"
+
 [[example]]
 name = "simple-server"
 path = "examples/simple/server.rs"
