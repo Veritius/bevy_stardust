@@ -15,6 +15,9 @@ use std::{cmp::Ordering, ops::{Add, AddAssign, Sub, SubAssign}};
 /// since we only [`increment`](Self::increment) the sequence value a certain amount. For example, the
 /// difference between `4` and `9` is `5`, but the difference between `254` and `1` is `3`, again
 /// assuming you're using a `Sequence<u8>`.
+/// 
+/// The `SeqValue` trait is intentionally hidden, as its internals are not important.
+/// `T` can be any one of `u8`, `u16`, `u32`, `u64`, or `u128`.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 #[repr(transparent)]
 pub struct Sequence<T: SeqValue>(T);
@@ -105,7 +108,7 @@ impl<T: SeqValue> SubAssign<T> for Sequence<T> {
 }
 
 /// A number that can be used in a [`Sequence`] value.
-#[allow(missing_docs)]
+#[doc(hidden)]
 pub trait SeqValue
 where
     Self: sealed::Sealed,
