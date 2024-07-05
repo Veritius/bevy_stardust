@@ -165,6 +165,34 @@ mod sealed {
     impl Sealed for u128 {}
 }
 
+#[cfg(feature="octs")]
+mod octs {
+    use octs::{Encode, FixedEncodeLen, Decode};
+    use super::{Sequence, SeqValue};
+
+    impl<T: SeqValue + Encode> Encode for Sequence<T> {
+        type Error = T::Error;
+
+        #[inline]
+        fn encode(&self, dst: &mut impl octs::Write) -> Result<(), octs::BufTooShortOr<Self::Error>> {
+            self.0.encode(dst)
+        }
+    }
+
+    impl<T: SeqValue + FixedEncodeLen> FixedEncodeLen for Sequence<T> {
+        const ENCODE_LEN: usize = T::ENCODE_LEN;
+    }
+
+    impl<T: SeqValue + Decode> Decode for Sequence<T> {
+        type Error = T::Error;
+
+        #[inline]
+        fn decode(src: &mut impl octs::Read) -> Result<Self, octs::BufTooShortOr<Self::Error>> {
+            T::decode(src).map(|v| Self(v))
+        }
+    }
+}
+
 #[test]
 fn sequence_id_difference_test() {
     const MIDPOINT: Sequence::<u16> = Sequence(u16::MID);
