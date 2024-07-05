@@ -1,8 +1,41 @@
+use bevy_stardust_extras::numbers::Sequence;
 use bytes::{Buf, BufMut, Bytes};
 use quinn_proto::{VarInt, coding::Codec};
+use smallvec::SmallVec;
 
-#[derive(Debug)]
-pub(crate) struct SequenceId(u32);
+type Seq = Sequence<u32>;
+
+pub(crate) struct DatagramOrdering {
+    send_idx: Seq,
+    waiting: SmallVec<[(Seq, Bytes); 2]>,
+}
+
+impl DatagramOrdering {
+    pub fn new() -> Self {
+        Self {
+            send_idx: Seq::default(),
+            waiting: SmallVec::new(),
+        }
+    }
+
+    pub fn new_boxed(&self) -> Box<Self> {
+        Box::new(Self::new())
+    }
+
+    pub fn next(&mut self) -> Seq {
+        let f = self.send_idx;
+        self.send_idx.increment();
+        return f;
+    }
+
+    pub fn store(&mut self, seq: Seq, data: Bytes) {
+        todo!()
+    }
+
+    pub fn drain(&mut self) -> impl Iterator<Item = Bytes> {
+        [].into_iter() // TODO
+    }
+}
 
 pub(crate) struct Datagram {
     pub header: DatagramHeader,
