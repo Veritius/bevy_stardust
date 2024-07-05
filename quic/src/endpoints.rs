@@ -1,6 +1,6 @@
 use std::{io::ErrorKind, net::{SocketAddr, UdpSocket}, sync::Arc, time::Instant};
 use anyhow::Result;
-use bevy::{prelude::*, utils::HashMap};
+use bevy::{ecs::component::{ComponentHooks, StorageType}, prelude::*, utils::HashMap};
 use bytes::BytesMut;
 use quinn_proto::{ClientConfig, ConnectionHandle, DatagramEvent, Endpoint, EndpointConfig, ServerConfig, Transmit};
 use crate::{QuicConfig, QuicConnection};
@@ -10,7 +10,6 @@ use crate::{QuicConfig, QuicConnection};
 /// # Safety
 /// This component must always stay in the same [`World`] as it was created in.
 /// Being put into another `World` will lead to undefined behavior.
-#[derive(Component)]
 pub struct QuicEndpoint {
     pub(crate) inner: Box<Endpoint>,
     pub(crate) entities: HashMap<ConnectionHandle, Entity>,
@@ -88,6 +87,33 @@ impl QuicEndpoint {
 
         // Return the entity id
         return Ok(entity);
+    }
+}
+
+impl Component for QuicEndpoint {
+    const STORAGE_TYPE: StorageType = StorageType::Table;
+
+    fn register_component_hooks(hooks: &mut ComponentHooks) {
+        hooks.on_remove(|world, entity, _| {
+            // Create an iterator over all connections
+            let endpoint = world.get::<Self>(entity).unwrap();
+
+            let count = endpoint.entities.len();
+            if count == 0 { return } // no work to do
+
+            let mut alerted = false;
+
+            // Iterate over all connections
+            for connection in endpoint.entities.values() {
+                if let Some(connection) = world.get::<QuicConnection>(*connection) {
+                    if connection.inner.is_closed() { continue }
+                    if alerted { continue }
+                    alerted = true;
+
+                    warn!(endpoint=?entity, count, "An endpoint was closed with open connections");
+                }
+            }
+        });
     }
 }
 
