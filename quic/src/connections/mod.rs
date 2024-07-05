@@ -19,7 +19,7 @@ pub struct QuicConnection {
     pub(crate) inner: Box<Connection>,
 
     readers: HashMap<StreamId, Box<StRecv>>,
-    desequencers: HashMap<ChannelId, Box<DatagramDesequencer>>,
+    desequencers: HashMap<ChannelId, DatagramDesequencer>,
 
     channels: HashMap<ChannelId, StreamId>,
     senders: HashMap<StreamId, Box<StSend>>,

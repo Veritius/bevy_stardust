@@ -1,30 +1,23 @@
 use bevy_stardust_extras::numbers::{Sequence, VarInt};
 use bytes::{Buf, BufMut, Bytes};
-use smallvec::SmallVec;
 
 type Seq = Sequence<u32>;
 
 pub(crate) struct DatagramDesequencer {
-    waiting: SmallVec<[(Seq, Bytes); 2]>,
+    recv_idx: Seq,
 }
 
 impl DatagramDesequencer {
     pub fn new() -> Self {
         Self {
-            waiting: SmallVec::default(),
+            recv_idx: Seq::default(),
         }
     }
 
-    pub fn new_boxed(&self) -> Box<Self> {
-        Box::new(Self::new())
-    }
-
-    pub fn store(&mut self, seq: Seq, data: Bytes) {
-        todo!()
-    }
-
-    pub fn drain(&mut self) -> impl Iterator<Item = Bytes> {
-        [].into_iter() // TODO
+    pub fn newer(&mut self, seq: Seq) -> bool {
+        if seq <= self.recv_idx { return false; }
+        self.recv_idx = seq;
+        return true;
     }
 }
 

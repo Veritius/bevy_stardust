@@ -2,7 +2,7 @@ use std::{sync::Mutex, time::Instant};
 use bevy::{prelude::*, utils::HashMap};
 use bevy_stardust::{connections::{PeerAddress, PeerRtt}, prelude::*};
 use bytes::BytesMut;
-use datagrams::{Datagram, DatagramHeader, DatagramPurpose, DatagramSequencer};
+use datagrams::{Datagram, DatagramDesequencer, DatagramHeader, DatagramPurpose, DatagramSequencer};
 use endpoints::perform_transmit;
 use quinn_proto::{Connection, Dir, Event as AppEvent, SendDatagramError, StreamEvent, StreamId, VarInt};
 use streams::{Recv, Send, SendInit, StreamReader, StreamWriter};
@@ -79,6 +79,7 @@ pub(crate) fn connection_event_handler_system(
         let readers = &mut connection.readers;
         let senders = &mut connection.senders;
         let pending = &mut connection.pending;
+        let desequencers = &mut connection.desequencers;
 
         // Poll as many events as possible from the handler
         while let Some(event) = inner.poll() { match event {
@@ -228,7 +229,33 @@ pub(crate) fn connection_event_handler_system(
                             }
                         },
 
-                        DatagramPurpose::StardustSequenced { channel, sequence: order } => todo!(),
+                        DatagramPurpose::StardustSequenced { channel, sequence } => {
+                            let channel = ChannelId::from(channel);
+
+                            // Check the channel exists
+                            if !channels.exists(channel) {
+                                todo!()
+                            }
+
+                            // Get the desequencer value
+                            let desequencer = desequencers
+                                .entry(channel)
+                                .or_insert_with(DatagramDesequencer::new);
+
+                            // Store in the desequencer
+                            if desequencer.newer(sequence) {
+                                // Construct message wrapper type
+                                let message = ChannelMessage {
+                                    channel,
+                                    payload: datagram.payload.clone().into(),
+                                };
+
+                                match incoming {
+                                    Some(ref mut queue) => queue.push_one(message),
+                                    None => pending.push(message),
+                                }
+                            }
+                        },
                     }
                 }
             },
