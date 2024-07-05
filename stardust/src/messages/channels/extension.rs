@@ -23,7 +23,8 @@ impl ChannelSetupAppExt for App {
         config: ChannelConfiguration,
     ) -> ChannelId {
         // Get the registry
-        let mut registry = self.world.get_resource_mut::<ChannelRegistryBuilder>()
+        let mut registry = self.world_mut()
+            .get_resource_mut::<ChannelRegistryBuilder>()
             .expect("Cannot add channels after plugin cleanup");
 
         // Add to registry

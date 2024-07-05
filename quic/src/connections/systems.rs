@@ -61,7 +61,7 @@ pub(crate) fn connection_event_handler_system(
 ) {
     // Wrap the commands queue, query and eventwriter in a mutex so we can use them in parallel
     // Accesses (should be) infrequent enough that this is fine.
-    let commands = Mutex::new(&mut commands);
+    // let commands = Mutex::new(&mut commands);
     let endpoints = Mutex::new(&mut endpoints);
     let dc_events = Mutex::new(&mut dc_events);
 
@@ -90,13 +90,13 @@ pub(crate) fn connection_event_handler_system(
                 }
 
                 // Add the necessary components
-                commands.lock().unwrap().entity(entity).insert((
-                    Peer::new(),
-                    PeerRtt(inner.rtt()),
-                    PeerAddress(inner.remote_address()),
-                    PeerMessages::<Incoming>::new(),
-                    PeerMessages::<Outgoing>::new(),
-                ));
+                // commands.lock().unwrap().entity(entity).insert((
+                //     Peer::new(),
+                //     PeerRtt(inner.rtt()),
+                //     PeerAddress(inner.remote_address()),
+                //     PeerMessages::<Incoming>::new(),
+                //     PeerMessages::<Outgoing>::new(),
+                // ));
             },
 
             AppEvent::ConnectionLost { reason } => {
@@ -126,7 +126,7 @@ pub(crate) fn connection_event_handler_system(
                 drop(endpoints);
 
                 // Queue the entity to be despawned
-                commands.lock().unwrap().entity(entity).despawn();
+                // commands.lock().unwrap().entity(entity).despawn();
 
                 // Notify other systems of the disconnection
                 dc_events.lock().unwrap().send(PeerDisconnectedEvent {

@@ -22,7 +22,7 @@ pub fn setup_app() -> App {
         LogPlugin {
             filter: "".to_string(),
             level: bevy::log::Level::TRACE,
-            update_subscriber: None,
+            custom_layer: |_| None,
         },
         ScheduleRunnerPlugin::run_loop(std::time::Duration::from_millis(200)),
         StardustPlugin,

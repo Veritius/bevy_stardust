@@ -9,7 +9,7 @@ repository="https://github.com/veritius/bevy_stardust/"
 keywords=["bevy", "gamedev", "networking", "quic"]
 
 [dependencies.bevy]
-version = "0.13"
+version = "0.14"
 default-features = false
 
 [dependencies.bevy_stardust]

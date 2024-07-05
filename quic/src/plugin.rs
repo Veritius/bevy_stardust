@@ -8,7 +8,7 @@ pub struct QuicPlugin;
 
 impl Plugin for QuicPlugin {
     fn build(&self, app: &mut App) {
-        if app.world.get_resource::<QuicConfig>().is_none() {
+        if app.world().get_resource::<QuicConfig>().is_none() {
             app.init_resource::<QuicConfig>();
         }
 

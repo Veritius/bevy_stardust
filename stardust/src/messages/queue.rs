@@ -19,7 +19,9 @@ impl MessageQueue {
         }
     }
 
-    /// Clears all queues but doesn't reallocate.
+    /// Clears all queues but doesn't resize anything.
+    /// 
+    /// If you want to free allocations, use [`reset`](Self::reset).
     pub fn clear(&mut self) {
         // Clear the message map
         self.messages.clear();
@@ -30,11 +32,26 @@ impl MessageQueue {
         .for_each(|(_, v)| v.clear())
     }
 
-    /// Clears all queues and deallocates.
-    pub fn empty(&mut self) {
-        self.clear();
-        self.messages.shrink_to(0);
-        self.index_map.shrink_to(0);
+    /// Clears all data in the queue, and frees any allocations.
+    pub fn reset(&mut self) {
+        *self = MessageQueue::new();
+    }
+
+    /// Reserves capacity for at least `additional` new messages to be efficiently inserted.
+    pub fn reserve(&mut self, additional: usize) {
+        self.messages.reserve(additional);
+    }
+
+    /// Reserves capacity for at least `additional` new messages associated with `channel` to be efficiently inserted.
+    pub fn reserve_channel(&mut self, channel: ChannelId, additional: usize) {
+        // Reserve space in the messages vector
+        self.reserve(additional);
+
+        // Reserve space in the index vector
+        self.index_map
+        .entry(channel)
+        .or_insert_with(|| SmallVec::new())
+        .reserve(additional);
     }
 
     /// Returns the total number of messages stored in the queue.
