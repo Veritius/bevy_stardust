@@ -170,9 +170,7 @@ pub(crate) fn connection_event_handler_system(
                 },
 
                 StreamEvent::Finished { id } => {
-                    senders.remove(&id);
-
-                    // TODO: Remove from channel map
+                    readers.remove(&id);
                 },
 
                 StreamEvent::Stopped { id, error_code: _ } => todo!(),
