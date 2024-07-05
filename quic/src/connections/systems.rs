@@ -227,7 +227,7 @@ pub(crate) fn connection_event_handler_system(
                             }
                         },
 
-                        DatagramPurpose::StardustOrdered { channel, order } => todo!(),
+                        DatagramPurpose::StardustSequenced { channel, order } => todo!(),
                     }
                 }
             },

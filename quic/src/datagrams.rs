@@ -1,6 +1,9 @@
 use bytes::{Buf, BufMut, Bytes};
 use quinn_proto::{VarInt, coding::Codec};
 
+#[derive(Debug)]
+pub(crate) struct SequenceId(u32);
+
 pub(crate) struct Datagram {
     pub header: DatagramHeader,
     pub payload: Bytes,
@@ -41,7 +44,7 @@ pub(crate) enum DatagramPurpose {
         channel: u32,
     },
 
-    StardustOrdered {
+    StardustSequenced {
         channel: u32,
         order: u32,
     },
@@ -55,7 +58,7 @@ impl DatagramPurpose {
                 VarInt::from_u32(*channel).encode(buf);
             },
 
-            DatagramPurpose::StardustOrdered { channel, order } => {
+            DatagramPurpose::StardustSequenced { channel, order } => {
                 VarInt::from_u32(0).encode(buf);
                 VarInt::from_u32(*channel).encode(buf);
                 VarInt::from_u32(*order).encode(buf);
@@ -71,7 +74,7 @@ impl DatagramPurpose {
                 channel: decode_uint::<B, u32>(buf)?,
             },
 
-            1 => Self::StardustOrdered {
+            1 => Self::StardustSequenced {
                 channel: decode_uint::<B, u32>(buf)?,
                 order: decode_uint::<B, u32>(buf)?
             },
