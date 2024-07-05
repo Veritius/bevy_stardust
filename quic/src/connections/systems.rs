@@ -6,7 +6,7 @@ use connections::codes::ResetCode;
 use datagrams::{Datagram, DatagramDesequencer, DatagramHeader, DatagramPurpose, DatagramSequencer};
 use endpoints::perform_transmit;
 use quinn_proto::{Connection, Dir, Event as AppEvent, SendDatagramError, StreamEvent, StreamId, VarInt};
-use streams::{Recv, Send, SendInit, StreamReader, StreamWriter};
+use streams::{Recv, Send, SendInit, StreamReadError, StreamReader, StreamWriter};
 use crate::*;
 
 pub(crate) fn connection_update_rtt_system(
@@ -136,23 +136,37 @@ pub(crate) fn connection_event_handler_system(
                     let id = inner.streams().accept(dir).unwrap();
                     readers.insert(id, Box::new(Recv::new()));
 
-                    stream_read(
+                    match stream_read(
                         &config,
                         id,
                         inner,
                         readers,
                         &mut incoming,
                         pending,
-                    );
+                    ) {
+                        Ok(_) => { /* Do nothing */ },
+
+                        Err(err) => {
+                            trace!(stream=?id, "Error while reading stream: {err:?}");
+                            readers.remove(&id);
+                        },
+                    }
                 },
 
-                StreamEvent::Readable { id } => stream_read(
+                StreamEvent::Readable { id } => match stream_read(
                     &config,
                     id, inner,
                     readers,
                     &mut incoming,
                     pending,
-                ),
+                ) {
+                    Ok(_) => { /* Do nothing */ },
+
+                    Err(err) => {
+                        trace!(stream=?id, "Error while reading stream: {err:?}");
+                        readers.remove(&id);
+                    },
+                },
 
                 StreamEvent::Writable { id } => {
                     let mut stream = inner.send_stream(id);
@@ -278,20 +292,20 @@ pub(crate) fn connection_event_handler_system(
         readers: &mut HashMap<StreamId, Box<Recv>>,
         incoming: &mut Option<Mut<'a, PeerMessages<Incoming>>>,
         pending: &mut Vec<ChannelMessage>,
-    ) {
+    ) -> Result<(), StreamReadError> {
         let mut stream = inner.recv_stream(id);
         let recv = readers.get_mut(&id).unwrap().as_mut();
 
         match stream.read(true) {
             Ok(mut chunks) => {
-                if let Err(err) = recv.read_from(&mut chunks) {
-                    todo!()
-                }
-
+                recv.read_from(&mut chunks)?;
                 let _ = chunks.finalize();
             },
 
-            Err(err) => todo!(),
+            Err(err) => return Err(match err {
+                quinn_proto::ReadableError::ClosedStream => StreamReadError::Closed,
+                quinn_proto::ReadableError::IllegalOrderedRead => unimplemented!(),
+            }),
         };
 
         match recv.poll(&config) {
@@ -307,6 +321,8 @@ pub(crate) fn connection_event_handler_system(
                 };
             },
         }
+
+        return Ok(())
     }
 }
 
