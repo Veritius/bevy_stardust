@@ -294,6 +294,7 @@ pub(crate) fn connection_message_sender_system(
                         match send.write(&mut stream) {
                             // The entire send buffer was written
                             streams::StreamWriteOutcome::Complete => {
+                                trace!(?channel, stream=?id, "ReliableUnordered stream did full transmit and was finished");
                                 stream.finish().unwrap();
                             },
 
