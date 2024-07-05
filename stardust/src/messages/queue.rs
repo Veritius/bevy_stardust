@@ -253,3 +253,43 @@ impl<'a> ExactSizeIterator for MessageIter<'a> {
         self.indexes.len()
     }
 }
+
+#[test]
+fn message_queue_ordering_test() {
+    let mut queue = MessageQueue::new();
+
+    fn map_messages(set: &'static [&'static [u8]]) -> impl Iterator<Item = Message> {
+        set.iter().map(|v| Message::from_bytes(Bytes::from_static(v)))
+    }
+
+    const MESSAGE_SET_A: &[&[u8]] = &[
+        b"Hello, world!",
+        b"It's a very nice day, isn't it?",
+        b"Yeah, I agree!",
+    ];
+
+    const MESSAGE_SET_B: &[&[u8]] = &[
+        b"Hello, world!",
+        b"It's a miserable day, isn't it?",
+        b"No, I think it's fine!",
+    ];
+
+    const MESSAGE_SET_C: &[&[u8]] = &[
+        b"Hello, world!",
+        b"It's an alright day, isn't it?",
+        b"That's a good way of putting it.",
+    ];
+
+    // Add all the messages to the channel
+    queue.push_channel(ChannelId::from(0), map_messages(MESSAGE_SET_A));
+    queue.push_channel(ChannelId::from(0), map_messages(MESSAGE_SET_B));
+    queue.push_channel(ChannelId::from(1), map_messages(MESSAGE_SET_C));
+
+    queue.iter_channel(ChannelId::from(0))
+    .zip(MESSAGE_SET_A.iter().chain(MESSAGE_SET_B))
+    .for_each(|(a, b)| assert_eq!(a.as_slice(), *b));
+
+    queue.iter_channel(ChannelId::from(1))
+    .zip(MESSAGE_SET_C)
+    .for_each(|(a, b)| assert_eq!(a.as_slice(), *b));
+}
