@@ -1,6 +1,6 @@
 use std::{sync::Mutex, time::Instant};
 use bevy::{prelude::*, utils::HashMap};
-use bevy_stardust::{connections::{PeerAddress, PeerRtt}, prelude::*};
+use bevy_stardust::{connections::{PeerAddress, PeerRtt}, diagnostics::NetworkPerformanceReduction, prelude::*};
 use bytes::BytesMut;
 use datagrams::{Datagram, DatagramDesequencer, DatagramHeader, DatagramPurpose, DatagramSequencer};
 use endpoints::perform_transmit;
@@ -577,7 +577,7 @@ pub(crate) fn connection_message_sender_system(
 pub(crate) fn connection_datagram_send_system(
     config: Res<QuicConfig>,
     mut endpoints: Query<(Entity, &mut QuicEndpoint)>,
-    connections: Query<&mut QuicConnection>,
+    connections: Query<(&mut QuicConnection, Option<&NetworkPerformanceReduction>)>,
 ) {
     endpoints.par_iter_mut().for_each(|(entity, mut endpoint)| {
         // Logging stuff
@@ -591,6 +591,9 @@ pub(crate) fn connection_datagram_send_system(
         // Allocate a buffer to store messages in
         let mut buf = Vec::with_capacity(config.maximum_transport_units);
 
+        // Random chance state for some stuff
+        let mut rng = fastrand::Rng::new();
+
         // Iterate over all connections associated with this endpoint
         let entities = endpoint.entities.iter();
         for (handle, entity) in entities {
@@ -599,7 +602,7 @@ pub(crate) fn connection_datagram_send_system(
             let _entered = trace_span.entered();
 
             // SAFETY: Endpoints will only access the connections they have created
-            let mut connection = unsafe { connections.get_unchecked(*entity) }.unwrap();
+            let (mut connection, reduction) = unsafe { connections.get_unchecked(*entity) }.unwrap();
 
             // Handle timeouts
             connection.inner.handle_timeout(Instant::now());
@@ -607,12 +610,18 @@ pub(crate) fn connection_datagram_send_system(
             // Repeatedly poll transmit until the connection no longer wants to send any more packets
             let mut send_count: u32 = 0;
             while let Some(transmit) = connection.inner.poll_transmit(Instant::now(), 1, &mut buf) {
-                perform_transmit(socket, &buf, transmit);
+                // Whether or not we simply 'forget' to send the packet
+                // TODO: Don't check if reduction is Some every time we need to transmit
+                let send = reduction.is_some_and(|v| rng.f32() > v.packet_drop_chance);
+
+                if send { perform_transmit(socket, &buf, transmit); }
+
                 send_count += 1;
                 buf.clear(); // Clear the buffer
             }
 
             // Record the amount of packets we've sent
+            // This includes intentionally dropped packets
             _entered.record("sends", send_count);
         }
     });
