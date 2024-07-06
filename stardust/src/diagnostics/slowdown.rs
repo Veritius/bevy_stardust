@@ -1,28 +1,17 @@
 use std::time::Duration;
 use bevy::prelude::*;
 
-/// Reduces the performance of I/O entities and types that it is attached to.
-/// This merely instructs transport layers as to what they should do,
-/// and how they handle these values is defined per transport layer.
-#[derive(Debug, Clone, Component, Reflect)]
+/// Instructs transport layers to drop packets randomly, simulating an unstable connection.
+/// 
+/// This value ranges between `0.0` (never drop) to `1.0` (always drop), with `0.5` dropping 50% of the time.
+#[derive(Debug, Default, Clone, Component, Reflect)]
 #[reflect(Debug, Default, Component)]
-pub struct NetworkPerformanceReduction {
-    /// Chance to drop a packet when sending, if the transport is packet-based.
-    /// This chance is from `0.0` (never) to `1.0` (always), with `0.5` dropping 50% of the time.
-    #[reflect(@0.0..=1.0)]
-    pub packet_drop_chance: f32,
+pub struct DropPackets(#[reflect(@0.0..=1.0)] pub f32);
 
-    /// Controls the **minimum** RTT that will be used, based on the transport layer's estimates.
-    /// If the peer would have a lesser RTT, an artificial delay is added to increase it.
-    /// This is good for simulating connections with extremely high latency.
-    pub simulate_rtt: Duration,
-}
-
-impl Default for NetworkPerformanceReduction {
-    fn default() -> Self {
-        Self {
-            packet_drop_chance: 0.0,
-            simulate_rtt: Duration::ZERO,
-        }
-    }
-}
+/// Instructs transport layers to artifically increase latency, simulating a distant connection.
+/// 
+/// This latency increase is implemented by the transport layer, as a minimum latency value.
+/// You can think of it as a function `min(a,b)` where `a` is their real latency, and `b` is the value in this component.
+#[derive(Debug, Default, Clone, Component, Reflect)]
+#[reflect(Debug, Default, Component)]
+pub struct SimulateLatency(pub Duration);
