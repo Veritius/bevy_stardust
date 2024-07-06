@@ -1,23 +1,24 @@
+use std::time::Duration;
 use bevy::prelude::*;
 
-/// Reduces the performance of I/O entities and types that it is attached to.
-/// This merely instructs transport layers as to what they should do,
-/// and how they handle these values is defined per transport layer.
-#[derive(Debug, Clone, Component, Reflect)]
-#[reflect(Debug, Component)]
-pub struct NetworkPerformanceReduction {
-    /// Chance to drop a packet when sending, if the transport is packet-based.
-    /// This chance is from `0.0` (never) to `1.0` (always), with `0.5` dropping 50% of the time.
-    #[reflect(@0.0..=1.0)]
-    pub packet_drop_chance: f32,
+/// Instructs transport layers to drop packets randomly, simulating an unstable connection.
+/// 
+/// This value ranges between `0.0` (never drop) to `1.0` (always drop), with `0.5` dropping 50% of the time.
+#[derive(Debug, Default, Clone, Component, Reflect)]
+#[reflect(Debug, Default, Component)]
+pub struct DropPackets(#[reflect(@0.0..=1.0)] pub f32);
 
-    /// Chance to mangle or otherwise invalidate a packet, if the transport is packet based.
-    /// This chance is from `0.0` (never) to `1.0` (always), with `0.5` mangling 50% of the time.
-    /// The degree to which the packet is mangled is up to the transport layer.
-    #[reflect(@0.0..=1.0)]
-    pub packet_mangle_chance: f32,
+/// Instructs transport layers to artifically increase latency, simulating a distant connection.
+/// 
+/// This latency increase is implemented by the transport layer, as a minimum latency value.
+/// You can think of it as a function `min(a,b)` where `a` is their real latency, and `b` is the value in this component.
+#[derive(Debug, Default, Clone, Component, Reflect)]
+#[reflect(Debug, Default, Component)]
+pub struct SimulateLatency(pub Duration);
 
-    /// Artificial delay in transmitting, in milliseconds.
-    /// 1000 milliseconds is the same as one second.
-    pub transmit_delay_millis: u32,
+impl From<Duration> for SimulateLatency {
+    #[inline]
+    fn from(value: Duration) -> Self {
+        Self(value)
+    }
 }

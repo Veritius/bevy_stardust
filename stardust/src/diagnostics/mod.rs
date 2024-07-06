@@ -8,5 +8,5 @@ mod stats;
 
 pub use connections::PeerDiagnosticPlugin;
 pub use messages::MessageCountDiagnosticsPlugin;
-pub use slowdown::NetworkPerformanceReduction;
+pub use slowdown::{DropPackets, SimulateLatency};
 pub use stats::PeerStats;

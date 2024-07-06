@@ -20,8 +20,9 @@ impl Plugin for StardustPlugin {
         app.register_type::<PeerLifestage>();
 
         // Register diagnostic types
-        app.register_type::<NetworkPerformanceReduction>();
         app.register_type::<PeerStats>();
+        app.register_type::<DropPackets>();
+        app.register_type::<SimulateLatency>();
 
         // Register channel types
         app.register_type::<ChannelId>();

@@ -1,6 +1,6 @@
 use std::{sync::Mutex, time::Instant};
 use bevy::{prelude::*, utils::HashMap};
-use bevy_stardust::{connections::{PeerAddress, PeerRtt}, diagnostics::NetworkPerformanceReduction, prelude::*};
+use bevy_stardust::{connections::{PeerAddress, PeerRtt}, diagnostics::DropPackets, prelude::*};
 use bytes::BytesMut;
 use datagrams::{Datagram, DatagramDesequencer, DatagramHeader, DatagramPurpose, DatagramSequencer};
 use endpoints::perform_transmit;
@@ -577,7 +577,7 @@ pub(crate) fn connection_message_sender_system(
 pub(crate) fn connection_datagram_send_system(
     config: Res<QuicConfig>,
     mut endpoints: Query<(Entity, &mut QuicEndpoint)>,
-    connections: Query<(&mut QuicConnection, Option<&NetworkPerformanceReduction>)>,
+    connections: Query<(&mut QuicConnection, Option<&DropPackets>)>,
 ) {
     endpoints.par_iter_mut().for_each(|(entity, mut endpoint)| {
         // Logging stuff
@@ -612,7 +612,7 @@ pub(crate) fn connection_datagram_send_system(
             while let Some(transmit) = connection.inner.poll_transmit(Instant::now(), 1, &mut buf) {
                 // Whether or not we simply 'forget' to send the packet
                 // TODO: Don't check if reduction is Some every time we need to transmit
-                let send = reduction.is_some_and(|v| rng.f32() > v.packet_drop_chance);
+                let send = reduction.is_some_and(|v| rng.f32() > v.0);
 
                 if send { perform_transmit(socket, &buf, transmit); }
 
