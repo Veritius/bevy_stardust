@@ -15,3 +15,10 @@ pub struct DropPackets(#[reflect(@0.0..=1.0)] pub f32);
 #[derive(Debug, Default, Clone, Component, Reflect)]
 #[reflect(Debug, Default, Component)]
 pub struct SimulateLatency(pub Duration);
+
+impl From<Duration> for SimulateLatency {
+    #[inline]
+    fn from(value: Duration) -> Self {
+        Self(value)
+    }
+}
