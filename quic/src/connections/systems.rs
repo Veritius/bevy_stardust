@@ -612,7 +612,7 @@ pub(crate) fn connection_datagram_send_system(
             while let Some(transmit) = connection.inner.poll_transmit(Instant::now(), 1, &mut buf) {
                 // Whether or not we simply 'forget' to send the packet
                 // TODO: Don't check if reduction is Some every time we need to transmit
-                let send = reduction.is_some_and(|v| rng.f32() > v.0);
+                let send = !(reduction.is_some_and(|v| rng.f32() < v.0));
 
                 if send { perform_transmit(socket, &buf, transmit); }
 
