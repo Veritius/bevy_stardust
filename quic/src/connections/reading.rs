@@ -10,6 +10,10 @@ pub(super) struct ParsingContext<'a> {
     pub channels: &'a ChannelRegistry,
 }
 
+pub(super) struct IncomingBuffers<'a> {
+    messages: &'a (),
+}
+
 pub(super) struct IncomingStreams {
     readers: HashMap<StreamId, Box<Recv>>,
 }
@@ -17,28 +21,22 @@ pub(super) struct IncomingStreams {
 impl IncomingStreams {
     pub fn recv<S: ReadableStream>(
         &mut self,
+        context: ParsingContext,
         id: StreamId,
         mut stream: S,
     ) {
-        // Repeatedly call read on the stream
-        loop { match stream.read() {
-            // A chunk was returned, read it
-            StreamReadOutcome::Chunk(chunk) => {
-                todo!()
-            },
+        // Get or add Recv state from/to the map
+        let recv = self.readers
+            .entry(id)
+            .or_insert_with(|| Box::new(Recv::new()))
+            .as_mut();
 
-            // No more data to read, break the loop
-            StreamReadOutcome::Blocked => break,
-
-            // The stream is finished
-            StreamReadOutcome::Finished => {
-                todo!()
-            },
-
-            // The stream ended early due to an error
-            StreamReadOutcome::Error(_) => todo!(),
+        // Get the receiver to read the stream
+        match recv.read_from(&mut stream) {
+            Ok(_) => {},
+            Err(error) => todo!(),
         }
-    } }
+    }
 }
 
 pub(super) struct IncomingDatagrams {
