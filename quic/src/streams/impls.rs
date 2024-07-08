@@ -7,6 +7,10 @@ impl WritableStream for BytesMut {
         self.put(data);
         StreamWriteOutcome::Complete
     }
+
+    fn finish(&mut self) -> Result<(), StreamWriteError> {
+        unimplemented!()
+    }
 }
 
 impl WritableStream for SendStream<'_> {
@@ -24,6 +28,13 @@ impl WritableStream for SendStream<'_> {
                 WriteError::Blocked => unreachable!(),
             }),
         }
+    }
+
+    fn finish(&mut self) -> Result<(), StreamWriteError> {
+        self.finish().map_err(|e| match e {
+            quinn_proto::FinishError::Stopped(code) => StreamWriteError::Stopped(code.into()),
+            quinn_proto::FinishError::ClosedStream => StreamWriteError::Closed,
+        })
     }
 }
 

@@ -15,6 +15,7 @@ use bytes::Bytes;
 /// A byte stream that can be written to.
 pub(crate) trait WritableStream {
     fn write_to(&mut self, data: Bytes) -> StreamWriteOutcome;
+    fn finish(&mut self) -> Result<(), StreamWriteError>;
 }
 
 /// A type that writes data to a stream.
