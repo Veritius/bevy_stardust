@@ -11,7 +11,7 @@ pub(super) struct ParsingContext<'a> {
 }
 
 pub(super) struct IncomingBuffers<'a> {
-    messages: &'a (),
+    messages: &'a mut MessageQueue,
 }
 
 pub(super) struct IncomingStreams {
@@ -22,6 +22,7 @@ impl IncomingStreams {
     pub fn recv<S: ReadableStream>(
         &mut self,
         context: ParsingContext,
+        buffers: IncomingBuffers,
         id: StreamId,
         mut stream: S,
     ) {
