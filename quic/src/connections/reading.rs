@@ -12,7 +12,7 @@ pub(super) struct ParsingContext<'a> {
 }
 
 pub(super) struct IncomingBuffers<'a> {
-    messages: &'a mut MessageQueue,
+    pub messages: &'a mut MessageQueue,
 }
 
 pub(super) struct IncomingStreams {
@@ -24,11 +24,6 @@ impl IncomingStreams {
         Self {
             readers: HashMap::new(),
         }
-    }
-
-    pub fn opened(&mut self, id: StreamId) {
-        self.readers.insert(id, Box::new(Recv::new()))
-            .expect(&format!("A stream with id {id:?} already existed"));
     }
 
     pub fn read<'a, S: ReadableStream>(
@@ -77,6 +72,10 @@ impl IncomingStreams {
             let r = self.readers.remove(&id).unwrap();
             debug_assert_eq!(r.unread(), 0);
         }
+    }
+
+    pub fn remove(&mut self, id: StreamId) {
+        self.readers.remove(&id);
     }
 }
 

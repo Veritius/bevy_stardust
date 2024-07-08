@@ -19,7 +19,7 @@ use reading::*;
 pub struct QuicConnection {
     pub(crate) owner: Entity,
     pub(crate) handle: ConnectionHandle,
-    pub(crate) inner: Box<Connection>,
+    pub(crate) quinn: Box<Connection>,
 
     incoming_streams: IncomingStreams,
     incoming_datagrams: IncomingDatagrams,
@@ -39,7 +39,7 @@ impl QuicConnection {
         Self {
             owner,
             handle,
-            inner,
+            quinn: inner,
 
             incoming_streams: IncomingStreams::new(),
             incoming_datagrams: IncomingDatagrams::new(),
@@ -53,7 +53,7 @@ impl QuicConnection {
 
     /// Returns the full collection of statistics for the connection.
     pub fn stats(&self) -> ConnectionStats {
-        self.inner.stats()
+        self.quinn.stats()
     }
 }
 
@@ -64,10 +64,10 @@ impl Component for QuicConnection {
         hooks.on_remove(|mut world, entity, _| {
             // Check the component isn't drained
             let connection = world.get::<Self>(entity).unwrap();
-            if connection.inner.is_drained() { return }
+            if connection.quinn.is_drained() { return }
 
             // Check if the component isn't closed
-            if !connection.inner.is_closed() {
+            if !connection.quinn.is_closed() {
                 warn!(connection=?entity, "A connection was removed without being fully closed");
             }
 

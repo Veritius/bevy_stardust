@@ -106,7 +106,7 @@ impl Component for QuicEndpoint {
             // Iterate over all connections
             for connection in endpoint.entities.values() {
                 if let Some(connection) = world.get::<QuicConnection>(*connection) {
-                    if connection.inner.is_closed() { continue }
+                    if connection.quinn.is_closed() { continue }
                     if alerted { continue }
                     alerted = true;
 
@@ -186,7 +186,7 @@ pub(crate) fn endpoint_datagram_recv_system(
                                 };
 
                                 // Connection handles event
-                                connection.inner.handle_event(event);
+                                connection.quinn.handle_event(event);
                             },
 
                             // New connection
