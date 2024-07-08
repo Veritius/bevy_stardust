@@ -2,11 +2,12 @@ use bevy::{log::trace, utils::HashMap};
 use bevy_stardust::messages::*;
 use bytes::Bytes;
 use quinn_proto::StreamId;
-use crate::{datagrams::*, streams::*};
+use crate::{datagrams::*, streams::*, QuicConfig};
 
 /// Shared context data used when parsing.
 #[derive(Clone, Copy)]
 pub(super) struct ParsingContext<'a> {
+    pub config: &'a QuicConfig,
     pub channels: &'a ChannelRegistry,
 }
 
@@ -19,24 +20,31 @@ pub(super) struct IncomingStreams {
 }
 
 impl IncomingStreams {
-    pub fn recv<S: ReadableStream>(
-        &mut self,
-        context: ParsingContext,
-        buffers: IncomingBuffers,
+    pub fn reader<'a, S: ReadableStream>(
+        &'a mut self,
+        context: ParsingContext<'a>,
+        buffers: IncomingBuffers<'a>,
         id: StreamId,
-        mut stream: S,
-    ) {
+    ) -> IncomingStream {
         // Get or add Recv state from/to the map
         let recv = self.readers
             .entry(id)
             .or_insert_with(|| Box::new(Recv::new()))
             .as_mut();
 
-        // Get the receiver to read the stream
-        match recv.read_from(&mut stream) {
-            Ok(_) => {},
-            Err(error) => todo!(),
-        }
+        return IncomingStream { recv, context, buffers }
+    }
+}
+
+pub(super) struct IncomingStream<'a> {
+    recv: &'a mut Recv,
+    context: ParsingContext<'a>,
+    buffers: IncomingBuffers<'a>,
+}
+
+impl<'a> StreamReader for IncomingStream<'a> {
+    fn read_from<S: ReadableStream>(&mut self, stream: &mut S) -> Result<usize, StreamReadError> {
+        self.recv.read_from(stream)
     }
 }
 
