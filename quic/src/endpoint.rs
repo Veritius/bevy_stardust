@@ -19,3 +19,14 @@ pub struct Endpoint {
     #[reflect(ignore)]
     socket: UdpSocket,
 }
+
+impl Endpoint {
+    /// SAFETY: An individual `id` can only be associated with one endpoint.
+    pub(crate) unsafe fn insert_connection(&mut self, id: Entity) {
+        self.connections.insert(id);
+    }
+
+    pub(crate) fn remove_connection(&mut self, id: Entity) {
+        self.connections.remove(&id);
+    }
+}
