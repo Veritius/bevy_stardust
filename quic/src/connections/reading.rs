@@ -20,6 +20,11 @@ pub(super) struct IncomingStreams {
 }
 
 impl IncomingStreams {
+    pub fn opened(&mut self, id: StreamId) {
+        self.readers.insert(id, Box::new(Recv::new()))
+            .expect(&format!("A stream with id {id:?} already existed"));
+    }
+
     pub fn reader<'a, S: ReadableStream>(
         &'a mut self,
         context: ParsingContext<'a>,
