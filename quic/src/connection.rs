@@ -5,5 +5,6 @@ use bevy::prelude::*;
 /// All connections 'belong' to an [`Endpoint`](crate::Endpoint), which they use for I/O.
 #[derive(Component)]
 pub struct Connection {
+    #[cfg(feature="quiche")]
     quiche: quiche::Connection,
 }
