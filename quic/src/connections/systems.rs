@@ -185,7 +185,11 @@ pub(crate) fn connection_event_handler_system(
                     let mut stream = quinn.send_stream(id);
                 },
 
-                StreamEvent::Finished { id } => todo!(),
+                StreamEvent::Finished { id } => {
+                    // Remove stream writers and readers
+                    incoming_streams.remove(id);
+                },
+
                 StreamEvent::Stopped { id, error_code } => todo!(),
                 StreamEvent::Available { dir } => todo!(),
             },

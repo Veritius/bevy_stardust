@@ -10,9 +10,8 @@ pub(crate) struct Recv {
 }
 
 impl StreamReader for Recv {
-    fn read_from<S: ReadableStream>(&mut self, stream: &mut S) -> Result<StreamReaderOutput, StreamReadError> {
+    fn read_from<S: ReadableStream>(&mut self, stream: &mut S) -> Result<usize, StreamReadError> {
         let mut bytes_read = 0;
-        let mut finished = false;
 
         loop {
             match stream.read() {
@@ -23,16 +22,13 @@ impl StreamReader for Recv {
 
                 StreamReadOutcome::Blocked => { break },
 
-                StreamReadOutcome::Finished => {
-                    finished = true;
-                    break
-                },
+                StreamReadOutcome::Finished => { break },
 
                 StreamReadOutcome::Error(err) => return Err(err),
             }
         }
 
-        return Ok(StreamReaderOutput { bytes_read, finished });
+        return Ok(bytes_read);
     }
 }
 

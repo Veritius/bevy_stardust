@@ -40,8 +40,8 @@ impl IncomingStreams {
             .as_mut();
 
         // Read data into the Recv state
-        let output = match recv.read_from(&mut stream) {
-            Ok(output) => output,
+        match recv.read_from(&mut stream) {
+            Ok(_) => {},
             Err(_) => todo!(),
         };
 
@@ -65,12 +65,6 @@ impl IncomingStreams {
                     });
                 },
             }
-        }
-
-        // Finished readers are discarded
-        if output.finished {
-            let r = self.readers.remove(&id).unwrap();
-            debug_assert_eq!(r.unread(), 0);
         }
     }
 
