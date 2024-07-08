@@ -76,6 +76,8 @@ pub(crate) fn connection_event_handler_system(
         let incoming_streams = &mut connection.incoming_streams;
         let incoming_datagrams = &mut connection.incoming_datagrams;
         let held_messages = &mut connection.held_messages;
+        let outgoing_shared = &mut connection.outgoing_shared;
+        let outgoing_streams = &mut connection.outgoing_streams;
 
         // Immutable context object for parsing
         let context = ParsingContext {
@@ -178,7 +180,11 @@ pub(crate) fn connection_event_handler_system(
                 },
 
 
-                StreamEvent::Writable { id } => todo!(),
+                StreamEvent::Writable { id } => {
+                    // Get a handle to the stream
+                    let mut stream = quinn.send_stream(id);
+                },
+
                 StreamEvent::Finished { id } => todo!(),
                 StreamEvent::Stopped { id, error_code } => todo!(),
                 StreamEvent::Available { dir } => todo!(),

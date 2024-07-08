@@ -24,6 +24,7 @@ pub(crate) trait StreamWriter {
 }
 
 /// The outcome of attempting to write to the stream.
+#[must_use]
 pub(crate) enum StreamWriteOutcome {
     /// The full slice was written.
     Complete,
@@ -61,6 +62,7 @@ pub(crate) trait StreamReader {
 }
 
 /// The outcome of reading from a stream.
+#[must_use]
 pub(crate) enum StreamReadOutcome {
     /// A chunk of data was returned.
     Chunk(Bytes),
