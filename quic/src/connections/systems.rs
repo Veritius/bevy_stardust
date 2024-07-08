@@ -2,7 +2,6 @@ use std::{sync::Mutex, time::Instant};
 use bevy::{prelude::*, utils::HashMap};
 use bevy_stardust::{connections::{PeerAddress, PeerRtt}, diagnostics::DropPackets, prelude::*};
 use bytes::BytesMut;
-use connections::sending::stardust_transmit_many;
 use datagrams::{Datagram, DatagramDesequencer, DatagramHeader, DatagramPurpose, DatagramSequencer};
 use endpoints::perform_transmit;
 use quinn_proto::{Connection, Dir, Event as AppEvent, SendDatagramError, StreamEvent, StreamId, VarInt};
@@ -397,6 +396,10 @@ pub(crate) fn connection_message_sender_system(
 
         // Split borrows
         let connection = connection.as_mut();
+        let inner = connection.inner.as_mut();
+        let channel_map = &mut connection.channels;
+        let senders = &mut connection.senders;
+        let sequencers = &mut connection.sequencers;
 
         // Storage for datagrams with an attached priority value
         let mut queued_datagrams: Vec<(u32, Datagram)> = Vec::new();
@@ -415,13 +418,109 @@ pub(crate) fn connection_message_sender_system(
             // Save ourselves some work
             if messages.len() == 0 { continue }
 
-            stardust_transmit_many(
-                config,
-                connection,
-                &mut queued_datagrams,
-                channel,
-                messages
-            );
+            // Different channels have different config requirements
+            use ChannelConsistency::*;
+            match config.consistency {
+                UnreliableUnordered => {
+                    queued_datagrams.extend(messages.map(|m| (config.priority, Datagram {
+                        header: DatagramHeader {
+                            purpose: DatagramPurpose::StardustUnordered {
+                                channel: channel.into(),
+                            }
+                        },
+
+                        payload: m.into(),
+                    })));
+                },
+
+                UnreliableSequenced => {
+                    let sequencer = sequencers
+                        .entry(channel)
+                        .or_insert_with(|| DatagramSequencer::new());
+
+                    queued_datagrams.extend(messages.map(|m| (config.priority, Datagram {
+                        header: DatagramHeader {
+                            purpose: DatagramPurpose::StardustSequenced {
+                                channel: channel.into(),
+                                sequence: sequencer.next(),
+                            }
+                        },
+
+                        payload: m.into(),
+                    })));
+                },
+
+                ReliableUnordered => {
+                    for message in messages {
+                        // Open a new outgoing, unidirectional stream
+                        let id = inner.streams().open(Dir::Uni).unwrap();
+                        let mut stream = inner.send_stream(id);
+                        stream.set_priority(map_priority_value(config.priority)).unwrap();
+                        trace!(?channel, stream=?id, "Opened stream for reliable unordered messages");
+
+                        // Create a new sender
+                        let mut send = Send::new(SendInit::StardustTransient { channel: channel.into() });
+
+                        // Add the message
+                        send.push(message.into());
+
+                        // Try to write as much as possible to the stream
+                        match send.write(&mut stream) {
+                            // The entire send buffer was written
+                            streams::StreamWriteOutcome::Complete => {
+                                trace!(?channel, stream=?id, "ReliableUnordered stream did full transmit and was finished");
+                                stream.finish().unwrap();
+                            },
+
+                            // Only a portion of the send buffer was written
+                            streams::StreamWriteOutcome::Partial(_) |
+                            streams::StreamWriteOutcome::Blocked => {
+                                let boxed = Box::new(send);
+                                senders.insert(id, boxed);
+                            },
+
+                            streams::StreamWriteOutcome::Error(err) => {
+                                trace!(stream=?id, "Stream send failed: {err:?}");
+                                continue;
+                            },
+                        }
+                    }
+                },
+
+                ReliableOrdered => {
+                    // Get the ID of the channel
+                    let id = channel_map.entry(channel).or_insert_with(|| {
+                        // Open a new outgoing, unidirectional stream
+                        let id = inner.streams().open(Dir::Uni).unwrap();
+                        inner.send_stream(id).set_priority(map_priority_value(config.priority)).unwrap();
+                        trace!(?channel, stream=?id, "Opened stream for reliable ordered messages");
+                        id
+                    }).clone();
+
+                    // Get the sender queue
+                    let send = senders.entry(id).or_insert_with(|| {
+                        Box::new(Send::new(SendInit::StardustPersistent { channel: channel.into() }))
+                    }).as_mut();
+
+                    // Put all messages into the sender
+                    for message in messages {
+                        send.push(message.into());
+                    }
+
+                    // Try to write as much as possible to the stream
+                    let mut stream = inner.send_stream(id);
+                    match send.write(&mut stream) {
+                        streams::StreamWriteOutcome::Error(err) => {
+                            trace!(stream=?id, "Stream send failed: {err:?}");
+                            continue;
+                        },
+
+                        _ => {},
+                    }
+                },
+
+                _ => unimplemented!()
+            }
         }
 
         // Empty the datagram queue
@@ -436,10 +535,10 @@ pub(crate) fn connection_message_sender_system(
                 queued_datagrams.sort_unstable_by_key(|(k, _)| *k);
             });
 
-            let max_size = connection.inner.datagrams().max_size().unwrap();
+            let max_size = inner.datagrams().max_size().unwrap();
 
             // Send as many datagrams as possible
-            let mut datagrams = connection.inner.datagrams();
+            let mut datagrams = inner.datagrams();
             let mut sends: u32 = 0;
             for (_, datagram) in queued_datagrams.drain(..) {
                 // Length estimate
@@ -525,4 +624,9 @@ pub(crate) fn connection_datagram_send_system(
             _entered.record("sends", send_count);
         }
     });
+}
+
+#[inline]
+fn map_priority_value(priority: u32) -> i32 {
+    TryInto::<i32>::try_into(priority).unwrap_or(i32::MAX)
 }
