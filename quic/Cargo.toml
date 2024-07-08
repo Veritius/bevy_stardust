@@ -18,3 +18,8 @@ path = "../stardust"
 
 [dependencies.quiche]
 version = "0.22.0"
+optional = true
+
+[features]
+default=["quiche"]
+quiche=["dep:quiche"]
