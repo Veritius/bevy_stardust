@@ -1,0 +1,20 @@
+[package]
+name="bevy_stardust_quic"
+version="0.1.0"
+edition="2021"
+authors=["Veritius <veritiusgaming@gmail.com>"]
+license="MIT OR Apache-2.0"
+description="A QUIC transport layer plugin for bevy_stardust"
+repository="https://github.com/veritius/bevy_stardust/"
+keywords=["bevy", "gamedev", "networking", "quic"]
+
+[dependencies.bevy]
+version = "0.14"
+default-features = false
+
+[dependencies.bevy_stardust]
+version = "0.6"
+path = "../stardust"
+
+[dependencies.quiche]
+version = "0.22.0"
