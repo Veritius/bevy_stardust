@@ -28,6 +28,13 @@ impl<D: MessageDirection> PeerMessages<D> {
         }
     }
 
+    /// Returns a reference to the inner [`MessageQueue`].
+    /// This **must not** be used to clear the queue, or data will be lost.
+    #[inline]
+    pub fn inner(&mut self) -> &mut MessageQueue {
+        &mut self.inner
+    }
+
     /// Returns the total number of messages stored in the queue.
     #[inline]
     pub fn count(&self) -> usize {
