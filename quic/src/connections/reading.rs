@@ -45,17 +45,17 @@ impl IncomingStreams {
             .as_mut();
 
         // Read data into the Recv state
-        match recv.read_from(&mut stream) {
-            Ok(_) => {},
+        let output = match recv.read_from(&mut stream) {
+            Ok(output) => output,
             Err(_) => todo!(),
-        }
+        };
 
         // Check if the Recv is ready to be read
         if !recv.ready() { return }
         let header = recv.header().unwrap();
         let iter = recv.iter(context.config.maximum_framed_message_length).unwrap();
 
-        // Repeatedly pull messages from the Recv
+        // Repeatedly pull from the Recv
         for item in iter {
             let payload = match item {
                 Ok(d) => d,
@@ -70,6 +70,12 @@ impl IncomingStreams {
                     });
                 },
             }
+        }
+
+        // Finished readers are discarded
+        if output.finished {
+            let r = self.readers.remove(&id).unwrap();
+            debug_assert_eq!(r.unread(), 0);
         }
     }
 }

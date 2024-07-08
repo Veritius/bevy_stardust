@@ -57,7 +57,7 @@ pub(crate) trait ReadableStream {
 
 /// A type that consumes data from a [`ReadableStream`] and handles it internally.
 pub(crate) trait StreamReader {
-    fn read_from<S: ReadableStream>(&mut self, stream: &mut S) -> Result<usize, StreamReadError>;
+    fn read_from<S: ReadableStream>(&mut self, stream: &mut S) -> Result<StreamReaderOutput, StreamReadError>;
 }
 
 /// The outcome of reading from a stream.
@@ -86,4 +86,9 @@ pub(crate) enum StreamReadError {
 
     /// The stream was reset.
     Reset(ResetCode),
+}
+
+pub(crate) struct StreamReaderOutput {
+    pub bytes_read: usize,
+    pub finished: bool,
 }

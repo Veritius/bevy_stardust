@@ -10,25 +10,29 @@ pub(crate) struct Recv {
 }
 
 impl StreamReader for Recv {
-    fn read_from<S: ReadableStream>(&mut self, stream: &mut S) -> Result<usize, StreamReadError> {
-        let mut read = 0;
+    fn read_from<S: ReadableStream>(&mut self, stream: &mut S) -> Result<StreamReaderOutput, StreamReadError> {
+        let mut bytes_read = 0;
+        let mut finished = false;
 
         loop {
             match stream.read() {
                 StreamReadOutcome::Chunk(chunk) => {
-                    read += chunk.len();
+                    bytes_read += chunk.len();
                     self.queue.push_back(chunk);
                 },
 
                 StreamReadOutcome::Blocked => { break },
 
-                StreamReadOutcome::Finished => { break },
+                StreamReadOutcome::Finished => {
+                    finished = true;
+                    break
+                },
 
                 StreamReadOutcome::Error(err) => return Err(err),
             }
         }
 
-        return Ok(read)
+        return Ok(StreamReaderOutput { bytes_read, finished });
     }
 }
 
@@ -38,6 +42,10 @@ impl Recv {
             header: None,
             queue: VecDeque::with_capacity(1),
         }
+    }
+
+    pub fn unread(&self) -> usize {
+        self.queue.iter().map(|v| v.len()).sum()
     }
 
     pub fn ready(&self) -> bool {
