@@ -81,9 +81,9 @@ fn main() {
 }
 
 // Messages use the Message type, which is a wrapper around the Bytes type.
-// This is cheaply clonable and you can send the same message to multiple peers.
-// For this example, we create one from the bytes of a static str.
-const MESSAGE: Message = Message::from_bytes(Bytes::from_static("Hello, world!".as_bytes()));
+// This is cheaply clonable and you can send the same message to multiple peers without copying.
+// Here, we simply use the from_static_str method, which is very cheap.
+const MESSAGE: Message = Message::from_static_str("Hello, world!");
 
 // Queueing messages just requires component access.
 // This means you can use query filters to achieve better parallelism.
