@@ -40,6 +40,10 @@ impl Recv {
         }
     }
 
+    pub fn ready(&self) -> bool {
+        self.header.is_some()
+    }
+
     pub fn header(&self) -> Option<StreamHeader> {
         self.header.clone()
     }

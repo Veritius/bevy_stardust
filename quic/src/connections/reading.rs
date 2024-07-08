@@ -31,31 +31,46 @@ impl IncomingStreams {
             .expect(&format!("A stream with id {id:?} already existed"));
     }
 
-    pub fn reader<'a, S: ReadableStream>(
+    pub fn read<'a, S: ReadableStream>(
         &'a mut self,
         context: ParsingContext<'a>,
         buffers: IncomingBuffers<'a>,
         id: StreamId,
-    ) -> IncomingStream {
+        mut stream: S,
+    ) {
         // Get or add Recv state from/to the map
         let recv = self.readers
             .entry(id)
             .or_insert_with(|| Box::new(Recv::new()))
             .as_mut();
 
-        return IncomingStream { recv, context, buffers }
-    }
-}
+        // Read data into the Recv state
+        match recv.read_from(&mut stream) {
+            Ok(_) => {},
+            Err(_) => todo!(),
+        }
 
-pub(super) struct IncomingStream<'a> {
-    recv: &'a mut Recv,
-    context: ParsingContext<'a>,
-    buffers: IncomingBuffers<'a>,
-}
+        // Check if the Recv is ready to be read
+        if !recv.ready() { return }
+        let header = recv.header().unwrap();
+        let iter = recv.iter(context.config.maximum_framed_message_length).unwrap();
 
-impl<'a> StreamReader for IncomingStream<'a> {
-    fn read_from<S: ReadableStream>(&mut self, stream: &mut S) -> Result<usize, StreamReadError> {
-        self.recv.read_from(stream)
+        // Repeatedly pull messages from the Recv
+        for item in iter {
+            let payload = match item {
+                Ok(d) => d,
+                Err(_) => break,
+            };
+
+            match header {
+                StreamHeader::Stardust { channel } => {
+                    buffers.messages.push_one(ChannelMessage {
+                        channel: ChannelId::from(channel),
+                        payload: Message::from_bytes(payload),
+                    });
+                },
+            }
+        }
     }
 }
 
