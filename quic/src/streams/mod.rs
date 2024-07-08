@@ -19,7 +19,7 @@ pub(crate) trait WritableStream {
 
 /// A type that writes data to a stream.
 pub(crate) trait StreamWriter {
-    fn write<S: WritableStream>(&mut self, stream: &mut S) -> StreamWriteOutcome;
+    fn write<S: WritableStream>(self, stream: &mut S) -> StreamWriteOutcome;
 }
 
 /// The outcome of attempting to write to the stream.

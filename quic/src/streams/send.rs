@@ -62,8 +62,8 @@ impl Send {
     }
 }
 
-impl StreamWriter for Send {
-    fn write<S: WritableStream>(&mut self, stream: &mut S) -> StreamWriteOutcome {
+impl StreamWriter for &mut Send {
+    fn write<S: WritableStream>(self, stream: &mut S) -> StreamWriteOutcome {
         let mut total = 0;
         let mut written = 0;
 
