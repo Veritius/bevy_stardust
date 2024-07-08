@@ -16,6 +16,9 @@ default-features = false
 version = "0.6"
 path = "../stardust"
 
+[dependencies.anyhow]
+version = "1"
+
 [dependencies.quiche]
 version = "0.22.0"
 optional = true

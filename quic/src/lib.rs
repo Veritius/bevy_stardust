@@ -10,6 +10,7 @@ mod quiche;
 mod connection;
 mod endpoint;
 mod plugin;
+mod receiving;
 
 pub use connection::Connection;
 pub use endpoint::Endpoint;
