@@ -5,10 +5,11 @@ mod systems;
 
 pub(crate) use systems::*;
 
-use bevy_stardust::messages::{ChannelId, ChannelMessage};
-use bevy::{ecs::component::{ComponentHooks, StorageType}, prelude::*, utils::hashbrown::HashMap};
-use quinn_proto::{Connection, ConnectionHandle, ConnectionStats, EndpointEvent, StreamId};
-use crate::{datagrams::{DatagramDesequencer, DatagramSequencer}, streams::{Recv as StRecv, Send as StSend}, QuicEndpoint};
+use bevy::{ecs::component::{ComponentHooks, StorageType}, prelude::*};
+use quinn_proto::{Connection, ConnectionHandle, ConnectionStats, EndpointEvent};
+use crate::QuicEndpoint;
+use sending::*;
+use reading::*;
 
 /// A QUIC connection, attached to an endpoint.
 /// 
@@ -20,14 +21,13 @@ pub struct QuicConnection {
     pub(crate) handle: ConnectionHandle,
     pub(crate) inner: Box<Connection>,
 
-    readers: HashMap<StreamId, Box<StRecv>>,
-    desequencers: HashMap<ChannelId, DatagramDesequencer>,
+    incoming_streams: IncomingStreams,
+    incoming_datagrams: IncomingDatagrams,
+    held_messages: HeldMessages,
 
-    channels: HashMap<ChannelId, StreamId>,
-    senders: HashMap<StreamId, Box<StSend>>,
-    sequencers: HashMap<ChannelId, DatagramSequencer>,
-
-    pending: Vec<ChannelMessage>,
+    outgoing_shared: OutgoingShared,
+    outgoing_streams: OutgoingStreams,
+    outgoing_datagrams: OutgoingDatagrams,
 }
 
 impl QuicConnection {
@@ -41,14 +41,13 @@ impl QuicConnection {
             handle,
             inner,
 
-            readers: HashMap::new(),
-            desequencers: HashMap::new(),
+            incoming_streams: IncomingStreams::new(),
+            incoming_datagrams: IncomingDatagrams::new(),
+            held_messages: HeldMessages::new(),
 
-            channels: HashMap::new(),
-            senders: HashMap::new(),
-            sequencers: HashMap::default(),
-
-            pending: Vec::new(),
+            outgoing_shared: OutgoingShared::new(),
+            outgoing_streams: OutgoingStreams::new(),
+            outgoing_datagrams: OutgoingDatagrams::new(),
         }
     }
 

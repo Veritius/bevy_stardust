@@ -20,6 +20,12 @@ pub(super) struct IncomingStreams {
 }
 
 impl IncomingStreams {
+    pub fn new() -> Self {
+        Self {
+            readers: HashMap::new(),
+        }
+    }
+
     pub fn opened(&mut self, id: StreamId) {
         self.readers.insert(id, Box::new(Recv::new()))
             .expect(&format!("A stream with id {id:?} already existed"));
@@ -58,6 +64,12 @@ pub(super) struct IncomingDatagrams {
 }
 
 impl IncomingDatagrams {
+    pub fn new() -> Self {
+        Self {
+            desequencers: HashMap::new(),
+        }
+    }
+
     pub fn recv(
         &mut self,
         context: ParsingContext,
@@ -81,5 +93,18 @@ impl IncomingDatagrams {
 }
 
 pub(super) struct HeldMessages {
-    inner: Vec<ChannelMessage>,
+    queue: MessageQueue,
+}
+
+impl HeldMessages {
+    pub fn new() -> Self {
+        Self {
+            queue: MessageQueue::new(),
+        }
+    }
+
+    #[inline]
+    pub fn inner(&mut self) -> &mut MessageQueue {
+        &mut self.queue
+    }
 }

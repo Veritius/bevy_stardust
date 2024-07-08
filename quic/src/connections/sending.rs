@@ -3,8 +3,16 @@ use bevy_stardust::prelude::*;
 use quinn_proto::StreamId;
 use crate::{datagrams::*, streams::*};
 
-pub(super) struct OutgoingChannels {
+pub(super) struct OutgoingShared {
     channels: HashMap<ChannelId, StreamId>,
+}
+
+impl OutgoingShared {
+    pub fn new() -> Self {
+        Self {
+            channels: HashMap::new(),
+        }
+    }
 }
 
 pub(super) struct OutgoingStreams {
@@ -12,6 +20,12 @@ pub(super) struct OutgoingStreams {
 }
 
 impl OutgoingStreams {
+    pub fn new() -> Self {
+        Self {
+            senders: HashMap::new(),
+        }
+    }
+
     pub fn sender(&mut self, stream: StreamId) -> Option<OutgoingStream> {
         Some(OutgoingStream { send: self.senders.get_mut(&stream)? })
     }
@@ -45,4 +59,12 @@ pub(super) enum OutgoingStreamEvent {
 
 pub(super) struct OutgoingDatagrams {
     sequencers: HashMap<ChannelId, DatagramSequencer>,
+}
+
+impl OutgoingDatagrams {
+    pub fn new() -> Self {
+        Self {
+            sequencers: HashMap::new(),
+        }
+    }
 }
