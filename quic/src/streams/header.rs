@@ -1,6 +1,7 @@
 use bytes::{Buf, BufMut};
 use quinn_proto::{VarInt, coding::Codec};
 
+#[derive(Clone)]
 pub(crate) enum StreamHeader {
     Stardust {
         channel: u32,

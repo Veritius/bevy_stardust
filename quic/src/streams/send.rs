@@ -6,7 +6,6 @@ use quinn_proto::{VarInt, coding::Codec};
 use super::*;
 
 pub(crate) struct Send {
-    framed: bool,
     transient: bool,
     channel: Option<ChannelId>,
     queue: VecDeque<Bytes>,
@@ -15,11 +14,6 @@ pub(crate) struct Send {
 impl Send {
     pub fn new(init: SendInit) -> Self {
         let mut queue = VecDeque::with_capacity(1);
-
-        let framed = match init {
-            SendInit::StardustPersistent { channel: _ } => true,
-            SendInit::StardustTransient  { channel: _ } => true,
-        };
 
         let transient = match init {
             SendInit::StardustPersistent { channel: _ } => false,
@@ -40,16 +34,13 @@ impl Send {
         header.encode(&mut buffer);
         queue.push_back(buffer.freeze());
 
-        return Self { framed, transient, channel, queue };
+        return Self { transient, channel, queue };
     }
 
     pub fn push(&mut self, chunk: Bytes) {
-        if self.framed {
-            let mut buffer = BytesMut::with_capacity(4);
-            VarInt::from_u64(chunk.len() as u64).unwrap().encode(&mut buffer);
-            self.queue.push_back(buffer.freeze());
-        }
-
+        let mut buffer = BytesMut::with_capacity(4);
+        VarInt::from_u64(chunk.len() as u64).unwrap().encode(&mut buffer);
+        self.queue.push_back(buffer.freeze());
         self.queue.push_back(chunk);
     }
 
