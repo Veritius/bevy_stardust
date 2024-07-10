@@ -73,7 +73,6 @@ impl DatagramPurpose {
     }
 }
 
-
 impl TryFrom<u32> for DatagramPurposeCode {
     type Error = ();
 
