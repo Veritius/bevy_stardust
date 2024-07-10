@@ -13,11 +13,13 @@ impl Plugin for QuicPlugin {
             panic!("StardustPlugin must be added before QuicPlugin");
         }
 
+        app.configure_sets(PreUpdate, QuicSystems::ReceivePackets.in_set(NetworkRecv::Receive));
+        app.configure_sets(PostUpdate, QuicSystems::ReceivePackets.in_set(NetworkSend::Transmit));
+
         app.register_type::<Endpoint>();
         app.register_type::<Connection>();
 
-        app.configure_sets(PreUpdate, QuicSystems::ReceivePackets.in_set(NetworkRecv::Receive));
-        app.configure_sets(PostUpdate, QuicSystems::ReceivePackets.in_set(NetworkSend::Transmit));
+        app.add_event::<crate::events::TryConnectEvent>();
 
         #[cfg(feature="quiche")]
         crate::quiche::setup(app);

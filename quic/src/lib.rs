@@ -11,10 +11,12 @@ mod connection;
 mod crypto;
 mod datagrams;
 mod endpoint;
+mod events;
 mod plugin;
 mod streams;
 
 pub use connection::Connection;
-pub use endpoint::Endpoint;
-pub use plugin::QuicPlugin;
 pub use crypto::{PrivateKey, Certificate, CertChain, RootCAs, Credentials};
+pub use endpoint::Endpoint;
+pub use events::TryConnectEvent;
+pub use plugin::QuicPlugin;
