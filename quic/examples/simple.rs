@@ -30,7 +30,6 @@ fn shared() -> App {
     let mut app = App::new();
 
     app.add_plugins(ScheduleRunnerPlugin::run_loop(TICK_DELAY));
-    app.add_plugins(bevy::app::MainSchedulePlugin);
 
     app.add_plugins(StardustPlugin);
 
