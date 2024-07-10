@@ -24,8 +24,14 @@ version = "1"
 
 [dependencies.quiche]
 version = "0.22.0"
+default-features = false
+features = ["boringssl-boring-crate"]
+optional = true
+
+[dependencies.boring]
+version = "4"
 optional = true
 
 [features]
 default=["quiche"]
-quiche=["dep:quiche"]
+quiche=["dep:quiche", "dep:boring"]
