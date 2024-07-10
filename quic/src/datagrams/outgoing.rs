@@ -1,5 +1,5 @@
 use bytes::{Bytes, BytesMut};
-use crate::streams::{OutgoingStreams, StreamManager, StreamPurpose, StreamTryWriteOutcome};
+use crate::streams::{OutgoingStreams, OutgoingStreamsTryWriteOutcome, StreamManager, StreamPurpose, StreamTryWriteOutcome};
 use super::{header::{DatagramHeader, DatagramPurpose}, DatagramTryWrite};
 
 pub(crate) struct OutgoingDatagrams {
@@ -57,8 +57,14 @@ impl OutgoingDatagrams {
 
                 // Try to send as much as possible on the stream
                 let mut transmit = strmgr.get_send_stream(id).unwrap();
-                if let Some(StreamTryWriteOutcome::Error(err)) = streams.write(id, &mut transmit) {
-                    todo!()
+                match streams.write(id, &mut transmit) {
+                    // The stream was finished
+                    Some(OutgoingStreamsTryWriteOutcome::Finished(_)) => todo!(),
+
+                    // An error occurred
+                    Some(OutgoingStreamsTryWriteOutcome::WriteOutcome(StreamTryWriteOutcome::Error(err))) => todo!(),
+
+                    _ => { /* Do nothing */ },
                 }
             },
         }

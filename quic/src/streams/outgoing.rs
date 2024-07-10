@@ -38,7 +38,7 @@ impl OutgoingStreams {
         self.streams.remove(&id);
     }
 
-    pub fn write<S: SendStream>(&mut self, id: StreamId, stream: &mut S) -> Option<StreamTryWriteOutcome> {
+    pub fn write<S: SendStream>(&mut self, id: StreamId, stream: &mut S) -> Option<OutgoingStreamsTryWriteOutcome> {
         let outgoing = self.streams.get_mut(&id)?;
 
         match outgoing.queue.write(stream)? {
@@ -47,14 +47,17 @@ impl OutgoingStreams {
                 if !outgoing.persistent {
                     stream.finish_stream();
                     self.forget(id);
+
+                    // Send this event to inform that the stream was forgotten
+                    return Some(OutgoingStreamsTryWriteOutcome::Finished(id));
                 }
 
                 // Return that we have completed the task
-                return Some(StreamTryWriteOutcome::Complete);
+                return Some(OutgoingStreamsTryWriteOutcome::WriteOutcome(StreamTryWriteOutcome::Complete));
             },
 
             // Any other cases we forward with no further changes
-            other => return Some(other),
+            other => return Some(OutgoingStreamsTryWriteOutcome::WriteOutcome(other)),
         }
     }
 }
@@ -101,6 +104,11 @@ impl<'a> OutgoingStream<'a> {
         if bytes.len() == 0 { return }
         self.state.push(bytes);
     }
+}
+
+pub(crate) enum OutgoingStreamsTryWriteOutcome {
+    WriteOutcome(StreamTryWriteOutcome),
+    Finished(StreamId),
 }
 
 struct OutgoingStreamState {
