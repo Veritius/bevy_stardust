@@ -16,7 +16,7 @@ mod plugin;
 mod streams;
 
 pub use connection::Connection;
-pub use crypto::{PrivateKey, Certificate, CertChain, RootCAs, Credentials};
+pub use crypto::{PrivateKey, Certificate, CertChain, TrustAnchors, Credentials};
 pub use endpoint::Endpoint;
 pub use events::TryConnectEvent;
 pub use plugin::QuicPlugin;

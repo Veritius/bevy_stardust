@@ -112,10 +112,10 @@ struct CertChainInner {
 
 /// A collection of trusted root certificates.
 #[derive(Clone)]
-pub struct RootCAs(RootCAsInner);
+pub struct TrustAnchors(TrustAnchorsInner);
 
-impl RootCAs {
-    /// Create a `RootCAs` from an iterator of certificates.
+impl TrustAnchors {
+    /// Create a `TrustAnchors` store from an iterator of certificates.
     pub fn from_iter<I: IntoIterator<Item = Certificate>>(iter: I) -> anyhow::Result<Self> {
         let iter = iter.into_iter();
 
@@ -130,12 +130,12 @@ impl RootCAs {
 
     #[cfg(feature="quiche")]
     fn from_boring_x509_store(inner: boring::x509::store::X509Store) -> Self {
-        Self(RootCAsInner { inner: Arc::new(inner) })
+        Self(TrustAnchorsInner { inner: Arc::new(inner) })
     }
 }
 
 #[cfg(feature="quiche")]
-impl From<boring::x509::store::X509Store> for RootCAs {
+impl From<boring::x509::store::X509Store> for TrustAnchors {
     #[inline]
     fn from(value: boring::x509::store::X509Store) -> Self {
         Self::from_boring_x509_store(value)
@@ -143,7 +143,7 @@ impl From<boring::x509::store::X509Store> for RootCAs {
 }
 
 #[derive(Clone)]
-struct RootCAsInner {
+struct TrustAnchorsInner {
     #[cfg(feature="quiche")]
     inner: Arc<boring::x509::store::X509Store>,
 }

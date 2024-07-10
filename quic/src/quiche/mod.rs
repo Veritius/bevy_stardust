@@ -5,9 +5,11 @@ mod sending;
 mod streams;
 
 use std::ops::{Deref, DerefMut};
+use anyhow::Result;
 use bevy::prelude::*;
-use quiche::ConnectionId;
-use crate::plugin::QuicSystems;
+use boring::ssl::{SslContextBuilder, SslMethod};
+use quiche::{Config, ConnectionId};
+use crate::{plugin::QuicSystems, Credentials, TrustAnchors};
 
 pub(crate) fn setup(app: &mut App) {
     app.add_systems(PreUpdate, receiving::endpoints_receive_datagrams_system
@@ -18,6 +20,23 @@ pub(crate) fn setup(app: &mut App) {
 
     app.add_systems(PostUpdate, sending::endpoints_transmit_datagrams_system
         .in_set(QuicSystems::TransmitPackets));
+}
+
+pub(crate) fn quiche_config(
+    trust_anchors: Option<TrustAnchors>,
+    credentials: Option<Credentials>,
+) -> Result<Config> {
+    use boring::ssl::{SslContextBuilder, SslMethod};
+
+    let mut tls = SslContextBuilder::new(SslMethod::tls())?;
+
+    if let Some(trust_anchors) = trust_anchors {
+        tls.set_cert_store(todo!());
+    }
+
+    let mut config = Config::with_boring_ssl_ctx_builder(quiche::PROTOCOL_VERSION, tls)?;
+
+    todo!()
 }
 
 pub(crate) struct QuicheConnection {
