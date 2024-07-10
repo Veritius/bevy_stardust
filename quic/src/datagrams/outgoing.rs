@@ -1,6 +1,7 @@
-use bytes::{Bytes, BytesMut};
+use bytes::BytesMut;
+use rand::seq;
 use crate::streams::{OutgoingStreams, OutgoingStreamsTryWriteOutcome, StreamManager, StreamPurpose, StreamTryWriteOutcome};
-use super::{header::{DatagramHeader, DatagramPurpose}, DatagramTryWrite};
+use super::{header::{DatagramHeader, DatagramPurpose}, Datagram, DatagramTag, DatagramTryWrite};
 
 pub(crate) struct OutgoingDatagrams {
 
@@ -15,29 +16,26 @@ impl OutgoingDatagrams {
 
     pub fn send<D: DatagramTryWrite, S: StreamManager>(
         &mut self,
-        payload: Bytes,
-        purpose: DatagramPurpose,
+        datagram: Datagram,
         dgrams: &mut D,
         strmgr: &mut S,
         streams: &mut OutgoingStreams,
     ) -> anyhow::Result<()> {
         // Create the datagram header
-        let header = DatagramHeader {
-            purpose,
-        };
+        let header = datagram.header();
 
         // Check if the message can be sent in a datagram
-        let len = header.encode_len() + payload.len(); 
+        let len = header.encode_len() + datagram.payload.len(); 
         match dgrams.datagram_max_size() >= len {
             // The datagram fits and can be sent normally
             true => {
                 // Put the header and payload into a single contiguous allocation
                 let mut buf = BytesMut::with_capacity(len);
                 header.encode(&mut buf).unwrap();
-                buf.extend_from_slice(&payload[..]);
+                buf.extend_from_slice(&datagram.payload[..]);
 
                 // Try to send the datagram
-                dgrams.try_send_datagram(payload)?;
+                dgrams.try_send_datagram(datagram.payload)?;
             },
 
             // The datagram does not fit and must be sent in a stream
@@ -53,7 +51,7 @@ impl OutgoingDatagrams {
                 let header = buf.freeze();
 
                 // Push the header and the payload into the queue for sending
-                outgoing.push_chunks_framed([header, payload].iter().cloned());
+                outgoing.push_chunks_framed([header, datagram.payload].iter().cloned());
 
                 // Try to send as much as possible on the stream
                 let mut transmit = strmgr.get_send_stream(id).unwrap();
@@ -70,5 +68,19 @@ impl OutgoingDatagrams {
         }
 
         return Ok(());
+    }
+}
+
+impl Datagram {
+    fn header(&self) -> DatagramHeader {
+        match self.tag {
+            DatagramTag::Stardust { channel, sequence: None } => DatagramHeader {
+                purpose: DatagramPurpose::Stardust { channel },
+            },
+
+            DatagramTag::Stardust { channel, sequence: Some(sequence) } => DatagramHeader {
+                purpose: DatagramPurpose::StardustSequenced { channel, sequence: sequence.inner() },
+            },
+        }
     }
 }

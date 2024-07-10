@@ -8,14 +8,14 @@ pub(super) struct DatagramHeader {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub(crate) enum DatagramPurpose {
+pub(super) enum DatagramPurpose {
     Stardust {
         channel: ChannelId
     },
 
     StardustSequenced {
         channel: ChannelId,
-        sequence: Sequence<u16>,
+        sequence: u16,
     }
 }
 
@@ -61,7 +61,7 @@ impl DatagramHeader {
 
             DatagramPurpose::StardustSequenced { channel, sequence } => {
                 VarInt::from_u32(channel.into()).write(buf)?;
-                buf.put_u16(sequence.inner());
+                buf.put_u16(sequence);
             },
         }
 
@@ -85,7 +85,7 @@ impl DatagramHeader {
                 channel: VarInt::read(buf).and_then(u32::try_from).map_err(|_| ())?.into(),
                 sequence: {
                     if buf.remaining() < 2 { return Err(()); }
-                    Sequence::from(buf.get_u16())
+                    buf.get_u16()
                 },
             },
         };
