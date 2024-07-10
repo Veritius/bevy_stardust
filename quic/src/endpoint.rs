@@ -1,6 +1,8 @@
 use std::net::{SocketAddr, UdpSocket};
 use bevy::{prelude::*, utils::HashMap};
 
+use crate::Credentials;
+
 /// A QUIC endpoint, corresponding to a single UDP socket.
 /// 
 /// All [connections](crate::Connection) 'belong' to an Endpoint, which they use for I/O.
@@ -15,6 +17,11 @@ pub struct Endpoint {
     /// Setting this above `65535` is pointless, as that is the largest packet size in most operating systems.
     #[reflect(@1280..65535)]
     pub recv_size: usize,
+
+    /// Credentials used to authenticate this endpoint to incoming connections.
+    /// If this is not present, connections that require authentication will fail.
+    #[reflect(ignore)]
+    pub credentials: Option<Credentials>,
 
     #[reflect(ignore)]
     socket: UdpSocket,
