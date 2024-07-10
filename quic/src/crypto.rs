@@ -123,3 +123,20 @@ struct RootCAsInner {
     #[cfg(feature="quiche")]
     inner: Arc<boring::x509::store::X509Store>,
 }
+
+/// TLS credentials used to authenticate this peer to incoming connections.
+#[derive(Clone)]
+pub struct Credentials {
+    pub(crate) certificates: CertChain,
+    pub(crate) private_key: PrivateKey,
+}
+
+impl Credentials {
+    /// Creates a new `Credentials` from component parts.
+    pub fn new(
+        certificates: CertChain,
+        private_key: PrivateKey,
+    ) -> Self {
+        Self { certificates, private_key }
+    }
+}
