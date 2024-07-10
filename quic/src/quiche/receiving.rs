@@ -100,7 +100,7 @@ pub(super) fn endpoints_receive_datagrams_system(
 
         if new_peers.len() != 0 {
             // Start a new span for tracking accepts
-            let span = trace_span!("Adding new peers");
+            let span = trace_span!("Adding new peers", endpoint=?endpoint_id);
             let _entered = span.enter();
 
             // Command scope to defer world mutations
@@ -112,13 +112,17 @@ pub(super) fn endpoints_receive_datagrams_system(
 
                     // Register the connection to this endpoint
                     // SAFETY: Commands gives a unique ID when adding entities
-                    unsafe { endpoint.insert_connection(commands.id(), address); }
+                    let id = commands.id();
+                    unsafe { endpoint.insert_connection(id, address); }
 
                     // Queue spawning the entity into the world
                     commands.insert(Connection {
                         endpoint: endpoint_id,
                         quiche: *connection,
                     });
+
+                    // Log the addition for debugging
+                    debug!(?address, "Accepted new peer {id}");
                 }
             });
         }
