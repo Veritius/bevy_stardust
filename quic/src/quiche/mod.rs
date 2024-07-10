@@ -18,12 +18,16 @@ pub(crate) fn setup(app: &mut App) {
 
 pub(crate) struct QuicheConnection {
     inner: quiche::Connection,
+
+    out_sid_idx: u64,
 }
 
 impl QuicheConnection {
     pub fn new(value: quiche::Connection) -> Self {
         Self {
             inner: value,
+
+            out_sid_idx: 0,
         }
     }
 }

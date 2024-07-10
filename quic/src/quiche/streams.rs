@@ -7,7 +7,9 @@ impl StreamManager for QuicheConnection {
     type Outgoing<'a> = QuicheSendStream<'a>;
     
     fn open_send_stream(&mut self) -> anyhow::Result<StreamId> {
-        todo!()
+        let v = self.out_sid_idx;
+        self.out_sid_idx += 1;
+        return Ok(StreamId::new(v));
     }
     
     fn get_send_stream(&mut self, id: StreamId) -> Option<Self::Outgoing<'_>> {
