@@ -88,14 +88,30 @@ impl VarInt {
         return Ok(());
     }
 
-    /// Estimates the length of the `VarInt` in bytes.
+    /// Returns the amount of bytes that would be written if `write` were used.
     pub fn len(&self) -> u8 {
-        let x = self.0;
+        // SAFETY: A VarInt that would return an Err cannot be created, so this case cannot occur.
+        unsafe { Self::len_u64(self.0).unwrap_unchecked() }
+    }
+
+    /// Estimate the encoded size of a `VarInt` with this value.
+    pub fn len_u32(value: u32) -> u8 {
+        let x = value;
         if x <= 63                  { return 1; }
         if x <= 16383               { return 2; }
         if x <= 1073741823          { return 4; }
-        if x <= 4611686018427387903 { return 8; }
-        unreachable!()
+        return 8;
+    }
+
+    /// Estimate the encoded size of a `VarInt` with this value.
+    /// 
+    /// Since `u64` can represent values a `VarInt` can't, this function can fail.
+    pub fn len_u64(value: u64) -> Result<u8, ()> {
+        if value <= 63                  { return Ok(1); }
+        if value <= 16383               { return Ok(2); }
+        if value <= 1073741823          { return Ok(4); }
+        if value <= 4611686018427387903 { return Ok(8); }
+        return Err(());
     }
 }
 
@@ -189,6 +205,7 @@ fn varint_encoding() {
 
         // Serialise
         value.write(bytes).unwrap();
+        assert_eq!(bytes.len(), value.len() as usize);
 
         // Deserialise
         let mut cursor = Cursor::new(&bytes[..]);
