@@ -21,7 +21,7 @@ pub(super) fn connection_attempt_events_system(
             &super::issue_connection_id(),
             endpoint.local_addr(),
             event.address,
-            todo!(),
+            &mut endpoint.quiche_config,
         ) {
             Ok(connection) => QuicheConnection::new(connection),
             Err(_) => todo!(),
