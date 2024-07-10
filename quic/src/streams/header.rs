@@ -51,7 +51,7 @@ impl StreamHeader {
         return Ok(())
     }
 
-    pub fn decode<B: Buf>(&self, buf: &mut B) -> Result<Self, ()> {
+    pub fn decode<B: Buf>(buf: &mut B) -> Result<Self, ()> {
         // Get the purpose code prefixing the datagram
         let code = VarInt::read(buf)
             .and_then(u32::try_from)
