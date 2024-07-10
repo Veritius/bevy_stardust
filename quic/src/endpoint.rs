@@ -60,6 +60,7 @@ impl Endpoint {
 }
 
 impl Endpoint {
+    /// Returns the local address this endpoint is bound to.
     pub fn local_addr(&self) -> SocketAddr {
         self.socket.local_addr().unwrap()
     }
