@@ -1,6 +1,5 @@
 use std::net::SocketAddr;
 use bevy::prelude::*;
-use crate::Credentials;
 
 /// Send to try and connect to a remote peer with `endpoint`.
 #[derive(Event)]
@@ -13,7 +12,4 @@ pub struct TryConnectEvent {
 
     /// The name of the server, used for certificate authentication.
     pub server_name: Option<Box<str>>,
-
-    /// Credentials for authenticating this peer during the handshake.
-    pub credentials: Option<Credentials>,
 }
