@@ -96,7 +96,7 @@ pub(super) fn endpoints_receive_datagrams_system(
 
         // Record statistics to the span
         span.record("receives", receives);
-        drop(entered); // explict drop to end the span
+        drop(entered); // explicit drop to end the span
 
         if new_peers.len() != 0 {
             // Start a new span for tracking accepts
