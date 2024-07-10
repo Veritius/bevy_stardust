@@ -1,3 +1,4 @@
+mod connect;
 mod datagrams;
 mod receiving;
 mod sending;
@@ -12,7 +13,10 @@ pub(crate) fn setup(app: &mut App) {
     app.add_systems(PreUpdate, receiving::endpoints_receive_datagrams_system
         .in_set(QuicSystems::ReceivePackets));
 
-    app.add_systems(PreUpdate, sending::endpoints_transmit_datagrams_system
+    app.add_systems(PostUpdate, connect::connection_attempt_events_system
+        .before(sending::endpoints_transmit_datagrams_system));
+
+    app.add_systems(PostUpdate, sending::endpoints_transmit_datagrams_system
         .in_set(QuicSystems::TransmitPackets));
 }
 
