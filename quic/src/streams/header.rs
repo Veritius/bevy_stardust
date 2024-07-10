@@ -8,7 +8,7 @@ pub(super) struct StreamHeader {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub(super) enum StreamPurpose {
+pub(crate) enum StreamPurpose {
     Stardust { channel: ChannelId },
     Datagram,
 }
@@ -79,6 +79,11 @@ impl StreamPurpose {
             StreamPurpose::Datagram => StreamPurposeCode::Datagram,
         }
     }
+
+    #[inline]
+    pub fn is_framed(&self) -> bool {
+        self.code().is_framed()
+    }
 }
 
 impl TryFrom<u32> for StreamPurposeCode {
@@ -91,5 +96,14 @@ impl TryFrom<u32> for StreamPurposeCode {
 
             _ => return Err(()),
         });
+    }
+}
+
+impl StreamPurposeCode {
+    fn is_framed(&self) -> bool {
+        match self {
+            StreamPurposeCode::Stardust => true,
+            StreamPurposeCode::Datagram => false,
+        }
     }
 }

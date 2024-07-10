@@ -8,7 +8,7 @@ pub(super) struct DatagramHeader {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub(super) enum DatagramPurpose {
+pub(crate) enum DatagramPurpose {
     Stardust { channel: ChannelId },
 }
 

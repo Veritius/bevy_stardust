@@ -1,6 +1,6 @@
 use bytes::{Bytes, BytesMut};
 use crate::streams::{OutgoingStreams, StreamManager};
-use super::{header::DatagramHeader, DatagramTryWrite};
+use super::{header::{DatagramHeader, DatagramPurpose}, DatagramTryWrite};
 
 pub(crate) struct OutgoingDatagrams {
 
@@ -16,13 +16,14 @@ impl OutgoingDatagrams {
     pub fn send<D: DatagramTryWrite, S: StreamManager>(
         &mut self,
         payload: Bytes,
+        purpose: DatagramPurpose,
         dgrams: &mut D,
         strmgr: &mut S,
         streams: &mut OutgoingStreams,
     ) -> anyhow::Result<()> {
         // Create the datagram header
         let header = DatagramHeader {
-            purpose: todo!(),
+            purpose,
         };
 
         // Check if the message can be sent in a datagram

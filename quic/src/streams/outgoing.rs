@@ -3,7 +3,7 @@ use bevy::utils::HashMap;
 use bevy_stardust::messages::ChannelId;
 use bevy_stardust_extras::numbers::VarInt;
 use bytes::{Bytes, BytesMut};
-use super::{StreamId, StreamTryWrite, StreamTryWriteOutcome};
+use super::{header::StreamPurpose, StreamId, StreamTryWrite, StreamTryWriteOutcome};
 
 pub(crate) struct OutgoingStreams {
     channels: HashMap<ChannelId, StreamId>,
@@ -18,6 +18,14 @@ impl OutgoingStreams {
         }
     }
 
+    pub fn open(&mut self, stream: StreamId, purpose: StreamPurpose) {
+        self.streams.insert(stream, OutgoingStream {
+            framed: purpose.is_framed(),
+            transient: todo!(),
+            queue: WriteQueue::new(),
+        });
+    }
+
     pub fn write<S: StreamTryWrite>(&mut self, id: StreamId, stream: &mut S) -> Option<StreamTryWriteOutcome> {
         let outgoing = self.streams.get_mut(&id)?;
         return outgoing.queue.write(stream);
@@ -26,6 +34,7 @@ impl OutgoingStreams {
 
 struct OutgoingStream {
     framed: bool,
+    transient: bool,
     queue: WriteQueue,
 }
 
@@ -45,6 +54,10 @@ impl OutgoingStream {
 struct WriteQueue(VecDeque<Bytes>);
 
 impl WriteQueue {
+    pub fn new() -> Self {
+        Self(VecDeque::new())
+    }
+
     #[inline]
     pub fn push(&mut self, bytes: Bytes) {
         self.0.push_back(bytes);
