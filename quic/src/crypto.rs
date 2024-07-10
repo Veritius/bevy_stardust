@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 /// A private key used for encryption.
 #[derive(Clone)]
-pub struct PrivateKey(Arc<PrivateKeyInner>);
+pub struct PrivateKey(PrivateKeyInner);
 
 impl PrivateKey {
     /// Create a `PrivateKey` from a PEM-encoded slice.
@@ -25,18 +25,19 @@ impl PrivateKey {
 
     #[cfg(feature="quiche")]
     fn from_boring_pkey(inner: boring::pkey::PKey<boring::pkey::Private>) -> Self {
-        Self(Arc::new(PrivateKeyInner { inner }))
+        Self(PrivateKeyInner { inner: Arc::new(inner) })
     }
 }
 
+#[derive(Clone)]
 struct PrivateKeyInner {
     #[cfg(feature="quiche")]
-    inner: boring::pkey::PKey<boring::pkey::Private>,
+    inner: Arc<boring::pkey::PKey<boring::pkey::Private>>,
 }
 
 /// An X.509 certificate used for encryption.
 #[derive(Clone)]
-pub struct Certificate(Arc<CertificateInner>);
+pub struct Certificate(CertificateInner);
 
 impl Certificate {
     /// Create a `Certificate` from a PEM-encoded slice.
@@ -53,18 +54,19 @@ impl Certificate {
 
     #[cfg(feature="quiche")]
     fn from_boring_x509(inner: boring::x509::X509) -> Self {
-        Self(Arc::new(CertificateInner { inner }))
+        Self(CertificateInner { inner: Arc::new(inner) })
     }
 }
 
+#[derive(Clone)]
 struct CertificateInner {
     #[cfg(feature="quiche")]
-    inner: boring::x509::X509,
+    inner: Arc<boring::x509::X509>,
 }
 
 /// A chain of [`Certificate`] objects.
 #[derive(Clone)]
-pub struct CertChain(Arc<CertChainInner>);
+pub struct CertChain(CertChainInner);
 
 impl CertChain {
     /// Create a `CertChain` from an iterator of certificates.
@@ -73,13 +75,14 @@ impl CertChain {
     }
 }
 
+#[derive(Clone)]
 struct CertChainInner {
 
 }
 
 /// A collection of trusted root certificates.
 #[derive(Clone)]
-pub struct RootCAs(Arc<RootCAsInner>);
+pub struct RootCAs(RootCAsInner);
 
 impl RootCAs {
     /// Create a `RootCAs` from an iterator of `CertChain` objects.
@@ -88,6 +91,7 @@ impl RootCAs {
     }
 }
 
+#[derive(Clone)]
 struct RootCAsInner {
 
 }
