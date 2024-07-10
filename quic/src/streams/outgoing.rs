@@ -56,7 +56,7 @@ impl WriteQueue {
         }
 
         while let Some(chunk) = self.0.pop_front() {
-            match stream.try_write(chunk.clone()) {
+            match stream.try_write_stream(chunk.clone()) {
                 StreamTryWriteOutcome::Complete => { continue },
 
                 StreamTryWriteOutcome::Partial(written) => {
