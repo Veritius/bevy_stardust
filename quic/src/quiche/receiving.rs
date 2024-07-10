@@ -1,4 +1,4 @@
-use std::{io::ErrorKind, sync::Mutex};
+use std::io::ErrorKind;
 use bevy::{prelude::*, utils::HashMap};
 use quiche::RecvInfo;
 use crate::{Connection, Endpoint};
@@ -6,16 +6,16 @@ use crate::{Connection, Endpoint};
 pub(super) fn endpoints_receive_datagrams_system(
     mut endpoints: Query<(Entity, &mut Endpoint)>,
     connections: Query<&mut Connection>,
-    mut commands: Commands,
+    commands: ParallelCommands,
 ) {
-    // Storage for peers that have connected
-    let new_peers = Mutex::new(HashMap::new());
-
     // Iterate over all endpoints in parallel
     endpoints.par_iter_mut().for_each(|(endpoint_id, mut endpoint)| {
+        // Storage for peers that have connected
+        let mut new_peers = HashMap::new();
+
         // Logging stuff
         let span = trace_span!("Receiving packets on endpoint", endpoint=?endpoint_id, address=?endpoint.local_addr());
-        let _entered = span.enter();
+        let entered = span.enter();
         let mut receives: usize = 0;
 
         // Create a new iterator and fill it with zeros
@@ -51,12 +51,9 @@ pub(super) fn endpoints_receive_datagrams_system(
 
                         // Peer doesn't exist
                         None => {
-                            // Lock new_peers for mutable access
-                            let mut new_peers = new_peers.lock().unwrap();
-
                             // Get or create the connection
                             let connection = match new_peers.get_mut(&remote_address) {
-                                Some((_, connection)) => connection,
+                                Some(connection) => connection,
                                 None => {
                                     // Try to accept the connection
                                     let connection = match quiche::accept(
@@ -76,8 +73,8 @@ pub(super) fn endpoints_receive_datagrams_system(
                                     };
 
                                     // Add it to the map and return a mutable reference
-                                    new_peers.insert(remote_address, (endpoint_id, Box::new(connection)));
-                                    &mut (*new_peers.get_mut(&remote_address).unwrap().1)
+                                    new_peers.insert(remote_address, Box::new(connection));
+                                    &mut (*new_peers.get_mut(&remote_address).unwrap())
                                 }
                             };
 
@@ -99,5 +96,31 @@ pub(super) fn endpoints_receive_datagrams_system(
 
         // Record statistics to the span
         span.record("receives", receives);
+        drop(entered); // explict drop to end the span
+
+        if new_peers.len() != 0 {
+            // Start a new span for tracking accepts
+            let span = trace_span!("Adding new peers");
+            let _entered = span.enter();
+
+            // Command scope to defer world mutations
+            commands.command_scope(|mut commands| {
+                // Spawn the new connections
+                for (address, connection) in new_peers.drain() {
+                    // Spawn a new entity to represent the connection
+                    let mut commands = commands.spawn_empty();
+
+                    // Register the connection to this endpoint
+                    // SAFETY: Commands gives a unique ID when adding entities
+                    unsafe { endpoint.insert_connection(commands.id(), address); }
+
+                    // Queue spawning the entity into the world
+                    commands.insert(Connection {
+                        endpoint: endpoint_id,
+                        quiche: *connection,
+                    });
+                }
+            });
+        }
     });
 }

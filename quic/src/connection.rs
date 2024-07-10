@@ -8,7 +8,7 @@ use crate::Endpoint;
 #[reflect(from_reflect=false, Component)]
 pub struct Connection {
     #[reflect(ignore)]
-    endpoint: Entity,
+    pub(crate) endpoint: Entity,
 
     #[cfg(feature="quiche")]
     #[reflect(ignore)]
