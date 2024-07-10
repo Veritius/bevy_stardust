@@ -6,16 +6,17 @@ use crate::{Endpoint, Connection};
 pub struct QuicPlugin;
 
 impl Plugin for QuicPlugin {
-    fn name(&self) -> &str {
-        "QuicPlugin"
-    }
+    fn name(&self) -> &str { "QuicPlugin" }
 
     fn build(&self, app: &mut App) {
+        if !app.is_plugin_added::<StardustPlugin>() {
+            panic!("StardustPlugin must be added before QuicPlugin");
+        }
+
         app.register_type::<Endpoint>();
         app.register_type::<Connection>();
 
-        app.add_systems(PreUpdate, (
-            crate::receiving::endpoints_receive_datagrams_system,
-        ).chain().in_set(NetworkRecv::Receive));
+        #[cfg(feature="quiche")]
+        crate::quiche::setup(app);
     }
 }

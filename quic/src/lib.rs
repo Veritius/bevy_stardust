@@ -11,7 +11,6 @@ mod connection;
 mod crypto;
 mod endpoint;
 mod plugin;
-mod receiving;
 
 pub use connection::Connection;
 pub use endpoint::Endpoint;

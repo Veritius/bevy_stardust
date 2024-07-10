@@ -1,7 +1,5 @@
-use std::net::SocketAddr;
 use bevy::{ecs::component::{ComponentHooks, StorageType}, prelude::*};
 use crate::Endpoint;
-use anyhow::Result;
 
 /// A QUIC connection.
 /// 
@@ -14,7 +12,7 @@ pub struct Connection {
 
     #[cfg(feature="quiche")]
     #[reflect(ignore)]
-    quiche: quiche::Connection,
+    pub(crate) quiche: quiche::Connection,
 }
 
 impl Component for Connection {
@@ -41,12 +39,5 @@ impl Component for Connection {
                 endpoint.remove_connection(entity);
             }
         });
-    }
-}
-
-impl Connection {
-    pub(crate) fn recv(&mut self, buf: &mut [u8], from: SocketAddr, to: SocketAddr) -> Result<()> {
-        #[cfg(feature="quiche")]
-        Ok(self.quiche.recv(buf, quiche::RecvInfo { from, to }).map(|_| ())?)
     }
 }
