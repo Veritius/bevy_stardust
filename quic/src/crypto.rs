@@ -64,34 +64,32 @@ struct CertificateInner {
     inner: Arc<boring::x509::X509>,
 }
 
-/// A chain of [`Certificate`] objects.
-#[derive(Clone)]
-pub struct CertChain(CertChainInner);
-
-impl CertChain {
-    /// Create a `CertChain` from an iterator of certificates.
-    pub fn from_iter<I: Iterator<Item = Certificate>>(iter: I) -> anyhow::Result<Self> {
-        todo!()
-    }
-}
-
-#[derive(Clone)]
-struct CertChainInner {
-
-}
-
 /// A collection of trusted root certificates.
 #[derive(Clone)]
 pub struct RootCAs(RootCAsInner);
 
 impl RootCAs {
-    /// Create a `RootCAs` from an iterator of `CertChain` objects.
-    pub fn from_iter<I: Iterator<Item = CertChain>>(iter: I) -> anyhow::Result<Self> {
-        todo!()
+    /// Create a `RootCAs` from an iterator of certificates.
+    pub fn from_iter<I: IntoIterator<Item = Certificate>>(iter: I) -> anyhow::Result<Self> {
+        let iter = iter.into_iter();
+
+        #[cfg(feature="quiche")] return {
+            use boring::x509::store::X509StoreBuilder;
+            let mut builder = X509StoreBuilder::new()?;
+            let iter = iter.map(|v| (*v.0.inner).clone());
+            for cert in iter { builder.add_cert(cert)?; }
+            Ok(Self::from_boring_x509_store(builder.build()))
+        };
+    }
+
+    #[cfg(feature="quiche")]
+    fn from_boring_x509_store(inner: boring::x509::store::X509Store) -> Self {
+        Self(RootCAsInner { inner: Arc::new(inner) })
     }
 }
 
 #[derive(Clone)]
 struct RootCAsInner {
-
+    #[cfg(feature="quiche")]
+    inner: Arc<boring::x509::store::X509Store>,
 }

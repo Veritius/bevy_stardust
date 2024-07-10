@@ -16,4 +16,4 @@ mod receiving;
 pub use connection::Connection;
 pub use endpoint::Endpoint;
 pub use plugin::QuicPlugin;
-pub use crypto::{PrivateKey, Certificate, CertChain, RootCAs};
+pub use crypto::{PrivateKey, Certificate, RootCAs};
