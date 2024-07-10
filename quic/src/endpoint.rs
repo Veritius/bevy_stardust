@@ -49,6 +49,14 @@ impl Endpoint {
         }
     }
 
+    pub(crate) fn iterate_connections(&self) -> impl Iterator<Item = Entity> + '_ {
+        self.ent_to_addr.keys().cloned()
+    }
+
+    pub(crate) fn iterate_connections_owned(&self) -> impl Iterator<Item = Entity> {
+        self.iterate_connections().collect::<Vec<_>>().into_iter()
+    }
+
     pub(crate) fn ent_to_addr(&mut self, id: Entity) -> Option<SocketAddr> {
         self.ent_to_addr.get(&id).cloned()
     }
