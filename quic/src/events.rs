@@ -12,7 +12,7 @@ pub struct TryConnectEvent {
     pub address: SocketAddr,
 
     /// The name of the server, used for certificate authentication.
-    pub server_name: Box<str>,
+    pub server_name: Option<Box<str>>,
 
     /// Credentials for authenticating this peer during the handshake.
     pub credentials: Option<Credentials>,
