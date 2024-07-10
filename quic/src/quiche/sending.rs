@@ -17,6 +17,9 @@ pub(super) fn endpoints_transmit_datagrams_system(
         scratch.extend((0..endpoint.send_size).into_iter().map(|_| 0));
         debug_assert_eq!(endpoint.send_size, scratch.len());
 
+        // Some information about the endpoint we will use frequently
+        let local_addr = endpoint.socket().local_addr().unwrap();
+
         // Iterate over all associated entities
         for connection in endpoint.iterate_connections_owned() {
             // SAFETY: Only one Endpoint will ever try to access the connection
@@ -39,7 +42,7 @@ pub(super) fn endpoints_transmit_datagrams_system(
                     // The connection wants to send data
                     Ok((written, send_info)) => {
                         // This shouldn't trip but it's worth checking
-                        debug_assert_eq!(send_info.from, endpoint.local_addr());
+                        debug_assert_eq!(send_info.from, local_addr);
 
                         // TODO: Handle pacing (the at field in send_info)
 
