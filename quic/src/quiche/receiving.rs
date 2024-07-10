@@ -76,8 +76,8 @@ pub(super) fn endpoints_receive_datagrams_system(
                                     };
 
                                     // Add it to the map and return a mutable reference
-                                    new_peers.insert(remote_address, (endpoint_id, connection));
-                                    &mut new_peers.get_mut(&remote_address).unwrap().1
+                                    new_peers.insert(remote_address, (endpoint_id, Box::new(connection)));
+                                    &mut (*new_peers.get_mut(&remote_address).unwrap().1)
                                 }
                             };
 
