@@ -1,7 +1,7 @@
 use std::io::ErrorKind;
 use bevy::{prelude::*, utils::HashMap};
 use quiche::RecvInfo;
-use crate::{datagrams::{IncomingDatagrams, OutgoingDatagrams}, streams::{IncomingStreams, OutgoingStreams}, Connection, Endpoint};
+use crate::{datagrams::{IncomingDatagrams, OutgoingDatagrams}, streams::{ChannelStreams, IncomingStreams, OutgoingStreams}, Connection, Endpoint};
 
 pub(super) fn endpoints_receive_datagrams_system(
     mut endpoints: Query<(Entity, &mut Endpoint)>,
@@ -124,6 +124,7 @@ pub(super) fn endpoints_receive_datagrams_system(
                         outgoing_streams: OutgoingStreams::new(),
                         incoming_datagrams: IncomingDatagrams::new(),
                         outgoing_datagrams: OutgoingDatagrams::new(),
+                        channel_streams: ChannelStreams::new(),
                     });
 
                     // Log the addition for debugging

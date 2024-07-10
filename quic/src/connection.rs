@@ -1,5 +1,5 @@
 use bevy::{ecs::component::{ComponentHooks, StorageType}, prelude::*};
-use crate::{datagrams::{IncomingDatagrams, OutgoingDatagrams}, streams::{IncomingStreams, OutgoingStreams}, Endpoint};
+use crate::{datagrams::{IncomingDatagrams, OutgoingDatagrams}, streams::{ChannelStreams, IncomingStreams, OutgoingStreams}, Endpoint};
 
 /// A QUIC connection.
 /// 
@@ -25,6 +25,9 @@ pub struct Connection {
 
     #[reflect(ignore)]
     pub(crate) outgoing_datagrams: OutgoingDatagrams,
+
+    #[reflect(ignore)]
+    pub(crate) channel_streams: ChannelStreams,
 }
 
 impl Component for Connection {
