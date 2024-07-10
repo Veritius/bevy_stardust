@@ -79,10 +79,13 @@ impl CertChain {
     /// Decodes and verifies a `CertChain` from PEM.
     pub fn from_pem(pem: impl AsRef<[u8]>) -> anyhow::Result<Self> {
         #[cfg(feature="quiche")]
-        return Ok(Self(CertChainInner { inner: {
+        let inner = {
             let stack = boring::x509::X509::stack_from_pem(pem.as_ref())?;
             todo!("Verify PEM chain")
-        }}));
+        };
+
+        // Return the certificate chain
+        return Ok(Self(CertChainInner { inner }));
     }
 }
 
