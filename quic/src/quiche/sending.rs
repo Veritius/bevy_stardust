@@ -38,6 +38,9 @@ pub(super) fn endpoints_transmit_datagrams_system(
                 match connection.quiche.send(&mut scratch[..]) {
                     // The connection wants to send data
                     Ok((written, send_info)) => {
+                        // This shouldn't trip but it's worth checking
+                        debug_assert_eq!(send_info.from, endpoint.local_addr());
+
                         // TODO: Handle pacing (the at field in send_info)
 
                         // Send the data with the socket
