@@ -14,4 +14,15 @@ impl ChannelDatagrams {
             send_sequences: HashMap::new(),
         }
     }
+
+    pub fn next_send_seq(&mut self, channel: ChannelId) -> Sequence<u16> {
+        let value = self.send_sequences
+            .entry(channel)
+            .or_insert(Sequence::default());
+
+        let ret = *value;
+        value.increment();
+
+        return ret;
+    }
 }
