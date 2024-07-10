@@ -25,7 +25,12 @@ impl PrivateKey {
 
     #[cfg(feature="quiche")]
     fn from_boring_pkey(inner: boring::pkey::PKey<boring::pkey::Private>) -> Self {
-        Self(PrivateKeyInner { inner: Arc::new(inner) })
+        Self(PrivateKeyInner { inner })
+    }
+
+    #[cfg(feature="quiche")]
+    pub(crate) fn as_boring_pkey_ref(&self) -> &boring::pkey::PKeyRef<boring::pkey::Private> {
+        self.0.inner.as_ref()
     }
 }
 
@@ -40,7 +45,7 @@ impl From<boring::pkey::PKey<boring::pkey::Private>> for PrivateKey {
 #[derive(Clone)]
 struct PrivateKeyInner {
     #[cfg(feature="quiche")]
-    inner: Arc<boring::pkey::PKey<boring::pkey::Private>>,
+    inner: boring::pkey::PKey<boring::pkey::Private>,
 }
 
 /// An X.509 certificate used for encryption.
@@ -64,6 +69,16 @@ impl Certificate {
     fn from_boring_x509(inner: boring::x509::X509) -> Self {
         Self(CertificateInner { inner: Arc::new(inner) })
     }
+
+    #[cfg(feature="quiche")]
+    pub(crate) fn as_boring_x509(&self) -> boring::x509::X509 {
+        (*self.0.inner).clone()
+    }
+
+    #[cfg(feature="quiche")]
+    pub(crate) fn as_boring_x509_ref(&self) -> &boring::x509::X509Ref {
+        self.0.inner.as_ref()
+    }
 }
 
 #[cfg(feature="quiche")]
@@ -81,6 +96,8 @@ struct CertificateInner {
 }
 
 /// A complete chain of certificates, from the issuer to the end entity.
+/// 
+/// Contains at least one certificate, as zero certificates is not a chain.
 #[derive(Clone)]
 pub struct CertChain(CertChainInner);
 
@@ -88,6 +105,8 @@ impl CertChain {
     /// Create a `CertChain` from an iterator of certificates.
     pub fn from_iter<I: IntoIterator<Item = Certificate>>(iter: I) -> anyhow::Result<Self> {
         let iter = iter.into_iter();
+        let certs = iter.collect::<Vec<_>>();
+        if certs.len() == 0 { anyhow::bail!("Iterator must have at least 1 certificate") }
 
         todo!("Verify cert chain")
     }
@@ -103,6 +122,10 @@ impl CertChain {
         // Return the certificate chain
         return Ok(Self(CertChainInner { inner }));
     }
+
+    pub(crate) fn iter(&self) -> impl Iterator<Item = Certificate> + '_ {
+        self.0.inner.iter().cloned()
+    }
 }
 
 #[derive(Clone)]
@@ -111,7 +134,6 @@ struct CertChainInner {
 }
 
 /// A collection of trusted root certificates.
-#[derive(Clone)]
 pub struct TrustAnchors(TrustAnchorsInner);
 
 impl TrustAnchors {
@@ -130,7 +152,12 @@ impl TrustAnchors {
 
     #[cfg(feature="quiche")]
     fn from_boring_x509_store(inner: boring::x509::store::X509Store) -> Self {
-        Self(TrustAnchorsInner { inner: Arc::new(inner) })
+        Self(TrustAnchorsInner { inner })
+    }
+
+    #[cfg(feature="quiche")]
+    pub(crate) fn into_boring_x509_store(self) -> boring::x509::store::X509Store {
+        self.0.inner
     }
 }
 
@@ -142,10 +169,9 @@ impl From<boring::x509::store::X509Store> for TrustAnchors {
     }
 }
 
-#[derive(Clone)]
 struct TrustAnchorsInner {
     #[cfg(feature="quiche")]
-    inner: Arc<boring::x509::store::X509Store>,
+    inner: boring::x509::store::X509Store,
 }
 
 /// TLS credentials used to authenticate this peer to incoming connections.
