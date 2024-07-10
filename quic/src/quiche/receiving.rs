@@ -21,6 +21,7 @@ pub(super) fn endpoints_receive_datagrams_system(
         // Create a new iterator and fill it with zeros
         let mut scratch = Vec::with_capacity(endpoint.recv_size);
         scratch.extend((0..endpoint.recv_size).into_iter().map(|_| 0));
+        debug_assert_eq!(endpoint.recv_size, scratch.len());
 
         // Some information about the endpoint we will use frequently
         let local_addr = endpoint.socket().local_addr().unwrap();

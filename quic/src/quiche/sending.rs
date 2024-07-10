@@ -12,6 +12,11 @@ pub(super) fn endpoints_transmit_datagrams_system(
         let entered = span.enter();
         let mut transmits: usize = 0;
 
+        // Create a new iterator and fill it with zeros
+        let mut scratch = Vec::with_capacity(endpoint.send_size);
+        scratch.extend((0..endpoint.send_size).into_iter().map(|_| 0));
+        debug_assert_eq!(endpoint.send_size, scratch.len());
+
         // Iterate over all associated entities
         for connection in endpoint.iterate_connections_owned() {
             // SAFETY: Only one Endpoint will ever try to access the connection
@@ -25,7 +30,30 @@ pub(super) fn endpoints_transmit_datagrams_system(
                 },
             };
 
-            todo!()
+            // If this returns true, quiche::Connection::send will always return Done
+            // We check this here to save ourselves some effort
+            if connection.quiche.is_draining() { continue }
+
+            'send: loop {
+                match connection.quiche.send(&mut scratch[..]) {
+                    // The connection wants to send data
+                    Ok((written, send_info)) => {
+                        // TODO: Handle pacing (the at field in send_info)
+
+                        // Send the data with the socket
+                        if let Err(err) = endpoint.socket().send_to(&scratch[..written], send_info.to) {
+                            error!("I/O error while sending packets: {err}");
+                            todo!()
+                        }
+                    },
+
+                    // Nothing more to send
+                    Err(quiche::Error::Done) => break 'send,
+
+                    // Actual error
+                    Err(err) => todo!(),
+                }
+            }
         }
     });
 }

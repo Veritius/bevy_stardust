@@ -1,8 +1,6 @@
 use std::net::{SocketAddr, UdpSocket};
 use bevy::{prelude::*, utils::HashMap};
 
-use crate::Credentials;
-
 /// A QUIC endpoint, corresponding to a single UDP socket.
 /// 
 /// All [connections](crate::Connection) 'belong' to an Endpoint, which they use for I/O.
@@ -12,7 +10,13 @@ pub struct Endpoint {
     /// If `true`, the endpoint will listen for new, incoming connections.
     pub listening: bool,
 
-    /// The amount of space that is allocated to receive packets.
+    /// The amount of space that is allocated to transmitting UDP packets.
+    /// This must be at least `1280`, the minimum packet size imposed by the QUIC standard.
+    /// Setting this above `65535` is pointless, as that is the largest packet size in most operating systems.
+    #[reflect(@1280..65535)]
+    pub send_size: usize,
+
+    /// The amount of space that is allocated to receiving UDP packets.
     /// This must be at least `1280`, the minimum packet size imposed by the QUIC standard.
     /// Setting this above `65535` is pointless, as that is the largest packet size in most operating systems.
     #[reflect(@1280..65535)]
