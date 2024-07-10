@@ -31,6 +31,10 @@ pub struct Endpoint {
 
     #[reflect(ignore)]
     addr_to_ent: HashMap<SocketAddr, Entity>,
+
+    #[reflect(ignore)]
+    #[cfg(feature="quiche")]
+    pub(crate) quiche_config: quiche::Config,
 }
 
 impl Endpoint {

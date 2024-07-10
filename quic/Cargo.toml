@@ -32,6 +32,14 @@ optional = true
 version = "4"
 optional = true
 
+[dependencies.rand]
+version = "0.8.5"
+optional = true
+
 [features]
 default=["quiche"]
-quiche=["dep:quiche", "dep:boring"]
+quiche=[
+    "dep:quiche",
+    "dep:boring",
+    "dep:rand"
+]
