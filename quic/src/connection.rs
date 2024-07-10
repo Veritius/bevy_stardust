@@ -36,12 +36,9 @@ impl Component for Connection {
 
             // Try to get the endpoint
             // This may be Err if the endpoint is despawned before the connection
-            match world.get_mut::<Endpoint>(connection.endpoint) {
-                Some(mut endpoint) => {
-                    // Deregister the connection
-                    endpoint.remove_connection(entity);
-                },
-                None => { /* Do nothing */ },
+            if let Some(mut endpoint) = world.get_mut::<Endpoint>(connection.endpoint) {
+                // Deregister the connection
+                endpoint.remove_connection(entity);
             }
         });
     }
