@@ -18,11 +18,6 @@ pub struct Endpoint {
     #[reflect(@1280..65535)]
     pub recv_size: usize,
 
-    /// Credentials used to authenticate this endpoint to incoming connections.
-    /// If this is not present, connections that require authentication will fail.
-    #[reflect(ignore)]
-    pub credentials: Option<Credentials>,
-
     #[reflect(ignore)]
     socket: UdpSocket,
 
