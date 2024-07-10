@@ -8,6 +8,7 @@ compile_error!("You must choose a QUIC implementation.");
 mod quiche;
 
 mod connection;
+mod crypto;
 mod endpoint;
 mod plugin;
 mod receiving;
@@ -15,3 +16,4 @@ mod receiving;
 pub use connection::Connection;
 pub use endpoint::Endpoint;
 pub use plugin::QuicPlugin;
+pub use crypto::{Certificate, CertChain, RootCAs};
