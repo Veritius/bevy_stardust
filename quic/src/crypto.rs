@@ -3,7 +3,7 @@ use std::sync::Arc;
 /// A private key used for encryption.
 #[derive(Clone)]
 pub struct PrivateKey {
-    inner: Arc<[u8]>,
+    inner: Arc<PrivateKeyInner>,
 }
 
 impl PrivateKey {
@@ -23,10 +23,14 @@ impl PrivateKey {
     }
 }
 
+struct PrivateKeyInner {
+
+}
+
 /// An X.509 certificate used for encryption.
 #[derive(Clone)]
 pub struct Certificate {
-    inner: Arc<[u8]>,
+    inner: Arc<CertificateInner>,
 }
 
 impl Certificate {
@@ -41,10 +45,14 @@ impl Certificate {
     }
 }
 
+struct CertificateInner {
+
+}
+
 /// A chain of [`Certificate`] objects.
 #[derive(Clone)]
 pub struct CertChain {
-    inner: Arc<[Certificate]>,
+    inner: Arc<CertChainInner>,
 }
 
 impl CertChain {
@@ -54,10 +62,14 @@ impl CertChain {
     }
 }
 
+struct CertChainInner {
+
+}
+
 /// A collection of trusted root certificates.
 #[derive(Clone)]
 pub struct RootCAs {
-    inner: Arc<[CertChain]>,
+    inner: Arc<RootCAsInner>,
 }
 
 impl RootCAs {
@@ -65,4 +77,8 @@ impl RootCAs {
     pub fn from_iter<I: Iterator<Item = CertChain>>(iter: I) -> anyhow::Result<Self> {
         todo!()
     }
+}
+
+struct RootCAsInner {
+
 }
