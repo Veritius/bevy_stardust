@@ -16,7 +16,7 @@ pub(super) fn endpoints_receive_datagrams_system(
         // Logging stuff
         let span = trace_span!("Receiving packets on endpoint", endpoint=?endpoint_id, address=?endpoint.local_addr());
         let _entered = span.enter();
-        let mut receives = 0;
+        let mut receives: usize = 0;
 
         // Create a new iterator and fill it with zeros
         let mut scratch = Vec::with_capacity(endpoint.recv_size);
