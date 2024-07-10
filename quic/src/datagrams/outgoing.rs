@@ -3,13 +3,13 @@ use crate::streams::{OutgoingStreams, OutgoingStreamsTryWriteOutcome, StreamMana
 use super::{header::{DatagramHeader, DatagramPurpose}, Datagram, DatagramTag, DatagramTryWrite};
 
 pub(crate) struct OutgoingDatagrams {
-
+    _hidden: (),
 }
 
 impl OutgoingDatagrams {
     pub fn new() -> Self {
         Self {
-
+            _hidden: (),
         }
     }
 

@@ -3,13 +3,13 @@ use crate::datagrams::header::{DatagramHeader, DatagramPurpose};
 use super::{Datagram, DatagramTag};
 
 pub(crate) struct IncomingDatagrams {
-
+    _hidden: (),
 }
 
 impl IncomingDatagrams {
     pub fn new() -> Self {
         Self {
-
+            _hidden: (),
         }
     }
 
