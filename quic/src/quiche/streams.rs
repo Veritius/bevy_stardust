@@ -36,6 +36,14 @@ impl<'a> SendStream for QuicheSendStream<'a> {
 
 impl<'a> StreamTryWrite for QuicheSendStream<'a> {
     fn try_write_stream(&mut self, chunk: bytes::Bytes) -> StreamTryWriteOutcome {
-        todo!()
+        match self.connection.inner.stream_send(self.id.inner(), &chunk[..], false) {
+            Ok(written) => match written == chunk.len() {
+                true => StreamTryWriteOutcome::Complete,
+                false => StreamTryWriteOutcome::Partial(written),
+            },
+
+            Err(quiche::Error::Done) => StreamTryWriteOutcome::Blocked,
+            Err(err) => StreamTryWriteOutcome::Error(err.into()),
+        }
     }
 }
