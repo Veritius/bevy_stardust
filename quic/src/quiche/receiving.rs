@@ -1,7 +1,7 @@
 use std::io::ErrorKind;
 use bevy::{prelude::*, utils::HashMap};
 use quiche::RecvInfo;
-use crate::{datagrams::{ChannelDatagrams, IncomingDatagrams, OutgoingDatagrams}, streams::{ChannelStreams, IncomingStreams, OutgoingStreams}, Connection, Endpoint};
+use crate::{datagrams::{ChannelDatagrams, IncomingDatagrams, OutgoingDatagrams}, quiche::QuicheConnection, streams::{ChannelStreams, IncomingStreams, OutgoingStreams}, Connection, Endpoint};
 
 pub(super) fn endpoints_receive_datagrams_system(
     mut endpoints: Query<(Entity, &mut Endpoint)>,
@@ -119,7 +119,7 @@ pub(super) fn endpoints_receive_datagrams_system(
                     // Queue spawning the entity into the world
                     commands.insert(Connection {
                         endpoint: endpoint_id,
-                        quiche: *connection,
+                        quiche: QuicheConnection::new(*connection),
                         incoming_streams: IncomingStreams::new(),
                         outgoing_streams: OutgoingStreams::new(),
                         channel_streams: ChannelStreams::new(),

@@ -2,15 +2,15 @@ use bytes::Bytes;
 use super::StreamId;
 
 pub(crate) trait StreamManager {
-    type Outgoing: SendStream;
+    type Outgoing<'a>: SendStream where Self: 'a;
 
     fn open_send_stream(&mut self) -> anyhow::Result<StreamId>;
-    fn get_send_stream(&mut self, id: StreamId) -> Option<Self::Outgoing>;
+    fn get_send_stream(&mut self, id: StreamId) -> Option<Self::Outgoing<'_>>;
 }
 
 pub(crate) trait SendStream: StreamTryWrite {
-    fn finish_stream(&mut self);
-    fn reset_stream(&mut self);
+    fn finish_stream(&mut self) -> anyhow::Result<()>;
+    fn reset_stream(&mut self) -> anyhow::Result<()>;
 }
 
 pub(crate) trait StreamTryWrite {
