@@ -58,3 +58,9 @@ impl Endpoint {
         self.addr_to_ent.get(&id).cloned()
     }
 }
+
+impl Endpoint {
+    pub fn local_addr(&self) -> SocketAddr {
+        self.socket.local_addr().unwrap()
+    }
+}
