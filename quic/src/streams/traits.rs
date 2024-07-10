@@ -4,7 +4,7 @@ use super::StreamId;
 pub(crate) trait StreamManager {
     type SendStream: StreamTryWrite;
 
-    fn open_send_stream(&mut self, id: StreamId) -> anyhow::Result<StreamId>;
+    fn open_send_stream(&mut self) -> anyhow::Result<StreamId>;
     fn get_send_stream(&mut self, id: StreamId) -> Option<Self::SendStream>;
 }
 

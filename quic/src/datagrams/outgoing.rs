@@ -1,5 +1,5 @@
 use bytes::{Bytes, BytesMut};
-use crate::streams::{OutgoingStreams, StreamManager};
+use crate::streams::{OutgoingStreams, StreamManager, StreamPurpose, StreamTryWriteOutcome};
 use super::{header::{DatagramHeader, DatagramPurpose}, DatagramTryWrite};
 
 pub(crate) struct OutgoingDatagrams {
@@ -41,7 +41,26 @@ impl OutgoingDatagrams {
             },
 
             // The datagram does not fit and must be sent in a stream
-            false => todo!(),
+            false => {
+                // Open a new transient stream to wrap our datagram
+                let purpose = StreamPurpose::Datagram;
+                let id = strmgr.open_send_stream()?;
+                let mut outgoing = streams.open_and_get(id, purpose, true);
+
+                // Encode the header into its own allocation
+                let mut buf = BytesMut::with_capacity(len);
+                header.encode(&mut buf).unwrap();
+                let header = buf.freeze();
+
+                // Push the header and the payload into the queue for sending
+                outgoing.push_chunks_framed([header, payload].iter().cloned());
+
+                // Try to send as much as possible on the stream
+                let mut transmit = strmgr.get_send_stream(id).unwrap();
+                if let Some(StreamTryWriteOutcome::Error(err)) = streams.write(id, &mut transmit) {
+                    todo!()
+                }
+            },
         }
 
         return Ok(());
