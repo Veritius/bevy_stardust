@@ -9,8 +9,10 @@ mod quiche;
 
 mod connection;
 mod crypto;
+mod datagrams;
 mod endpoint;
 mod plugin;
+mod streams;
 
 pub use connection::Connection;
 pub use endpoint::Endpoint;
