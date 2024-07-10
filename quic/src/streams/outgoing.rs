@@ -1,39 +1,41 @@
 use std::collections::VecDeque;
 use bevy::utils::HashMap;
-use bevy_stardust::messages::ChannelId;
 use bevy_stardust_extras::numbers::VarInt;
 use bytes::{Bytes, BytesMut};
 use super::{header::StreamPurpose, SendStream, StreamId, StreamTryWrite, StreamTryWriteOutcome};
 
 pub(crate) struct OutgoingStreams {
-    channels: HashMap<ChannelId, StreamId>,
     streams: HashMap<StreamId, OutgoingStreamState>,
 }
 
 impl OutgoingStreams {
     pub fn new() -> Self {
         Self {
-            channels: HashMap::new(),
             streams: HashMap::new(),
         }
     }
 
-    pub fn open(&mut self, stream: StreamId, purpose: StreamPurpose, transient: bool) {
-        self.streams.insert(stream, OutgoingStreamState {
+    pub fn open(&mut self, id: StreamId, purpose: StreamPurpose, transient: bool) {
+        self.streams.insert(id, OutgoingStreamState {
             persistent: false,
             queue: WriteQueue::new(),
         });
     }
 
-    pub fn get(&mut self, stream: StreamId) -> Option<OutgoingStream> {
-        let state = self.streams.get_mut(&stream)?;
+    #[must_use]
+    pub fn get(&mut self, id: StreamId) -> Option<OutgoingStream> {
+        let state = self.streams.get_mut(&id)?;
         return Some(OutgoingStream { state });
     }
 
     #[must_use]
-    pub fn open_and_get(&mut self, stream: StreamId, purpose: StreamPurpose, transient: bool) -> OutgoingStream {
-        self.open(stream, purpose, transient);
-        return self.get(stream).unwrap();
+    pub fn open_and_get(&mut self, id: StreamId, purpose: StreamPurpose, transient: bool) -> OutgoingStream {
+        self.open(id, purpose, transient);
+        return self.get(id).unwrap();
+    }
+
+    pub fn forget(&mut self, id: StreamId) {
+        self.streams.remove(&id);
     }
 
     pub fn write<S: SendStream>(&mut self, id: StreamId, stream: &mut S) -> Option<StreamTryWriteOutcome> {
@@ -44,6 +46,7 @@ impl OutgoingStreams {
             StreamTryWriteOutcome::Complete => {
                 if !outgoing.persistent {
                     stream.finish_stream();
+                    self.forget(id);
                 }
 
                 // Return that we have completed the task
