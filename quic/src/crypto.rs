@@ -8,19 +8,19 @@ impl PrivateKey {
     /// Create a `PrivateKey` from a PEM-encoded slice.
     pub fn from_pem(pem: impl AsRef<[u8]>) -> anyhow::Result<Self> {
         #[cfg(feature="quiche")]
-        Ok(Self::from_boring_pkey(boring::pkey::PKey::private_key_from_pem(pem.as_ref())?))
+        return Ok(Self::from_boring_pkey(boring::pkey::PKey::private_key_from_pem(pem.as_ref())?));
     }
 
     /// Create a `PrivateKey` from a DER-encoded slice.
     pub fn from_der(der: impl AsRef<[u8]>) -> anyhow::Result<Self> {
         #[cfg(feature="quiche")]
-        Ok(Self::from_boring_pkey(boring::pkey::PKey::private_key_from_der(der.as_ref())?))
+        return Ok(Self::from_boring_pkey(boring::pkey::PKey::private_key_from_der(der.as_ref())?));
     }
 
     /// Create a `PrivateKey` from a DER-encoded PKCS#8 key.
     pub fn from_pkcs8(pkcs8: impl AsRef<[u8]>) -> anyhow::Result<Self> {
         #[cfg(feature="quiche")]
-        Ok(Self::from_boring_pkey(boring::pkey::PKey::private_key_from_pkcs8(pkcs8.as_ref())?))
+        return Ok(Self::from_boring_pkey(boring::pkey::PKey::private_key_from_pkcs8(pkcs8.as_ref())?));
     }
 
     #[cfg(feature="quiche")]
