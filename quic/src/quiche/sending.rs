@@ -48,10 +48,12 @@ pub(super) fn endpoints_transmit_datagrams_system(
 
                         // Send the data with the socket
                         if let Err(err) = endpoint.socket().send_to(&scratch[..written], send_info.to) {
-                            transmits += 1;
                             error!("I/O error while sending packets: {err}");
                             todo!()
                         }
+
+                        // logging
+                        transmits += 1;
                     },
 
                     // Nothing more to send
