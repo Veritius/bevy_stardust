@@ -1,5 +1,5 @@
 use bevy_stardust::prelude::*;
-use bevy_stardust_extras::numbers::VarInt;
+use bevy_stardust_extras::numbers::{Sequence, VarInt};
 use bytes::{Buf, BufMut};
 
 #[derive(Debug, Clone, Copy)]
@@ -9,13 +9,21 @@ pub(super) struct DatagramHeader {
 
 #[derive(Debug, Clone, Copy)]
 pub(crate) enum DatagramPurpose {
-    Stardust { channel: ChannelId },
+    Stardust {
+        channel: ChannelId
+    },
+
+    StardustSequenced {
+        channel: ChannelId,
+        sequence: Sequence<u16>,
+    }
 }
 
 #[derive(Clone, Copy)]
 #[repr(u32)]
 enum DatagramPurposeCode {
     Stardust = 0,
+    StardustSequenced = 1,
 }
 
 impl DatagramHeader {
@@ -26,7 +34,14 @@ impl DatagramHeader {
         len += VarInt::len_u32(self.purpose.code() as u32) as usize;
 
         match self.purpose {
-            DatagramPurpose::Stardust { channel } => { len += VarInt::len_u32(channel.into()) as usize; },
+            DatagramPurpose::Stardust { channel } => {
+                len += VarInt::len_u32(channel.into()) as usize;
+            },
+
+            DatagramPurpose::StardustSequenced { channel, sequence: _ } => {
+                len += VarInt::len_u32(channel.into()) as usize;
+                len += 2; // sequence has a static size
+            }
         }
 
         return len;
@@ -40,7 +55,14 @@ impl DatagramHeader {
         VarInt::from_u32(self.purpose.code() as u32).write(buf)?;
 
         match self.purpose {
-            DatagramPurpose::Stardust { channel } => { VarInt::from_u32(channel.into()).write(buf)?; },
+            DatagramPurpose::Stardust { channel } => {
+                VarInt::from_u32(channel.into()).write(buf)?;
+            },
+
+            DatagramPurpose::StardustSequenced { channel, sequence } => {
+                VarInt::from_u32(channel.into()).write(buf)?;
+                buf.put_u16(sequence.inner());
+            },
         }
 
         return Ok(())
@@ -58,6 +80,14 @@ impl DatagramHeader {
             DatagramPurposeCode::Stardust => DatagramPurpose::Stardust {
                 channel: VarInt::read(buf).and_then(u32::try_from).map_err(|_| ())?.into(),
             },
+
+            DatagramPurposeCode::StardustSequenced => DatagramPurpose::StardustSequenced {
+                channel: VarInt::read(buf).and_then(u32::try_from).map_err(|_| ())?.into(),
+                sequence: {
+                    if buf.remaining() < 2 { return Err(()); }
+                    Sequence::from(buf.get_u16())
+                },
+            },
         };
 
         // Return the decoded header
@@ -69,6 +99,7 @@ impl DatagramPurpose {
     fn code(&self) -> DatagramPurposeCode {
         match self {
             DatagramPurpose::Stardust { channel: _ } => DatagramPurposeCode::Stardust,
+            DatagramPurpose::StardustSequenced { channel: _, sequence: _ } => DatagramPurposeCode::StardustSequenced,
         }
     }
 }
