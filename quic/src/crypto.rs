@@ -57,12 +57,12 @@ impl CertChain {
 /// A collection of trusted root certificates.
 #[derive(Clone)]
 pub struct RootCAs {
-    inner: Arc<[Certificate]>,
+    inner: Arc<[CertChain]>,
 }
 
 impl RootCAs {
-    /// Create a `RootCAs` from an iterator of certificates.
-    pub fn from_iter<I: Iterator<Item = Certificate>>(iter: I) -> anyhow::Result<Self> {
+    /// Create a `RootCAs` from an iterator of `CertChain` objects.
+    pub fn from_iter<I: Iterator<Item = CertChain>>(iter: I) -> anyhow::Result<Self> {
         todo!()
     }
 }
