@@ -5,4 +5,4 @@ mod traits;
 
 pub(crate) use incoming::IncomingDatagrams;
 pub(crate) use outgoing::OutgoingDatagrams;
-pub(crate) use traits::DatagramTryWrite;
+pub(crate) use traits::*;
