@@ -29,6 +29,14 @@ impl PrivateKey {
     }
 }
 
+#[cfg(feature="quiche")]
+impl From<boring::pkey::PKey<boring::pkey::Private>> for PrivateKey {
+    #[inline]
+    fn from(value: boring::pkey::PKey<boring::pkey::Private>) -> Self {
+        Self::from_boring_pkey(value)
+    }
+}
+
 #[derive(Clone)]
 struct PrivateKeyInner {
     #[cfg(feature="quiche")]
@@ -55,6 +63,14 @@ impl Certificate {
     #[cfg(feature="quiche")]
     fn from_boring_x509(inner: boring::x509::X509) -> Self {
         Self(CertificateInner { inner: Arc::new(inner) })
+    }
+}
+
+#[cfg(feature="quiche")]
+impl From<boring::x509::X509> for Certificate {
+    #[inline]
+    fn from(value: boring::x509::X509) -> Self {
+        Self::from_boring_x509(value)
     }
 }
 
@@ -115,6 +131,14 @@ impl RootCAs {
     #[cfg(feature="quiche")]
     fn from_boring_x509_store(inner: boring::x509::store::X509Store) -> Self {
         Self(RootCAsInner { inner: Arc::new(inner) })
+    }
+}
+
+#[cfg(feature="quiche")]
+impl From<boring::x509::store::X509Store> for RootCAs {
+    #[inline]
+    fn from(value: boring::x509::store::X509Store) -> Self {
+        Self::from_boring_x509_store(value)
     }
 }
 
