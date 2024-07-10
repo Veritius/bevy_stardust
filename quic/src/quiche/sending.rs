@@ -9,7 +9,7 @@ pub(super) fn endpoints_transmit_datagrams_system(
     endpoints.par_iter_mut().for_each(|(endpoint_id, mut endpoint)| {
         // Logging stuff
         let span = trace_span!("Transmitting packets on endpoint", endpoint=?endpoint_id, address=?endpoint.local_addr());
-        let entered = span.enter();
+        let _entered = span.enter();
         let mut transmits: usize = 0;
 
         // Create a new iterator and fill it with zeros
@@ -48,6 +48,7 @@ pub(super) fn endpoints_transmit_datagrams_system(
 
                         // Send the data with the socket
                         if let Err(err) = endpoint.socket().send_to(&scratch[..written], send_info.to) {
+                            transmits += 1;
                             error!("I/O error while sending packets: {err}");
                             todo!()
                         }
@@ -61,5 +62,8 @@ pub(super) fn endpoints_transmit_datagrams_system(
                 }
             }
         }
+
+        // Record statistics to the span
+        span.record("transmits", transmits);
     });
 }
