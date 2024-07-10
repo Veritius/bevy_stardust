@@ -3,7 +3,7 @@ use bevy::utils::HashMap;
 use bevy_stardust::messages::ChannelId;
 use bevy_stardust_extras::numbers::VarInt;
 use bytes::{Bytes, BytesMut};
-use super::{header::StreamPurpose, StreamId, StreamTryWrite, StreamTryWriteOutcome};
+use super::{header::StreamPurpose, SendStream, StreamId, StreamTryWrite, StreamTryWriteOutcome};
 
 pub(crate) struct OutgoingStreams {
     channels: HashMap<ChannelId, StreamId>,
@@ -20,6 +20,7 @@ impl OutgoingStreams {
 
     pub fn open(&mut self, stream: StreamId, purpose: StreamPurpose, transient: bool) {
         self.streams.insert(stream, OutgoingStreamState {
+            persistent: false,
             queue: WriteQueue::new(),
         });
     }
@@ -35,9 +36,23 @@ impl OutgoingStreams {
         return self.get(stream).unwrap();
     }
 
-    pub fn write<S: StreamTryWrite>(&mut self, id: StreamId, stream: &mut S) -> Option<StreamTryWriteOutcome> {
+    pub fn write<S: SendStream>(&mut self, id: StreamId, stream: &mut S) -> Option<StreamTryWriteOutcome> {
         let outgoing = self.streams.get_mut(&id)?;
-        return outgoing.queue.write(stream);
+
+        match outgoing.queue.write(stream)? {
+            // Additional checks must be made if this is done
+            StreamTryWriteOutcome::Complete => {
+                if !outgoing.persistent {
+                    stream.finish_stream();
+                }
+
+                // Return that we have completed the task
+                return Some(StreamTryWriteOutcome::Complete);
+            },
+
+            // Any other cases we forward with no further changes
+            other => return Some(other),
+        }
     }
 }
 
@@ -46,6 +61,10 @@ pub(crate) struct OutgoingStream<'a> {
 }
 
 impl<'a> OutgoingStream<'a> {
+    pub fn make_persistent(&mut self) {
+        self.state.persistent = true;
+    }
+
     pub fn push_framed(&mut self, bytes: Bytes) {
         self.push_frame_prefix(bytes.len());
         self.push_unframed(bytes);
@@ -82,6 +101,7 @@ impl<'a> OutgoingStream<'a> {
 }
 
 struct OutgoingStreamState {
+    persistent: bool,
     queue: WriteQueue,
 }
 
