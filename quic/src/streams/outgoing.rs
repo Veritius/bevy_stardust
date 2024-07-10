@@ -2,7 +2,7 @@ use std::collections::VecDeque;
 use bevy::utils::HashMap;
 use bevy_stardust_extras::numbers::VarInt;
 use bytes::{Bytes, BytesMut};
-use super::{header::StreamPurpose, SendStream, StreamId, StreamTryWrite, StreamTryWriteOutcome};
+use super::{header::StreamPurpose, SendStream, StreamId, StreamTag, StreamTryWrite, StreamTryWriteOutcome};
 
 pub(crate) struct OutgoingStreams {
     streams: HashMap<StreamId, OutgoingStreamState>,
@@ -15,7 +15,7 @@ impl OutgoingStreams {
         }
     }
 
-    pub fn open(&mut self, id: StreamId, purpose: StreamPurpose, transient: bool) {
+    pub fn open(&mut self, id: StreamId, tag: StreamTag, transient: bool) {
         self.streams.insert(id, OutgoingStreamState {
             persistent: false,
             queue: WriteQueue::new(),
@@ -29,8 +29,8 @@ impl OutgoingStreams {
     }
 
     #[must_use]
-    pub fn open_and_get(&mut self, id: StreamId, purpose: StreamPurpose, transient: bool) -> OutgoingStream {
-        self.open(id, purpose, transient);
+    pub fn open_and_get(&mut self, id: StreamId, tag: StreamTag, transient: bool) -> OutgoingStream {
+        self.open(id, tag, transient);
         return self.get(id).unwrap();
     }
 

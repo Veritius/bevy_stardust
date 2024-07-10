@@ -8,7 +8,7 @@ pub(super) struct StreamHeader {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub(crate) enum StreamPurpose {
+pub(super) enum StreamPurpose {
     Stardust { channel: ChannelId },
     Datagram,
 }

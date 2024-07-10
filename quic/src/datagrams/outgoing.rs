@@ -1,6 +1,5 @@
 use bytes::BytesMut;
-use rand::seq;
-use crate::streams::{OutgoingStreams, OutgoingStreamsTryWriteOutcome, StreamManager, StreamPurpose, StreamTryWriteOutcome};
+use crate::streams::{OutgoingStreams, OutgoingStreamsTryWriteOutcome, StreamManager, StreamTag, StreamTryWriteOutcome};
 use super::{header::{DatagramHeader, DatagramPurpose}, Datagram, DatagramTag, DatagramTryWrite};
 
 pub(crate) struct OutgoingDatagrams {
@@ -41,9 +40,8 @@ impl OutgoingDatagrams {
             // The datagram does not fit and must be sent in a stream
             false => {
                 // Open a new transient stream to wrap our datagram
-                let purpose = StreamPurpose::Datagram;
                 let id = strmgr.open_send_stream()?;
-                let mut outgoing = streams.open_and_get(id, purpose, true);
+                let mut outgoing = streams.open_and_get(id, StreamTag::Datagram, true);
 
                 // Encode the header into its own allocation
                 let mut buf = BytesMut::with_capacity(len);
