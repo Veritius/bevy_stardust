@@ -64,6 +64,33 @@ struct CertificateInner {
     inner: Arc<boring::x509::X509>,
 }
 
+/// A complete chain of certificates, from the issuer to the end entity.
+#[derive(Clone)]
+pub struct CertChain(CertChainInner);
+
+impl CertChain {
+    /// Create a `CertChain` from an iterator of certificates.
+    pub fn from_iter<I: IntoIterator<Item = Certificate>>(iter: I) -> anyhow::Result<Self> {
+        let iter = iter.into_iter();
+
+        todo!("Verify cert chain")
+    }
+
+    /// Decodes and verifies a `CertChain` from PEM.
+    pub fn from_pem(pem: impl AsRef<[u8]>) -> anyhow::Result<Self> {
+        #[cfg(feature="quiche")]
+        return Ok(Self(CertChainInner { inner: {
+            let stack = boring::x509::X509::stack_from_pem(pem.as_ref())?;
+            todo!("Verify PEM chain")
+        }}));
+    }
+}
+
+#[derive(Clone)]
+struct CertChainInner {
+    inner: Arc<[Certificate]>,
+}
+
 /// A collection of trusted root certificates.
 #[derive(Clone)]
 pub struct RootCAs(RootCAsInner);
