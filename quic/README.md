@@ -13,4 +13,7 @@ Instead, you can choose from the currently supported implementations.
 |--------|--------------|--------------|----------------------------------------|-------------------------------|
 | quiche | `quiche`     | BSD 2-Clause | <https://github.com/cloudflare/quiche> | [Extensive][quiche_building]  |
 
+You can also enable the `reveal` feature flag to expose various backend-specific functionality.
+This is not recommended for almost all applications, but there are some niche cases where it's needed.
+
 [quiche_building]: https://github.com/cloudflare/quiche/tree/master?tab=readme-ov-file#building
