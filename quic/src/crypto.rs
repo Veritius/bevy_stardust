@@ -34,11 +34,18 @@ impl PrivateKey {
     }
 }
 
-#[cfg(feature="quiche")]
+#[cfg(all(feature="reveal", feature="quiche"))]
 impl From<boring::pkey::PKey<boring::pkey::Private>> for PrivateKey {
     #[inline]
     fn from(value: boring::pkey::PKey<boring::pkey::Private>) -> Self {
         Self::from_boring_pkey(value)
+    }
+}
+
+#[cfg(all(feature="reveal", feature="quiche"))]
+impl AsRef<boring::pkey::PKeyRef<boring::pkey::Private>> for PrivateKey {
+    fn as_ref(&self) -> &boring::pkey::PKeyRef<boring::pkey::Private> {
+        self.0.inner.as_ref()
     }
 }
 
@@ -81,11 +88,19 @@ impl Certificate {
     }
 }
 
-#[cfg(feature="quiche")]
+#[cfg(all(feature="reveal", feature="quiche"))]
 impl From<boring::x509::X509> for Certificate {
     #[inline]
     fn from(value: boring::x509::X509) -> Self {
         Self::from_boring_x509(value)
+    }
+}
+
+#[cfg(all(feature="reveal", feature="quiche"))]
+impl AsRef<boring::x509::X509Ref> for Certificate {
+    #[inline]
+    fn as_ref(&self) -> &boring::x509::X509Ref {
+        self.0.inner.as_ref()
     }
 }
 
@@ -161,7 +176,7 @@ impl TrustAnchors {
     }
 }
 
-#[cfg(feature="quiche")]
+#[cfg(all(feature="reveal", feature="quiche"))]
 impl From<boring::x509::store::X509Store> for TrustAnchors {
     #[inline]
     fn from(value: boring::x509::store::X509Store) -> Self {

@@ -42,6 +42,7 @@ optional = true
 
 [features]
 default=["quiche"]
+reveal=[]
 quiche=[
     "dep:quiche",
     "dep:boring",
