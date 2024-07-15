@@ -73,42 +73,14 @@ impl Endpoint {
 }
 
 impl Endpoint {
-    /// Returns an [`EndpointBuilder`] which can be used to create a new `Endpoint`.
-    #[inline]
-    pub fn builder() -> EndpointBuilder {
-        EndpointBuilder::new()
-    }
+    // /// Returns an [`EndpointBuilder`] which can be used to create a new `Endpoint`.
+    // #[inline]
+    // pub fn builder() -> EndpointBuilder {
+    //     EndpointBuilder::new()
+    // }
 
     /// Returns the local address this endpoint is bound to.
     pub fn local_addr(&self) -> SocketAddr {
         self.socket.local_addr().unwrap()
-    }
-}
-
-pub struct EndpointBuilder {
-    trust_anchors: Option<TrustAnchors>,
-    credentials: Option<Credentials>,
-}
-
-impl EndpointBuilder {
-    pub fn new() -> Self {
-        Self {
-            trust_anchors: None,
-            credentials: None,
-        }
-    }
-
-    pub fn with_trust_anchors(mut self, trust_anchors: TrustAnchors) -> Self {
-        self.trust_anchors = Some(trust_anchors);
-        return self;
-    }
-
-    pub fn with_credentials(mut self, credentials: Credentials) -> Self {
-        self.credentials = Some(credentials);
-        return self;
-    }
-
-    pub fn build(self) -> Result<Endpoint> {
-        todo!()
     }
 }
