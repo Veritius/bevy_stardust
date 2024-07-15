@@ -1,7 +1,9 @@
+mod builder;
+
 use std::net::{SocketAddr, UdpSocket};
-use anyhow::Result;
 use bevy::{prelude::*, utils::HashMap};
-use crate::{Credentials, TrustAnchors};
+
+pub use builder::{EndpointBuilder, Server, Client};
 
 /// A QUIC endpoint, corresponding to a single UDP socket.
 /// 
