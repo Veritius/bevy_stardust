@@ -1,10 +1,9 @@
 use std::{marker::PhantomData, net::ToSocketAddrs};
 use anyhow::{Context, Result};
 use crate::{AppProtos, Credentials, TrustAnchors};
-
 use super::*;
 
-/// A type annotation indicating neither client nor server.
+/// A type annotation indicating an endpoint that can act as both a [`Server`] and [`Client`].
 /// Used by [`EndpointBuilder`].
 pub enum Dual {}
 
