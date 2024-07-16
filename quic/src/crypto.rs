@@ -1,4 +1,4 @@
-use std::{path::Path, sync::Arc};
+use std::{fs::read as fs_read, path::Path, sync::Arc};
 
 /// A private key used for encryption.
 #[derive(Clone)]
@@ -25,17 +25,17 @@ impl PrivateKey {
 
     /// Read a `PrivateKey` from PEM-encoded data in a file.
     pub fn from_pem_file(path: impl AsRef<Path>) -> anyhow::Result<Self> {
-        Self::from_pem(std::fs::read_to_string(path)?.as_bytes())
+        Self::from_pem(fs_read(path)?)
     }
 
     /// Read a `PrivateKey` from DER-encoded data in a file.
     pub fn from_der_file(path: impl AsRef<Path>) -> anyhow::Result<Self> {
-        Self::from_der(std::fs::read_to_string(path)?.as_bytes())
+        Self::from_der(fs_read(path)?)
     }
 
     /// Read a PKCS#8 key as a `PrivateKey` from PEM-encoded data in a file.
     pub fn from_pkcs8_file(path: impl AsRef<Path>) -> anyhow::Result<Self> {
-        Self::from_pkcs8(std::fs::read_to_string(path)?.as_bytes())
+        Self::from_pkcs8(fs_read(path)?)
     }
 
     #[cfg(feature="quiche")]
@@ -89,12 +89,12 @@ impl Certificate {
 
     /// Read a `Certificate` from PEM-encoded data in a file.
     pub fn from_pem_file(path: impl AsRef<Path>) -> anyhow::Result<Self> {
-        Self::from_pem(std::fs::read_to_string(path)?.as_bytes())
+        Self::from_pem(fs_read(path)?)
     }
 
     /// Read a `Certificate` from DER-encoded data in a file.
     pub fn from_der_file(path: impl AsRef<Path>) -> anyhow::Result<Self> {
-        Self::from_der(std::fs::read_to_string(path)?.as_bytes())
+        Self::from_der(fs_read(path)?)
     }
 
     #[cfg(feature="quiche")]
@@ -165,7 +165,7 @@ impl CertChain {
 
     /// Decodes and verifies a `CertChain` from PEM-encoded data stored in the file at `path`.
     pub fn from_pem_file(path: impl AsRef<Path>) -> anyhow::Result<Self> {
-        Self::from_pem(std::fs::read_to_string(path)?.as_bytes())
+        Self::from_pem(fs_read(path)?)
     }
 
     pub(crate) fn iter(&self) -> impl Iterator<Item = Certificate> + '_ {
