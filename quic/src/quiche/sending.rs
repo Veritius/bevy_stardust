@@ -21,13 +21,13 @@ pub(super) fn endpoints_transmit_datagrams_system(
         let local_addr = endpoint.socket().local_addr().unwrap();
 
         // Iterate over all associated entities
-        for connection in endpoint.iterate_connections_owned() {
+        for connection in endpoint.connections.iter_owned() {
             // SAFETY: Only one Endpoint will ever try to access the connection
             let mut connection = match unsafe { connections.get_unchecked(connection) } {
                 Ok(connection) => connection,
                 Err(_) => {
                     // Disassociate the connection from the endpoint
-                    endpoint.remove_connection(connection);
+                    endpoint.connections.deregister(connection);
                     trace!(endpoint=?endpoint_id, ?connection, "Endpoint had an entity ID associated with it that didn't appear in a query");
                     continue;
                 },

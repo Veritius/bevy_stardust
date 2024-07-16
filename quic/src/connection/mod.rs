@@ -54,7 +54,7 @@ impl Component for Connection {
             // This may be Err if the endpoint is despawned before the connection
             if let Some(mut endpoint) = world.get_mut::<Endpoint>(connection.endpoint) {
                 // Deregister the connection
-                endpoint.remove_connection(entity);
+                endpoint.connections.deregister(entity);
             }
         });
     }

@@ -38,7 +38,7 @@ pub(super) fn endpoints_receive_datagrams_system(
                     let recv_info = RecvInfo { from: remote_address, to: local_addr };
 
                     // See if the peer exists already
-                    match endpoint.addr_to_ent(remote_address) {
+                    match endpoint.connections.get_entity(remote_address) {
                         // Peer exists
                         Some(entity) => {
                             // SAFETY: Only this endpoint should ever access the connection
@@ -114,7 +114,7 @@ pub(super) fn endpoints_receive_datagrams_system(
                     // Register the connection to this endpoint
                     // SAFETY: Commands gives a unique ID when adding entities
                     let id = commands.id();
-                    unsafe { endpoint.insert_connection(id, address); }
+                    unsafe { endpoint.connections.register(id, address); }
 
                     // Queue spawning the entity into the world
                     commands.insert(Connection {

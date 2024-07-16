@@ -45,6 +45,6 @@ pub(super) fn connection_attempt_events_system(
 
         // Register it to the endpoint
         // SAFETY: Since we just spawned the entity, we know its ID is unique
-        unsafe { endpoint.insert_connection(id, event.address); }
+        unsafe { endpoint.connections.register(id, event.address); }
     }
 }
