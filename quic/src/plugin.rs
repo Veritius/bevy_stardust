@@ -9,10 +9,6 @@ impl Plugin for QuicPlugin {
     fn name(&self) -> &str { "QuicPlugin" }
 
     fn build(&self, app: &mut App) {
-        if !app.is_plugin_added::<StardustPlugin>() {
-            panic!("StardustPlugin must be added before QuicPlugin");
-        }
-
         app.configure_sets(PreUpdate, QuicSystems::ReceivePackets.in_set(NetworkRecv::Receive));
         app.configure_sets(PostUpdate, QuicSystems::ReceivePackets.in_set(NetworkSend::Transmit));
 
