@@ -66,6 +66,9 @@ fn setup_ssl_host(
         ssl.add_extra_chain_cert(cert.as_boring_x509())?;
     }
 
+    // Check the private key
+    ssl.check_private_key()?;
+
     // Return builder
     return Ok(ssl);
 }
