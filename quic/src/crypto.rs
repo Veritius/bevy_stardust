@@ -190,3 +190,15 @@ impl Credentials {
         Self { certificates, private_key }
     }
 }
+
+impl From<(CertChain, PrivateKey)> for Credentials {
+    fn from(value: (CertChain, PrivateKey)) -> Self {
+        Self::new(value.0, value.1)
+    }
+}
+
+impl From<(PrivateKey, CertChain)> for Credentials {
+    fn from(value: (PrivateKey, CertChain)) -> Self {
+        Self::new(value.1, value.0)
+    }
+}
