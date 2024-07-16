@@ -153,11 +153,6 @@ struct CertChainInner {
 pub struct TrustAnchors(TrustAnchorsInner);
 
 impl TrustAnchors {
-    /// Create a `TrustAnchors` store from an iterator of certificates.
-    pub fn from_iter<I: IntoIterator<Item = Certificate>>(iter: I) -> anyhow::Result<Self> {
-        return Ok(Self(TrustAnchorsInner { inner: iter.into_iter().collect() }));
-    }
-
     #[cfg(feature="quiche")]
     pub(crate) fn into_boring_x509_store(self) -> anyhow::Result<boring::x509::store::X509Store> {
         use boring::x509::store::X509StoreBuilder;
@@ -165,6 +160,12 @@ impl TrustAnchors {
         let iter = self.0.inner.iter().map(|v| (*v.0.inner).clone());
         for cert in iter { builder.add_cert(cert)?; }
         Ok(builder.build())
+    }
+}
+
+impl FromIterator<Certificate> for TrustAnchors {
+    fn from_iter<T: IntoIterator<Item = Certificate>>(iter: T) -> Self {
+        Self(TrustAnchorsInner { inner: iter.into_iter().collect() })
     }
 }
 
