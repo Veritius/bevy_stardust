@@ -5,6 +5,7 @@ use bevy::{prelude::*, utils::HashMap};
 
 pub use builder::{EndpointBuilder, Client, Server, Dual};
 
+#[allow(unused)] // various backends may or may not use these exports
 pub(crate) use builder::{ReadyShared, HostShared, JoinShared, ClientReady, ServerReady, DualReady};
 
 /// A QUIC endpoint, corresponding to a single UDP socket.
