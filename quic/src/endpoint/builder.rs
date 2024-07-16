@@ -186,14 +186,35 @@ struct HostShared {
     credentials: Credentials,
 }
 
+impl EndpointBuilder<Dual, DualReady> {
+    /// Attempts to build the endpoint.
+    pub fn build(self) -> Result<Endpoint> {
+        todo!()
+    }
+}
+
 pub struct DualReady {
     shared: ReadyShared,
     host: HostShared,
 }
 
+impl EndpointBuilder<Server, ServerReady> {
+    /// Attempts to build the endpoint.
+    pub fn build(self) -> Result<Endpoint> {
+        todo!()
+    }
+}
+
 pub struct ServerReady {
     shared: ReadyShared,
     host: HostShared,
+}
+
+impl EndpointBuilder<Client, ClientReady> {
+    /// Attempts to build the endpoint.
+    pub fn build(self) -> Result<Endpoint> {
+        todo!()
+    }
 }
 
 pub struct ClientReady {
