@@ -11,7 +11,7 @@ fn main() {
     app.add_systems(Startup, |mut commands: Commands| {
         let endpoint = EndpointBuilder::server()
             .with_socket_addr("0.0.0.0:12345").unwrap()
-            .with_protos(shared::APP_PROTOS)
+            .with_protos(shared::app_protos())
             .with_trust_anchors(shared::trust_anchors())
             .with_credentials(Credentials::new(
                 todo!(),

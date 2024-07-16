@@ -6,11 +6,6 @@ use bevy_stardust_quic::*;
 const TICK_DELAY: Duration = Duration::from_millis(500);
 
 pub const CERTIFICATE: &str = include_str!("../certificate.crt");
-pub const APP_PROTOS: AppProtos = AppProtos::from_static_slice(APP_PROTOS_INNER);
-
-const APP_PROTOS_INNER: &'static [AppProto] = &[
-    AppProto::from_static_str("simple_example"),
-];
 
 pub enum MyChannel {}
 
@@ -29,6 +24,16 @@ pub fn app() -> App {
     app.add_plugins(QuicPlugin);
 
     return app;
+}
+
+pub fn app_protos() -> AppProtos {
+    const APP_PROTOS: AppProtos = AppProtos::from_static_slice(APP_PROTOS_INNER);
+
+    const APP_PROTOS_INNER: &'static [AppProto] = &[
+        AppProto::from_static_str("simple_example"),
+    ];
+
+    APP_PROTOS
 }
 
 pub fn trust_anchors() -> TrustAnchors {
