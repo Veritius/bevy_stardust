@@ -52,6 +52,12 @@ impl Extend<AppProto> for AppProtosBuilder {
 #[derive(Clone)]
 pub struct AppProtos(AppProtosInner);
 
+impl AsRef<[AppProto]> for AppProtos {
+    fn as_ref(&self) -> &[AppProto] {
+        self.0.inner.as_ref()
+    }
+}
+
 impl Debug for AppProtos {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.0.inner.fmt(f)
@@ -74,6 +80,12 @@ pub struct AppProto(AppProtoInner);
 impl AsRef<str> for AppProto {
     fn as_ref(&self) -> &str {
         &self.0.inner
+    }
+}
+
+impl AsRef<[u8]> for AppProto {
+    fn as_ref(&self) -> &[u8] {
+        self.0.inner.as_bytes()
     }
 }
 
