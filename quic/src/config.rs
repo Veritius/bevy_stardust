@@ -14,6 +14,11 @@ impl AppProtosBuilder {
         }
     }
 
+    /// Adds a single [`AppProto`] to the set.
+    pub fn push(&mut self, proto: AppProto) {
+        self.protos.push(proto);
+    }
+
     /// Try to create an [`AppProtos`] from the builder.
     /// Fails if no [`AppProto`] items have been added.
     pub fn build(self) -> anyhow::Result<AppProtos> {
@@ -99,6 +104,12 @@ impl AsRef<str> for AppProto {
 impl AsRef<[u8]> for AppProto {
     fn as_ref(&self) -> &[u8] {
         self.0.inner.as_bytes()
+    }
+}
+
+impl From<&str> for AppProto {
+    fn from(value: &str) -> Self {
+        Self(AppProtoInner { inner: value.into() })
     }
 }
 
