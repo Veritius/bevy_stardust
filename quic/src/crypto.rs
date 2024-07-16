@@ -147,8 +147,8 @@ impl CertChain {
         let iter = iter.into_iter();
         let certs = iter.collect::<Vec<_>>();
         if certs.len() == 0 { anyhow::bail!("Iterator must have at least 1 certificate") }
-
-        todo!("Verify cert chain")
+        // TODO: Verify certificate chain
+        return Ok(Self(CertChainInner { inner: certs.into() }));
     }
 
     /// Decodes and verifies a `CertChain` from PEM-encoded data.
