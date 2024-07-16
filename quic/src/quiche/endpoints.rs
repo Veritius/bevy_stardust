@@ -1,50 +1,50 @@
 use anyhow::Result;
 use boring::ssl::{SslContextBuilder, SslMethod};
 use quiche::Config;
-use crate::endpoint::*;
+use crate::{endpoint::*, AppProtos, TrustAnchors};
 
 pub(crate) fn build_client(state: ClientReady) -> Result<Endpoint> {
     // Setup BoringSSL's SSL stuff
-    let ssl = setup_ssl_shared(&state.shared)?;
+    let ssl = setup_ssl_shared(state.shared.anchors)?;
     let ssl = setup_ssl_join(ssl, &state.join)?;
 
     // Quiche config object
-    let config = setup_config_shared(ssl, &state.shared)?;
+    let config = setup_config_shared(ssl, state.shared.protos)?;
 
     todo!()
 }
 
 pub(crate) fn build_server(state: ServerReady) -> Result<Endpoint> {
     // Setup BoringSSL's SSL stuff
-    let ssl = setup_ssl_shared(&state.shared)?;
+    let ssl = setup_ssl_shared(state.shared.anchors)?;
     let ssl = setup_ssl_host(ssl, &state.host)?;
 
     // Quiche config object
-    let config = setup_config_shared(ssl, &state.shared)?;
+    let config = setup_config_shared(ssl, state.shared.protos)?;
 
     todo!()
 }
 
 pub(crate) fn build_dual(state: DualReady) -> Result<Endpoint> {
     // Setup BoringSSL's SSL stuff
-    let ssl = setup_ssl_shared(&state.shared)?;
+    let ssl = setup_ssl_shared(state.shared.anchors)?;
     let ssl = setup_ssl_host(ssl, &state.host)?;
     let ssl = setup_ssl_join(ssl, &state.join)?;
 
     // Quiche config object
-    let config = setup_config_shared(ssl, &state.shared)?;
+    let config = setup_config_shared(ssl, state.shared.protos)?;
 
     todo!()
 }
 
 fn setup_ssl_shared(
-    shared: &ReadyShared,
+    anchors: TrustAnchors,
 ) -> Result<SslContextBuilder> {
     // TODO: Only allow TLS 1.3
     let mut ssl = SslContextBuilder::new(SslMethod::tls())?;
 
     // Set the trust anchors
-    ssl.set_cert_store(todo!() /* shared.anchors.into_boring_x509_store() */);
+    ssl.set_cert_store(anchors.into_boring_x509_store());
 
     return Ok(ssl);
 }
@@ -78,13 +78,13 @@ fn setup_ssl_join(
 
 fn setup_config_shared(
     ssl: SslContextBuilder,
-    shared: &ReadyShared,
+    protos: AppProtos,
 ) -> Result<Config> {
     // Create the config object
     let mut config = Config::with_boring_ssl_ctx_builder(quiche::PROTOCOL_VERSION, ssl)?;
 
     // Set the application protos
-    config.set_application_protos(&shared.protos.collect())?;
+    config.set_application_protos(&protos.collect())?;
 
     // Enable datagrams (for unreliable traffic)
     config.enable_dgram(true, todo!(), todo!());
