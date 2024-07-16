@@ -1,5 +1,5 @@
 use std::time::Duration;
-use bevy::{app::ScheduleRunnerPlugin, prelude::*};
+use bevy::{app::ScheduleRunnerPlugin, log::LogPlugin, prelude::*};
 use bevy_stardust::prelude::*;
 use bevy_stardust_quic::*;
 
@@ -11,6 +11,8 @@ pub enum MyChannel {}
 
 pub fn app() -> App {
     let mut app = App::new();
+
+    app.add_plugins(LogPlugin::default());
 
     app.add_plugins(ScheduleRunnerPlugin::run_loop(TICK_DELAY));
 

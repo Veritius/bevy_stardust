@@ -1,5 +1,6 @@
 mod shared;
 
+use std::net::{IpAddr, Ipv4Addr};
 use bevy::prelude::*;
 use bevy_stardust_quic::*;
 
@@ -8,7 +9,7 @@ fn main() {
 
     app.add_systems(Startup, |mut commands: Commands| {
         let endpoint = EndpointBuilder::client()
-            .with_socket_addr("0.0.0.0:12345").unwrap()
+            .with_address(IpAddr::V4(Ipv4Addr::UNSPECIFIED)).unwrap()
             .with_protos(shared::app_protos())
             .with_trust_anchors(shared::trust_anchors())
             .build().unwrap();
