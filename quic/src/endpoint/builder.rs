@@ -15,26 +15,13 @@ pub enum Server {}
 /// Used by [`EndpointBuilder`].
 pub enum Client {}
 
-mod sealed {
-    pub trait Side {}
-    impl Side for super::Dual {}
-    impl Side for super::Server {}
-    impl Side for super::Client {}
-}
-
 /// A builder for an [`Endpoint`].
-pub struct EndpointBuilder<Side, State>
-where
-    Side: sealed::Side,
-{
+pub struct EndpointBuilder<Side, State> {
     side: PhantomData<Side>,
     state: State,
 }
 
-impl<Side, State> EndpointBuilder<Side, State>
-where
-    Side: sealed::Side,
-{
+impl<Side, State> EndpointBuilder<Side, State> {
     /// Create an `EndpointBuilder` that can act as both a client and server.
     pub fn dual() -> EndpointBuilder<Dual, WantsSocket> {
         EndpointBuilder {
@@ -64,10 +51,7 @@ pub struct WantsSocket {
     _hidden: ()
 }
 
-impl<Side> EndpointBuilder<Side, WantsSocket>
-where
-    Side: sealed::Side
-{
+impl<Side> EndpointBuilder<Side, WantsSocket> {
     /// Use an existing `UdpSocket`.
     pub fn with_socket(self, socket: UdpSocket) -> Result<EndpointBuilder<Side, WantsProtos>> {
         // Socket configuration
@@ -99,10 +83,7 @@ pub struct WantsProtos {
     socket: UdpSocket,
 }
 
-impl<Side> EndpointBuilder<Side, WantsProtos>
-where
-    Side: sealed::Side
-{
+impl<Side> EndpointBuilder<Side, WantsProtos> {
     /// Use a pre-existing [`AppProtos`].
     pub fn with_protos(self, protos: AppProtos) -> EndpointBuilder<Side, WantsTrustAnchors> {
         return EndpointBuilder {
