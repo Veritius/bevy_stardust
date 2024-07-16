@@ -19,6 +19,6 @@ mod streams;
 pub use config::{AppProtosBuilder, AppProtos, AppProto};
 pub use connection::Connection;
 pub use crypto::{PrivateKey, Certificate, CertChain, TrustAnchors, Credentials};
-pub use endpoint::{Endpoint, EndpointBuilder, Server, Client};
+pub use endpoint::{Endpoint, EndpointBuilder, Client, Server, Dual};
 pub use events::TryConnectEvent;
 pub use plugin::QuicPlugin;

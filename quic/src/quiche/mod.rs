@@ -1,5 +1,6 @@
 mod connect;
 mod datagrams;
+mod endpoints;
 mod receiving;
 mod sending;
 mod streams;
@@ -9,6 +10,12 @@ use anyhow::Result;
 use bevy::prelude::*;
 use quiche::{Config, ConnectionId};
 use crate::{plugin::QuicSystems, Credentials, TrustAnchors};
+
+pub(crate) use endpoints::{
+    build_client,
+    build_server,
+    build_dual,
+};
 
 pub(crate) fn setup(app: &mut App) {
     app.add_systems(PreUpdate, receiving::endpoints_receive_datagrams_system

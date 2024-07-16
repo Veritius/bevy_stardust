@@ -139,7 +139,11 @@ impl EndpointBuilder<Client, WantsTrustAnchors> {
                     socket: self.state.socket,
                     protos: self.state.protos,
                     anchors,
-                }
+                    _hidden: (),
+                },
+                join: JoinShared {
+                    _hidden: (),
+                },
             },
         };
     }
@@ -161,10 +165,15 @@ impl EndpointBuilder<Dual, WantsCredentials> {
                     socket: self.state.socket,
                     protos: self.state.protos,
                     anchors: self.state.anchors,
+                    _hidden: (),
                 },
                 host: HostShared {
                     credentials,
-                }
+                    _hidden: (),
+                },
+                join: JoinShared {
+                    _hidden: (),
+                },
             },
         };
     }
@@ -180,56 +189,69 @@ impl EndpointBuilder<Server, WantsCredentials> {
                     socket: self.state.socket,
                     protos: self.state.protos,
                     anchors: self.state.anchors,
+                    _hidden: (),
                 },
                 host: HostShared {
                     credentials,
+                    _hidden: (),
                 }
             },
         };
     }
 }
 
-struct ReadyShared {
-    socket: UdpSocket,
-    protos: AppProtos,
-    anchors: TrustAnchors,
+pub(crate) struct ReadyShared {
+    pub(crate) socket: UdpSocket,
+    pub(crate) protos: AppProtos,
+    pub(crate) anchors: TrustAnchors,
+    _hidden: (),
 }
 
-struct HostShared {
-    credentials: Credentials,
+pub(crate) struct HostShared {
+    pub(crate) credentials: Credentials,
+    _hidden: (),
+}
+
+pub(crate) struct JoinShared {
+    _hidden: (),
 }
 
 impl EndpointBuilder<Dual, DualReady> {
     /// Attempts to build the endpoint.
     pub fn build(self) -> Result<Endpoint> {
-        todo!()
+        #[cfg(feature="quiche")]
+        return crate::quiche::build_dual(self.state);
     }
 }
 
 pub struct DualReady {
-    shared: ReadyShared,
-    host: HostShared,
+    pub(crate) shared: ReadyShared,
+    pub(crate) host: HostShared,
+    pub(crate) join: JoinShared,
 }
 
 impl EndpointBuilder<Server, ServerReady> {
     /// Attempts to build the endpoint.
     pub fn build(self) -> Result<Endpoint> {
-        todo!()
+        #[cfg(feature="quiche")]
+        return crate::quiche::build_server(self.state);
     }
 }
 
 pub struct ServerReady {
-    shared: ReadyShared,
-    host: HostShared,
+    pub(crate) shared: ReadyShared,
+    pub(crate) host: HostShared,
 }
 
 impl EndpointBuilder<Client, ClientReady> {
     /// Attempts to build the endpoint.
     pub fn build(self) -> Result<Endpoint> {
-        todo!()
+        #[cfg(feature="quiche")]
+        return crate::quiche::build_client(self.state);
     }
 }
 
 pub struct ClientReady {
-    shared: ReadyShared,
+    pub(crate) shared: ReadyShared,
+    pub(crate) join: JoinShared,
 }
