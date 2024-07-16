@@ -151,7 +151,7 @@ impl EndpointBuilder<Server, WantsTrustAnchors> {
 
 impl EndpointBuilder<Client, WantsTrustAnchors> {
     /// Use a pre-existing [`TrustAnchors`] store.
-    pub fn with_trust_anchors(self, anchors: TrustAnchors) -> Result<EndpointBuilder<Client, ()>> {
+    pub fn with_trust_anchors(self, anchors: TrustAnchors) -> Result<EndpointBuilder<Client, ClientReady>> {
         todo!()
     }
 }
@@ -164,14 +164,38 @@ pub struct WantsCredentials {
 
 impl EndpointBuilder<Dual, WantsCredentials> {
     /// Use a pre-existing [`Credentials`] set.
-    pub fn with_credentials(self, credentials: Credentials) -> Result<EndpointBuilder<Dual, ()>> {
+    pub fn with_credentials(self, credentials: Credentials) -> Result<EndpointBuilder<Dual, DualReady>> {
         todo!()
     }
 }
 
 impl EndpointBuilder<Server, WantsCredentials> {
     /// Use a pre-existing [`Credentials`] set.
-    pub fn with_credentials(self, credentials: Credentials) -> Result<EndpointBuilder<Server, ()>> {
+    pub fn with_credentials(self, credentials: Credentials) -> Result<EndpointBuilder<Server, ServerReady>> {
         todo!()
     }
+}
+
+struct ReadyShared {
+    socket: UdpSocket,
+    protos: AppProtos,
+    anchors: TrustAnchors,
+}
+
+struct HostShared {
+    credentials: Credentials,
+}
+
+pub struct DualReady {
+    shared: ReadyShared,
+    host: HostShared,
+}
+
+pub struct ServerReady {
+    shared: ReadyShared,
+    host: HostShared,
+}
+
+pub struct ClientReady {
+    shared: ReadyShared,
 }
