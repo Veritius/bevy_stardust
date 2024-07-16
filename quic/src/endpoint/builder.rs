@@ -28,8 +28,8 @@ pub struct EndpointBuilder<Side, State>
 where
     Side: sealed::Side,
 {
-    state: State,
     side: PhantomData<Side>,
+    state: State,
 }
 
 impl<Side, State> EndpointBuilder<Side, State>
@@ -39,24 +39,24 @@ where
     /// Create an `EndpointBuilder` that can act as both a client and server.
     pub fn dual() -> EndpointBuilder<Dual, WantsSocket> {
         EndpointBuilder {
-            state: WantsSocket { _hidden: () },
             side: PhantomData,
+            state: WantsSocket { _hidden: () },
         }
     }
 
     /// Create an `EndpointBuilder` for a server.
     pub fn server() -> EndpointBuilder<Server, WantsSocket> {
         EndpointBuilder {
-            state: WantsSocket { _hidden: () },
             side: PhantomData,
+            state: WantsSocket { _hidden: () },
         }
     }
 
     /// Create an `EndpointBuilder` for a client.
     pub fn client() -> EndpointBuilder<Client, WantsSocket> {
         EndpointBuilder {
-            state: WantsSocket { _hidden: () },
             side: PhantomData,
+            state: WantsSocket { _hidden: () },
         }
     }
 }
@@ -76,10 +76,10 @@ where
 
         // Return the socket
         return Ok(EndpointBuilder {
+            side: PhantomData,
             state: WantsProtos {
                 socket
             },
-            side: PhantomData,
         });
     }
 
