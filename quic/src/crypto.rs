@@ -151,7 +151,7 @@ impl CertChain {
         todo!("Verify cert chain")
     }
 
-    /// Decodes and verifies a `CertChain` from PEM.
+    /// Decodes and verifies a `CertChain` from PEM-encoded data.
     pub fn from_pem(pem: impl AsRef<[u8]>) -> anyhow::Result<Self> {
         #[cfg(feature="quiche")]
         let inner = {
@@ -161,6 +161,11 @@ impl CertChain {
 
         // Return the certificate chain
         return Ok(Self(CertChainInner { inner }));
+    }
+
+    /// Decodes and verifies a `CertChain` from PEM-encoded data stored in the file at `path`.
+    pub fn from_pem_file(path: impl AsRef<Path>) -> anyhow::Result<Self> {
+        Self::from_pem(std::fs::read_to_string(path)?.as_bytes())
     }
 
     pub(crate) fn iter(&self) -> impl Iterator<Item = Certificate> + '_ {
