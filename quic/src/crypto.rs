@@ -149,44 +149,28 @@ struct CertChainInner {
 }
 
 /// A collection of trusted root certificates.
+#[derive(Clone)]
 pub struct TrustAnchors(TrustAnchorsInner);
 
 impl TrustAnchors {
     /// Create a `TrustAnchors` store from an iterator of certificates.
     pub fn from_iter<I: IntoIterator<Item = Certificate>>(iter: I) -> anyhow::Result<Self> {
-        let iter = iter.into_iter();
-
-        #[cfg(feature="quiche")] return {
-            use boring::x509::store::X509StoreBuilder;
-            let mut builder = X509StoreBuilder::new()?;
-            let iter = iter.map(|v| (*v.0.inner).clone());
-            for cert in iter { builder.add_cert(cert)?; }
-            Ok(Self::from_boring_x509_store(builder.build()))
-        };
+        return Ok(Self(TrustAnchorsInner { inner: iter.into_iter().collect() }));
     }
 
     #[cfg(feature="quiche")]
-    fn from_boring_x509_store(inner: boring::x509::store::X509Store) -> Self {
-        Self(TrustAnchorsInner { inner })
-    }
-
-    #[cfg(feature="quiche")]
-    pub(crate) fn into_boring_x509_store(self) -> boring::x509::store::X509Store {
-        self.0.inner
-    }
-}
-
-#[cfg(all(feature="reveal", feature="quiche"))]
-impl From<boring::x509::store::X509Store> for TrustAnchors {
-    #[inline]
-    fn from(value: boring::x509::store::X509Store) -> Self {
-        Self::from_boring_x509_store(value)
+    pub(crate) fn into_boring_x509_store(self) -> anyhow::Result<boring::x509::store::X509Store> {
+        use boring::x509::store::X509StoreBuilder;
+        let mut builder = X509StoreBuilder::new()?;
+        let iter = self.0.inner.iter().map(|v| (*v.0.inner).clone());
+        for cert in iter { builder.add_cert(cert)?; }
+        Ok(builder.build())
     }
 }
 
+#[derive(Clone)]
 struct TrustAnchorsInner {
-    #[cfg(feature="quiche")]
-    inner: boring::x509::store::X509Store,
+    inner: Arc<[Certificate]>,
 }
 
 /// TLS credentials used to authenticate this peer to incoming connections.

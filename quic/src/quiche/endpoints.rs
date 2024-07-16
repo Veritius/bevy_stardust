@@ -44,7 +44,7 @@ fn setup_ssl_shared(
     let mut ssl = SslContextBuilder::new(SslMethod::tls())?;
 
     // Set the trust anchors
-    ssl.set_cert_store(anchors.into_boring_x509_store());
+    ssl.set_cert_store(anchors.into_boring_x509_store()?);
 
     return Ok(ssl);
 }
