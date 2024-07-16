@@ -41,6 +41,14 @@ where
         self.right_to_left.get(right)
     }
 
+    pub fn iter_left(&self) -> impl Iterator<Item = &Left> {
+        self.left_to_right.keys()
+    }
+
+    pub fn iter_right(&self) -> impl Iterator<Item = &Right> {
+        self.right_to_left.keys()
+    }
+
     pub fn remove_left(&mut self, left: &Left) -> Option<Right> {
         if let Some(right) = self.left_to_right.remove(left) {
             self.right_to_left.remove(&right);
