@@ -9,9 +9,17 @@ pub(crate) fn build_client(state: ClientReady) -> Result<Endpoint> {
     let ssl = setup_ssl_join(ssl, &state.join)?;
 
     // Quiche config object
-    let config = setup_config_shared(ssl, state.shared.protos)?;
+    let quiche_config = setup_config_shared(ssl, state.shared.protos)?;
 
-    todo!()
+    // Create component
+    return Ok(Endpoint {
+        listening: false,
+        send_size: todo!(),
+        recv_size: todo!(),
+        socket: state.shared.socket,
+        connections: EndpointConnections::new(),
+        quiche_config,
+    });
 }
 
 pub(crate) fn build_server(state: ServerReady) -> Result<Endpoint> {
@@ -20,9 +28,17 @@ pub(crate) fn build_server(state: ServerReady) -> Result<Endpoint> {
     let ssl = setup_ssl_host(ssl, &state.host)?;
 
     // Quiche config object
-    let config = setup_config_shared(ssl, state.shared.protos)?;
+    let quiche_config = setup_config_shared(ssl, state.shared.protos)?;
 
-    todo!()
+    // Create component
+    return Ok(Endpoint {
+        listening: true,
+        send_size: todo!(),
+        recv_size: todo!(),
+        socket: state.shared.socket,
+        connections: EndpointConnections::new(),
+        quiche_config,
+    });
 }
 
 pub(crate) fn build_dual(state: DualReady) -> Result<Endpoint> {
@@ -32,9 +48,17 @@ pub(crate) fn build_dual(state: DualReady) -> Result<Endpoint> {
     let ssl = setup_ssl_join(ssl, &state.join)?;
 
     // Quiche config object
-    let config = setup_config_shared(ssl, state.shared.protos)?;
+    let quiche_config = setup_config_shared(ssl, state.shared.protos)?;
 
-    todo!()
+    // Create component
+    return Ok(Endpoint {
+        listening: false,
+        send_size: todo!(),
+        recv_size: todo!(),
+        socket: state.shared.socket,
+        connections: EndpointConnections::new(),
+        quiche_config,
+    });
 }
 
 fn setup_ssl_shared(
