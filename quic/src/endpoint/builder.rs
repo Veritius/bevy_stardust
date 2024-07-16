@@ -1,5 +1,6 @@
 use std::marker::PhantomData;
-use anyhow::{Context, Result};
+use anyhow::Result;
+use crate::{AppProtos, Credentials, TrustAnchors};
 
 use super::*;
 
@@ -69,7 +70,7 @@ where
     Side: sealed::Side
 {
     /// Use an existing `UdpSocket`.
-    pub fn with_socket(mut self, socket: UdpSocket) -> Result<EndpointBuilder<Side, WantsProtos>> {
+    pub fn with_socket(self, socket: UdpSocket) -> Result<EndpointBuilder<Side, WantsProtos>> {
         // Socket must be nonblocking
         socket.set_nonblocking(true)?;
 
@@ -91,4 +92,80 @@ where
 
 pub struct WantsProtos {
     socket: UdpSocket,
+}
+
+impl<Side> EndpointBuilder<Side, WantsProtos>
+where
+    Side: sealed::Side
+{
+    /// Use a pre-existing [`AppProtos`].
+    pub fn with_protos(self, protos: AppProtos) -> Result<EndpointBuilder<Side, WantsTrustAnchors>> {
+        return Ok(EndpointBuilder {
+            side: PhantomData,
+            state: WantsTrustAnchors {
+                socket: self.state.socket,
+                protos,
+            },
+        });
+    }
+}
+
+pub struct WantsTrustAnchors {
+    socket: UdpSocket,
+    protos: AppProtos,
+}
+
+impl EndpointBuilder<Dual, WantsTrustAnchors> {
+    /// Use a pre-existing [`TrustAnchors`] store.
+    pub fn with_trust_anchors(self, anchors: TrustAnchors) -> Result<EndpointBuilder<Dual, WantsCredentials>> {
+        return Ok(EndpointBuilder {
+            side: PhantomData,
+            state: WantsCredentials {
+                socket: self.state.socket,
+                protos: self.state.protos,
+                anchors,
+            },
+        });
+    }
+}
+
+impl EndpointBuilder<Server, WantsTrustAnchors> {
+    /// Use a pre-existing [`TrustAnchors`] store.
+    pub fn with_trust_anchors(self, anchors: TrustAnchors) -> Result<EndpointBuilder<Server, WantsCredentials>> {
+        return Ok(EndpointBuilder {
+            side: PhantomData,
+            state: WantsCredentials {
+                socket: self.state.socket,
+                protos: self.state.protos,
+                anchors,
+            },
+        });
+    }
+}
+
+impl EndpointBuilder<Client, WantsTrustAnchors> {
+    /// Use a pre-existing [`TrustAnchors`] store.
+    pub fn with_trust_anchors(self, anchors: TrustAnchors) -> Result<EndpointBuilder<Client, ()>> {
+        todo!()
+    }
+}
+
+pub struct WantsCredentials {
+    socket: UdpSocket,
+    protos: AppProtos,
+    anchors: TrustAnchors,
+}
+
+impl EndpointBuilder<Dual, WantsCredentials> {
+    /// Use a pre-existing [`Credentials`] set.
+    pub fn with_credentials(self, credentials: Credentials) -> Result<EndpointBuilder<Dual, ()>> {
+        todo!()
+    }
+}
+
+impl EndpointBuilder<Server, WantsCredentials> {
+    /// Use a pre-existing [`Credentials`] set.
+    pub fn with_credentials(self, credentials: Credentials) -> Result<EndpointBuilder<Server, ()>> {
+        todo!()
+    }
 }
