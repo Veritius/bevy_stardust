@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{path::Path, sync::Arc};
 
 /// A private key used for encryption.
 #[derive(Clone)]
@@ -21,6 +21,21 @@ impl PrivateKey {
     pub fn from_pkcs8(pkcs8: impl AsRef<[u8]>) -> anyhow::Result<Self> {
         #[cfg(feature="quiche")]
         return Ok(Self::from_boring_pkey(boring::pkey::PKey::private_key_from_pkcs8(pkcs8.as_ref())?));
+    }
+
+    /// Read a `PrivateKey` from PEM-encoded data in a file.
+    pub fn from_pem_file(path: impl AsRef<Path>) -> anyhow::Result<Self> {
+        todo!()
+    }
+
+    /// Read a `PrivateKey` from DER-encoded data in a file.
+    pub fn from_der_file(path: impl AsRef<Path>) -> anyhow::Result<Self> {
+        todo!()
+    }
+
+    /// Read a PKCS#8 key as a `PrivateKey` from PEM-encoded data in a file.
+    pub fn from_pkcs8_file(path: impl AsRef<Path>) -> anyhow::Result<Self> {
+        todo!()
     }
 
     #[cfg(feature="quiche")]
@@ -70,6 +85,16 @@ impl Certificate {
     pub fn from_der(der: impl AsRef<[u8]>) -> anyhow::Result<Self> {
         #[cfg(feature="quiche")]
         return Ok(Self::from_boring_x509(boring::x509::X509::from_der(der.as_ref())?));
+    }
+
+    /// Read a `Certificate` from PEM-encoded data in a file.
+    pub fn from_pem_file(path: impl AsRef<Path>) -> anyhow::Result<Self> {
+        todo!()
+    }
+
+    /// Read a `Certificate` from DER-encoded data in a file.
+    pub fn from_der_file(path: impl AsRef<Path>) -> anyhow::Result<Self> {
+        todo!()
     }
 
     #[cfg(feature="quiche")]
