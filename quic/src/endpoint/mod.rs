@@ -63,9 +63,9 @@ impl Endpoint {
     }
 
     /// Configures the length of the buffer allocated while sending UDP packets.
-    /// Must be at least `1280` (imposed by the QUIC standard), or an error will occur.
+    /// Must be at least `1200` (imposed by the QUIC standard), or an error will occur.
     pub fn set_send_buf_len(&mut self, len: usize) -> anyhow::Result<()> {
-        ensure!(len > 1280, "Length was smaller than minimum QUIC value");
+        ensure!(len > 1200, "Length was smaller than minimum QUIC value");
         self.recv_size = len;
 
         #[cfg(feature="quiche")]
