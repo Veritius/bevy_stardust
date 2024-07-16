@@ -41,15 +41,21 @@ where
         self.right_to_left.get(right)
     }
 
-    pub fn remove_left(&mut self, left: &Left) {
+    pub fn remove_left(&mut self, left: &Left) -> Option<Right> {
         if let Some(right) = self.left_to_right.remove(left) {
             self.right_to_left.remove(&right);
+            return Some(right);
         }
+
+        return None;
     }
 
-    pub fn remove_right(&mut self, right: &Right) {
+    pub fn remove_right(&mut self, right: &Right) -> Option<Left> {
         if let Some(left) = self.right_to_left.remove(right) {
             self.left_to_right.remove(&left);
+            return Some(left);
         }
+
+        return None;
     }
 }
