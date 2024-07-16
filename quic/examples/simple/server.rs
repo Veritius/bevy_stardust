@@ -14,7 +14,7 @@ fn main() {
             .with_protos(shared::app_protos())
             .with_trust_anchors(shared::trust_anchors())
             .with_credentials(Credentials::new(
-                todo!(),
+                CertChain::from_iter(Some(Certificate::from_pem(shared::CERTIFICATE).unwrap())).unwrap(),
                 PrivateKey::from_pem(PRIVATE_KEY).unwrap(),
             ).unwrap())
             .build().unwrap();
