@@ -14,8 +14,8 @@ pub(crate) fn build_client(state: ClientReady) -> Result<Endpoint> {
     // Create component
     return Ok(Endpoint {
         listening: false,
-        send_size: todo!(),
-        recv_size: todo!(),
+        send_size: 1280,
+        recv_size: 1472,
         socket: state.shared.socket,
         connections: EndpointConnections::new(),
         quiche_config,
@@ -33,8 +33,8 @@ pub(crate) fn build_server(state: ServerReady) -> Result<Endpoint> {
     // Create component
     return Ok(Endpoint {
         listening: true,
-        send_size: todo!(),
-        recv_size: todo!(),
+        send_size: 1280,
+        recv_size: 1472,
         socket: state.shared.socket,
         connections: EndpointConnections::new(),
         quiche_config,
@@ -53,8 +53,8 @@ pub(crate) fn build_dual(state: DualReady) -> Result<Endpoint> {
     // Create component
     return Ok(Endpoint {
         listening: false,
-        send_size: todo!(),
-        recv_size: todo!(),
+        send_size: 1280,
+        recv_size: 1472,
         socket: state.shared.socket,
         connections: EndpointConnections::new(),
         quiche_config,
@@ -115,7 +115,8 @@ fn setup_config_shared(
     config.set_application_protos(&protos.collect())?;
 
     // Enable datagrams (for unreliable traffic)
-    config.enable_dgram(true, todo!(), todo!());
+    // TODO: Make these queue length values set by the user
+    config.enable_dgram(true, 65535, 4096);
 
     // Return the config
     return Ok(config);

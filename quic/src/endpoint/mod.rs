@@ -2,6 +2,7 @@ mod builder;
 mod connections;
 
 use std::net::{SocketAddr, UdpSocket};
+use anyhow::ensure;
 use bevy::prelude::*;
 
 pub use builder::{EndpointBuilder, Client, Server, Dual};
@@ -20,17 +21,11 @@ pub struct Endpoint {
     /// If `true`, the endpoint will listen for new, incoming connections.
     pub listening: bool,
 
-    /// The amount of space that is allocated to transmitting UDP packets.
-    /// This must be at least `1280`, the minimum packet size imposed by the QUIC standard.
-    /// Setting this above `65535` is pointless, as that is the largest packet size in most operating systems.
-    #[reflect(@1280..65535)]
-    pub send_size: usize,
+    #[reflect(ignore)]
+    pub(crate) send_size: usize,
 
-    /// The amount of space that is allocated to receiving UDP packets.
-    /// This must be at least `1280`, the minimum packet size imposed by the QUIC standard.
-    /// Setting this above `65535` is pointless, as that is the largest packet size in most operating systems.
-    #[reflect(@1280..65535)]
-    pub recv_size: usize,
+    #[reflect(ignore)]
+    pub(crate) recv_size: usize,
 
     #[reflect(ignore)]
     pub(crate) socket: UdpSocket,
@@ -53,5 +48,29 @@ impl Endpoint {
     /// Returns the local address this endpoint is bound to.
     pub fn local_addr(&self) -> SocketAddr {
         self.socket.local_addr().unwrap()
+    }
+
+    /// Configures the length of the buffer allocated while receiving UDP packets.
+    /// Must be at least `1280` (imposed by the QUIC standard), or an error will occur.
+    pub fn set_recv_buf_len(&mut self, len: usize) -> anyhow::Result<()> {
+        ensure!(len > 1280, "Length was smaller than minimum QUIC value");
+        self.recv_size = len;
+        
+        #[cfg(feature="quiche")]
+        self.quiche_config.set_max_recv_udp_payload_size(len);
+
+        return Ok(())
+    }
+
+    /// Configures the length of the buffer allocated while sending UDP packets.
+    /// Must be at least `1280` (imposed by the QUIC standard), or an error will occur.
+    pub fn set_send_buf_len(&mut self, len: usize) -> anyhow::Result<()> {
+        ensure!(len > 1280, "Length was smaller than minimum QUIC value");
+        self.recv_size = len;
+
+        #[cfg(feature="quiche")]
+        self.quiche_config.set_max_send_udp_payload_size(len);
+
+        return Ok(())
     }
 }
