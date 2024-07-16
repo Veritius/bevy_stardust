@@ -105,14 +105,14 @@ where
     Side: sealed::Side
 {
     /// Use a pre-existing [`AppProtos`].
-    pub fn with_protos(self, protos: AppProtos) -> Result<EndpointBuilder<Side, WantsTrustAnchors>> {
-        return Ok(EndpointBuilder {
+    pub fn with_protos(self, protos: AppProtos) -> EndpointBuilder<Side, WantsTrustAnchors> {
+        return EndpointBuilder {
             side: PhantomData,
             state: WantsTrustAnchors {
                 socket: self.state.socket,
                 protos,
             },
-        });
+        };
     }
 }
 
@@ -123,36 +123,36 @@ pub struct WantsTrustAnchors {
 
 impl EndpointBuilder<Dual, WantsTrustAnchors> {
     /// Use a pre-existing [`TrustAnchors`] store.
-    pub fn with_trust_anchors(self, anchors: TrustAnchors) -> Result<EndpointBuilder<Dual, WantsCredentials>> {
-        return Ok(EndpointBuilder {
+    pub fn with_trust_anchors(self, anchors: TrustAnchors) -> EndpointBuilder<Dual, WantsCredentials> {
+        return EndpointBuilder {
             side: PhantomData,
             state: WantsCredentials {
                 socket: self.state.socket,
                 protos: self.state.protos,
                 anchors,
             },
-        });
+        };
     }
 }
 
 impl EndpointBuilder<Server, WantsTrustAnchors> {
     /// Use a pre-existing [`TrustAnchors`] store.
-    pub fn with_trust_anchors(self, anchors: TrustAnchors) -> Result<EndpointBuilder<Server, WantsCredentials>> {
-        return Ok(EndpointBuilder {
+    pub fn with_trust_anchors(self, anchors: TrustAnchors) -> EndpointBuilder<Server, WantsCredentials> {
+        return EndpointBuilder {
             side: PhantomData,
             state: WantsCredentials {
                 socket: self.state.socket,
                 protos: self.state.protos,
                 anchors,
             },
-        });
+        };
     }
 }
 
 impl EndpointBuilder<Client, WantsTrustAnchors> {
     /// Use a pre-existing [`TrustAnchors`] store.
-    pub fn with_trust_anchors(self, anchors: TrustAnchors) -> Result<EndpointBuilder<Client, ClientReady>> {
-        return Ok(EndpointBuilder {
+    pub fn with_trust_anchors(self, anchors: TrustAnchors) -> EndpointBuilder<Client, ClientReady> {
+        return EndpointBuilder {
             side: PhantomData,
             state: ClientReady {
                 shared: ReadyShared {
@@ -161,7 +161,7 @@ impl EndpointBuilder<Client, WantsTrustAnchors> {
                     anchors,
                 }
             },
-        });
+        };
     }
 }
 
@@ -173,8 +173,8 @@ pub struct WantsCredentials {
 
 impl EndpointBuilder<Dual, WantsCredentials> {
     /// Use a pre-existing [`Credentials`] set.
-    pub fn with_credentials(self, credentials: Credentials) -> Result<EndpointBuilder<Dual, DualReady>> {
-        return Ok(EndpointBuilder {
+    pub fn with_credentials(self, credentials: Credentials) -> EndpointBuilder<Dual, DualReady> {
+        return EndpointBuilder {
             side: PhantomData,
             state: DualReady {
                 shared: ReadyShared {
@@ -186,14 +186,14 @@ impl EndpointBuilder<Dual, WantsCredentials> {
                     credentials,
                 }
             },
-        })
+        };
     }
 }
 
 impl EndpointBuilder<Server, WantsCredentials> {
     /// Use a pre-existing [`Credentials`] set.
-    pub fn with_credentials(self, credentials: Credentials) -> Result<EndpointBuilder<Server, ServerReady>> {
-        return Ok(EndpointBuilder {
+    pub fn with_credentials(self, credentials: Credentials) -> EndpointBuilder<Server, ServerReady> {
+        return EndpointBuilder {
             side: PhantomData,
             state: ServerReady {
                 shared: ReadyShared {
@@ -205,7 +205,7 @@ impl EndpointBuilder<Server, WantsCredentials> {
                     credentials,
                 }
             },
-        })
+        };
     }
 }
 
