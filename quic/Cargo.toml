@@ -48,3 +48,16 @@ quiche=[
     "dep:boring",
     "dep:rand"
 ]
+
+[[example]]
+name = "simple_client"
+path = "examples/simple/client.rs"
+
+[[example]]
+name = "simple_server"
+path = "examples/simple/server.rs"
+
+[[example]]
+name = "simple_shared"
+path = "examples/simple/shared.rs"
+crate-type = ["lib"]
