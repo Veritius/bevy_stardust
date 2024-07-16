@@ -1,5 +1,5 @@
-use std::marker::PhantomData;
-use anyhow::Result;
+use std::{marker::PhantomData, net::ToSocketAddrs};
+use anyhow::{Context, Result};
 use crate::{AppProtos, Credentials, TrustAnchors};
 
 use super::*;
@@ -71,7 +71,7 @@ where
 {
     /// Use an existing `UdpSocket`.
     pub fn with_socket(self, socket: UdpSocket) -> Result<EndpointBuilder<Side, WantsProtos>> {
-        // Socket must be nonblocking
+        // Socket configuration
         socket.set_nonblocking(true)?;
 
         // Return the socket
@@ -84,7 +84,13 @@ where
     }
 
     /// Bind to `address`, creating a new `UdpSocket`.
-    pub fn with_address(self, address: SocketAddr) -> Result<EndpointBuilder<Side, WantsProtos>> {
+    pub fn with_address(self, address: impl ToSocketAddrs) -> Result<EndpointBuilder<Side, WantsProtos>> {
+        // Resolve address
+        let address = address
+            .to_socket_addrs().with_context(|| anyhow::anyhow!("Failed to get address for socket"))?
+            .next().ok_or_else(|| anyhow::anyhow!("Must have at least one address"))?;
+
+        // Bind the socket
         let socket = UdpSocket::bind(address)?;
         Self::with_socket(self, socket)
     }
