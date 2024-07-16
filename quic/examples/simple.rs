@@ -1,4 +1,4 @@
-use std::time::Duration;
+use std::{net::{IpAddr, Ipv4Addr}, time::Duration};
 use bevy::{app::ScheduleRunnerPlugin, prelude::*};
 use bevy_stardust::prelude::*;
 use bevy_stardust_quic::*;
@@ -17,11 +17,32 @@ fn main() {
 fn client() -> App {
     let mut app = shared();
 
+    app.add_systems(Startup, |mut commands: Commands| {
+        let endpoint = EndpointBuilder::client()
+            .with_address(IpAddr::V4(Ipv4Addr::LOCALHOST)).unwrap()
+            .with_protos(todo!())
+            .with_trust_anchors(todo!())
+            .build().unwrap();
+
+        commands.spawn(endpoint);
+    });
+
     return app;
 }
 
 fn server() -> App {
     let mut app = shared();
+
+    app.add_systems(Startup, |mut commands: Commands| {
+        let endpoint = EndpointBuilder::server()
+            .with_address_and_port("0.0.0.0:12345").unwrap()
+            .with_protos(todo!())
+            .with_trust_anchors(todo!())
+            .with_credentials(todo!())
+            .build().unwrap();
+
+        commands.spawn(endpoint);
+    });
 
     return app;
 }

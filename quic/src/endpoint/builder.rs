@@ -1,4 +1,4 @@
-use std::{marker::PhantomData, net::ToSocketAddrs};
+use std::{marker::PhantomData, net::{IpAddr, ToSocketAddrs}};
 use anyhow::{Context, Result};
 use crate::{AppProtos, Credentials, TrustAnchors};
 use super::*;
@@ -66,8 +66,14 @@ impl<Side> EndpointBuilder<Side, WantsSocket> {
         });
     }
 
+    /// Bind to a specific address, but lets the OS choose the port for us.
+    /// Useful for clients and other connections that don't need to use a specific port.
+    pub fn with_address(self, address: IpAddr) -> Result<EndpointBuilder<Side, WantsProtos>> {
+        Self::with_address_and_port(self, SocketAddr::new(address, 0))
+    }
+
     /// Bind to `address`, creating a new `UdpSocket`.
-    pub fn with_address(self, address: impl ToSocketAddrs) -> Result<EndpointBuilder<Side, WantsProtos>> {
+    pub fn with_address_and_port(self, address: impl ToSocketAddrs) -> Result<EndpointBuilder<Side, WantsProtos>> {
         // Resolve address
         let address = address
             .to_socket_addrs().with_context(|| anyhow::anyhow!("Failed to get address for socket"))?
