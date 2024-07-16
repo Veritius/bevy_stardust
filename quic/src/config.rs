@@ -52,6 +52,17 @@ impl Extend<AppProto> for AppProtosBuilder {
 #[derive(Clone)]
 pub struct AppProtos(AppProtosInner);
 
+impl AppProtos {
+    /// Since Arc<T> is a pointer to T, we can't return a slice of them
+    /// What we can do is collect the Ts into a slice of pointers and return that
+    /// This requires an allocation but is used very infrequently so it's not that bad
+    pub(crate) fn collect<'a>(&'a self) -> Box<[&'a [u8]]> {
+        self.0.inner.iter()
+            .map(|v| v.0.inner.as_bytes())
+            .collect()
+    }
+}
+
 impl AsRef<[AppProto]> for AppProtos {
     fn as_ref(&self) -> &[AppProto] {
         self.0.inner.as_ref()

@@ -84,7 +84,7 @@ fn setup_config_shared(
     let mut config = Config::with_boring_ssl_ctx_builder(quiche::PROTOCOL_VERSION, ssl)?;
 
     // Set the application protos
-    config.set_application_protos(todo!())?;
+    config.set_application_protos(&shared.protos.collect())?;
 
     // Enable datagrams (for unreliable traffic)
     config.enable_dgram(true, todo!(), todo!());
