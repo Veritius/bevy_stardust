@@ -213,22 +213,23 @@ pub struct Credentials {
 
 impl Credentials {
     /// Creates a new `Credentials` from component parts.
-    pub fn new(
-        certificates: CertChain,
-        private_key: PrivateKey,
-    ) -> Self {
-        Self { certificates, private_key }
+    pub fn new(certificates: CertChain, private_key: PrivateKey) -> anyhow::Result<Self> {
+        return Ok(Self { certificates, private_key });
     }
 }
 
-impl From<(CertChain, PrivateKey)> for Credentials {
-    fn from(value: (CertChain, PrivateKey)) -> Self {
+impl TryFrom<(CertChain, PrivateKey)> for Credentials {
+    type Error = anyhow::Error;
+
+    fn try_from(value: (CertChain, PrivateKey)) -> Result<Self, Self::Error> {
         Self::new(value.0, value.1)
     }
 }
 
-impl From<(PrivateKey, CertChain)> for Credentials {
-    fn from(value: (PrivateKey, CertChain)) -> Self {
+impl TryFrom<(PrivateKey, CertChain)> for Credentials {
+    type Error = anyhow::Error;
+
+    fn try_from(value: (PrivateKey, CertChain)) -> Result<Self, Self::Error> {
         Self::new(value.1, value.0)
     }
 }
