@@ -62,6 +62,12 @@ impl AppProtos {
         Self(AppProtosInner::Static(value))
     }
 
+    /// Create a new [`AppProtosBuilder`] for runtime construction of an [`AppProtos`] set.
+    #[inline]
+    pub fn builder() -> AppProtosBuilder {
+        AppProtosBuilder::new()
+    }
+
     /// Return a type that can be dereferenced into `&[&[u8]]`.
     /// 
     /// Since Arc<T> is a pointer to T, we can't return a slice of them.
