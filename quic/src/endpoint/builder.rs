@@ -16,12 +16,12 @@ pub enum Server {}
 pub enum Client {}
 
 /// A builder for an [`Endpoint`].
-pub struct EndpointBuilder<Side, State> {
+pub struct EndpointBuilder<Side, State = ()> {
     side: PhantomData<Side>,
     state: State,
 }
 
-impl<Side, State> EndpointBuilder<Side, State> {
+impl EndpointBuilder<(), ()> {
     /// Create an `EndpointBuilder` that can act as both a client and server.
     pub fn dual() -> EndpointBuilder<Dual, WantsSocket> {
         EndpointBuilder {
