@@ -1,5 +1,5 @@
 use anyhow::Result;
-use boring::ssl::{SslContextBuilder, SslMethod};
+use boring::ssl::{SslContextBuilder, SslMethod, SslVersion};
 use quiche::Config;
 use crate::{endpoint::*, AppProtos, TrustAnchors};
 
@@ -40,8 +40,9 @@ pub(crate) fn build_dual(state: DualReady) -> Result<Endpoint> {
 fn setup_ssl_shared(
     anchors: TrustAnchors,
 ) -> Result<SslContextBuilder> {
-    // TODO: Only allow TLS 1.3
+    // Setup the BoringSSL context
     let mut ssl = SslContextBuilder::new(SslMethod::tls())?;
+    ssl.set_min_proto_version(Some(SslVersion::TLS1_3))?;
 
     // Set the trust anchors
     ssl.set_cert_store(anchors.into_boring_x509_store()?);
