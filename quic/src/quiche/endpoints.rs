@@ -4,14 +4,36 @@ use quiche::Config;
 use crate::endpoint::*;
 
 pub(crate) fn build_client(state: ClientReady) -> Result<Endpoint> {
+    // Setup BoringSSL's SSL stuff
+    let ssl = setup_ssl_shared(&state.shared)?;
+    let ssl = setup_ssl_join(ssl, &state.join)?;
+
+    // Quiche config object
+    let config = setup_config_shared(ssl)?;
+
     todo!()
 }
 
 pub(crate) fn build_server(state: ServerReady) -> Result<Endpoint> {
+    // Setup BoringSSL's SSL stuff
+    let ssl = setup_ssl_shared(&state.shared)?;
+    let ssl = setup_ssl_host(ssl, &state.host)?;
+
+    // Quiche config object
+    let config = setup_config_shared(ssl)?;
+
     todo!()
 }
 
 pub(crate) fn build_dual(state: DualReady) -> Result<Endpoint> {
+    // Setup BoringSSL's SSL stuff
+    let ssl = setup_ssl_shared(&state.shared)?;
+    let ssl = setup_ssl_host(ssl, &state.host)?;
+    let ssl = setup_ssl_join(ssl, &state.join)?;
+
+    // Quiche config object
+    let config = setup_config_shared(ssl)?;
+
     todo!()
 }
 
