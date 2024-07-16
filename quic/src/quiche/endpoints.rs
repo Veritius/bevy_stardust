@@ -9,7 +9,7 @@ pub(crate) fn build_client(state: ClientReady) -> Result<Endpoint> {
     let ssl = setup_ssl_join(ssl, &state.join)?;
 
     // Quiche config object
-    let config = setup_config_shared(ssl)?;
+    let config = setup_config_shared(ssl, &state.shared)?;
 
     todo!()
 }
@@ -20,7 +20,7 @@ pub(crate) fn build_server(state: ServerReady) -> Result<Endpoint> {
     let ssl = setup_ssl_host(ssl, &state.host)?;
 
     // Quiche config object
-    let config = setup_config_shared(ssl)?;
+    let config = setup_config_shared(ssl, &state.shared)?;
 
     todo!()
 }
@@ -32,22 +32,9 @@ pub(crate) fn build_dual(state: DualReady) -> Result<Endpoint> {
     let ssl = setup_ssl_join(ssl, &state.join)?;
 
     // Quiche config object
-    let config = setup_config_shared(ssl)?;
+    let config = setup_config_shared(ssl, &state.shared)?;
 
     todo!()
-}
-
-fn setup_config_shared(
-    ssl: SslContextBuilder,
-) -> Result<Config> {
-    // Create the config object
-    let mut config = Config::with_boring_ssl_ctx_builder(quiche::PROTOCOL_VERSION, ssl)?;
-
-    // Enable datagrams (for unreliable traffic)
-    config.enable_dgram(true, todo!(), todo!());
-
-    // Return the config
-    return Ok(config);
 }
 
 fn setup_ssl_shared(
@@ -87,4 +74,21 @@ fn setup_ssl_join(
     join: &JoinShared,
 ) -> Result<SslContextBuilder> {
     return Ok(ssl);
+}
+
+fn setup_config_shared(
+    ssl: SslContextBuilder,
+    shared: &ReadyShared,
+) -> Result<Config> {
+    // Create the config object
+    let mut config = Config::with_boring_ssl_ctx_builder(quiche::PROTOCOL_VERSION, ssl)?;
+
+    // Set the application protos
+    config.set_application_protos(todo!())?;
+
+    // Enable datagrams (for unreliable traffic)
+    config.enable_dgram(true, todo!(), todo!());
+
+    // Return the config
+    return Ok(config);
 }
