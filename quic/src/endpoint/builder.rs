@@ -16,24 +16,40 @@ pub enum Server {}
 pub enum Client {}
 
 mod sealed {
-    pub trait Side {}
-    impl Side for super::Dual {}
-    impl Side for super::Server {}
-    impl Side for super::Client {}
+    pub trait Sealed {}
+    impl Sealed for super::Dual {}
+    impl Sealed for super::Server {}
+    impl Sealed for super::Client {}
+}
+
+pub trait Side: sealed::Sealed {
+
+}
+
+impl Side for Dual {
+
+}
+
+impl Side for Server {
+
+}
+
+impl Side for Client {
+
 }
 
 /// A builder for an [`Endpoint`].
-pub struct EndpointBuilder<Side, State>
+pub struct EndpointBuilder<S, State>
 where
-    Side: sealed::Side,
+    S: Side,
 {
-    side: PhantomData<Side>,
+    side: PhantomData<S>,
     state: State,
 }
 
-impl<Side, State> EndpointBuilder<Side, State>
+impl<S, State> EndpointBuilder<S, State>
 where
-    Side: sealed::Side,
+    S: Side,
 {
     /// Create an `EndpointBuilder` that can act as both a client and server.
     pub fn dual() -> EndpointBuilder<Dual, WantsSocket> {
@@ -64,12 +80,12 @@ pub struct WantsSocket {
     _hidden: ()
 }
 
-impl<Side> EndpointBuilder<Side, WantsSocket>
+impl<S> EndpointBuilder<S, WantsSocket>
 where
-    Side: sealed::Side
+    S: Side
 {
     /// Use an existing `UdpSocket`.
-    pub fn with_socket(self, socket: UdpSocket) -> Result<EndpointBuilder<Side, WantsProtos>> {
+    pub fn with_socket(self, socket: UdpSocket) -> Result<EndpointBuilder<S, WantsProtos>> {
         // Socket configuration
         socket.set_nonblocking(true)?;
 
@@ -83,7 +99,7 @@ where
     }
 
     /// Bind to `address`, creating a new `UdpSocket`.
-    pub fn with_address(self, address: impl ToSocketAddrs) -> Result<EndpointBuilder<Side, WantsProtos>> {
+    pub fn with_address(self, address: impl ToSocketAddrs) -> Result<EndpointBuilder<S, WantsProtos>> {
         // Resolve address
         let address = address
             .to_socket_addrs().with_context(|| anyhow::anyhow!("Failed to get address for socket"))?
@@ -99,12 +115,12 @@ pub struct WantsProtos {
     socket: UdpSocket,
 }
 
-impl<Side> EndpointBuilder<Side, WantsProtos>
+impl<S> EndpointBuilder<S, WantsProtos>
 where
-    Side: sealed::Side
+    S: Side
 {
     /// Use a pre-existing [`AppProtos`].
-    pub fn with_protos(self, protos: AppProtos) -> EndpointBuilder<Side, WantsTrustAnchors> {
+    pub fn with_protos(self, protos: AppProtos) -> EndpointBuilder<S, WantsTrustAnchors> {
         return EndpointBuilder {
             side: PhantomData,
             state: WantsTrustAnchors {
