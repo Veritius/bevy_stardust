@@ -52,6 +52,28 @@ pub struct WantsSocket {
 }
 
 impl<Side> EndpointBuilder<Side, WantsSocket> {
+    /// Bind to a specific address, but lets the OS choose the port for us.
+    pub fn with_address(self, address: impl Into<IpAddr>) -> Result<EndpointBuilder<Side, WantsProtos>> {
+        Self::with_address_and_port(self, address.into(), 0u16)
+    }
+
+    /// Binds to a specific address and port number, creating a new `UdpSocket`.
+    pub fn with_address_and_port(self, address: impl Into<IpAddr>, port: impl Into<u16>) -> Result<EndpointBuilder<Side, WantsProtos>> {
+        Self::with_socket_addr(self, SocketAddr::new(address.into(), port.into()))
+    }
+
+    /// Bind to `sock_addr`, creating a new `UdpSocket`.
+    pub fn with_socket_addr(self, sock_addr: impl ToSocketAddrs) -> Result<EndpointBuilder<Side, WantsProtos>> {
+        // Resolve address
+        let address = sock_addr
+            .to_socket_addrs().with_context(|| anyhow::anyhow!("Failed to get address for socket"))?
+            .next().ok_or_else(|| anyhow::anyhow!("Must have at least one address"))?;
+
+        // Bind the socket
+        let socket = UdpSocket::bind(address)?;
+        Self::with_socket(self, socket)
+    }
+
     /// Use an existing `UdpSocket`.
     pub fn with_socket(self, socket: UdpSocket) -> Result<EndpointBuilder<Side, WantsProtos>> {
         // Socket configuration
@@ -64,24 +86,6 @@ impl<Side> EndpointBuilder<Side, WantsSocket> {
                 socket
             },
         });
-    }
-
-    /// Bind to a specific address, but lets the OS choose the port for us.
-    /// Useful for clients and other connections that don't need to use a specific port.
-    pub fn with_address(self, address: IpAddr) -> Result<EndpointBuilder<Side, WantsProtos>> {
-        Self::with_address_and_port(self, SocketAddr::new(address, 0))
-    }
-
-    /// Bind to `address`, creating a new `UdpSocket`.
-    pub fn with_address_and_port(self, address: impl ToSocketAddrs) -> Result<EndpointBuilder<Side, WantsProtos>> {
-        // Resolve address
-        let address = address
-            .to_socket_addrs().with_context(|| anyhow::anyhow!("Failed to get address for socket"))?
-            .next().ok_or_else(|| anyhow::anyhow!("Must have at least one address"))?;
-
-        // Bind the socket
-        let socket = UdpSocket::bind(address)?;
-        Self::with_socket(self, socket)
     }
 }
 

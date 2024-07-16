@@ -35,7 +35,7 @@ fn server() -> App {
 
     app.add_systems(Startup, |mut commands: Commands| {
         let endpoint = EndpointBuilder::server()
-            .with_address_and_port("0.0.0.0:12345").unwrap()
+            .with_socket_addr("0.0.0.0:12345").unwrap()
             .with_protos(todo!())
             .with_trust_anchors(todo!())
             .with_credentials(todo!())
