@@ -28,9 +28,7 @@ impl AppProtosBuilder {
         }
 
         // Create and return the new structure
-        return Ok(AppProtos(AppProtosInner {
-            inner: self.protos.into(),
-        }));
+        return Ok(AppProtos(AppProtosInner::Owned(self.protos.into())));
     }
 }
 
@@ -58,33 +56,50 @@ impl Extend<AppProto> for AppProtosBuilder {
 pub struct AppProtos(AppProtosInner);
 
 impl AppProtos {
+    /// Create an `AppProtos` set from a `'static` slice of `AppProto` types.
+    /// Usable in const contexts.
+    pub const fn from_static_slice(value: &'static [AppProto]) -> Self {
+        Self(AppProtosInner::Static(value))
+    }
+
     /// Return a type that can be dereferenced into `&[&[u8]]`.
     /// 
     /// Since Arc<T> is a pointer to T, we can't return a slice of them.
     /// What we can do is collect the Ts into a slice of pointers and return that.
     /// This requires an allocation but is used very infrequently so it's not that bad.
     pub(crate) fn collect<'a>(&'a self) -> Box<[&'a [u8]]> {
-        self.0.inner.iter()
-            .map(|v| v.0.inner.as_bytes())
+        self.as_ref()
+            .iter()
+            .map(|v| v.as_ref())
             .collect()
     }
 }
 
 impl AsRef<[AppProto]> for AppProtos {
     fn as_ref(&self) -> &[AppProto] {
-        self.0.inner.as_ref()
+        match &self.0 {
+            AppProtosInner::Owned(arc) => &*arc,
+            AppProtosInner::Static(str) => str,
+        }
+    }
+}
+
+impl From<&'static [AppProto]> for AppProtos {
+    fn from(value: &'static [AppProto]) -> Self {
+        Self::from_static_slice(value)
     }
 }
 
 impl Debug for AppProtos {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.0.inner.fmt(f)
+        self.as_ref().fmt(f)
     }
 }
 
 #[derive(Clone)]
-struct AppProtosInner {
-    inner: Arc<[AppProto]>,
+enum AppProtosInner {
+    Owned(Arc<[AppProto]>),
+    Static(&'static [AppProto]),
 }
 
 /// A single [ALPN] application prototype code, with UTF-8 encoding.
@@ -95,49 +110,67 @@ struct AppProtosInner {
 #[derive(Clone)]
 pub struct AppProto(AppProtoInner);
 
+impl AppProto {
+    /// Create an `AppProto` from a `&'static str`.
+    /// Usable in const contexts.
+    pub const fn from_static_str(str: &'static str) -> Self {
+        Self(AppProtoInner::Static(str))
+    }
+}
+
 impl AsRef<str> for AppProto {
     fn as_ref(&self) -> &str {
-        &self.0.inner
+        self.0.as_ref()
     }
 }
 
 impl AsRef<[u8]> for AppProto {
     fn as_ref(&self) -> &[u8] {
-        self.0.inner.as_bytes()
+        self.0.as_ref().as_bytes()
     }
 }
 
-impl From<&str> for AppProto {
-    fn from(value: &str) -> Self {
-        Self(AppProtoInner { inner: value.into() })
+impl From<&'static str> for AppProto {
+    fn from(value: &'static str) -> Self {
+        Self::from_static_str(value)
     }
 }
 
 impl From<Box<str>> for AppProto {
     fn from(value: Box<str>) -> Self {
-        Self(AppProtoInner { inner: value.into() })
+        Self(AppProtoInner::Owned(value.into()))
     }
 }
 
 impl From<Arc<str>> for AppProto {
     fn from(value: Arc<str>) -> Self {
-        Self(AppProtoInner { inner: value.into() })
+        Self(AppProtoInner::Owned(value.into()))
     }
 }
 
 impl From<String> for AppProto {
     fn from(value: String) -> Self {
-        Self(AppProtoInner { inner: value.into() })
+        Self(AppProtoInner::Owned(value.into()))
     }
 }
 
 impl Debug for AppProto {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.0.inner.as_ref().fmt(f)
+        f.write_str(self.as_ref())
     }
 }
 
 #[derive(Clone)]
-struct AppProtoInner {
-    inner: Arc<str>,
+enum AppProtoInner {
+    Owned(Arc<str>),
+    Static(&'static str),
+}
+
+impl AsRef<str> for AppProtoInner {
+    fn as_ref(&self) -> &str {
+        match self {
+            AppProtoInner::Owned(arc) => &*arc,
+            AppProtoInner::Static(str) => str,
+        }
+    }
 }
