@@ -7,6 +7,7 @@ compile_error!("You must choose a QUIC implementation.");
 #[cfg(feature="quiche")]
 mod quiche;
 
+mod bimap;
 mod config;
 mod connection;
 mod crypto;
