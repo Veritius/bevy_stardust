@@ -25,17 +25,17 @@ impl PrivateKey {
 
     /// Read a `PrivateKey` from PEM-encoded data in a file.
     pub fn from_pem_file(path: impl AsRef<Path>) -> anyhow::Result<Self> {
-        todo!()
+        Self::from_pem(std::fs::read_to_string(path)?.as_bytes())
     }
 
     /// Read a `PrivateKey` from DER-encoded data in a file.
     pub fn from_der_file(path: impl AsRef<Path>) -> anyhow::Result<Self> {
-        todo!()
+        Self::from_der(std::fs::read_to_string(path)?.as_bytes())
     }
 
     /// Read a PKCS#8 key as a `PrivateKey` from PEM-encoded data in a file.
     pub fn from_pkcs8_file(path: impl AsRef<Path>) -> anyhow::Result<Self> {
-        todo!()
+        Self::from_pkcs8(std::fs::read_to_string(path)?.as_bytes())
     }
 
     #[cfg(feature="quiche")]
@@ -89,12 +89,12 @@ impl Certificate {
 
     /// Read a `Certificate` from PEM-encoded data in a file.
     pub fn from_pem_file(path: impl AsRef<Path>) -> anyhow::Result<Self> {
-        todo!()
+        Self::from_pem(std::fs::read_to_string(path)?.as_bytes())
     }
 
     /// Read a `Certificate` from DER-encoded data in a file.
     pub fn from_der_file(path: impl AsRef<Path>) -> anyhow::Result<Self> {
-        todo!()
+        Self::from_der(std::fs::read_to_string(path)?.as_bytes())
     }
 
     #[cfg(feature="quiche")]
