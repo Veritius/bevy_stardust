@@ -5,7 +5,7 @@ use bevy::{prelude::*, utils::HashMap};
 
 pub use builder::{EndpointBuilder, Client, Server, Dual};
 
-pub(crate) use builder::{ClientReady, ServerReady, DualReady};
+pub(crate) use builder::{ReadyShared, HostShared, JoinShared, ClientReady, ServerReady, DualReady};
 
 /// A QUIC endpoint, corresponding to a single UDP socket.
 /// 
