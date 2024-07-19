@@ -1,9 +1,9 @@
 use bevy::prelude::*;
-use crate::{datagrams::{ChannelDatagrams, IncomingDatagrams, OutgoingDatagrams}, streams::{ChannelStreams, IncomingStreams, OutgoingStreams}, Connection, Endpoint, TryConnectEvent};
+use crate::{datagrams::{ChannelDatagrams, IncomingDatagrams, OutgoingDatagrams}, streams::{ChannelStreams, IncomingStreams, OutgoingStreams}, ConnectionShared, EndpointShared, TryConnectEvent};
 use super::QuicheConnection;
 
 pub(super) fn connection_attempt_events_system(
-    mut endpoints: Query<&mut Endpoint>,
+    mut endpoints: Query<&mut EndpointShared>,
     mut events: EventReader<TryConnectEvent>,
     mut commands: Commands,
 ) {
@@ -28,10 +28,10 @@ pub(super) fn connection_attempt_events_system(
         };
 
         // Construct the connection component
-        let connection = Connection {
+        let connection = ConnectionShared {
             quiche,
 
-            endpoint: event.endpoint,
+            owning_endpoint: event.endpoint,
             incoming_streams: IncomingStreams::new(),
             outgoing_streams: OutgoingStreams::new(),
             channel_streams: ChannelStreams::new(),

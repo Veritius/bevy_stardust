@@ -3,7 +3,7 @@ use boring::ssl::{SslContextBuilder, SslMethod, SslVersion};
 use quiche::Config;
 use crate::{endpoint::*, AppProtos, TrustAnchors};
 
-pub(crate) fn build_client(state: ClientReady) -> Result<Endpoint> {
+pub(crate) fn build_client(state: ClientReady) -> Result<EndpointShared> {
     // Setup BoringSSL's SSL stuff
     let ssl = setup_ssl_shared(state.shared.anchors)?;
     let ssl = setup_ssl_join(ssl, &state.join)?;
@@ -12,7 +12,7 @@ pub(crate) fn build_client(state: ClientReady) -> Result<Endpoint> {
     let quiche_config = setup_config_shared(ssl, state.shared.protos)?;
 
     // Create component
-    return Ok(Endpoint {
+    return Ok(EndpointShared {
         listening: false,
         send_size: 1280,
         recv_size: 1472,
@@ -22,7 +22,7 @@ pub(crate) fn build_client(state: ClientReady) -> Result<Endpoint> {
     });
 }
 
-pub(crate) fn build_server(state: ServerReady) -> Result<Endpoint> {
+pub(crate) fn build_server(state: ServerReady) -> Result<EndpointShared> {
     // Setup BoringSSL's SSL stuff
     let ssl = setup_ssl_shared(state.shared.anchors)?;
     let ssl = setup_ssl_host(ssl, &state.host)?;
@@ -31,7 +31,7 @@ pub(crate) fn build_server(state: ServerReady) -> Result<Endpoint> {
     let quiche_config = setup_config_shared(ssl, state.shared.protos)?;
 
     // Create component
-    return Ok(Endpoint {
+    return Ok(EndpointShared {
         listening: true,
         send_size: 1280,
         recv_size: 1472,
@@ -41,7 +41,7 @@ pub(crate) fn build_server(state: ServerReady) -> Result<Endpoint> {
     });
 }
 
-pub(crate) fn build_dual(state: DualReady) -> Result<Endpoint> {
+pub(crate) fn build_dual(state: DualReady) -> Result<EndpointShared> {
     // Setup BoringSSL's SSL stuff
     let ssl = setup_ssl_shared(state.shared.anchors)?;
     let ssl = setup_ssl_host(ssl, &state.host)?;
@@ -51,7 +51,7 @@ pub(crate) fn build_dual(state: DualReady) -> Result<Endpoint> {
     let quiche_config = setup_config_shared(ssl, state.shared.protos)?;
 
     // Create component
-    return Ok(Endpoint {
+    return Ok(EndpointShared {
         listening: false,
         send_size: 1280,
         recv_size: 1472,
@@ -123,10 +123,12 @@ fn setup_config_shared(
 }
 
 pub struct QuicheEndpoint {
-
+    config: quiche::Config,
 }
 
-impl EndpointBackend for QuicheEndpoint {
+impl EndpointState for QuicheEndpoint {
+    type Backend = super::Quiche;
+
     fn recv_udp_packet(&mut self, from: std::net::SocketAddr, packet: &[u8]) -> Result<()> {
         todo!()
     }

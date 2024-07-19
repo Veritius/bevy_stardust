@@ -1,17 +1,16 @@
 use std::any::Any;
-
 use bevy::reflect::TypePath;
-use crate::{connection::ConnectionBackend, endpoint::EndpointBackend};
+use crate::{connection::ConnectionState, endpoint::EndpointState};
 
-/// An implementation of the QUIC protocol.
-pub trait Backend
+/// An abstraction over the QUIC protocol, used by [`QuicBackendPlugin`](crate::plugin::QuicBackendPlugin).
+pub trait QuicBackend
 where 
     Self: Send + Sync,
     Self: Any + TypePath,
 {
     /// Endpoint state.
-    type EndpointState: EndpointBackend;
+    type EndpointState: EndpointState<Backend = Self>;
 
     /// Connection state.
-    type ConnectionState: ConnectionBackend;
+    type ConnectionState: ConnectionState<Backend = Self>;
 }

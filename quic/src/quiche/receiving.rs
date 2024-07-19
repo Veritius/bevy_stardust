@@ -1,11 +1,11 @@
 use std::io::ErrorKind;
 use bevy::{prelude::*, utils::HashMap};
 use quiche::RecvInfo;
-use crate::{datagrams::{ChannelDatagrams, IncomingDatagrams, OutgoingDatagrams}, quiche::QuicheConnection, streams::{ChannelStreams, IncomingStreams, OutgoingStreams}, Connection, Endpoint};
+use crate::{datagrams::{ChannelDatagrams, IncomingDatagrams, OutgoingDatagrams}, quiche::QuicheConnection, streams::{ChannelStreams, IncomingStreams, OutgoingStreams}, ConnectionShared, EndpointShared};
 
 pub(super) fn endpoints_receive_datagrams_system(
-    mut endpoints: Query<(Entity, &mut Endpoint)>,
-    connections: Query<&mut Connection>,
+    mut endpoints: Query<(Entity, &mut EndpointShared)>,
+    connections: Query<&mut ConnectionShared>,
     commands: ParallelCommands,
 ) {
     // Iterate over all endpoints in parallel
@@ -117,8 +117,8 @@ pub(super) fn endpoints_receive_datagrams_system(
                     unsafe { endpoint.connections.register(id, address); }
 
                     // Queue spawning the entity into the world
-                    commands.insert(Connection {
-                        endpoint: endpoint_id,
+                    commands.insert(ConnectionShared {
+                        owning_endpoint: endpoint_id,
                         quiche: QuicheConnection::new(*connection),
                         incoming_streams: IncomingStreams::new(),
                         outgoing_streams: OutgoingStreams::new(),

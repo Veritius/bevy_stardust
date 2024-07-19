@@ -228,7 +228,7 @@ pub(crate) struct JoinShared {
 
 impl EndpointBuilder<Dual, DualReady> {
     /// Attempts to build the endpoint.
-    pub fn build(self) -> Result<Endpoint> {
+    pub fn build(self) -> Result<EndpointShared> {
         #[cfg(feature="quiche")]
         return crate::quiche::build_dual(self.state);
     }
@@ -242,7 +242,7 @@ pub struct DualReady {
 
 impl EndpointBuilder<Server, ServerReady> {
     /// Attempts to build the endpoint.
-    pub fn build(self) -> Result<Endpoint> {
+    pub fn build(self) -> Result<EndpointShared> {
         #[cfg(feature="quiche")]
         return crate::quiche::build_server(self.state);
     }
@@ -255,7 +255,7 @@ pub struct ServerReady {
 
 impl EndpointBuilder<Client, ClientReady> {
     /// Attempts to build the endpoint.
-    pub fn build(self) -> Result<Endpoint> {
+    pub fn build(self) -> Result<EndpointShared> {
         #[cfg(feature="quiche")]
         return crate::quiche::build_client(self.state);
     }

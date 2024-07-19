@@ -1,9 +1,9 @@
 use bevy::prelude::*;
-use crate::{Connection, Endpoint};
+use crate::{ConnectionShared, EndpointShared};
 
 pub(super) fn endpoints_transmit_datagrams_system(
-    mut endpoints: Query<(Entity, &mut Endpoint)>,
-    connections: Query<&mut Connection>,
+    mut endpoints: Query<(Entity, &mut EndpointShared)>,
+    connections: Query<&mut ConnectionShared>,
 ) {
     // Iterate over all endpoints in parallel
     endpoints.par_iter_mut().for_each(|(endpoint_id, mut endpoint)| {

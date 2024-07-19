@@ -9,7 +9,7 @@ mod streams;
 use std::ops::{Deref, DerefMut};
 use bevy::prelude::*;
 use quiche::ConnectionId;
-use crate::{backend::Backend, plugin::QuicSystems};
+use crate::{backend::QuicBackend, plugin::QuicSystems};
 
 pub(crate) use endpoints::{
     build_client,
@@ -70,7 +70,7 @@ pub struct Quiche {
     _hidden: (),
 }
 
-impl Backend for Quiche {
+impl QuicBackend for Quiche {
     type EndpointState = endpoints::QuicheEndpoint;
     type ConnectionState = connections::QuicheConnection;
 }
