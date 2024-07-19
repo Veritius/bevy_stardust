@@ -1,5 +1,9 @@
+mod backend;
+
 use bevy::{ecs::component::{ComponentHooks, StorageType}, prelude::*};
 use crate::{datagrams::{ChannelDatagrams, IncomingDatagrams, OutgoingDatagrams}, quiche::QuicheConnection, streams::{ChannelStreams, IncomingStreams, OutgoingStreams}, Endpoint};
+
+pub use backend::ConnectionBackend;
 
 /// A QUIC connection.
 /// 

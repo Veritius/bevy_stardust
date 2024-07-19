@@ -1,3 +1,4 @@
+mod backend;
 mod builder;
 mod connections;
 
@@ -5,6 +6,7 @@ use std::net::{SocketAddr, UdpSocket};
 use anyhow::ensure;
 use bevy::prelude::*;
 
+pub use backend::{EndpointBackend, Transmit};
 pub use builder::{EndpointBuilder, Client, Server, Dual};
 
 pub(crate) use connections::EndpointConnections;

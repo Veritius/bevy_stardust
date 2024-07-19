@@ -7,6 +7,7 @@ compile_error!("You must choose a QUIC implementation.");
 #[cfg(feature="quiche")]
 mod quiche;
 
+mod backend;
 mod bimap;
 mod config;
 mod connection;
@@ -22,4 +23,4 @@ pub use connection::Connection;
 pub use crypto::{PrivateKey, Certificate, CertChain, TrustAnchors, Credentials};
 pub use endpoint::{Endpoint, EndpointBuilder, Client, Server, Dual};
 pub use events::TryConnectEvent;
-pub use plugin::QuicPlugin;
+pub use plugin::{QuicPlugin, QuicBackendPlugin, QuicSystems};

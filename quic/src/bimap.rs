@@ -1,5 +1,4 @@
 use std::hash::Hash;
-
 use bevy::utils::HashMap;
 
 pub(crate) struct BiHashMap<Left, Right> {

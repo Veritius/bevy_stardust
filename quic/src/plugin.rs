@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use bevy_stardust::prelude::*;
-use crate::{Endpoint, Connection};
+use crate::{backend::Backend, Connection, Endpoint};
 
 /// Adds QUIC support to the `App`.
 pub struct QuicPlugin;
@@ -22,8 +22,24 @@ impl Plugin for QuicPlugin {
     }
 }
 
+/// Adds a backend for QUIC plugins.
+pub struct QuicBackendPlugin<B: Backend>(B);
+
+impl<B: Backend> QuicBackendPlugin<B> {
+    /// Creates a new backend plugin using `backend`.
+    pub fn new(backend: B) -> QuicBackendPlugin<B> {
+        Self(backend)
+    }
+}
+
+impl<B: Backend> Plugin for QuicBackendPlugin<B> {
+    fn build(&self, app: &mut App) {
+        todo!()
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, SystemSet)]
-pub(crate) enum QuicSystems {
+pub enum QuicSystems {
     ReceivePackets,
     TransmitPackets,
 }
