@@ -1,5 +1,6 @@
 use bevy::{prelude::*, ecs::query::QueryData};
 use scoping::context::EndpointScopeContext;
+use scoping::id::Connections;
 use scoping::id::ScopedId;
 use crate::connection::*;
 use crate::endpoint::*;
@@ -31,12 +32,8 @@ fn scoped_endpoint_process_system<
     connections: Query<ConnectionData<Backend, Additional>>,
 ) {
     endpoints.par_iter_mut().for_each(|mut endpoint| {
-        // TODO: Safety annotations
-        let ids: Vec<ScopedId> = endpoint.shared.connections
-            .iter()
-            .filter(|v| connections.contains(*v))
-            .map(|id| unsafe { ScopedId::new(id) })
-            .collect::<Vec<_>>();
+        // SAFETY: This Connections set uses the endpoint's own connection set, so it should never overlap with other sets
+        let connections = unsafe { Connections::new(endpoint.shared.connections.expose()) };
 
         // let access = ScopedAccess { query: &connections };
     });

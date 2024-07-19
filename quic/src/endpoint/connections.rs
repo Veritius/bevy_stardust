@@ -18,6 +18,10 @@ impl EndpointConnections {
         self.inner.remove(&id);
     }
 
+    pub(super) fn expose(&self) -> &EntityHashSet<Entity> {
+        &self.inner
+    }
+
     pub fn contains(&self, id: Entity) -> bool {
         self.inner.contains(&id)
     }
