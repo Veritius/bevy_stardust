@@ -1,4 +1,4 @@
-use std::ops::DerefMut;
+use std::ops::{Deref, DerefMut};
 use bevy::{prelude::*, ecs::query::QueryData};
 use scoping::context::EndpointScopeContext;
 use scoping::id::Connections;
@@ -28,7 +28,7 @@ fn scoped_endpoint_process_system<
         EndpointScopeContext<'a, Backend>,
     ),
 >(
-    backend: BackendInstance<Backend>,
+    backend: Res<BackendInstance<Backend>>,
     mut endpoints: Query<EndpointData<Backend>>,
     connections: Query<ConnectionData<Backend, Additional>>,
 ) {
@@ -38,7 +38,7 @@ fn scoped_endpoint_process_system<
 
         // Context object for the task we're about to run
         let context = EndpointScopeContext::<Backend> {
-            backend: backend.as_ref(),
+            backend: backend.deref().as_ref(),
             state: endpoint.state.deref_mut().inner_mut(),
             connections,
         };
