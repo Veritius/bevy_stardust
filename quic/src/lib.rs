@@ -5,7 +5,6 @@
 mod quiche;
 
 mod backend;
-mod bimap;
 mod config;
 mod connection;
 mod crypto;
