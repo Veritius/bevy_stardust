@@ -73,7 +73,7 @@ where
     fn recv_udp_packet(&mut self, from: SocketAddr, packet: &[u8]) -> Result<(), Self::IoError>;
 
     /// Called to see if the backend wants to transmit any new packets.
-    fn send_udp_packet(&mut self) -> Option<Result<Transmit, Self::IoError>>;
+    fn send_udp_packet(&mut self) -> impl Iterator<Item = Result<Transmit, Self::IoError>> + '_;
 }
 
 #[derive(Component)]
