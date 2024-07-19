@@ -129,33 +129,8 @@ use crate::endpoint::Transmit;
 
 pub struct QuicheEndpoint {
     config: quiche::Config,
-
-    incoming: HashMap<SocketAddr, VecDeque<Bytes>>,
-    outgoing: HashMap<SocketAddr, VecDeque<Bytes>>,
 }
 
 impl crate::endpoint::EndpointState for QuicheEndpoint {
     type Backend = super::Quiche;
-    type IoError = quiche::Error;
-
-    fn recv_udp_packet(&mut self, from: std::net::SocketAddr, packet: &[u8]) -> Result<(), Self::IoError> {
-        if packet.len() < 1280 { return Err(quiche::Error::InvalidPacket); }
-
-        self.incoming
-            .entry(from)
-            .or_insert_with(|| VecDeque::new())
-            .push_back(Bytes::copy_from_slice(packet));
-
-        return Ok(());
-    }
-
-    fn send_udp_packet(&mut self) -> impl Iterator<Item = Result<Transmit, Self::IoError>> + '_ {
-        self.outgoing
-            .iter_mut()
-            .flat_map(|(addr, vec)| vec.drain(..).map(|v| (*addr, v)))
-            .map(|(remote, data)| {
-                let tk: Result<Transmit, Self::IoError> = Ok(Transmit { remote, data });
-                tk
-            })
-    }
 }

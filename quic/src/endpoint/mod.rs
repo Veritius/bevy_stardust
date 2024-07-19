@@ -64,18 +64,6 @@ where
 {
     /// The [`QuicBackend`] implementation that manages this endpoint.
     type Backend: QuicBackend;
-
-    /// Errors that can occur when using `recv_udp_packet` or `send_udp_packet`.
-    type IoError: Into<anyhow::Error>;
-
-    /// Called when a new UDP packet is received.
-    /// 
-    /// `from` is the IP address and port the packet was sent from.
-    /// `packet` is a slice containing the full received data.
-    fn recv_udp_packet(&mut self, from: SocketAddr, packet: &[u8]) -> Result<(), Self::IoError>;
-
-    /// Called to see if the backend wants to transmit any new packets.
-    fn send_udp_packet(&mut self) -> impl Iterator<Item = Result<Transmit, Self::IoError>> + '_;
 }
 
 #[derive(Component)]
