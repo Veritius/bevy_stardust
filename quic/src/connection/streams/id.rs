@@ -1,15 +1,15 @@
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub(crate) struct StreamId(StreamIdInner);
-
-#[cfg(feature="quiche")]
-type StreamIdInner = u64;
+pub struct StreamId(u64);
 
 impl StreamId {
-    pub fn new(inner: StreamIdInner) -> Self {
-        Self(inner)
+    pub const MAX: u64 = 2u64.pow(62) - 1;
+
+    pub fn new(inner: u64) -> Result<Self, ()> {
+        if inner > Self::MAX { return Err(()); }
+        return Ok(Self(inner));
     }
 
-    pub fn inner(&self) -> StreamIdInner {
+    pub fn inner(&self) -> u64 {
         self.0
     }
 }

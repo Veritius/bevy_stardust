@@ -58,7 +58,7 @@ where
 }
 
 /// A handle to the receiving side of a QUIC stream.
-pub(crate) trait RecvStream {
+pub trait RecvStream {
     /// An error returned by the underlying QUIC implementation while trying to receive data.
     type RecvError: Into<anyhow::Error>;
 

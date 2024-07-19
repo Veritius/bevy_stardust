@@ -6,10 +6,10 @@ mod outgoing;
 mod traits;
 
 pub(super) use channels::ChannelStreams;
-pub(super) use id::StreamId;
 pub(super) use incoming::IncomingStreams;
 pub(super) use outgoing::{OutgoingStreams, OutgoingStreamsTryWriteOutcome};
 
+pub use id::StreamId;
 pub use traits::*;
 
 use bevy_stardust::prelude::*;

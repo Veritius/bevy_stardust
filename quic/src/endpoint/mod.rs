@@ -3,7 +3,7 @@ mod connections;
 mod sending;
 
 use std::net::{SocketAddr, UdpSocket};
-use anyhow::{ensure, Result};
+use anyhow::ensure;
 use bevy::prelude::*;
 use crate::backend::QuicBackend;
 
@@ -63,14 +63,17 @@ where
     /// The [`QuicBackend`] implementation that manages this endpoint.
     type Backend: QuicBackend;
 
+    /// Errors that can occur when using `recv_udp_packet` or `send_udp_packet`.
+    type IoError: Into<anyhow::Error>;
+
     /// Called when a new UDP packet is received.
     /// 
     /// `from` is the IP address and port the packet was sent from.
     /// `packet` is a slice containing the full received data.
-    fn recv_udp_packet(&mut self, from: SocketAddr, packet: &[u8]) -> Result<()>;
+    fn recv_udp_packet(&mut self, from: SocketAddr, packet: &[u8]) -> Result<(), Self::IoError>;
 
     /// Called to see if the backend wants to transmit any new packets.
-    fn send_udp_packet(&mut self) -> Option<Result<Transmit>>;
+    fn send_udp_packet(&mut self) -> Option<Result<Transmit, Self::IoError>>;
 }
 
 #[derive(Component)]
