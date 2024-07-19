@@ -1,7 +1,7 @@
+use std::ops::DerefMut;
 use bevy::{prelude::*, ecs::query::QueryData};
 use scoping::context::EndpointScopeContext;
 use scoping::id::Connections;
-use scoping::id::ScopedId;
 use crate::connection::*;
 use crate::endpoint::*;
 use crate::backend::*;
@@ -28,12 +28,20 @@ fn scoped_endpoint_process_system<
         EndpointScopeContext<'a, Backend>,
     ),
 >(
+    backend: BackendInstance<Backend>,
     mut endpoints: Query<EndpointData<Backend>>,
     connections: Query<ConnectionData<Backend, Additional>>,
 ) {
     endpoints.par_iter_mut().for_each(|mut endpoint| {
         // SAFETY: This Connections set uses the endpoint's own connection set, so it should never overlap with other sets
         let connections = unsafe { Connections::new(endpoint.shared.connections.expose()) };
+
+        // Context object for the task we're about to run
+        let context = EndpointScopeContext::<Backend> {
+            backend: backend.as_ref(),
+            state: endpoint.state.deref_mut().inner_mut(),
+            connections,
+        };
 
         // let access = ScopedAccess { query: &connections };
     });

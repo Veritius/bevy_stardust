@@ -82,3 +82,13 @@ where
 pub struct Endpoint<State: EndpointState> {
     state: State,
 }
+
+impl<State: EndpointState> Endpoint<State> {
+    fn inner(&self) -> &State {
+        &self.state
+    }
+
+    fn inner_mut(&mut self) -> &mut State {
+        &mut self.state
+    }
+}
