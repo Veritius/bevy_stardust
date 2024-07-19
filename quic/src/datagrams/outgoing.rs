@@ -1,5 +1,5 @@
 use bytes::BytesMut;
-use crate::streams::{OutgoingStreams, OutgoingStreamsTryWriteOutcome, StreamManager, StreamTag, StreamTryWriteOutcome};
+use crate::streams::{OutgoingStreams, OutgoingStreamsTryWriteOutcome, StreamManager, StreamTag, StreamSendOutcome};
 use super::{header::{DatagramHeader, DatagramPurpose}, Datagram, DatagramTag, DatagramTryWrite};
 
 pub(crate) struct OutgoingDatagrams {
@@ -58,7 +58,7 @@ impl OutgoingDatagrams {
                     Some(OutgoingStreamsTryWriteOutcome::Finished(_)) => todo!(),
 
                     // An error occurred
-                    Some(OutgoingStreamsTryWriteOutcome::WriteOutcome(StreamTryWriteOutcome::Error(err))) => todo!(),
+                    Some(OutgoingStreamsTryWriteOutcome::WriteOutcome(StreamSendOutcome::Error(err))) => todo!(),
 
                     _ => { /* Do nothing */ },
                 }

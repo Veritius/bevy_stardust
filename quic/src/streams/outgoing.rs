@@ -2,7 +2,7 @@ use std::collections::VecDeque;
 use bevy::utils::HashMap;
 use bevy_stardust_extras::numbers::VarInt;
 use bytes::{Bytes, BytesMut};
-use super::{header::StreamPurpose, SendStream, StreamId, StreamTag, StreamTryWrite, StreamTryWriteOutcome};
+use super::{SendStream, StreamId, StreamTag, StreamSendOutcome};
 
 pub(crate) struct OutgoingStreams {
     streams: HashMap<StreamId, OutgoingStreamState>,
@@ -43,7 +43,7 @@ impl OutgoingStreams {
 
         match outgoing.queue.write(stream)? {
             // Additional checks must be made if this is done
-            StreamTryWriteOutcome::Complete => {
+            StreamSendOutcome::Complete => {
                 if !outgoing.persistent {
                     stream.finish_stream();
                     self.forget(id);
@@ -53,7 +53,7 @@ impl OutgoingStreams {
                 }
 
                 // Return that we have completed the task
-                return Some(OutgoingStreamsTryWriteOutcome::WriteOutcome(StreamTryWriteOutcome::Complete));
+                return Some(OutgoingStreamsTryWriteOutcome::WriteOutcome(StreamSendOutcome::Complete));
             },
 
             // Any other cases we forward with no further changes
@@ -107,7 +107,7 @@ impl<'a> OutgoingStream<'a> {
 }
 
 pub(crate) enum OutgoingStreamsTryWriteOutcome {
-    WriteOutcome(StreamTryWriteOutcome),
+    WriteOutcome(StreamSendOutcome),
     Finished(StreamId),
 }
 
@@ -134,30 +134,30 @@ impl WriteQueue {
         self.0.push_back(bytes);
     }
 
-    pub fn write<S: StreamTryWrite>(&mut self, stream: &mut S) -> Option<StreamTryWriteOutcome> {
+    pub fn write<S: StreamTryWrite>(&mut self, stream: &mut S) -> Option<StreamSendOutcome> {
         if self.0.len() == 0 {
             return None;
         }
 
         while let Some(chunk) = self.0.pop_front() {
             match stream.try_write_stream(chunk.clone()) {
-                StreamTryWriteOutcome::Complete => { continue },
+                StreamSendOutcome::Complete => { continue },
 
-                StreamTryWriteOutcome::Partial(written) => {
+                StreamSendOutcome::Partial(written) => {
                     self.0.push_front(chunk.slice(written..));
-                    return Some(StreamTryWriteOutcome::Partial(written));
+                    return Some(StreamSendOutcome::Partial(written));
                 },
 
-                StreamTryWriteOutcome::Blocked => {
+                StreamSendOutcome::Blocked => {
                     self.0.push_front(chunk);
-                    return Some(StreamTryWriteOutcome::Blocked);
+                    return Some(StreamSendOutcome::Blocked);
                 }
 
-                StreamTryWriteOutcome::Error(err) => return Some(StreamTryWriteOutcome::Error(err)),
+                StreamSendOutcome::Error(err) => return Some(StreamSendOutcome::Error(err)),
             }
         }
 
-        return Some(StreamTryWriteOutcome::Complete);
+        return Some(StreamSendOutcome::Complete);
     }
 }
 

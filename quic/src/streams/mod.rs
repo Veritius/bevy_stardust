@@ -9,7 +9,8 @@ pub(crate) use channels::ChannelStreams;
 pub(crate) use id::StreamId;
 pub(crate) use incoming::IncomingStreams;
 pub(crate) use outgoing::{OutgoingStreams, OutgoingStreamsTryWriteOutcome};
-pub(crate) use traits::*;
+
+pub use traits::*;
 
 use bevy_stardust::prelude::*;
 
