@@ -1,38 +1,28 @@
-use std::net::SocketAddr;
-use bevy::prelude::Entity;
-use crate::bimap::BiHashMap;
+use bevy::{prelude::Entity, utils::EntityHashSet};
 
 pub(crate) struct EndpointConnections {
-    inner: BiHashMap<Entity, SocketAddr>,
+    inner: EntityHashSet<Entity>,
 }
 
 impl EndpointConnections {
-    pub fn new() -> Self {
-        Self { inner: BiHashMap::new() }
+    pub(super) fn new() -> Self {
+        Self { inner: EntityHashSet::default() }
     }
 
     /// SAFETY: An individual `id` can only be associated with one endpoint.
-    pub unsafe fn register(&mut self, id: Entity, address: SocketAddr) {
-        self.inner.insert(id, address);
+    pub(super) unsafe fn register(&mut self, id: Entity) {
+        self.inner.insert(id);
     }
 
-    pub fn deregister(&mut self, id: Entity) {
-        self.inner.remove_left(&id);
+    pub(super) fn deregister(&mut self, id: Entity) {
+        self.inner.remove(&id);
     }
 
-    pub fn get_address(&self, id: Entity) -> Option<SocketAddr> {
-        self.inner.get_left(&id).cloned()
-    }
-
-    pub fn get_entity(&self, address: SocketAddr) -> Option<Entity> {
-        self.inner.get_right(&address).cloned()
+    pub fn contains(&self, id: Entity) -> bool {
+        self.inner.contains(&id)
     }
 
     pub fn iter(&self) -> impl Iterator<Item = Entity> + '_ {
-        self.inner.iter_left().cloned()
-    }
-
-    pub fn iter_owned(&self) -> impl Iterator<Item = Entity> {
-        self.iter().collect::<Vec<_>>().into_iter()
+        self.inner.iter().cloned()
     }
 }
