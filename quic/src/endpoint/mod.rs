@@ -1,4 +1,4 @@
-mod builder;
+// mod builder;
 mod connections;
 mod sending;
 
@@ -9,10 +9,10 @@ use crate::backend::QuicBackend;
 
 pub(crate) use connections::EndpointConnections;
 
-#[allow(unused)] // various backends may or may not use these exports
-pub(crate) use builder::{ReadyShared, HostShared, JoinShared, ClientReady, ServerReady, DualReady};
+// #[allow(unused)] // various backends may or may not use these exports
+// pub(crate) use builder::{ReadyShared, HostShared, JoinShared, ClientReady, ServerReady, DualReady};
 
-pub use builder::{EndpointBuilder, Client, Server, Dual};
+// pub use builder::{EndpointBuilder, Client, Server, Dual};
 pub use sending::Transmit;
 
 /// Endpoint state information.

@@ -5,10 +5,10 @@ mod incoming;
 mod outgoing;
 mod traits;
 
-pub(crate) use channels::ChannelStreams;
-pub(crate) use id::StreamId;
-pub(crate) use incoming::IncomingStreams;
-pub(crate) use outgoing::{OutgoingStreams, OutgoingStreamsTryWriteOutcome};
+pub(super) use channels::ChannelStreams;
+pub(super) use id::StreamId;
+pub(super) use incoming::IncomingStreams;
+pub(super) use outgoing::{OutgoingStreams, OutgoingStreamsTryWriteOutcome};
 
 pub use traits::*;
 

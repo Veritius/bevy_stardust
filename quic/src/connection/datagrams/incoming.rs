@@ -1,5 +1,5 @@
 use bytes::Bytes;
-use crate::datagrams::header::{DatagramHeader, DatagramPurpose};
+use super::header::{DatagramHeader, DatagramPurpose};
 use super::{Datagram, DatagramTag};
 
 pub(crate) struct IncomingDatagrams {

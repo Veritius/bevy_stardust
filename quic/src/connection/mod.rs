@@ -1,5 +1,10 @@
+mod streams;
+mod datagrams;
+
 use bevy::{ecs::component::{ComponentHooks, StorageType}, prelude::*};
-use crate::{datagrams::{ChannelDatagrams, IncomingDatagrams, OutgoingDatagrams}, streams::{ChannelStreams, IncomingStreams, OutgoingStreams}, EndpointShared};
+use datagrams::{ChannelDatagrams, IncomingDatagrams, OutgoingDatagrams};
+use streams::{ChannelStreams, IncomingStreams, OutgoingStreams};
+use crate::EndpointShared;
 use crate::backend::QuicBackend;
 
 /// Shared connection state.
@@ -8,13 +13,13 @@ use crate::backend::QuicBackend;
 pub struct ConnectionShared {
     pub(crate) owning_endpoint: Entity,
 
-    pub(crate) incoming_streams: IncomingStreams,
-    pub(crate) outgoing_streams: OutgoingStreams,
-    pub(crate) channel_streams: ChannelStreams,
+    incoming_streams: IncomingStreams,
+    outgoing_streams: OutgoingStreams,
+    channel_streams: ChannelStreams,
 
-    pub(crate) incoming_datagrams: IncomingDatagrams,
-    pub(crate) outgoing_datagrams: OutgoingDatagrams,
-    pub(crate) channel_datagrams: ChannelDatagrams,
+    incoming_datagrams: IncomingDatagrams,
+    outgoing_datagrams: OutgoingDatagrams,
+    channel_datagrams: ChannelDatagrams,
 }
 
 impl Component for ConnectionShared {
