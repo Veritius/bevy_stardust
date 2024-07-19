@@ -18,19 +18,21 @@ impl<'a> ScopedId<'a> {
     }
 }
 
-pub struct Connections<'a>(&'a EntityHashSet<Entity>);
+pub struct Connections<'a> {
+    set: &'a EntityHashSet<Entity>,
+}
 
 impl<'a> Connections<'a> {
     pub(super) unsafe fn new(set: &'a EntityHashSet<Entity>) -> Self {
-        Self(set)
+        Self { set }
     }
 
     pub fn iter(&self) -> impl Iterator<Item = ScopedId<'a>> {
         // SAFETY: If the guarantees of `new` are upheld, this is fine.
-        self.0.iter().map(|id| unsafe { ScopedId::new(*id) })
+        self.set.iter().map(|id| unsafe { ScopedId::new(*id) })
     }
 
     pub fn contains(&self, id: ScopedId<'a>) -> bool {
-        self.0.contains(&id.inner())
+        self.set.contains(&id.inner())
     }
 }
