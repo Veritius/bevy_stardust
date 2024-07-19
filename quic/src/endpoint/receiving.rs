@@ -1,15 +1,7 @@
-use std::net::SocketAddr;
 use bevy::{ecs::query::QueryData, prelude::*};
-use bevy_stardust::{connections::PeerMessages, messages::Outgoing};
-use bytes::Bytes;
+use bevy_stardust::{connections::PeerMessages, messages::Incoming};
 use crate::{backend::QuicBackend, connection::Connection, ConnectionShared, EndpointShared};
 use super::{scoping::{ScopedAccess, ScopedId}, Endpoint};
-
-/// A datagram that must be transmitted.
-pub struct Transmit {
-    pub remote: SocketAddr,
-    pub data: Bytes,
-}
 
 #[derive(QueryData)]
 #[query_data(mutable)]
@@ -23,10 +15,10 @@ struct EndpointData<'w, Backend: QuicBackend> {
 struct ConnectionData<'w, Backend: QuicBackend> {
     shared: &'w mut ConnectionShared,
     state: &'w mut Connection<Backend::ConnectionState>,
-    messages: &'w PeerMessages<Outgoing>,
+    messages: &'w mut PeerMessages<Incoming>,
 }
 
-fn quic_sending_system<Backend: QuicBackend>(
+fn quic_receiving_system<Backend: QuicBackend>(
     mut endpoints: Query<EndpointData<Backend>>,
     connections: Query<ConnectionData<Backend>>
 ) {

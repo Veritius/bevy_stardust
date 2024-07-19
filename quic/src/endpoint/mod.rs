@@ -1,6 +1,7 @@
 // mod builder;
 mod connections;
-mod obscure;
+mod scoping;
+mod receiving;
 mod sending;
 
 use std::net::{SocketAddr, UdpSocket};
