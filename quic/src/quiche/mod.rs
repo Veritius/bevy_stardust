@@ -1,4 +1,5 @@
 mod connect;
+mod connections;
 mod datagrams;
 mod endpoints;
 mod receiving;
@@ -8,7 +9,7 @@ mod streams;
 use std::ops::{Deref, DerefMut};
 use bevy::prelude::*;
 use quiche::ConnectionId;
-use crate::plugin::QuicSystems;
+use crate::{backend::Backend, plugin::QuicSystems};
 
 pub(crate) use endpoints::{
     build_client,
@@ -59,4 +60,24 @@ impl DerefMut for QuicheConnection {
 
 fn issue_connection_id() -> ConnectionId<'static> {
     ConnectionId::from_vec(rand::random::<[u8; 16]>().into())
+}
+
+/// Uses the `quiche` crate as a backend QUIC implementation.
+/// 
+/// Only enabled with the `quiche` feature flag.
+#[derive(TypePath)]
+pub struct Quiche {
+    _hidden: (),
+}
+
+impl Backend for Quiche {
+    type EndpointState = endpoints::QuicheEndpoint;
+    type ConnectionState = connections::QuicheConnection;
+}
+
+impl Quiche {
+    /// Creates a new [`Quiche`] backend instance.
+    pub fn new() -> Self {
+        Self { _hidden: () }
+    }
 }

@@ -121,3 +121,17 @@ fn setup_config_shared(
     // Return the config
     return Ok(config);
 }
+
+pub struct QuicheEndpoint {
+
+}
+
+impl EndpointBackend for QuicheEndpoint {
+    fn recv_udp_packet(&mut self, from: std::net::SocketAddr, packet: &[u8]) -> Result<()> {
+        todo!()
+    }
+
+    fn send_udp_packet(&mut self) -> Option<Result<Transmit>> {
+        todo!()
+    }
+}
