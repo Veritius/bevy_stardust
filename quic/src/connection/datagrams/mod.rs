@@ -7,7 +7,8 @@ mod traits;
 pub(crate) use channels::ChannelDatagrams;
 pub(crate) use incoming::IncomingDatagrams;
 pub(crate) use outgoing::OutgoingDatagrams;
-pub(crate) use traits::*;
+
+pub use traits::DatagramManager;
 
 use bytes::Bytes;
 use bevy_stardust::prelude::*;

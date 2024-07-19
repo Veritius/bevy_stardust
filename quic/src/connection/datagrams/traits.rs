@@ -1,6 +1,21 @@
-use bytes::Bytes;
+use bytes::{Buf, Bytes};
 
-pub(crate) trait DatagramTryWrite {
-    fn datagram_max_size(&self) -> usize;
-    fn try_send_datagram(&mut self, payload: Bytes) -> anyhow::Result<usize>;
+/// A type that gives access and control over datagrams.
+pub trait DatagramManager {
+    /// An error returned by the underlying QUIC implementation while trying to transmit data.
+    type SendError: Into<anyhow::Error>;
+
+    /// An error returned by the underlying QUIC implementation while trying to receive data.
+    type RecvError: Into<anyhow::Error>;
+
+    /// The maximum size of datagrams that can be sent.
+    fn max_size(&self) -> usize;
+
+    /// Try to send `buf` as a datagram.
+    /// The entire datagram must be sent, or not at all.
+    fn send<B: Buf>(&mut self, buf: &mut B) -> Result<(), Self::SendError>;
+
+    /// Try to receive a single datagram.
+    /// The entire datagram must be received, or not at all.
+    fn recv(&mut self) -> Result<Bytes, Self::RecvError>;
 }

@@ -1,4 +1,3 @@
-use std::error::Error as StdError;
 use bytes::{Buf, Bytes};
 use super::StreamId;
 
@@ -23,10 +22,10 @@ pub trait StreamManager {
 /// A handle to the transmitting side of a QUIC stream.
 pub trait SendStream {
     /// An error returned by the underlying QUIC implementation while trying to transmit data.
-    type SendError: StdError;
+    type SendError: Into<anyhow::Error>;
 
     /// Try to write the contents of `buf` to the stream.
-    fn write<B: Buf>(&mut self, buf: &mut B) -> StreamSendOutcome<Self::SendError>;
+    fn send<B: Buf>(&mut self, buf: &mut B) -> StreamSendOutcome<Self::SendError>;
 
     /// Finishes the stream, indicating transmission is complete.
     fn finish(&mut self) -> Result<(), Self::SendError>;
@@ -35,7 +34,10 @@ pub trait SendStream {
 }
 
 /// The outcome of trying to write to a QUIC stream.
-pub enum StreamSendOutcome<E: StdError> {
+pub enum StreamSendOutcome<E>
+where
+    E: Into<anyhow::Error>,
+{
     /// Transmitted the full buffer successfully.
     Complete,
 
@@ -44,7 +46,12 @@ pub enum StreamSendOutcome<E: StdError> {
     Partial(usize),
 
     /// The stream is blocked, probably due to congestion control.
+    /// Attempting to send data in the future may work.
     Blocked,
+
+    /// The stream is stopped, either due to a finish, reset, or stop.
+    /// Once this is sent, no further data can be transmitted.
+    Stopped,
 
     /// An unexpected error occurred.
     Error(E),
@@ -53,7 +60,7 @@ pub enum StreamSendOutcome<E: StdError> {
 /// A handle to the receiving side of a QUIC stream.
 pub(crate) trait RecvStream {
     /// An error returned by the underlying QUIC implementation while trying to receive data.
-    type RecvError: StdError;
+    type RecvError: Into<anyhow::Error>;
 
     /// Try to receive chunks from the stream.
     fn recv(&mut self) -> StreamRecvOutcome<Self::RecvError>;
@@ -63,7 +70,10 @@ pub(crate) trait RecvStream {
 }
 
 /// The outcome of trying to read from a QUIC stream.
-pub enum StreamRecvOutcome<E: StdError> {
+pub enum StreamRecvOutcome<E>
+where
+    E: Into<anyhow::Error>,
+{
     /// Received a chunk of information.
     Chunk(Bytes),
 

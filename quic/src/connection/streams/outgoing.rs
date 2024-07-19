@@ -45,7 +45,7 @@ impl OutgoingStreams {
             // Additional checks must be made if this is done
             StreamSendOutcome::Complete => {
                 if !outgoing.persistent {
-                    stream.finish_stream();
+                    stream.finish();
                     self.forget(id);
 
                     // Send this event to inform that the stream was forgotten
@@ -107,7 +107,7 @@ impl<'a> OutgoingStream<'a> {
 }
 
 pub(crate) enum OutgoingStreamsTryWriteOutcome {
-    WriteOutcome(StreamSendOutcome),
+    WriteOutcome(StreamSendOutcome<anyhow::Error>),
     Finished(StreamId),
 }
 
@@ -134,13 +134,13 @@ impl WriteQueue {
         self.0.push_back(bytes);
     }
 
-    pub fn write<S: StreamTryWrite>(&mut self, stream: &mut S) -> Option<StreamSendOutcome> {
+    pub fn write<S: SendStream>(&mut self, stream: &mut S) -> Option<StreamSendOutcome<anyhow::Error>> {
         if self.0.len() == 0 {
             return None;
         }
 
         while let Some(chunk) = self.0.pop_front() {
-            match stream.try_write_stream(chunk.clone()) {
+            match stream.send(&mut chunk.clone()) {
                 StreamSendOutcome::Complete => { continue },
 
                 StreamSendOutcome::Partial(written) => {
@@ -153,7 +153,12 @@ impl WriteQueue {
                     return Some(StreamSendOutcome::Blocked);
                 }
 
-                StreamSendOutcome::Error(err) => return Some(StreamSendOutcome::Error(err)),
+                StreamSendOutcome::Stopped => {
+                    self.0.push_front(chunk);
+                    return Some(StreamSendOutcome::Stopped);
+                }
+
+                StreamSendOutcome::Error(err) => return Some(StreamSendOutcome::Error(err.into())),
             }
         }
 
