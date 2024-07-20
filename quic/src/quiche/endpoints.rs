@@ -122,15 +122,24 @@
 //     return Ok(config);
 // }
 
-use std::{collections::VecDeque, net::SocketAddr};
-use bevy::utils::HashMap;
-use bytes::Bytes;
-use crate::endpoint::Transmit;
-
 pub struct QuicheEndpoint {
     config: quiche::Config,
 }
 
 impl crate::endpoint::EndpointState for QuicheEndpoint {
     type Backend = super::Quiche;
+    
+    fn recv<'a>(
+        &'a mut self,
+        backend: &'a Self::Backend,
+    ) {
+        todo!()
+    }
+    
+    fn send<'a>(
+        &'a mut self,
+        backend: &'a Self::Backend,
+    ) {
+        todo!()
+    }
 }

@@ -43,7 +43,7 @@ pub struct ScopedAccess<'a, Data: QueryData> {
 
 impl<'a, Data: QueryData> ScopedAccess<'a, Data> {
     pub(super) unsafe fn new(query: &'a Query<'a, 'a, Data>) -> Self {
-        Self { query}
+        Self { query }
     }
 
     pub fn get(&'a self, id: ScopedId<'a>) -> ROQueryItem<'a, Data> {

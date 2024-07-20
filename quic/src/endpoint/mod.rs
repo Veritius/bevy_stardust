@@ -65,6 +65,16 @@ where
 {
     /// The [`QuicBackend`] implementation that manages this endpoint.
     type Backend: QuicBackend;
+
+    fn recv<'a>(
+        &'a mut self,
+        backend: &'a Self::Backend,
+    );
+
+    fn send<'a>(
+        &'a mut self,
+        backend: &'a Self::Backend,
+    );
 }
 
 #[derive(Component)]
