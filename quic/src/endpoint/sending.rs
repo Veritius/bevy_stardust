@@ -42,6 +42,19 @@ impl<'a, Backend: QuicBackend> SendConnections<'a, Backend> {
             messages: item.messages,
         });
     }
+
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = SendConnectionHandle<Backend>> + '_{
+        self.connections.iter()
+            .map(|id| (id, unsafe { self.query.get_unchecked(id.inner()) }))
+            .filter(|(_, item)| item.is_ok())
+            .map(|(id, item)| (id, item.unwrap()))
+            .map(|(id, item)| SendConnectionHandle {
+                id,
+                shared: item.shared.into_inner(),
+                backend: item.state.into_inner().inner(),
+                messages: item.messages,
+            })
+    }
 }
 
 pub struct SendConnectionHandle<'a, Backend: QuicBackend> {
@@ -49,6 +62,16 @@ pub struct SendConnectionHandle<'a, Backend: QuicBackend> {
     shared: &'a mut ConnectionShared,
     backend: &'a mut Backend::ConnectionState,
     messages: &'a PeerMessages<Outgoing>,
+}
+
+impl<'a, Backend: QuicBackend> SendConnectionHandle<'a, Backend> {
+    pub fn id(&'a self) -> ScopedId<'a> {
+        self.id
+    }
+
+    pub fn state(&'a mut self) -> &'a mut Backend::ConnectionState {
+        self.backend
+    }
 }
 
 #[derive(QueryData)]

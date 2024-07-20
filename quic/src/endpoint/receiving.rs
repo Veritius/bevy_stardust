@@ -51,7 +51,7 @@ impl<'a, Backend: QuicBackend> RecvConnections<'a, Backend> {
         });
     }
 
-    pub fn iter(&mut self) -> impl Iterator<Item = RecvConnectionHandle<Backend>> + '_{
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = RecvConnectionHandle<Backend>> + '_{
         self.connections.iter()
             .map(|id| (id, unsafe { self.query.get_unchecked(id.inner()) }))
             .filter(|(_, item)| item.is_ok())
@@ -70,6 +70,16 @@ pub struct RecvConnectionHandle<'a, Backend: QuicBackend> {
     shared: &'a mut ConnectionShared,
     backend: &'a mut Backend::ConnectionState,
     messages: &'a mut PeerMessages<Incoming>,
+}
+
+impl<'a, Backend: QuicBackend> RecvConnectionHandle<'a, Backend> {
+    pub fn id(&'a self) -> ScopedId<'a> {
+        self.id
+    }
+
+    pub fn state(&'a mut self) -> &'a mut Backend::ConnectionState {
+        self.backend
+    }
 }
 
 #[derive(QueryData)]

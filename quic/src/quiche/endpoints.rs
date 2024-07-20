@@ -122,7 +122,7 @@
 //     return Ok(config);
 // }
 
-use crate::endpoint::{RecvConnections, SendConnections, UdpSocketRecv, UdpSocketSend};
+use crate::endpoint::{RecvConnectionHandle, RecvConnections, SendConnectionHandle, SendConnections, UdpSocketRecv, UdpSocketSend};
 
 pub struct QuicheEndpoint {
     config: quiche::Config,
@@ -135,17 +135,21 @@ impl crate::endpoint::EndpointState for QuicheEndpoint {
         &'a mut self,
         backend: &'a Self::Backend,
         socket: UdpSocketRecv<'a>,
-        connections: RecvConnections<'a, Self::Backend>,
+        mut connections: RecvConnections<'a, Self::Backend>,
     ) {
-        todo!()
+        connections.iter_mut().for_each(|mut handle: RecvConnectionHandle<Self::Backend>| {
+            todo!()
+        });
     }
 
     fn send<'a>(
         &'a mut self,
         backend: &'a Self::Backend,
         socket: UdpSocketSend<'a>,
-        connections: SendConnections<'a, Self::Backend>,
+        mut connections: SendConnections<'a, Self::Backend>,
     ) {
-        todo!()
+        connections.iter_mut().for_each(|mut handle: SendConnectionHandle<Self::Backend>| {
+            todo!()
+        });
     }
 }

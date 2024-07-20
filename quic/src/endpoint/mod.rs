@@ -12,8 +12,8 @@ use crate::backend::QuicBackend;
 
 pub(crate) use connections::EndpointConnections;
 
-pub use receiving::{UdpSocketRecv, ReceivedDatagram, RecvConnections};
-pub use sending::{UdpSocketSend, TransmitDatagram, SendConnections};
+pub use receiving::{UdpSocketRecv, ReceivedDatagram, RecvConnections, RecvConnectionHandle};
+pub use sending::{UdpSocketSend, TransmitDatagram, SendConnections, SendConnectionHandle};
 
 /// Endpoint state information.
 /// 
