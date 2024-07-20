@@ -8,17 +8,17 @@ pub struct UdpSocketRecv<'a> {
 }
 
 impl<'a> UdpSocketRecv<'a> {
-    pub fn recv(&mut self) -> Option<Result<ReceivedDatagram>> {
+    pub fn recv(&mut self) -> Result<Option<ReceivedDatagram>> {
         match self.socket.recv_from(&mut self.scratch) {
             Ok((length, address)) => {
                 let payload = &self.scratch[..length];
-                return Some(Ok(ReceivedDatagram { address, payload }));
+                return Ok(Some(ReceivedDatagram { address, payload }));
             },
 
-            Err(err) if err.kind() == ErrorKind::WouldBlock => return None,
+            Err(err) if err.kind() == ErrorKind::WouldBlock => return Ok(None),
 
-            Err(err) => return Some(Err(<std::io::Error as Into<anyhow::Error>>::into(err)
-                .context("while receiving udp packets"))),
+            Err(err) => return Err(<std::io::Error as Into<anyhow::Error>>::into(err)
+                .context("while receiving udp packets")),
         }
     }
 }
