@@ -16,7 +16,7 @@ pub(crate) use connections::EndpointConnections;
 // pub(crate) use builder::{ReadyShared, HostShared, JoinShared, ClientReady, ServerReady, DualReady};
 
 // pub use builder::{EndpointBuilder, Client, Server, Dual};
-pub use sending::Transmit;
+pub use sending::TransmitDatagram;
 
 /// Endpoint state information.
 /// 
