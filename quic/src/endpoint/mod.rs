@@ -12,11 +12,8 @@ use crate::backend::QuicBackend;
 
 pub(crate) use connections::EndpointConnections;
 
-// #[allow(unused)] // various backends may or may not use these exports
-// pub(crate) use builder::{ReadyShared, HostShared, JoinShared, ClientReady, ServerReady, DualReady};
-
-// pub use builder::{EndpointBuilder, Client, Server, Dual};
-pub use sending::TransmitDatagram;
+pub use receiving::{UdpSocketRecv, ReceivedDatagram};
+pub use sending::{UdpSocketSend, TransmitDatagram};
 
 /// Endpoint state information.
 /// 
@@ -69,11 +66,13 @@ where
     fn recv<'a>(
         &'a mut self,
         backend: &'a Self::Backend,
+        socket: UdpSocketRecv<'a>,
     );
 
     fn send<'a>(
         &'a mut self,
         backend: &'a Self::Backend,
+        socket: UdpSocketSend<'a>,
     );
 }
 

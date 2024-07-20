@@ -122,6 +122,8 @@
 //     return Ok(config);
 // }
 
+use crate::endpoint::{UdpSocketRecv, UdpSocketSend};
+
 pub struct QuicheEndpoint {
     config: quiche::Config,
 }
@@ -132,6 +134,7 @@ impl crate::endpoint::EndpointState for QuicheEndpoint {
     fn recv<'a>(
         &'a mut self,
         backend: &'a Self::Backend,
+        socket: UdpSocketRecv<'a>,
     ) {
         todo!()
     }
@@ -139,6 +142,7 @@ impl crate::endpoint::EndpointState for QuicheEndpoint {
     fn send<'a>(
         &'a mut self,
         backend: &'a Self::Backend,
+        socket: UdpSocketSend<'a>
     ) {
         todo!()
     }
