@@ -12,8 +12,8 @@ use crate::backend::QuicBackend;
 
 pub(crate) use connections::EndpointConnections;
 
-pub use receiving::{UdpSocketRecv, ReceivedDatagram};
-pub use sending::{UdpSocketSend, TransmitDatagram};
+pub use receiving::{UdpSocketRecv, ReceivedDatagram, RecvConnections};
+pub use sending::{UdpSocketSend, TransmitDatagram, SendConnections};
 
 /// Endpoint state information.
 /// 
@@ -67,12 +67,14 @@ where
         &'a mut self,
         backend: &'a Self::Backend,
         socket: UdpSocketRecv<'a>,
+        connections: RecvConnections<'a, Self::Backend>,
     );
 
     fn send<'a>(
         &'a mut self,
         backend: &'a Self::Backend,
         socket: UdpSocketSend<'a>,
+        connections: SendConnections<'a, Self::Backend>,
     );
 }
 

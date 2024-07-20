@@ -1,5 +1,9 @@
 use std::{io::ErrorKind, net::{SocketAddr, UdpSocket}};
 use anyhow::Result;
+use bevy::ecs::query::QueryData;
+use bevy_stardust::{connections::PeerMessages, messages::Incoming};
+use crate::{backend::QuicBackend, connection::Connection, ConnectionShared};
+use super::scoping::{Connections, ScopedAccess};
 
 /// A handle to a UDP socket.
 pub struct UdpSocketRecv<'a> {
@@ -27,4 +31,23 @@ impl<'a> UdpSocketRecv<'a> {
 pub struct ReceivedDatagram<'a> {
     pub address: SocketAddr,
     pub payload: &'a [u8],
+}
+
+pub struct RecvConnections<'a, Backend: QuicBackend> {
+    connections: Connections<'a>,
+    query_data: ScopedAccess<'a, RecvConnectionsQueryData<'a, Backend>>,
+}
+
+pub struct RecvConnectionHandle<'a, Backend: QuicBackend> {
+    shared: &'a mut ConnectionShared,
+    backend: &'a mut Backend::ConnectionState,
+    messages: &'a mut PeerMessages<Incoming>,
+}
+
+#[derive(QueryData)]
+#[query_data(mutable)]
+struct RecvConnectionsQueryData<'w, Backend: QuicBackend> {
+    shared: &'w mut ConnectionShared,
+    state: &'w mut Connection<Backend::ConnectionState>,
+    messages: &'w mut PeerMessages<Incoming>,
 }

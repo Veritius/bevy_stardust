@@ -37,7 +37,7 @@ impl<'a> Connections<'a> {
     }
 }
 
-pub struct ScopedAccess<'a, Data: QueryData> {
+pub(super) struct ScopedAccess<'a, Data: QueryData> {
     query: &'a Query<'a, 'a, Data>,
 }
 
