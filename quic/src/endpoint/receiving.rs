@@ -44,14 +44,29 @@ impl<'a, Backend: QuicBackend> RecvConnections<'a, Backend> {
         let item = unsafe { self.query.get_unchecked(id.inner()).ok()? };
 
         return Some(RecvConnectionHandle {
+            id,
             shared: item.shared.into_inner(),
             backend: item.state.into_inner().inner(),
             messages: item.messages.into_inner(),
         });
     }
+
+    pub fn iter(&mut self) -> impl Iterator<Item = RecvConnectionHandle<Backend>> + '_{
+        self.connections.iter()
+            .map(|id| (id, unsafe { self.query.get_unchecked(id.inner()) }))
+            .filter(|(_, item)| item.is_ok())
+            .map(|(id, item)| (id, item.unwrap()))
+            .map(|(id, item)| RecvConnectionHandle {
+                id,
+                shared: item.shared.into_inner(),
+                backend: item.state.into_inner().inner(),
+                messages: item.messages.into_inner(),
+            })
+    }
 }
 
 pub struct RecvConnectionHandle<'a, Backend: QuicBackend> {
+    id: ScopedId<'a>,
     shared: &'a mut ConnectionShared,
     backend: &'a mut Backend::ConnectionState,
     messages: &'a mut PeerMessages<Incoming>,

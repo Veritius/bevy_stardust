@@ -36,6 +36,7 @@ impl<'a, Backend: QuicBackend> SendConnections<'a, Backend> {
         let item = unsafe { self.query.get_unchecked(id.inner()).ok()? };
 
         return Some(SendConnectionHandle {
+            id,
             shared: item.shared.into_inner(),
             backend: item.state.into_inner().inner(),
             messages: item.messages,
@@ -44,6 +45,7 @@ impl<'a, Backend: QuicBackend> SendConnections<'a, Backend> {
 }
 
 pub struct SendConnectionHandle<'a, Backend: QuicBackend> {
+    id: ScopedId<'a>,
     shared: &'a mut ConnectionShared,
     backend: &'a mut Backend::ConnectionState,
     messages: &'a PeerMessages<Outgoing>,
