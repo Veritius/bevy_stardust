@@ -1,9 +1,9 @@
 use std::net::{SocketAddr, UdpSocket};
 use anyhow::Result;
-use bevy::ecs::query::QueryData;
+use bevy::{ecs::query::QueryData, prelude::Query};
 use bevy_stardust::{connections::PeerMessages, messages::Outgoing};
 use crate::{backend::QuicBackend, connection::Connection, ConnectionShared};
-use super::scoping::{Connections, ScopedAccess};
+use super::scoping::{Connections, ScopedId};
 
 /// A handle to a UDP socket.
 pub struct UdpSocketSend<'a> {
@@ -27,7 +27,20 @@ pub struct TransmitDatagram<'a> {
 
 pub struct SendConnections<'a, Backend: QuicBackend> {
     connections: Connections<'a>,
-    query_data: ScopedAccess<'a, SendConnectionsQueryData<'a, Backend>>,
+    query: &'a Query<'a, 'a, SendConnectionsQueryData<'static, Backend>>,
+}
+
+impl<'a, Backend: QuicBackend> SendConnections<'a, Backend> {
+    pub fn get_mut(&mut self, id: ScopedId<'a>) -> Option<SendConnectionHandle<Backend>> {
+        // SAFETY: Using a ScopedId ensures we don't have aliasing mutable accesses
+        let item = unsafe { self.query.get_unchecked(id.inner()).ok()? };
+
+        return Some(SendConnectionHandle {
+            shared: item.shared.into_inner(),
+            backend: item.state.into_inner().inner(),
+            messages: item.messages,
+        });
+    }
 }
 
 pub struct SendConnectionHandle<'a, Backend: QuicBackend> {

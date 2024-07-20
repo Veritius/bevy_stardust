@@ -55,3 +55,9 @@ where
 pub struct Connection<State: ConnectionState> {
     state: State,
 }
+
+impl<State: ConnectionState> Connection<State> {
+    pub(crate) fn inner(&mut self) -> &mut State {
+        &mut self.state
+    }
+}

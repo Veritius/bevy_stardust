@@ -1,9 +1,9 @@
-use std::{io::ErrorKind, net::{SocketAddr, UdpSocket}};
+use std::{io::ErrorKind, net::{SocketAddr, UdpSocket}, ops::Deref};
 use anyhow::Result;
-use bevy::ecs::query::QueryData;
+use bevy::{ecs::query::QueryData, prelude::Query};
 use bevy_stardust::{connections::PeerMessages, messages::Incoming};
 use crate::{backend::QuicBackend, connection::Connection, ConnectionShared};
-use super::scoping::{Connections, ScopedAccess};
+use super::scoping::{Connections, ScopedId};
 
 /// A handle to a UDP socket.
 pub struct UdpSocketRecv<'a> {
@@ -35,7 +35,20 @@ pub struct ReceivedDatagram<'a> {
 
 pub struct RecvConnections<'a, Backend: QuicBackend> {
     connections: Connections<'a>,
-    query_data: ScopedAccess<'a, RecvConnectionsQueryData<'a, Backend>>,
+    query: &'a Query<'a, 'a, RecvConnectionsQueryData<'static, Backend>>,
+}
+
+impl<'a, Backend: QuicBackend> RecvConnections<'a, Backend> {
+    pub fn get_mut(&mut self, id: ScopedId<'a>) -> Option<RecvConnectionHandle<Backend>> {
+        // SAFETY: Using a ScopedId ensures we don't have aliasing mutable accesses
+        let item = unsafe { self.query.get_unchecked(id.inner()).ok()? };
+
+        return Some(RecvConnectionHandle {
+            shared: item.shared.into_inner(),
+            backend: item.state.into_inner().inner(),
+            messages: item.messages.into_inner(),
+        });
+    }
 }
 
 pub struct RecvConnectionHandle<'a, Backend: QuicBackend> {
