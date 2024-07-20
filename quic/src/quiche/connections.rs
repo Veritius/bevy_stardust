@@ -7,59 +7,62 @@ pub struct QuicheConnection {
 impl ConnectionState for QuicheConnection {
     type Backend = super::Quiche;
 
-    type Datagrams<'a> where Self: 'a = Self;
-    
-    type Streams<'a> where Self: 'a = Self;
+    type Datagrams<'a> = QuicheDatagrams<'a>;
+    type Streams<'a> = QuicheStreams<'a>;
 
     fn is_closed(&self) -> bool {
-        todo!()
+        self.connection.is_closed()
     }
-    
+
     fn datagrams(&mut self) -> Self::Datagrams<'_> {
-        todo!()
+        QuicheDatagrams(self)
     }
-    
+
     fn streams(&mut self) -> Self::Streams<'_> {
-        todo!()
+        QuicheStreams(self)
     }
 }
 
-impl DatagramManager for QuicheConnection {
+pub struct QuicheDatagrams<'a>(&'a mut QuicheConnection);
+
+impl<'a> DatagramManager for QuicheDatagrams<'a> {
     type RecvError = quiche::Error;
     type SendError = quiche::Error;
 
     fn max_size(&self) -> usize {
-        self.connection.dgram_max_writable_len().unwrap() // TODO: Handle None case
+        self.0.connection.dgram_max_writable_len().unwrap() // TODO: Handle None case
     }
 
     fn recv(&mut self) -> Result<bytes::Bytes, Self::RecvError> {
-        self.connection.dgram_recv_vec().map(|v| v.into())
+        self.0.connection.dgram_recv_vec().map(|v| v.into())
     }
 
     fn send<B: bytes::Buf>(&mut self, buf: &mut B) -> Result<(), Self::SendError> {
-        self.connection.dgram_send(&buf.copy_to_bytes(buf.remaining()))
+        self.0.connection.dgram_send(&buf.copy_to_bytes(buf.remaining()))
     }
 }
 
-impl StreamManager for QuicheConnection {
-    type Recv<'a> = RecvStream<'a>;
-    type Send<'a> = SendStream<'a>;
+pub struct QuicheStreams<'a>(&'a mut QuicheConnection);
+
+impl<'a> StreamManager for QuicheStreams<'a> {
+    type Recv<'s> = RecvStream<'s> where Self: 's;
+    type Send<'s> = SendStream<'s> where Self: 's;
 
     fn open_send_stream(&mut self) -> anyhow::Result<StreamId> {
         todo!()
     }
     
     fn get_send_stream(&mut self, id: StreamId) -> Option<Self::Send<'_>> {
-        todo!()
+        return Some(SendStream { streams: self.0, id });;
     }
     
     fn get_recv_stream(&mut self, id: StreamId) -> Option<Self::Recv<'_>> {
-        todo!()
+        return Some(RecvStream { streams: self.0, id });
     }
 }
 
 pub struct RecvStream<'a> {
-    connection: &'a mut QuicheConnection,
+    streams: &'a mut QuicheConnection,
     id: StreamId
 }
 
@@ -76,7 +79,7 @@ impl<'a> crate::connection::RecvStream for RecvStream<'a> {
 }
 
 pub struct SendStream<'a> {
-    connection: &'a mut QuicheConnection,
+    streams: &'a mut QuicheConnection,
     id: StreamId
 }
 

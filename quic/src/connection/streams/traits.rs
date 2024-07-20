@@ -4,10 +4,10 @@ use super::StreamId;
 /// A type that gives access and control over streams.
 pub trait StreamManager {
     /// Handle for the sending side of a stream.
-    type Send<'a>: SendStream where Self: 'a;
+    type Send<'s>: SendStream where Self: 's;
 
     /// Handle for the receiving side of a stream.
-    type Recv<'a>: RecvStream where Self: 'a;
+    type Recv<'s>: RecvStream where Self: 's;
 
     /// Opens an outgoing stream.
     fn open_send_stream(&mut self) -> anyhow::Result<StreamId>;

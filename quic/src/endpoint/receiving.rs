@@ -1,4 +1,4 @@
-use std::{io::ErrorKind, net::{SocketAddr, UdpSocket}, ops::Deref};
+use std::{io::ErrorKind, net::{SocketAddr, UdpSocket}};
 use anyhow::Result;
 use bevy::{ecs::query::QueryData, prelude::Query};
 use bevy_stardust::{connections::PeerMessages, messages::Incoming};
