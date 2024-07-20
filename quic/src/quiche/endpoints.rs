@@ -130,7 +130,7 @@ pub struct QuicheEndpoint {
 
 impl crate::endpoint::EndpointState for QuicheEndpoint {
     type Backend = super::Quiche;
-    
+
     fn recv<'a>(
         &'a mut self,
         backend: &'a Self::Backend,
@@ -138,7 +138,7 @@ impl crate::endpoint::EndpointState for QuicheEndpoint {
     ) {
         todo!()
     }
-    
+
     fn send<'a>(
         &'a mut self,
         backend: &'a Self::Backend,
