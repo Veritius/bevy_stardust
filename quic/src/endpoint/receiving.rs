@@ -12,6 +12,10 @@ pub struct UdpSocketRecv<'a> {
 }
 
 impl<'a> UdpSocketRecv<'a> {
+    /// Try to receive packets, with three possible cases:
+    /// - `Ok(Some())` - A UDP packet was received over the socket
+    /// - `Ok(None)` - No more packets are available this tick
+    /// - `Err()` - An I/O error occurred
     pub fn recv(&mut self) -> Result<Option<ReceivedDatagram>> {
         match self.socket.recv_from(&mut self.scratch) {
             Ok((length, address)) => {

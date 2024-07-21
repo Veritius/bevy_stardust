@@ -11,6 +11,7 @@ pub struct UdpSocketSend<'a> {
 }
 
 impl<'a> UdpSocketSend<'a> {
+    /// Try to send a UDP packet over the socket.
     pub fn send(&mut self, transmit: TransmitDatagram) -> Result<()> {
         match self.socket.send_to(transmit.payload, transmit.address) {
             Ok(_) => return Ok(()),
