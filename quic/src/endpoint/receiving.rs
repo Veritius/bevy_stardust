@@ -1,5 +1,4 @@
-use std::{io::ErrorKind, net::{SocketAddr, UdpSocket}};
-use anyhow::Result;
+use std::{io::{Error as IoError, ErrorKind}, net::{SocketAddr, UdpSocket}};
 
 /// A handle to a UDP socket.
 pub struct UdpSocketRecv<'a> {
@@ -12,7 +11,7 @@ impl<'a> UdpSocketRecv<'a> {
     /// - `Ok(Some())` - A UDP packet was received over the socket
     /// - `Ok(None)` - No more packets are available this tick
     /// - `Err()` - An I/O error occurred
-    pub fn recv(&mut self) -> Result<Option<ReceivedDatagram>> {
+    pub fn recv(&mut self) -> Result<Option<ReceivedDatagram>, IoError> {
         match self.socket.recv_from(&mut self.scratch) {
             Ok((length, address)) => {
                 let payload = &self.scratch[..length];
@@ -21,8 +20,7 @@ impl<'a> UdpSocketRecv<'a> {
 
             Err(err) if err.kind() == ErrorKind::WouldBlock => return Ok(None),
 
-            Err(err) => return Err(<std::io::Error as Into<anyhow::Error>>::into(err)
-                .context("while receiving udp packets")),
+            Err(err) => return Err(err),
         }
     }
 }

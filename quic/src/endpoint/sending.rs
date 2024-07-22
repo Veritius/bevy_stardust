@@ -1,5 +1,5 @@
+use std::io::Error as IoError;
 use std::net::{SocketAddr, UdpSocket};
-use anyhow::Result;
 
 /// A handle to a UDP socket.
 pub struct UdpSocketSend<'a> {
@@ -8,10 +8,10 @@ pub struct UdpSocketSend<'a> {
 
 impl<'a> UdpSocketSend<'a> {
     /// Try to send a UDP packet over the socket.
-    pub fn send(&mut self, transmit: TransmitDatagram) -> Result<()> {
+    pub fn send(&mut self, transmit: TransmitDatagram) -> Result<(), IoError> {
         match self.socket.send_to(transmit.payload, transmit.address) {
             Ok(_) => return Ok(()),
-            Err(err) => return Err(err.into()),
+            Err(err) => return Err(err),
         }
     }
 }
