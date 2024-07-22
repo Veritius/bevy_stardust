@@ -9,7 +9,7 @@ impl StreamId {
         return Ok(Self(inner));
     }
 
-    pub fn inner(&self) -> u64 {
+    pub fn inner(self) -> u64 {
         self.0
     }
 }

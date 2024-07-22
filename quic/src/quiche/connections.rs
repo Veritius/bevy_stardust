@@ -1,4 +1,4 @@
-use crate::connection::{ConnectionState, DatagramManager, StreamId, StreamManager};
+use crate::connection::{ConnectionState, DatagramManager, StreamId, StreamManager, StreamRecvOutcome, StreamSendOutcome};
 
 pub struct QuicheConnection {
     connection: quiche::Connection,
@@ -53,23 +53,23 @@ impl<'a> StreamManager for QuicheStreams<'a> {
     }
     
     fn get_send_stream(&mut self, id: StreamId) -> Option<Self::Send<'_>> {
-        return Some(SendStream { streams: self.0, id });;
+        return Some(SendStream { inner: self.0, id });;
     }
     
     fn get_recv_stream(&mut self, id: StreamId) -> Option<Self::Recv<'_>> {
-        return Some(RecvStream { streams: self.0, id });
+        return Some(RecvStream { inner: self.0, id });
     }
 }
 
 pub struct RecvStream<'a> {
-    streams: &'a mut QuicheConnection,
-    id: StreamId
+    inner: &'a mut QuicheConnection,
+    id: StreamId,
 }
 
 impl<'a> crate::connection::RecvStream for RecvStream<'a> {
     type RecvError = quiche::Error;
 
-    fn recv(&mut self) -> crate::connection::StreamRecvOutcome<Self::RecvError> {
+    fn recv(&mut self) -> StreamRecvOutcome<Self::RecvError> {
         todo!()
     }
 
@@ -79,15 +79,47 @@ impl<'a> crate::connection::RecvStream for RecvStream<'a> {
 }
 
 pub struct SendStream<'a> {
-    streams: &'a mut QuicheConnection,
-    id: StreamId
+    inner: &'a mut QuicheConnection,
+    id: StreamId,
 }
 
 impl<'a> crate::connection::SendStream for SendStream<'a> {
     type SendError = quiche::Error;
 
-    fn send<B: bytes::Buf>(&mut self, buf: &mut B) -> crate::connection::StreamSendOutcome<Self::SendError> {
-        todo!()
+    fn send<B: bytes::Buf>(&mut self, buf: &mut B) -> StreamSendOutcome<Self::SendError> {
+        let total = buf.remaining();
+        let mut written = 0;
+
+        while buf.remaining() > 0 && written <= total {
+            match self.inner.connection.stream_send(
+                self.id.inner(),
+                buf.chunk(),
+                false,
+            ) {
+                Ok(amt) => {
+                    written += amt;
+                    buf.advance(amt);
+                    continue;
+                }
+
+                Err(error) => return match error {
+                    // Stream has no capacity (from stream_send docs)
+                    quiche::Error::Done => StreamSendOutcome::Blocked,
+
+                    // Stream was stopped/reset
+                    quiche::Error::StreamStopped(_) => StreamSendOutcome::Stopped,
+                    quiche::Error::StreamReset(_) => StreamSendOutcome::Stopped,
+
+                    // The rest of the cases are actual errors
+                    error => StreamSendOutcome::Error(error),
+                },
+            }
+        }
+
+        match total == written {
+            true => StreamSendOutcome::Complete,
+            false => StreamSendOutcome::Partial(written),
+        }
     }
 
     fn finish(&mut self) -> Result<(), Self::SendError> {
