@@ -1,6 +1,8 @@
 use std::fmt::{Debug, Display};
-use bevy_stardust::messages::bytes::{Buf, BufMut};
+use bevy_stardust::messages::*;
 use bevy_stardust::prelude::*;
+use bytes::Buf;
+use bytes::BufMut;
 
 /// A variable length integer that can store values up to `(2^62)-1`.
 /// 
@@ -159,16 +161,16 @@ impl From<VarInt> for u64 {
     }
 }
 
-impl From<VarInt> for ChannelId {
+impl From<VarInt> for ChannelId<Messages> {
     #[inline]
     fn from(value: VarInt) -> Self {
         value.into()
     }
 }
 
-impl From<ChannelId> for VarInt {
+impl<R: ChannelType> From<ChannelId<R>> for VarInt {
     #[inline]
-    fn from(value: ChannelId) -> Self {
+    fn from(value: ChannelId<R>) -> Self {
         VarInt::from_u32(value.into())
     }
 }

@@ -1,13 +1,16 @@
-use bevy::reflect::Reflect;
+use std::hash::Hash;
+use bevy::prelude::*;
+use crate::channels::{ChannelId, NetIdentifier, RegistryBuilder};
+use super::message::Messages;
 
 /// Configuration for a channel.
 #[derive(Debug, Clone, Hash, Reflect)]
 #[reflect(Debug, Hash)]
-pub struct ChannelConfiguration {
+pub struct MessageConfiguration {
     /// Guarantees that the transport layer must make
     /// for messages sent on this channel. See the
     /// documentation of [`ChannelConsistency`].
-    pub consistency: ChannelConsistency,
+    pub consistency: MessageConsistency,
 
     /// The priority of messages on this channel.
     /// Transport values will send messages on channels with higher `priority` values first.
@@ -44,10 +47,10 @@ pub struct ChannelConfiguration {
 /// received in order, the application sees `[1,2,3,4,5]`. However, if the
 /// messages are received in the order `[1,3,2,5,4]`, the application will
 /// only see the messages `[1,3,5]`.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Reflect)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Reflect)]
 #[reflect(Debug, PartialEq, Hash)]
 #[non_exhaustive]
-pub enum ChannelConsistency {
+pub enum MessageConsistency {
     /// Messages lost in transport will not be resent.
     /// They are added to the queue in the order they're received,
     /// which may be different to the order they were sent in.
@@ -85,24 +88,62 @@ pub enum ChannelConsistency {
     ReliableOrdered,
 }
 
-impl ChannelConsistency {
+impl MessageConsistency {
     /// Returns `true` if messages in this channel must be sent reliably.
     pub fn is_reliable(&self) -> bool {
         match self {
-            ChannelConsistency::UnreliableUnordered => false,
-            ChannelConsistency::UnreliableSequenced => false,
-            ChannelConsistency::ReliableUnordered   => true,
-            ChannelConsistency::ReliableOrdered     => true,
+            MessageConsistency::UnreliableUnordered => false,
+            MessageConsistency::UnreliableSequenced => false,
+            MessageConsistency::ReliableUnordered   => true,
+            MessageConsistency::ReliableOrdered     => true,
         }
     }
 
     /// Returns `true` if messages in this channel have any ordering constraints applied.
     pub fn is_ordered(&self) -> bool {
         match self {
-            ChannelConsistency::UnreliableUnordered => false,
-            ChannelConsistency::UnreliableSequenced => true,
-            ChannelConsistency::ReliableUnordered   => false,
-            ChannelConsistency::ReliableOrdered     => true,
+            MessageConsistency::UnreliableUnordered => false,
+            MessageConsistency::UnreliableSequenced => true,
+            MessageConsistency::ReliableUnordered   => false,
+            MessageConsistency::ReliableOrdered     => true,
         }
     }
+}
+
+impl Hash for MessageConsistency {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        match self {
+            MessageConsistency::UnreliableUnordered => state.write_u8(0),
+            MessageConsistency::UnreliableSequenced => state.write_u8(1),
+            MessageConsistency::ReliableUnordered => state.write_u8(2),
+            MessageConsistency::ReliableOrdered => state.write_u8(3),
+        }
+    }
+}
+
+/// Adds channel-related functions to the `App`.
+pub trait MessageChannelSetupExt: sealed::Sealed {
+    /// Registers a channel with type `C` and the config and components given.
+    /// Returns the sequential `ChannelId` now associated with the channel.
+    fn add_message_channel<C: NetIdentifier>(&mut self, config: MessageConfiguration) -> ChannelId<Messages>;
+}
+
+impl MessageChannelSetupExt for App {
+    fn add_message_channel<I: NetIdentifier>(
+        &mut self,
+        config: MessageConfiguration,
+    ) -> ChannelId<Messages> {
+        // Get the registry
+        let mut registry = self.world_mut()
+            .get_resource_mut::<RegistryBuilder<Messages>>()
+            .expect("Cannot add channels after plugin cleanup");
+
+        // Add to registry
+        return registry.register::<I>(config);
+    }
+}
+
+mod sealed {
+    pub trait Sealed {}
+    impl Sealed for bevy::app::App {}
 }

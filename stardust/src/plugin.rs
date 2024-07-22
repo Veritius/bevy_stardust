@@ -2,9 +2,9 @@
 
 use bevy::prelude::*;
 use crate::prelude::*;
-use crate::channels;
 use crate::connections::*;
 use crate::diagnostics::*;
+use crate::messages::*;
 
 /// The Stardust multiplayer plugin.
 /// Adds the core functionality of Stardust, but does not add a transport layer.
@@ -25,9 +25,8 @@ impl Plugin for StardustPlugin {
         app.register_type::<SimulateLatency>();
 
         // Register channel types
-        app.register_type::<ChannelId>();
-        app.register_type::<channels::ChannelConfiguration>();
-        app.register_type::<channels::ChannelConsistency>();
+        app.register_type::<MessageConfiguration>();
+        app.register_type::<MessageConsistency>();
 
         // Register messaging types
         app.register_type::<NetDirection>();
@@ -45,7 +44,7 @@ impl Plugin for StardustPlugin {
         crate::scheduling::configure_scheduling(app);
 
         // Setup channels
-        channels::plugin_build(app);
+        crate::channels::build::<Messages>(app);
 
         // Add systems
         app.add_systems(PostUpdate, (
@@ -56,6 +55,6 @@ impl Plugin for StardustPlugin {
 
     fn cleanup(&self, app: &mut App) {
         // Finish channels
-        channels::plugin_cleanup(app);
+        crate::channels::finish::<Messages>(app);
     }
 }

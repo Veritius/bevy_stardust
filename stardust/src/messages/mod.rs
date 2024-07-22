@@ -19,6 +19,7 @@
 //! [peers]: crate::connections
 //! [`PeerMessages<D>`]: crate::connections::PeerMessages
 
+mod config;
 mod direction;
 mod message;
 mod queue;
@@ -28,5 +29,6 @@ pub use bytes;
 
 // Public types
 pub use direction::{NetDirection, MessageDirection, Incoming, Outgoing};
-pub use message::{Message, ChannelMessage};
+pub use message::{Messages, Message, ChannelMessage};
 pub use queue::{MessageQueue, ChannelIter, MessageIter};
+pub use config::{MessageConfiguration, MessageConsistency};

@@ -1,7 +1,8 @@
 #![doc = include_str!("../README.md")]
 #![warn(missing_docs)]
 
-pub mod channels;
+mod channels;
+
 pub mod connections;
 pub mod diagnostics;
 pub mod messages;
