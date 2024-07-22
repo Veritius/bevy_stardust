@@ -1,12 +1,8 @@
 use std::{ops::Deref, str::{from_utf8, Utf8Error}};
 use bytes::Bytes;
-use crate::channels::{ChannelId, ChannelType};
+use crate::channels::ChannelId;
 
-pub enum Messages {}
-
-impl ChannelType for Messages {
-    type Config = super::MessageConfiguration;
-}
+use super::MessageCid;
 
 /// Individual, cheaply clonable, contiguous octet (byte) strings.
 /// 
@@ -119,14 +115,14 @@ impl std::fmt::Debug for Message {
 #[derive(Clone)]
 pub struct ChannelMessage {
     /// The channel's identifier.
-    pub channel: ChannelId<Messages>,
+    pub channel: MessageCid,
 
     /// The contents of the message.
     pub payload: Message,
 }
 
-impl From<(ChannelId<Messages>, Message)> for ChannelMessage {
-    fn from(value: (ChannelId<Messages>, Message)) -> Self {
+impl From<(MessageCid, Message)> for ChannelMessage {
+    fn from(value: (MessageCid, Message)) -> Self {
         Self {
             channel: value.0,
             payload: value.1,
@@ -134,8 +130,8 @@ impl From<(ChannelId<Messages>, Message)> for ChannelMessage {
     }
 }
 
-impl From<(ChannelId<Messages>, Bytes)> for ChannelMessage {
-    fn from(value: (ChannelId<Messages>, Bytes)) -> Self {
+impl From<(MessageCid, Bytes)> for ChannelMessage {
+    fn from(value: (MessageCid, Bytes)) -> Self {
         Self {
             channel: value.0,
             payload: Message::from_bytes(value.1),

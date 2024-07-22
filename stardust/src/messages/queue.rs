@@ -1,7 +1,7 @@
 use bevy::utils::HashMap;
 use smallvec::SmallVec;
 use crate::{channels::ChannelId, prelude::*};
-use super::message::Messages;
+use super::Messages;
 
 type IdxVec = SmallVec<[usize; 2]>; 
 

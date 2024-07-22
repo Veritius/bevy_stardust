@@ -1,7 +1,7 @@
 use std::hash::Hash;
 use bevy::prelude::*;
-use crate::channels::{ChannelId, NetIdentifier, RegistryBuilder};
-use super::message::Messages;
+use crate::channels::{NetIdentifier, RegistryBuilder};
+use super::{MessageCid, Messages};
 
 /// Configuration for a channel.
 #[derive(Debug, Clone, Hash, Reflect)]
@@ -125,14 +125,14 @@ impl Hash for MessageConsistency {
 pub trait MessageChannelSetupExt: sealed::Sealed {
     /// Registers a channel with type `C` and the config and components given.
     /// Returns the sequential `ChannelId` now associated with the channel.
-    fn add_message_channel<C: NetIdentifier>(&mut self, config: MessageConfiguration) -> ChannelId<Messages>;
+    fn add_message_channel<C: NetIdentifier>(&mut self, config: MessageConfiguration) -> MessageCid;
 }
 
 impl MessageChannelSetupExt for App {
     fn add_message_channel<I: NetIdentifier>(
         &mut self,
         config: MessageConfiguration,
-    ) -> ChannelId<Messages> {
+    ) -> MessageCid {
         // Get the registry
         let mut registry = self.world_mut()
             .get_resource_mut::<RegistryBuilder<Messages>>()

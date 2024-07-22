@@ -29,6 +29,15 @@ pub use bytes;
 
 // Public types
 pub use direction::{NetDirection, MessageDirection, Incoming, Outgoing};
-pub use message::{Messages, Message, ChannelMessage};
+pub use message::{Message, ChannelMessage};
 pub use queue::{MessageQueue, ChannelIter, MessageIter};
 pub use config::{MessageConfiguration, MessageConsistency};
+
+/// A message channel's unique ID.
+pub type MessageCid = crate::channels::ChannelId<Messages>;
+
+pub enum Messages {}
+
+impl crate::channels::ChannelType for Messages {
+    type Config = MessageConfiguration;
+}
