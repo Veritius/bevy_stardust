@@ -1,4 +1,4 @@
-use crate::datagrams::DatagramTryWrite;
+use crate::connection::datagrams::DatagramTryWrite;
 use super::QuicheConnection;
 
 impl DatagramTryWrite for QuicheConnection {

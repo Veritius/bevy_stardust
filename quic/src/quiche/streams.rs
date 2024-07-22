@@ -1,6 +1,6 @@
 use quiche::Shutdown;
 
-use crate::streams::*;
+use crate::connection::streams::*;
 use super::QuicheConnection;
 
 impl StreamManager for QuicheConnection {

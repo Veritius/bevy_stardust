@@ -1,5 +1,5 @@
 use bytes::BytesMut;
-use crate::streams::{OutgoingStreams, OutgoingStreamsTryWriteOutcome, StreamManager, StreamTag, StreamTryWriteOutcome};
+use crate::connection::streams::{OutgoingStreams, OutgoingStreamsTryWriteOutcome, StreamManager, StreamTag, StreamTryWriteOutcome};
 use super::{header::{DatagramHeader, DatagramPurpose}, Datagram, DatagramTag, DatagramTryWrite};
 
 pub(crate) struct OutgoingDatagrams {

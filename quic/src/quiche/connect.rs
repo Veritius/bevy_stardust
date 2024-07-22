@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use crate::{datagrams::{ChannelDatagrams, IncomingDatagrams, OutgoingDatagrams}, streams::{ChannelStreams, IncomingStreams, OutgoingStreams}, Connection, Endpoint, TryConnectEvent};
+use crate::{connection::{datagrams::{ChannelDatagrams, IncomingDatagrams, OutgoingDatagrams}, streams::{ChannelStreams, IncomingStreams, OutgoingStreams}, Connection}, Endpoint, TryConnectEvent};
 use super::QuicheConnection;
 
 pub(super) fn connection_attempt_events_system(

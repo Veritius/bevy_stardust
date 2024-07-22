@@ -11,11 +11,9 @@ mod bimap;
 mod config;
 mod connection;
 mod crypto;
-mod datagrams;
 mod endpoint;
 mod events;
 mod plugin;
-mod streams;
 
 pub use config::{AppProtosBuilder, AppProtos, AppProto};
 pub use connection::Connection;

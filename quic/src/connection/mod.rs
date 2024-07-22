@@ -1,5 +1,11 @@
+pub mod datagrams;
+pub mod streams;
+
 use bevy::{ecs::component::{ComponentHooks, StorageType}, prelude::*};
-use crate::{datagrams::{ChannelDatagrams, IncomingDatagrams, OutgoingDatagrams}, quiche::QuicheConnection, streams::{ChannelStreams, IncomingStreams, OutgoingStreams}, Endpoint};
+use datagrams::{ChannelDatagrams, IncomingDatagrams, OutgoingDatagrams};
+use streams::{ChannelStreams, IncomingStreams, OutgoingStreams};
+
+use crate::Endpoint;
 
 /// A QUIC connection.
 /// 
@@ -12,7 +18,7 @@ pub struct Connection {
 
     #[cfg(feature="quiche")]
     #[reflect(ignore)]
-    pub(crate) quiche: QuicheConnection,
+    pub(crate) quiche: crate::quiche::QuicheConnection,
 
     #[reflect(ignore)]
     pub(crate) incoming_streams: IncomingStreams,
