@@ -1,9 +1,5 @@
 use std::{io::ErrorKind, net::{SocketAddr, UdpSocket}};
 use anyhow::Result;
-use bevy::{ecs::query::QueryData, prelude::*};
-use bevy_stardust::{connections::PeerMessages, messages::Incoming};
-use crate::{backend::QuicBackend, connection::ConnectionStateData, Connection};
-use super::scoping::{Connections, ScopedId};
 
 /// A handle to a UDP socket.
 pub struct UdpSocketRecv<'a> {
@@ -35,61 +31,4 @@ impl<'a> UdpSocketRecv<'a> {
 pub struct ReceivedDatagram<'a> {
     pub address: SocketAddr,
     pub payload: &'a [u8],
-}
-
-pub struct RecvConnections<'a, Backend: QuicBackend> {
-    connections: Connections<'a>,
-    query: &'a Query<'a, 'a, RecvConnectionsQueryData<'static, Backend>>,
-}
-
-impl<'a, Backend: QuicBackend> RecvConnections<'a, Backend> {
-    pub fn get_mut(&mut self, id: ScopedId<'a>) -> Option<RecvConnectionHandle<Backend>> {
-        // SAFETY: Using a ScopedId ensures we don't have aliasing mutable accesses
-        let item = unsafe { self.query.get_unchecked(id.inner()).ok()? };
-
-        return Some(RecvConnectionHandle {
-            id,
-            shared: item.shared.into_inner(),
-            backend: item.state.into_inner().inner(),
-            messages: item.messages.into_inner(),
-        });
-    }
-
-    pub fn iter_mut(&mut self) -> impl Iterator<Item = RecvConnectionHandle<Backend>> + '_{
-        self.connections.iter()
-            .map(|id| (id, unsafe { self.query.get_unchecked(id.inner()) }))
-            .filter(|(_, item)| item.is_ok())
-            .map(|(id, item)| (id, item.unwrap()))
-            .map(|(id, item)| RecvConnectionHandle {
-                id,
-                shared: item.shared.into_inner(),
-                backend: item.state.into_inner().inner(),
-                messages: item.messages.into_inner(),
-            })
-    }
-}
-
-pub struct RecvConnectionHandle<'a, Backend: QuicBackend> {
-    id: ScopedId<'a>,
-    shared: &'a mut Connection,
-    backend: &'a mut Backend::ConnectionState,
-    messages: &'a mut PeerMessages<Incoming>,
-}
-
-impl<'a, Backend: QuicBackend> RecvConnectionHandle<'a, Backend> {
-    pub fn id(&'a self) -> ScopedId<'a> {
-        self.id
-    }
-
-    pub fn state(&'a mut self) -> &'a mut Backend::ConnectionState {
-        self.backend
-    }
-}
-
-#[derive(QueryData)]
-#[query_data(mutable)]
-struct RecvConnectionsQueryData<'w, Backend: QuicBackend> {
-    shared: &'w mut Connection,
-    state: &'w mut ConnectionStateData<Backend::ConnectionState>,
-    messages: &'w mut PeerMessages<Incoming>,
 }

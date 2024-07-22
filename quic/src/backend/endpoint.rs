@@ -1,4 +1,4 @@
-use crate::endpoint::{RecvConnections, SendConnections, UdpSocketRecv, UdpSocketSend};
+use crate::endpoint::{UdpSocketRecv, UdpSocketSend};
 use super::QuicBackend;
 
 /// An endpoint associated with a [`Backend`](crate::backend::Backend) implementation.
@@ -13,13 +13,11 @@ where
         &'a mut self,
         backend: &'a Self::Backend,
         socket: UdpSocketRecv<'a>,
-        connections: RecvConnections<'a, Self::Backend>,
     );
 
     fn send<'a>(
         &'a mut self,
         backend: &'a Self::Backend,
         socket: UdpSocketSend<'a>,
-        connections: SendConnections<'a, Self::Backend>,
     );
 }

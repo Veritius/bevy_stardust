@@ -1,7 +1,6 @@
 // mod builder;
 mod connections;
 mod receiving;
-mod scoping;
 mod sending;
 
 use std::net::{SocketAddr, UdpSocket};
@@ -12,8 +11,8 @@ use crate::backend::*;
 pub(crate) use connections::EndpointConnections;
 
 pub use connections::ConnectionId;
-pub use receiving::{UdpSocketRecv, ReceivedDatagram, RecvConnections, RecvConnectionHandle};
-pub use sending::{UdpSocketSend, TransmitDatagram, SendConnections, SendConnectionHandle};
+pub use receiving::{UdpSocketRecv, ReceivedDatagram};
+pub use sending::{UdpSocketSend, TransmitDatagram};
 
 /// Endpoint state information.
 /// 
