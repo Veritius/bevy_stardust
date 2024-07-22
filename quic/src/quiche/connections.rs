@@ -167,10 +167,18 @@ impl<'a> crate::connection::SendStream for SendStream<'a> {
     }
 
     fn finish(&mut self) -> Result<(), Self::SendError> {
-        todo!()
+        self.inner.connection.stream_send(
+            self.id.inner(),
+            &[],
+            false,
+        ).map(|_| ())
     }
 
     fn reset(&mut self) -> Result<(), Self::SendError> {
-        todo!()
+        self.inner.connection.stream_shutdown(
+            self.id.inner(), 
+            quiche::Shutdown::Write,
+            todo!(),
+        )
     }
 }
