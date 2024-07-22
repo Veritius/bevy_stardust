@@ -1,3 +1,5 @@
+use bytes::Bytes;
+
 use crate::connection::{ConnectionState, DatagramManager, StreamId, StreamManager, StreamRecvOutcome, StreamSendOutcome};
 
 pub struct QuicheConnection {
@@ -53,11 +55,22 @@ impl<'a> StreamManager for QuicheStreams<'a> {
     }
     
     fn get_send_stream(&mut self, id: StreamId) -> Option<Self::Send<'_>> {
-        return Some(SendStream { inner: self.0, id });;
+        return Some(SendStream { inner: self.0, id });
     }
     
     fn get_recv_stream(&mut self, id: StreamId) -> Option<Self::Recv<'_>> {
+        if self.0.connection.stream_finished(id.inner()) { return None; }
         return Some(RecvStream { inner: self.0, id });
+    }
+
+    fn next_available_send(&mut self) -> Option<Self::Send<'_>> {
+        let id = self.0.connection.stream_writable_next()?;
+        return Some(SendStream { inner: self.0, id: StreamId::new(id).unwrap() });
+    }
+
+    fn next_available_recv(&mut self) -> Option<Self::Recv<'_>> {
+        let id = self.0.connection.stream_readable_next()?;
+        return Some(RecvStream { inner: self.0, id: StreamId::new(id).unwrap() });
     }
 }
 
@@ -66,11 +79,42 @@ pub struct RecvStream<'a> {
     id: StreamId,
 }
 
+const RECV_SCRATCH_ALLOC_SIZE: usize = 1024;
+
 impl<'a> crate::connection::RecvStream for RecvStream<'a> {
     type RecvError = quiche::Error;
 
+    fn id(&self) -> StreamId {
+        self.id
+    }
+
     fn recv(&mut self) -> StreamRecvOutcome<Self::RecvError> {
-        todo!()
+        // Check if the stream is readable in the first place
+        if !self.inner.connection.stream_readable(self.id.inner()) {
+            return StreamRecvOutcome::Blocked;
+        }
+
+        // SAFETY
+        // Allocate a space and unsafely set its length to the max
+        // This measure is necessary since by default a Vec has no items
+        // and a Vec will only return up to its length as a slice
+        // We could use Vec::extend() to fill it with zeros, but that's slow
+        // Since this is just scratch space for network data (which is untrusted anyway)
+        // and quiche will (probably) only write to it, this is probably fine to do
+        let mut scratch = Vec::with_capacity(RECV_SCRATCH_ALLOC_SIZE);
+        unsafe { scratch.set_len(RECV_SCRATCH_ALLOC_SIZE); }
+
+        match self.inner.connection.stream_recv(self.id.inner(), &mut scratch[..]) {
+            Ok((len, _fin)) => {
+                // TODO: Avoid allocating twice, maybe reuse the vec's allocation?
+                // SAFETY: We only take up to the written part of memory
+                let chunk = Bytes::copy_from_slice(&scratch[..len]);
+                return StreamRecvOutcome::Chunk(chunk);
+            },
+
+            Err(quiche::Error::Done) => StreamRecvOutcome::Blocked,
+            Err(error) => StreamRecvOutcome::Error(error),
+        }
     }
 
     fn stop(&mut self) -> Result<(), Self::RecvError> {
@@ -86,6 +130,10 @@ pub struct SendStream<'a> {
 impl<'a> crate::connection::SendStream for SendStream<'a> {
     type SendError = quiche::Error;
 
+    fn id(&self) -> StreamId {
+        self.id
+    }
+
     fn send<B: bytes::Buf>(&mut self, buf: &mut B) -> StreamSendOutcome<Self::SendError> {
         let total = buf.remaining();
         let mut written = 0;
@@ -96,23 +144,22 @@ impl<'a> crate::connection::SendStream for SendStream<'a> {
                 buf.chunk(),
                 false,
             ) {
+                // Successfully sent data
                 Ok(amt) => {
                     written += amt;
                     buf.advance(amt);
                     continue;
                 }
 
-                Err(error) => return match error {
-                    // Stream has no capacity (from stream_send docs)
-                    quiche::Error::Done => StreamSendOutcome::Blocked,
+                // Stream has no capacity (from stream_send docs)
+                Err(quiche::Error::Done) => return StreamSendOutcome::Blocked,
 
-                    // Stream was stopped/reset
-                    quiche::Error::StreamStopped(_) => StreamSendOutcome::Stopped,
-                    quiche::Error::StreamReset(_) => StreamSendOutcome::Stopped,
+                // Stream was stopped/reset
+                Err(quiche::Error::StreamStopped(_)) => return StreamSendOutcome::Stopped,
+                Err(quiche::Error::StreamReset(_)) => return StreamSendOutcome::Stopped,
 
-                    // The rest of the cases are actual errors
-                    error => StreamSendOutcome::Error(error),
-                },
+                // The rest of the cases are actual errors
+                Err(error) => return StreamSendOutcome::Error(error),
             }
         }
 

@@ -17,12 +17,21 @@ pub trait StreamManager {
 
     /// Gets a handle to the receiving side of a stream.
     fn get_recv_stream(&mut self, id: StreamId) -> Option<Self::Recv<'_>>;
+
+    /// Return the next send stream that data can be transmitted on.
+    fn next_available_send(&mut self) -> Option<Self::Send<'_>>;
+
+    /// Return the next recv stream that data can be transmitted on.
+    fn next_available_recv(&mut self) -> Option<Self::Recv<'_>>;
 }
 
 /// A handle to the transmitting side of a QUIC stream.
 pub trait SendStream {
     /// An error returned by the underlying QUIC implementation while trying to transmit data.
     type SendError: Into<anyhow::Error>;
+
+    /// Returns the stream's unique ID.
+    fn id(&self) -> StreamId;
 
     /// Try to write the contents of `buf` to the stream.
     fn send<B: Buf>(&mut self, buf: &mut B) -> StreamSendOutcome<Self::SendError>;
@@ -61,6 +70,9 @@ where
 pub trait RecvStream {
     /// An error returned by the underlying QUIC implementation while trying to receive data.
     type RecvError: Into<anyhow::Error>;
+
+    /// Returns the stream's unique ID.
+    fn id(&self) -> StreamId;
 
     /// Try to receive chunks from the stream.
     fn recv(&mut self) -> StreamRecvOutcome<Self::RecvError>;
