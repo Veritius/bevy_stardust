@@ -170,7 +170,7 @@ impl<'a> crate::connection::SendStream for SendStream<'a> {
         self.inner.connection.stream_send(
             self.id.inner(),
             &[],
-            false,
+            true,
         ).map(|_| ())
     }
 
