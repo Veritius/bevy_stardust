@@ -1,5 +1,6 @@
 //! Ordered byte streams.
 
+mod chunk;
 mod config;
 mod queue;
 
@@ -9,7 +10,7 @@ pub use config::*;
 pub use queue::*;
 
 /// A stream channel's unique ID.
-pub type MessageCid = crate::channels::ChannelId<Streams>;
+pub type StreamCid = crate::channels::ChannelId<Streams>;
 
 pub enum Streams {}
 
