@@ -1,5 +1,7 @@
 use super::{DatagramManager, QuicBackend, StreamManager};
 
+pub use crate::endpoint::ConnectionId;
+
 /// Connection state for a connection managed by a [`QuicBackend`] implementor.
 pub trait ConnectionState
 where

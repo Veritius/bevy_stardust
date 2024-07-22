@@ -11,6 +11,7 @@ use crate::backend::*;
 
 pub(crate) use connections::EndpointConnections;
 
+pub use connections::ConnectionId;
 pub use receiving::{UdpSocketRecv, ReceivedDatagram, RecvConnections, RecvConnectionHandle};
 pub use sending::{UdpSocketSend, TransmitDatagram, SendConnections, SendConnectionHandle};
 
