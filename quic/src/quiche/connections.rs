@@ -111,7 +111,11 @@ impl<'a> crate::connection::RecvStream for RecvStream<'a> {
     }
 
     fn stop(&mut self) -> Result<(), Self::RecvError> {
-        todo!()
+        self.inner.connection.stream_shutdown(
+            self.id.inner(),
+            quiche::Shutdown::Read,
+            todo!(),
+        )
     }
 }
 
