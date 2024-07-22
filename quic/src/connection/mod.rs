@@ -1,7 +1,7 @@
 mod datagrams;
-mod streams;
-
+mod events;
 mod state;
+mod streams;
 
 use bevy::{ecs::component::{ComponentHooks, StorageType}, prelude::*};
 use datagrams::{ChannelDatagrams, IncomingDatagrams, OutgoingDatagrams};

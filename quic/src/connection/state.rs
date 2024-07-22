@@ -1,6 +1,6 @@
 use std::collections::VecDeque;
 use bevy_stardust::messages::ChannelMessage;
-use super::{datagrams::{ChannelDatagrams, IncomingDatagrams, OutgoingDatagrams}, streams::{ChannelStreams, IncomingStreams, OutgoingStreams}};
+use super::{datagrams::{ChannelDatagrams, IncomingDatagrams, OutgoingDatagrams}, events::StreamEvent, streams::{ChannelStreams, IncomingStreams, OutgoingStreams}};
 
 pub struct ConnectionStateMachine {
     incoming_streams: IncomingStreams,
@@ -12,4 +12,10 @@ pub struct ConnectionStateMachine {
     channel_datagrams: ChannelDatagrams,
 
     outgoing_messages: VecDeque<ChannelMessage>,
+}
+
+impl ConnectionStateMachine {
+    pub fn recv_stream_event(&mut self, event: StreamEvent) {
+        
+    }
 }
