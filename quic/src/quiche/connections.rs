@@ -4,6 +4,7 @@ use crate::connection::{ConnectionState, DatagramManager, StreamId, StreamManage
 
 pub struct QuicheConnection {
     connection: quiche::Connection,
+    stream_idx: u64,
 }
 
 impl ConnectionState for QuicheConnection {
@@ -51,7 +52,13 @@ impl<'a> StreamManager for QuicheStreams<'a> {
     type Send<'s> = SendStream<'s> where Self: 's;
 
     fn open_send_stream(&mut self) -> anyhow::Result<StreamId> {
-        todo!()
+        const DEFAULT_STREAM_PRIORITY: u8 = 127;
+
+        let stream_id = self.0.stream_idx;
+        self.0.stream_idx += 1;
+
+        self.0.connection.stream_priority(stream_id, DEFAULT_STREAM_PRIORITY, true)?;
+        return Ok(StreamId::new(stream_id).unwrap());
     }
     
     fn get_send_stream(&mut self, id: StreamId) -> Option<Self::Send<'_>> {
