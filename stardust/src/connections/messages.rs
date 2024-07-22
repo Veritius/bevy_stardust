@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 use bevy::prelude::*;
-use crate::messages::*;
+use crate::{channels::ChannelId, messages::*};
 use super::Peer;
 
 /// A message queue for a [peer entity], exposing a subset of [`MessageQueue`]'s API.
