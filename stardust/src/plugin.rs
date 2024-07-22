@@ -5,6 +5,7 @@ use crate::prelude::*;
 use crate::connections::*;
 use crate::diagnostics::*;
 use crate::messages::*;
+use crate::streams::*;
 
 /// The Stardust multiplayer plugin.
 /// Adds the core functionality of Stardust, but does not add a transport layer.
@@ -45,6 +46,7 @@ impl Plugin for StardustPlugin {
 
         // Setup channels
         crate::channels::build::<Messages>(app);
+        crate::channels::build::<Streams>(app);
 
         // Add systems
         app.add_systems(PostUpdate, (
@@ -56,5 +58,6 @@ impl Plugin for StardustPlugin {
     fn cleanup(&self, app: &mut App) {
         // Finish channels
         crate::channels::finish::<Messages>(app);
+        crate::channels::finish::<Streams>(app);
     }
 }
