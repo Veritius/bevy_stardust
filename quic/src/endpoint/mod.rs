@@ -9,27 +9,16 @@ pub(crate) use connections::EndpointConnections;
 /// A QUIC endpoint, corresponding to a single UDP socket.
 /// 
 /// All [connections](crate::Connection) 'belong' to an Endpoint, which they use for I/O.
-#[derive(Component, Reflect)]
-#[reflect(from_reflect=false, Component)]
+#[derive(Component)]
 pub struct Endpoint {
     /// If `true`, the endpoint will listen for new, incoming connections.
     pub listening: bool,
 
-    #[reflect(ignore)]
     pub(crate) send_size: usize,
-
-    #[reflect(ignore)]
     pub(crate) recv_size: usize,
 
-    #[reflect(ignore)]
     pub(crate) socket: UdpSocket,
-
-    #[reflect(ignore)]
     pub(crate) connections: EndpointConnections,
-
-    #[reflect(ignore)]
-    #[cfg(feature="quiche")]
-    pub(crate) quiche_config: quiche::Config,
 }
 
 impl Endpoint {
