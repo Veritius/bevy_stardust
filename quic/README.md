@@ -7,7 +7,9 @@ A QUIC-based transport layer for bevy_stardust.
 
 ## Backends
 This plugin does not use a specific QUIC implementation.
-Instead, you can choose from the currently supported implementations.
+Instead, you can choose from a 'backend' - an implementation of `QuicBackend` and associated traits.
+
+This is a list of backends supported in the current crate, but you can easily write your own.
 
 | Name   | Feature flag | License      | Repository                             | Additional build requirements |
 |--------|--------------|--------------|----------------------------------------|-------------------------------|
