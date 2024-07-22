@@ -41,7 +41,7 @@ version = "0.8.5"
 optional = true
 
 [features]
-default=["quiche"]
+default=[]
 reveal=[]
 quiche=[
     "dep:quiche",

@@ -37,7 +37,3 @@ pub fn app_protos() -> AppProtos {
 
     APP_PROTOS
 }
-
-pub fn trust_anchors() -> TrustAnchors {
-    TrustAnchors::from_iter(Some(Certificate::from_pem(CERTIFICATE).unwrap()))
-}

@@ -1,16 +1,10 @@
-mod builder;
 mod connections;
 
 use std::net::{SocketAddr, UdpSocket};
 use anyhow::ensure;
 use bevy::prelude::*;
 
-pub use builder::{EndpointBuilder, Client, Server, Dual};
-
 pub(crate) use connections::EndpointConnections;
-
-#[allow(unused)] // various backends may or may not use these exports
-pub(crate) use builder::{ReadyShared, HostShared, JoinShared, ClientReady, ServerReady, DualReady};
 
 /// A QUIC endpoint, corresponding to a single UDP socket.
 /// 
