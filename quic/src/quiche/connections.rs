@@ -94,15 +94,10 @@ impl<'a> crate::connection::RecvStream for RecvStream<'a> {
             return StreamRecvOutcome::Blocked;
         }
 
-        // SAFETY
-        // Allocate a space and unsafely set its length to the max
-        // This measure is necessary since by default a Vec has no items
-        // and a Vec will only return up to its length as a slice
-        // We could use Vec::extend() to fill it with zeros, but that's slow
-        // Since this is just scratch space for network data (which is untrusted anyway)
-        // and quiche will (probably) only write to it, this is probably fine to do
+        // Fill the vector with zeros to ensure that the resulting slice is correct
+        // If we don't do this, stream_recv gets a slice of length 0, which is bad
         let mut scratch = Vec::with_capacity(RECV_SCRATCH_ALLOC_SIZE);
-        unsafe { scratch.set_len(RECV_SCRATCH_ALLOC_SIZE); }
+        scratch.extend((0..RECV_SCRATCH_ALLOC_SIZE).into_iter().map(|_| 0));
 
         match self.inner.connection.stream_recv(self.id.inner(), &mut scratch[..]) {
             Ok((len, _fin)) => {
