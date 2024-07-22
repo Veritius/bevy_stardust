@@ -100,7 +100,6 @@ impl<'a> crate::connection::RecvStream for RecvStream<'a> {
         match self.inner.connection.stream_recv(self.id.inner(), &mut scratch[..]) {
             Ok((len, _fin)) => {
                 // TODO: Avoid allocating twice, maybe reuse the vec's allocation?
-                // SAFETY: We only take up to the written part of memory
                 let chunk = Bytes::copy_from_slice(&scratch[..len]);
                 return StreamRecvOutcome::Chunk(chunk);
             },
