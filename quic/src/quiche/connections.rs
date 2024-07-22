@@ -131,6 +131,14 @@ impl<'a> crate::connection::SendStream for SendStream<'a> {
         self.id
     }
 
+    fn priority(&mut self, priority: u32) -> Result<(), Self::SendError> {
+        const PRIORITY_DIVISOR: u32 = u32::MAX / 2u32.pow(8);
+        let urgency = (priority / PRIORITY_DIVISOR).try_into().unwrap();
+
+        // TODO: Figure out what incremental does
+        self.inner.connection.stream_priority(self.id.inner(), urgency, true)
+    }
+
     fn send<B: bytes::Buf>(&mut self, buf: &mut B) -> StreamSendOutcome<Self::SendError> {
         let total = buf.remaining();
         let mut written = 0;

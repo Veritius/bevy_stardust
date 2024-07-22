@@ -33,6 +33,9 @@ pub trait SendStream {
     /// Returns the stream's unique ID.
     fn id(&self) -> StreamId;
 
+    /// Set the priority of a stream.
+    fn priority(&mut self, priority: u32) -> Result<(), Self::SendError>;
+
     /// Try to write the contents of `buf` to the stream.
     fn send<B: Buf>(&mut self, buf: &mut B) -> StreamSendOutcome<Self::SendError>;
 
