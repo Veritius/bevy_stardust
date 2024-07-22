@@ -94,10 +94,8 @@ impl<'a> crate::connection::RecvStream for RecvStream<'a> {
             return StreamRecvOutcome::Blocked;
         }
 
-        // Fill the vector with zeros to ensure that the resulting slice is correct
-        // If we don't do this, stream_recv gets a slice of length 0, which is bad
-        let mut scratch = Vec::with_capacity(RECV_SCRATCH_ALLOC_SIZE);
-        scratch.extend((0..RECV_SCRATCH_ALLOC_SIZE).into_iter().map(|_| 0));
+        // Scratch vector for stream_recv to work with
+        let mut scratch = vec![0u8; RECV_SCRATCH_ALLOC_SIZE];
 
         match self.inner.connection.stream_recv(self.id.inner(), &mut scratch[..]) {
             Ok((len, _fin)) => {
