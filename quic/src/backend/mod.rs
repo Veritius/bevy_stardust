@@ -1,6 +1,15 @@
+mod connection;
+mod datagrams;
+mod endpoint;
+mod streams;
+
 use std::{any::Any, sync::Arc};
 use bevy::{prelude::Resource, reflect::TypePath};
-use crate::{connection::ConnectionState, endpoint::EndpointState};
+
+pub use connection::*;
+pub use datagrams::*;
+pub use endpoint::*;
+pub use streams::*;
 
 /// An abstraction over the QUIC protocol, used by [`QuicBackendPlugin`](crate::plugin::QuicBackendPlugin).
 pub trait QuicBackend

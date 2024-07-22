@@ -2,7 +2,9 @@ use std::collections::VecDeque;
 use bevy::utils::HashMap;
 use bevy_stardust_extras::numbers::VarInt;
 use bytes::{Bytes, BytesMut};
-use super::{SendStream, StreamId, StreamTag, StreamSendOutcome};
+use crate::connection::{SendStream, StreamSendOutcome};
+
+use super::{StreamId, StreamTag};
 
 pub(crate) struct OutgoingStreams {
     streams: HashMap<StreamId, OutgoingStreamState>,

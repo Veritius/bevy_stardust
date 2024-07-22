@@ -128,7 +128,7 @@ pub struct QuicheEndpoint {
     config: quiche::Config,
 }
 
-impl crate::endpoint::EndpointState for QuicheEndpoint {
+impl crate::backend::EndpointState for QuicheEndpoint {
     type Backend = super::Quiche;
 
     fn recv<'a>(

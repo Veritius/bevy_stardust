@@ -2,13 +2,12 @@ mod channels;
 mod header;
 mod incoming;
 mod outgoing;
-mod traits;
 
 pub(crate) use channels::ChannelDatagrams;
 pub(crate) use incoming::IncomingDatagrams;
 pub(crate) use outgoing::OutgoingDatagrams;
 
-pub use traits::DatagramManager;
+use crate::backend::DatagramManager;
 
 use bytes::Bytes;
 use bevy_stardust::prelude::*;

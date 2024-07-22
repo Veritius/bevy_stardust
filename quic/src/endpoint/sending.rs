@@ -3,7 +3,7 @@ use anyhow::Result;
 use bevy::{ecs::query::QueryData, prelude::*};
 use bevy_stardust::{connections::PeerMessages, messages::Outgoing};
 use crate::{backend::{BackendInstance, QuicBackend}, connection::ConnectionStateData, Connection, Endpoint};
-use super::{scoping::{Connections, ScopedId}, EndpointStateData};
+use super::scoping::{Connections, ScopedId};
 
 /// A handle to a UDP socket.
 pub struct UdpSocketSend<'a> {
@@ -81,12 +81,4 @@ struct SendConnectionsQueryData<'w, Backend: QuicBackend> {
     shared: &'w mut Connection,
     state: &'w mut ConnectionStateData<Backend::ConnectionState>,
     messages: &'w PeerMessages<Outgoing>,
-}
-
-fn endpoint_sending_system<Backend: QuicBackend>(
-    backend: Res<BackendInstance<Backend>>,
-    endpoints: Query<(&mut Endpoint, &mut EndpointStateData<Backend::EndpointState>)>,
-    connections: Query<SendConnectionsQueryData<Backend>>,
-) {
-
 }

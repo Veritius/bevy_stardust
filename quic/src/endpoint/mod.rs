@@ -7,7 +7,7 @@ mod sending;
 use std::net::{SocketAddr, UdpSocket};
 use anyhow::ensure;
 use bevy::prelude::*;
-use crate::backend::QuicBackend;
+use crate::backend::*;
 
 pub(crate) use connections::EndpointConnections;
 
@@ -75,19 +75,4 @@ where
         socket: UdpSocketSend<'a>,
         connections: SendConnections<'a, Self::Backend>,
     );
-}
-
-#[derive(Component)]
-pub(crate) struct EndpointStateData<State: EndpointState> {
-    state: State,
-}
-
-impl<State: EndpointState> EndpointStateData<State> {
-    fn inner(&self) -> &State {
-        &self.state
-    }
-
-    fn inner_mut(&mut self) -> &mut State {
-        &mut self.state
-    }
 }

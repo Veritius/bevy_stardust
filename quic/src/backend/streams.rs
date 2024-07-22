@@ -1,5 +1,4 @@
 use bytes::{Buf, Bytes};
-use super::StreamId;
 
 /// A type that gives access and control over streams.
 pub trait StreamManager {
@@ -102,4 +101,20 @@ where
 
     /// An unexpected error occurred.
     Error(E),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct StreamId(u64);
+
+impl StreamId {
+    pub const MAX: u64 = 2u64.pow(62) - 1;
+
+    pub fn new(inner: u64) -> Result<Self, ()> {
+        if inner > Self::MAX { return Err(()); }
+        return Ok(Self(inner));
+    }
+
+    pub fn inner(self) -> u64 {
+        self.0
+    }
 }
