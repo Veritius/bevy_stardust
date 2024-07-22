@@ -2,7 +2,7 @@ use std::net::{SocketAddr, UdpSocket};
 use anyhow::Result;
 use bevy::{ecs::query::QueryData, prelude::Query};
 use bevy_stardust::{connections::PeerMessages, messages::Outgoing};
-use crate::{backend::QuicBackend, connection::Connection, ConnectionShared};
+use crate::{backend::QuicBackend, connection::ConnectionStateData, Connection};
 use super::scoping::{Connections, ScopedId};
 
 /// A handle to a UDP socket.
@@ -60,7 +60,7 @@ impl<'a, Backend: QuicBackend> SendConnections<'a, Backend> {
 
 pub struct SendConnectionHandle<'a, Backend: QuicBackend> {
     id: ScopedId<'a>,
-    shared: &'a mut ConnectionShared,
+    shared: &'a mut Connection,
     backend: &'a mut Backend::ConnectionState,
     messages: &'a PeerMessages<Outgoing>,
 }
@@ -78,7 +78,7 @@ impl<'a, Backend: QuicBackend> SendConnectionHandle<'a, Backend> {
 #[derive(QueryData)]
 #[query_data(mutable)]
 struct SendConnectionsQueryData<'w, Backend: QuicBackend> {
-    shared: &'w mut ConnectionShared,
-    state: &'w mut Connection<Backend::ConnectionState>,
+    shared: &'w mut Connection,
+    state: &'w mut ConnectionStateData<Backend::ConnectionState>,
     messages: &'w PeerMessages<Outgoing>,
 }

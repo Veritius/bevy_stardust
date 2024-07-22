@@ -1,5 +1,5 @@
-mod streams;
 mod datagrams;
+mod streams;
 
 use bevy::prelude::*;
 use datagrams::{ChannelDatagrams, IncomingDatagrams, OutgoingDatagrams};
@@ -14,7 +14,7 @@ pub use streams::StreamId;
 /// 
 /// All connections 'belong' to an [`Endpoint`](crate::Endpoint), which they use for I/O.
 #[derive(Component)]
-pub struct ConnectionShared {
+pub struct Connection {
     pub(crate) owning_endpoint: Entity,
 
     incoming_streams: IncomingStreams,
@@ -52,11 +52,11 @@ where
 }
 
 #[derive(Component)]
-pub struct Connection<State: ConnectionState> {
+pub(crate) struct ConnectionStateData<State: ConnectionState> {
     state: State,
 }
 
-impl<State: ConnectionState> Connection<State> {
+impl<State: ConnectionState> ConnectionStateData<State> {
     pub(crate) fn inner(&mut self) -> &mut State {
         &mut self.state
     }

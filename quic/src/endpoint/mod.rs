@@ -19,7 +19,7 @@ pub use sending::{UdpSocketSend, TransmitDatagram, SendConnections, SendConnecti
 /// 
 /// All [connections](crate::Connection) 'belong' to an Endpoint, which they use for I/O.
 #[derive(Component)]
-pub struct EndpointShared {
+pub struct Endpoint {
     /// If `true`, the endpoint will listen for new, incoming connections.
     pub listening: bool,
 
@@ -30,7 +30,7 @@ pub struct EndpointShared {
     pub(crate) recv_size: usize,
 }
 
-impl EndpointShared {
+impl Endpoint {
     /// Returns the local address this endpoint is bound to.
     pub fn local_addr(&self) -> SocketAddr {
         self.socket.local_addr().unwrap()
@@ -79,11 +79,11 @@ where
 }
 
 #[derive(Component)]
-pub struct Endpoint<State: EndpointState> {
+pub(crate) struct EndpointStateData<State: EndpointState> {
     state: State,
 }
 
-impl<State: EndpointState> Endpoint<State> {
+impl<State: EndpointState> EndpointStateData<State> {
     fn inner(&self) -> &State {
         &self.state
     }
