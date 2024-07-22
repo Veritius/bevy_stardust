@@ -14,29 +14,25 @@ use crate::Endpoint;
 #[reflect(from_reflect=false, Component)]
 pub struct Connection {
     #[reflect(ignore)]
-    pub(crate) endpoint: Entity,
-
-    #[cfg(feature="quiche")]
-    #[reflect(ignore)]
-    pub(crate) quiche: crate::quiche::QuicheConnection,
+    endpoint: Entity,
 
     #[reflect(ignore)]
-    pub(crate) incoming_streams: IncomingStreams,
+    incoming_streams: IncomingStreams,
 
     #[reflect(ignore)]
-    pub(crate) outgoing_streams: OutgoingStreams,
+    outgoing_streams: OutgoingStreams,
 
     #[reflect(ignore)]
-    pub(crate) channel_streams: ChannelStreams,
+    channel_streams: ChannelStreams,
 
     #[reflect(ignore)]
-    pub(crate) incoming_datagrams: IncomingDatagrams,
+    incoming_datagrams: IncomingDatagrams,
 
     #[reflect(ignore)]
-    pub(crate) outgoing_datagrams: OutgoingDatagrams,
+    outgoing_datagrams: OutgoingDatagrams,
 
     #[reflect(ignore)]
-    pub(crate) channel_datagrams: ChannelDatagrams,
+    channel_datagrams: ChannelDatagrams,
 }
 
 impl Component for Connection {
@@ -47,10 +43,10 @@ impl Component for Connection {
             // Get the connection component from the World
             let connection = world.get::<Self>(entity).unwrap();
 
-            let is_fully_closed = {
-                #[cfg(feature="quiche")]
-                connection.quiche.is_closed()
-            };
+            let is_fully_closed: bool = todo!(); //{
+            //     #[cfg(feature="quiche")]
+            //     connection.quiche.is_closed()
+            // };
 
             if !is_fully_closed {
                 warn!("The connection associated with {entity} was dropped when not fully closed");

@@ -45,9 +45,9 @@ pub(super) fn endpoints_receive_datagrams_system(
                             let mut connection = unsafe { connections.get_unchecked(entity) }.unwrap();
 
                             // Perform the recv with their connection
-                            if let Err(err) = connection.quiche.recv(recv_data, recv_info) {
-                                todo!()
-                            }
+                            // if let Err(err) = connection.quiche.recv(recv_data, recv_info) {
+                            //     todo!()
+                            // }
                         },
 
                         // Peer doesn't exist
@@ -117,16 +117,7 @@ pub(super) fn endpoints_receive_datagrams_system(
                     unsafe { endpoint.connections.register(id, address); }
 
                     // Queue spawning the entity into the world
-                    commands.insert(Connection {
-                        endpoint: endpoint_id,
-                        quiche: QuicheConnection::new(*connection),
-                        incoming_streams: IncomingStreams::new(),
-                        outgoing_streams: OutgoingStreams::new(),
-                        channel_streams: ChannelStreams::new(),
-                        incoming_datagrams: IncomingDatagrams::new(),
-                        outgoing_datagrams: OutgoingDatagrams::new(),
-                        channel_datagrams: ChannelDatagrams::new(),
-                    });
+                    commands.insert(todo!());
 
                     // Log the addition for debugging
                     debug!(?address, "Accepted new peer {id}");

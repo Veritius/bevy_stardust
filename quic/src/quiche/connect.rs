@@ -28,17 +28,17 @@ pub(super) fn connection_attempt_events_system(
         };
 
         // Construct the connection component
-        let connection = Connection {
-            quiche,
+        let connection = todo!(); // Connection {
+        //     quiche,
 
-            endpoint: event.endpoint,
-            incoming_streams: IncomingStreams::new(),
-            outgoing_streams: OutgoingStreams::new(),
-            channel_streams: ChannelStreams::new(),
-            incoming_datagrams: IncomingDatagrams::new(),
-            outgoing_datagrams: OutgoingDatagrams::new(),
-            channel_datagrams: ChannelDatagrams::new(),
-        };
+        //     endpoint: event.endpoint,
+        //     incoming_streams: IncomingStreams::new(),
+        //     outgoing_streams: OutgoingStreams::new(),
+        //     channel_streams: ChannelStreams::new(),
+        //     incoming_datagrams: IncomingDatagrams::new(),
+        //     outgoing_datagrams: OutgoingDatagrams::new(),
+        //     channel_datagrams: ChannelDatagrams::new(),
+        // };
 
         // Spawn the connection entity
         let id = commands.spawn(connection).id();

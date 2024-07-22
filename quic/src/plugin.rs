@@ -16,9 +16,6 @@ impl Plugin for QuicPlugin {
         app.register_type::<Connection>();
 
         app.add_event::<crate::events::TryConnectEvent>();
-
-        #[cfg(feature="quiche")]
-        crate::quiche::setup(app);
     }
 }
 

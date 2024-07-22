@@ -35,33 +35,33 @@ pub(super) fn endpoints_transmit_datagrams_system(
 
             // If this returns true, quiche::Connection::send will always return Done
             // We check this here to save ourselves some effort
-            if connection.quiche.is_draining() { continue }
+            // if connection.quiche.is_draining() { continue }
 
             'send: loop {
-                match connection.quiche.send(&mut scratch[..]) {
-                    // The connection wants to send data
-                    Ok((written, send_info)) => {
-                        // This shouldn't trip but it's worth checking
-                        debug_assert_eq!(send_info.from, local_addr);
+                // match connection.quiche.send(&mut scratch[..]) {
+                //     // The connection wants to send data
+                //     Ok((written, send_info)) => {
+                //         // This shouldn't trip but it's worth checking
+                //         debug_assert_eq!(send_info.from, local_addr);
 
-                        // TODO: Handle pacing (the at field in send_info)
+                //         // TODO: Handle pacing (the at field in send_info)
 
-                        // Send the data with the socket
-                        if let Err(err) = endpoint.socket().send_to(&scratch[..written], send_info.to) {
-                            error!("I/O error while sending packets: {err}");
-                            todo!()
-                        }
+                //         // Send the data with the socket
+                //         if let Err(err) = endpoint.socket().send_to(&scratch[..written], send_info.to) {
+                //             error!("I/O error while sending packets: {err}");
+                //             todo!()
+                //         }
 
-                        // logging
-                        transmits += 1;
-                    },
+                //         // logging
+                //         transmits += 1;
+                //     },
 
-                    // Nothing more to send
-                    Err(quiche::Error::Done) => break 'send,
+                //     // Nothing more to send
+                //     Err(quiche::Error::Done) => break 'send,
 
-                    // Actual error
-                    Err(err) => todo!(),
-                }
+                //     // Actual error
+                //     Err(err) => todo!(),
+                // }
             }
         }
 
