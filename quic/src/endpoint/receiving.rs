@@ -1,9 +1,9 @@
 use std::{io::ErrorKind, net::{SocketAddr, UdpSocket}};
 use anyhow::Result;
-use bevy::{ecs::query::QueryData, prelude::Query};
+use bevy::{ecs::query::QueryData, prelude::*};
 use bevy_stardust::{connections::PeerMessages, messages::Incoming};
-use crate::{backend::QuicBackend, connection::ConnectionStateData, Connection};
-use super::scoping::{Connections, ScopedId};
+use crate::{backend::{BackendInstance, QuicBackend}, connection::ConnectionStateData, Connection, Endpoint};
+use super::{scoping::{Connections, ScopedId}, EndpointState, EndpointStateData};
 
 /// A handle to a UDP socket.
 pub struct UdpSocketRecv<'a> {
@@ -92,4 +92,24 @@ struct RecvConnectionsQueryData<'w, Backend: QuicBackend> {
     shared: &'w mut Connection,
     state: &'w mut ConnectionStateData<Backend::ConnectionState>,
     messages: &'w mut PeerMessages<Incoming>,
+}
+
+fn endpoint_receiving_system<Backend: QuicBackend>(
+    backend: Res<BackendInstance<Backend>>,
+    mut endpoints: Query<(&mut Endpoint, &mut EndpointStateData<Backend::EndpointState>)>,
+    connections: Query<RecvConnectionsQueryData<Backend>>,
+) {
+    endpoints.par_iter_mut().for_each(|(mut endpoint, mut state)| {
+        // Scratch space for received packets
+        let mut scratch = vec![0u8; endpoint.recv_size];
+        let socket = UdpSocketRecv { socket: &endpoint.socket, scratch: &mut scratch[..] };
+
+        let connection_set = RecvConnections {
+            connections: unsafe { Connections::new(endpoint.connections.expose()) },
+            query: todo!(),
+        };
+
+        let backend_ref = (*backend).as_ref();
+        state.inner_mut().recv(backend_ref, socket, connection_set)
+    });
 }
