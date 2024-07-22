@@ -4,6 +4,7 @@ use bevy::prelude::*;
 /// A component for entities that represent a virtual connection.
 #[derive(Debug, Component, Reflect)]
 #[reflect(Debug, Component)]
+#[non_exhaustive]
 pub struct Peer {
     /// The point in time this peer was added to the `World`.
     pub joined: Instant,
