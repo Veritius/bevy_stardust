@@ -8,6 +8,14 @@ use bevy::prelude::*;
 #[reflect(Debug, Default, Component)]
 pub struct DropPackets(#[reflect(@0.0..=1.0)] pub f32);
 
+impl DropPackets {
+    /// Never drop packets.
+    pub const NEVER: Self = Self(0.0);
+
+    /// Always drop packets.
+    pub const ALWAYS: Self = Self(1.0);
+}
+
 /// Instructs transport layers to artifically increase latency, simulating a distant connection.
 /// 
 /// This latency increase is implemented by the transport layer, as a minimum latency value.
