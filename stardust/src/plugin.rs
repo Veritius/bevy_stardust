@@ -2,7 +2,7 @@
 
 use bevy::prelude::*;
 use crate::prelude::*;
-use crate::messages::channels;
+use crate::channels;
 use crate::connections::*;
 use crate::diagnostics::*;
 

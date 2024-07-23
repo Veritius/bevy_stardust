@@ -1,6 +1,6 @@
 use std::{ops::Deref, str::{from_utf8, Utf8Error}};
 use bytes::Bytes;
-use super::ChannelId;
+use crate::channels::ChannelId;
 
 /// Individual, cheaply clonable, contiguous octet (byte) strings.
 /// 
