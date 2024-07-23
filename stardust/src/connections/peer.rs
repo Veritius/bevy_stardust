@@ -1,4 +1,4 @@
-use std::{net::SocketAddr, time::Instant};
+use std::{net::IpAddr, time::Instant};
 use bevy::prelude::*;
 
 /// A component for entities that represent a virtual connection.
@@ -47,7 +47,7 @@ pub enum PeerLifestage {
 
 /// The IP address of a network peer, if it has one.
 #[derive(Component, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct PeerAddress(pub SocketAddr);
+pub struct PeerAddress(pub IpAddr);
 
 /// A unique identifier for a [`Peer`], to store persistent data across multiple connections.
 /// This component should only be constructed by the app developer, but can be read by any plugins.
