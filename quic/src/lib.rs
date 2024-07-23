@@ -4,13 +4,14 @@
 #[cfg(feature="quiche")]
 mod quiche;
 
-mod backend;
 mod config;
 mod connection;
 mod crypto;
 mod endpoint;
 mod events;
 mod plugin;
+
+pub mod backend;
 
 pub use config::{AppProtosBuilder, AppProtos, AppProto};
 pub use connection::Connection;

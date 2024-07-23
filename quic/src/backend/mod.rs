@@ -1,3 +1,5 @@
+//! The QUIC abstraction API surface.
+
 mod connection;
 mod datagrams;
 mod endpoint;
