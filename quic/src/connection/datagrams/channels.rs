@@ -1,5 +1,5 @@
 use bevy::utils::HashMap;
-use bevy_stardust::messages::ChannelId;
+use bevy_stardust::prelude::ChannelId;
 use bevy_stardust_extras::numbers::Sequence;
 
 pub(crate) struct ChannelDatagrams {
