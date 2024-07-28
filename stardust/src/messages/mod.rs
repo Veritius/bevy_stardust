@@ -1,4 +1,4 @@
-//! This module exposes APIs for working with messages and channels.
+//! This module exposes APIs for working with messages.
 //! 
 //! Messages are represented with the [`Message`] type, which is heap-allocated and cheaply clonable.
 //! This is the smallest unit of information transmission between [peers] used by Stardust.
@@ -19,8 +19,6 @@
 //! [peers]: crate::connections
 //! [`PeerMessages<D>`]: crate::connections::PeerMessages
 
-pub mod channels;
-
 mod direction;
 mod message;
 mod queue;
@@ -29,7 +27,6 @@ mod queue;
 pub use bytes;
 
 // Public types
-pub use channels::{Channel, ChannelId, ChannelRegistry, ToChannelId};
 pub use direction::{NetDirection, MessageDirection, Incoming, Outgoing};
 pub use message::{Message, ChannelMessage};
 pub use queue::{MessageQueue, ChannelIter, MessageIter};
