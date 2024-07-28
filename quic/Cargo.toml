@@ -18,6 +18,3 @@ path = "../extras"
 
 [dependencies.bytes]
 version = "1.5.0"
-
-[dependencies.hashbrown]
-version = "0.14.5"

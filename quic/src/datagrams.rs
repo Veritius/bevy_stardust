@@ -1,7 +1,6 @@
 use bevy_stardust::prelude::ChannelId;
 use bevy_stardust_extras::numbers::{Sequence, VarInt};
 use bytes::{Buf, BufMut, Bytes};
-
 use crate::Connection;
 
 impl Connection {
@@ -76,5 +75,13 @@ impl DatagramHeader {
         }
 
         return Ok(());
+    }
+}
+
+pub(crate) struct DatagramSequences(Sequence<u16>);
+
+impl DatagramSequences {
+    pub fn new() -> Self {
+        Self(Sequence::default())
     }
 }
