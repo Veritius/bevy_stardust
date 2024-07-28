@@ -2,6 +2,9 @@ mod events;
 mod incoming;
 mod outgoing;
 
+pub(crate) use incoming::IncomingStream;
+pub(crate) use outgoing::OutgoingStream;
+
 pub use events::StreamEvent;
 
 /// A stream identifier value.
