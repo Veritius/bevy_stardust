@@ -1,15 +1,15 @@
-mod codes;
-mod reading;
-mod sending;
+mod datagrams;
+mod streams;
 mod systems;
+
+use datagrams::*;
+use streams::*;
 
 pub(crate) use systems::*;
 
 use bevy::{ecs::component::{ComponentHooks, StorageType}, prelude::*};
 use quinn_proto::{Connection, ConnectionHandle, ConnectionStats, EndpointEvent};
 use crate::QuicEndpoint;
-use sending::*;
-use reading::*;
 
 /// A QUIC connection, attached to an endpoint.
 /// 
@@ -22,12 +22,12 @@ pub struct QuicConnection {
     pub(crate) quinn: Box<Connection>,
 
     incoming_streams: IncomingStreams,
-    incoming_datagrams: IncomingDatagrams,
-    held_messages: HeldMessages,
-
-    outgoing_shared: OutgoingShared,
     outgoing_streams: OutgoingStreams,
+    channel_streams: ChannelStreams,
+
+    incoming_datagrams: IncomingDatagrams,
     outgoing_datagrams: OutgoingDatagrams,
+    channel_datagrams: ChannelDatagrams,
 }
 
 impl QuicConnection {
@@ -42,12 +42,12 @@ impl QuicConnection {
             quinn: inner,
 
             incoming_streams: IncomingStreams::new(),
-            incoming_datagrams: IncomingDatagrams::new(),
-            held_messages: HeldMessages::new(),
+        outgoing_streams: OutgoingStreams::new(),
+        channel_streams: ChannelStreams::new(),
 
-            outgoing_shared: OutgoingShared::new(),
-            outgoing_streams: OutgoingStreams::new(),
-            outgoing_datagrams: OutgoingDatagrams::new(),
+        incoming_datagrams: IncomingDatagrams::new(),
+        outgoing_datagrams: OutgoingDatagrams::new(),
+        channel_datagrams: ChannelDatagrams::new(),
         }
     }
 
