@@ -1,5 +1,5 @@
 use bevy::{log::trace, utils::HashMap};
-use bevy_stardust::messages::*;
+use bevy_stardust::{messages::*, channels::*};
 use bytes::Bytes;
 use quinn_proto::StreamId;
 use crate::{datagrams::*, streams::*, QuicConfig};

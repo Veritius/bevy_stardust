@@ -1,5 +1,5 @@
 use std::collections::VecDeque;
-use bevy_stardust::messages::ChannelId;
+use bevy_stardust::prelude::ChannelId;
 use bytes::{Bytes, BytesMut};
 use header::StreamHeader;
 use quinn_proto::{VarInt, coding::Codec};

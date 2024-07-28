@@ -107,7 +107,7 @@ pub(crate) fn connection_event_handler_system(
                     commands.entity(entity).insert((
                         Peer::new(),
                         PeerRtt(quinn.rtt()),
-                        PeerAddress(quinn.remote_address()),
+                        PeerAddress(quinn.remote_address().ip()),
                         PeerMessages::<Incoming>::new(),
                         PeerMessages::<Outgoing>::new(),
                     ));
