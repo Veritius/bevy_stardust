@@ -2,10 +2,40 @@ mod events;
 mod incoming;
 mod outgoing;
 
+use crate::Connection;
+use bytes::Bytes;
+
 pub(crate) use incoming::IncomingStream;
 pub(crate) use outgoing::OutgoingStream;
 
 pub use events::StreamEvent;
+
+impl Connection {
+    /// Call when a new incoming stream is opened.
+    pub fn stream_open(&mut self, stream: StreamId) {
+        todo!()
+    }
+
+    /// Call when a chunk of data is received on a stream.
+    pub fn stream_recv(&mut self, stream: StreamId, chunk: Bytes) {
+        todo!()
+    }
+
+    /// Call when a stream is stopped.
+    pub fn stream_stopped(&mut self, stream: StreamId) {
+        todo!()
+    }
+
+    /// Call when a stream is reset.
+    pub fn stream_reset(&mut self, stream: StreamId) {
+        todo!()
+    }
+
+    /// Call when a stream is finish.
+    pub fn stream_finished(&mut self, stream: StreamId) {
+        todo!()
+    }
+}
 
 /// A stream identifier value.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]

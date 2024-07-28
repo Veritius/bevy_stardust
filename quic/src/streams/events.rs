@@ -12,9 +12,30 @@ pub enum StreamEvent {
         chunk: Bytes,
     },
 
-    /// Reset the stream.
+    /// Set the priority of a stream.
+    SetPriority {
+        /// The stream which should have its priority changed.
+        id: StreamId,
+
+        /// The priority value.
+        priority: u32,
+    },
+
+    /// Stop a stream.
+    Stop {
+        /// The stream to stop.
+        id: StreamId,
+    },
+
+    /// Reset a stream.
     Reset {
         /// The stream to reset.
         id: StreamId,
     },
+
+    /// Finish a stream.
+    Finish {
+        /// The stream to finish.
+        id: StreamId,
+    }
 }

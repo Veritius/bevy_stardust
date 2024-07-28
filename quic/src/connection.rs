@@ -25,4 +25,8 @@ impl Connection {
     pub fn poll_events(&mut self) -> Option<ConnectionEvent> {
         self.events.pop_front()
     }
+
+    pub(crate) fn queue_event(&mut self, event: ConnectionEvent) {
+        self.events.push_back(event)
+    }
 }
