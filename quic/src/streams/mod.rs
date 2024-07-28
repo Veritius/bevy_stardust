@@ -28,11 +28,6 @@ impl Connection {
         todo!()
     }
 
-    /// Call when a stream is stopped.
-    pub fn stream_stopped(&mut self, stream: RecvStreamId) {
-        self.incoming_streams.remove(&stream);
-    }
-
     /// Call when a stream is reset.
     pub fn stream_reset(&mut self, stream: RecvStreamId) {
         self.incoming_streams.remove(&stream);
@@ -41,6 +36,11 @@ impl Connection {
     /// Call when a stream is finished.
     pub fn stream_finished(&mut self, stream: RecvStreamId) {
         self.incoming_streams.remove(&stream);
+    }
+
+    /// Call when a stream is stopped.
+    pub fn stream_stopped(&mut self, stream: SendStreamId) {
+        todo!()
     }
 }
 
