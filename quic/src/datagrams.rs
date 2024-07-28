@@ -1,12 +1,31 @@
-use bevy_stardust::prelude::ChannelId;
+use bevy_stardust::prelude::{ChannelId, ChannelMessage, Message};
 use bevy_stardust_extras::numbers::{Sequence, VarInt};
 use bytes::{Buf, BufMut, Bytes};
-use crate::Connection;
+use crate::{Connection, ConnectionEvent};
 
 impl Connection {
     /// Call when a datagram is received.
-    pub fn recv_dgram(&mut self, dgram: Bytes) {
-        todo!()
+    pub fn recv_dgram(&mut self, mut payload: Bytes) {
+        let header = match DatagramHeader::read(&mut payload) {
+            Ok(v) => v,
+            Err(_) => return,
+        };
+
+        match header {
+            DatagramHeader::Stardust { channel } => {
+                self.events.push_back(ConnectionEvent::ReceivedMessage(ChannelMessage {
+                    channel,
+                    payload: Message::from_bytes(payload),
+                }));
+            },
+
+            DatagramHeader::StardustSequenced { channel, sequence } => {
+                let mut seq = self.incoming_datagram_channel_sequences.entry(channel)
+                    .or_insert_with(|| IncomingDatagramSequence::new());
+
+                
+            },
+        }
     }
 }
 
@@ -78,10 +97,33 @@ impl DatagramHeader {
     }
 }
 
-pub(crate) struct DatagramSequences(Sequence<u16>);
+#[derive(Debug)]
+pub(crate) struct IncomingDatagramSequence(Sequence<u16>);
 
-impl DatagramSequences {
+impl IncomingDatagramSequence {
     pub fn new() -> Self {
         Self(Sequence::default())
+    }
+
+    fn latest(&mut self, index: Sequence<u16>) -> bool {
+        if self.0 > index {
+            self.0 = index;
+            return true;
+        } else {
+            return false;
+        }
+    }
+}
+
+#[derive(Debug)]
+pub(crate) struct OutgoingDatagramSequence(Sequence<u16>);
+
+impl OutgoingDatagramSequence {
+    pub fn new() -> Self {
+        Self(Sequence::default())
+    }
+
+    fn next(&mut self) -> Sequence<u16> {
+        todo!()
     }
 }
