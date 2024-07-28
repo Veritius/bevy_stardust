@@ -1,6 +1,22 @@
 use std::collections::VecDeque;
-use bevy_stardust::prelude::ChannelId;
+use bevy_stardust::prelude::*;
 use bytes::Bytes;
+use crate::Connection;
+use super::RecvStreamId;
+
+impl Connection {
+    /// Call when a chunk of data is received on a stream.
+    pub fn stream_recv(&mut self, stream: RecvStreamId, chunk: Bytes) {
+        if !self.incoming_streams.contains_key(&stream) {
+            self.stream_open(stream);
+        }
+
+        let stream = self.incoming_streams.get_mut(&stream).unwrap();
+        stream.push(chunk);
+
+        todo!()
+    }
+}
 
 pub(crate) struct IncomingStream {
     mode: Option<IncomingStreamMode>,

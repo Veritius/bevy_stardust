@@ -4,7 +4,6 @@ mod header;
 mod incoming;
 
 use crate::Connection;
-use bytes::Bytes;
 
 pub(crate) use incoming::IncomingStream;
 
@@ -14,18 +13,6 @@ impl Connection {
     /// Call when a new incoming stream is opened.
     pub fn stream_open(&mut self, stream: RecvStreamId) {
         self.incoming_streams.insert(stream, IncomingStream::new());
-    }
-
-    /// Call when a chunk of data is received on a stream.
-    pub fn stream_recv(&mut self, stream: RecvStreamId, chunk: Bytes) {
-        if !self.incoming_streams.contains_key(&stream) {
-            self.stream_open(stream);
-        }
-
-        let stream = self.incoming_streams.get_mut(&stream).unwrap();
-        stream.push(chunk);
-
-        todo!()
     }
 
     /// Call when a stream is reset.
