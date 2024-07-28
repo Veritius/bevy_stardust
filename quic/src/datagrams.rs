@@ -20,10 +20,15 @@ impl Connection {
             },
 
             DatagramHeader::StardustSequenced { channel, sequence } => {
-                let mut seq = self.incoming_datagram_channel_sequences.entry(channel)
+                let seq = self.incoming_datagram_channel_sequences.entry(channel)
                     .or_insert_with(|| IncomingDatagramSequence::new());
 
-                
+                if seq.latest(sequence) {
+                    self.events.push_back(ConnectionEvent::ReceivedMessage(ChannelMessage {
+                        channel,
+                        payload: Message::from_bytes(payload),
+                    }));
+                }
             },
         }
     }
