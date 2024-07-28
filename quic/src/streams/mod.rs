@@ -1,5 +1,8 @@
+mod events;
 mod incoming;
 mod outgoing;
+
+pub use events::StreamEvent;
 
 /// A stream identifier value.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]

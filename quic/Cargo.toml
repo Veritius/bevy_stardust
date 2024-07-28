@@ -11,3 +11,6 @@ keywords=["bevy", "gamedev", "networking"]
 [dependencies.bevy_stardust]
 version = "0.6.0"
 path = "../stardust"
+
+[dependencies.bytes]
+version = "1.5.0"
