@@ -1,6 +1,7 @@
 use bevy_stardust_extras::numbers::VarInt;
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
+#[derive(Debug, Clone, Copy)]
 pub(super) struct FramedHeader {
     pub length: usize,
 }

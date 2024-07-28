@@ -2,12 +2,13 @@ use bevy_stardust::prelude::*;
 use bevy_stardust_extras::numbers::VarInt;
 use bytes::{Buf, BufMut};
 
+#[derive(Debug, Clone, Copy)]
 pub(super) enum StreamHeader {
     Stardust {
         channel: ChannelId,
     },
 
-    Datagram,
+    WrappedDatagram,
 }
 
 impl StreamHeader {
@@ -25,7 +26,7 @@ impl StreamHeader {
                 });
             },
 
-            1 => return Ok(StreamHeader::Datagram),
+            1 => return Ok(StreamHeader::WrappedDatagram),
 
             _ => return Err(()),
         }
@@ -38,7 +39,7 @@ impl StreamHeader {
                 VarInt::from_u32((*channel).into()).write(buf)?;
             },
 
-            StreamHeader::Datagram => {
+            StreamHeader::WrappedDatagram => {
                 VarInt::from_u32(1).write(buf)?;
             }
         }
