@@ -56,7 +56,7 @@ fn decoding() {
 }
 
 #[test]
-fn encode_decode() {
+fn cycle() {
     fn subtest(original: FramedHeader) {
         let mut encoded = original.alloc().unwrap();
         dbg!(&encoded);
