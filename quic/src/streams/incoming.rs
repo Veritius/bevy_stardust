@@ -8,7 +8,7 @@ impl Connection {
     /// Call when a chunk of data is received on a stream.
     pub fn stream_recv(&mut self, stream: RecvStreamId, chunk: Bytes) {
         if !self.incoming_streams.contains_key(&stream) {
-            self.stream_open(stream);
+            self.stream_opened(stream);
         }
 
         let stream = self.incoming_streams.get_mut(&stream).unwrap();

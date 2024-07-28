@@ -11,7 +11,7 @@ pub use events::StreamEvent;
 
 impl Connection {
     /// Call when a new incoming stream is opened.
-    pub fn stream_open(&mut self, stream: RecvStreamId) {
+    pub fn stream_opened(&mut self, stream: RecvStreamId) {
         self.incoming_streams.insert(stream, IncomingStream::new());
     }
 
