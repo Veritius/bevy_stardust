@@ -1,12 +1,13 @@
+use std::error::Error as StdError;
 use bytes::{Buf, Bytes};
 
 /// A type that gives access and control over datagrams.
 pub trait DatagramManager {
     /// An error returned by the underlying QUIC implementation while trying to transmit data.
-    type SendError: Into<anyhow::Error>;
+    type SendError: StdError + Send + Sync + 'static;
 
     /// An error returned by the underlying QUIC implementation while trying to receive data.
-    type RecvError: Into<anyhow::Error>;
+    type RecvError: StdError + Send + Sync + 'static;
 
     /// The maximum size of datagrams that can be sent.
     fn max_size(&self) -> usize;

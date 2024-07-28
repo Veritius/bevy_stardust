@@ -34,7 +34,7 @@ impl OutgoingDatagrams {
                 buf.extend_from_slice(&datagram.payload[..]);
 
                 // Try to send the datagram
-                dgrams.send(&mut datagram.payload.clone()).map_err(|e| e.into())?;
+                dgrams.send(&mut datagram.payload.clone()).map_err(|e| anyhow::anyhow!(e))?;
             },
 
             // The datagram does not fit and must be sent in a stream

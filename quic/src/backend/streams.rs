@@ -1,3 +1,4 @@
+use std::error::Error as StdError;
 use bytes::{Buf, Bytes};
 
 /// A type that gives access and control over streams.
@@ -27,7 +28,7 @@ pub trait StreamManager {
 /// A handle to the transmitting side of a QUIC stream.
 pub trait SendStream {
     /// An error returned by the underlying QUIC implementation while trying to transmit data.
-    type SendError: Into<anyhow::Error>;
+    type SendError: StdError + Send + Sync + 'static;
 
     /// Returns the stream's unique ID.
     fn id(&self) -> StreamId;
@@ -45,10 +46,7 @@ pub trait SendStream {
 }
 
 /// The outcome of trying to write to a QUIC stream.
-pub enum StreamSendOutcome<E>
-where
-    E: Into<anyhow::Error>,
-{
+pub enum StreamSendOutcome<E> {
     /// Transmitted the full buffer successfully.
     Complete,
 
@@ -71,7 +69,7 @@ where
 /// A handle to the receiving side of a QUIC stream.
 pub trait RecvStream {
     /// An error returned by the underlying QUIC implementation while trying to receive data.
-    type RecvError: Into<anyhow::Error>;
+    type RecvError: StdError + Send + Sync + 'static;
 
     /// Returns the stream's unique ID.
     fn id(&self) -> StreamId;
@@ -84,10 +82,7 @@ pub trait RecvStream {
 }
 
 /// The outcome of trying to read from a QUIC stream.
-pub enum StreamRecvOutcome<E>
-where
-    E: Into<anyhow::Error>,
-{
+pub enum StreamRecvOutcome<E> {
     /// Received a chunk of information.
     Chunk(Bytes),
 
