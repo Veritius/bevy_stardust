@@ -1,6 +1,15 @@
-use bevy_stardust::prelude::*;
+use bevy_stardust::prelude::ChannelId;
 use bevy_stardust_extras::numbers::{Sequence, VarInt};
-use bytes::{Buf, BufMut};
+use bytes::{Buf, BufMut, Bytes};
+
+use crate::Connection;
+
+impl Connection {
+    /// Call when a datagram is received.
+    pub fn recv_dgram(&mut self, dgram: Bytes) {
+        todo!()
+    }
+}
 
 pub(super) enum DatagramHeader {
     Stardust {
