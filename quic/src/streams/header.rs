@@ -6,6 +6,8 @@ pub(super) enum StreamHeader {
     Stardust {
         channel: ChannelId,
     },
+
+    Datagram,
 }
 
 impl StreamHeader {
@@ -21,7 +23,9 @@ impl StreamHeader {
                 return Ok(StreamHeader::Stardust {
                     channel,
                 });
-            }
+            },
+
+            1 => return Ok(StreamHeader::Datagram),
 
             _ => return Err(()),
         }
@@ -33,6 +37,10 @@ impl StreamHeader {
                 VarInt::from_u32(0).write(buf)?;
                 VarInt::from_u32((*channel).into()).write(buf)?;
             },
+
+            StreamHeader::Datagram => {
+                VarInt::from_u32(1).write(buf)?;
+            }
         }
 
         return Ok(());
