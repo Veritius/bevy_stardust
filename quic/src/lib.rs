@@ -7,4 +7,6 @@ mod events;
 mod streams;
 
 pub use connection::*;
+pub use datagrams::*;
 pub use events::*;
+pub use streams::*;
