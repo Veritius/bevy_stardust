@@ -1,7 +1,7 @@
 use bevy_stardust_extras::numbers::VarInt;
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) struct FramedHeader {
     pub length: usize,
 }
@@ -29,4 +29,25 @@ impl FramedHeader {
         self.write(&mut buf)?;
         return Ok(buf.freeze());
     }
+}
+
+#[test]
+fn encode_decode() {
+    fn subtest(original: FramedHeader) {
+        let mut encoded = original.alloc().unwrap();
+        let decoded = FramedHeader::read(&mut encoded).unwrap();
+        assert_eq!(decoded, original);
+    }
+
+    subtest(FramedHeader { length: 0 });
+    subtest(FramedHeader { length: 1 });
+    subtest(FramedHeader { length: 2 });
+    subtest(FramedHeader { length: 4 });
+    subtest(FramedHeader { length: 50 });
+    subtest(FramedHeader { length: 100 });
+    subtest(FramedHeader { length: 128 });
+    subtest(FramedHeader { length: 519 });
+    subtest(FramedHeader { length: 25194 });
+    subtest(FramedHeader { length: 512932 });
+    subtest(FramedHeader { length: 99999999 });
 }
