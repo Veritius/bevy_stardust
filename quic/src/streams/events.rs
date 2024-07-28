@@ -1,5 +1,5 @@
 use bevy_stardust::prelude::*;
-use super::SendStreamId;
+use super::{RecvStreamId, SendStreamId};
 
 /// A stream-related event.
 pub enum StreamEvent {
@@ -21,12 +21,6 @@ pub enum StreamEvent {
         priority: u32,
     },
 
-    /// Stop a stream.
-    Stop {
-        /// The stream to stop.
-        id: SendStreamId,
-    },
-
     /// Reset a stream.
     Reset {
         /// The stream to reset.
@@ -37,5 +31,11 @@ pub enum StreamEvent {
     Finish {
         /// The stream to finish.
         id: SendStreamId,
-    }
+    },
+
+    /// Stop a stream.
+    Stop {
+        /// The stream to stop.
+        id: RecvStreamId,
+    },
 }
