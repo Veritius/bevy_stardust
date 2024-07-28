@@ -1,12 +1,12 @@
 use bevy_stardust::prelude::*;
-use super::StreamId;
+use super::SendStreamId;
 
 /// A stream-related event.
 pub enum StreamEvent {
     /// Send a chunk of data over a stream.
     Transmit {
         /// The stream to send over.
-        id: StreamId,
+        id: SendStreamId,
 
         /// The chunk of data to send.
         chunk: Bytes,
@@ -15,7 +15,7 @@ pub enum StreamEvent {
     /// Set the priority of a stream.
     SetPriority {
         /// The stream which should have its priority changed.
-        id: StreamId,
+        id: SendStreamId,
 
         /// The priority value.
         priority: u32,
@@ -24,18 +24,18 @@ pub enum StreamEvent {
     /// Stop a stream.
     Stop {
         /// The stream to stop.
-        id: StreamId,
+        id: SendStreamId,
     },
 
     /// Reset a stream.
     Reset {
         /// The stream to reset.
-        id: StreamId,
+        id: SendStreamId,
     },
 
     /// Finish a stream.
     Finish {
         /// The stream to finish.
-        id: StreamId,
+        id: SendStreamId,
     }
 }
