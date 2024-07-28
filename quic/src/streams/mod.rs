@@ -2,13 +2,11 @@ mod events;
 mod framing;
 mod header;
 mod incoming;
-mod outgoing;
 
 use crate::Connection;
 use bytes::Bytes;
 
 pub(crate) use incoming::IncomingStream;
-pub(crate) use outgoing::OutgoingStream;
 
 pub use events::StreamEvent;
 

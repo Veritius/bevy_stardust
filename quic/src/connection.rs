@@ -1,13 +1,12 @@
 use std::collections::VecDeque;
 use hashbrown::HashMap;
-use crate::{ConnectionEvent, IncomingStream, OutgoingStream, StreamId};
+use crate::{ConnectionEvent, IncomingStream, StreamId};
 
 /// The core state machine type, representing one QUIC connection.
 pub struct Connection {
     events: VecDeque<ConnectionEvent>,
 
     incoming_streams: HashMap<StreamId, IncomingStream>,
-    outgoing_streams: HashMap<StreamId, OutgoingStream>,
 }
 
 impl Connection {
@@ -17,7 +16,6 @@ impl Connection {
             events: VecDeque::new(),
 
             incoming_streams: HashMap::new(),
-            outgoing_streams: HashMap::new(),
         }
     }
 

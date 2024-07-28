@@ -1,5 +1,5 @@
 use bevy_stardust_extras::numbers::VarInt;
-use bytes::{Buf, BufMut};
+use bytes::{Buf, BufMut, Bytes, BytesMut};
 
 pub(super) struct FramedHeader {
     pub length: usize,
@@ -20,5 +20,12 @@ impl FramedHeader {
             .write(buf)?;
 
         return Ok(());
+    }
+
+    pub fn alloc(&self) -> Result<Bytes, ()> {
+        let est_len = VarInt::len_u64(self.length as u64).unwrap() as usize;
+        let mut buf = BytesMut::with_capacity(est_len);
+        self.write(&mut buf)?;
+        return Ok(buf.freeze());
     }
 }
