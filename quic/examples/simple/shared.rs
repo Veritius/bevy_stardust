@@ -5,8 +5,6 @@ use bevy_stardust_quic::*;
 
 const TICK_DELAY: Duration = Duration::from_millis(500);
 
-pub const CERTIFICATE: &str = include_str!("../certificate.crt");
-
 pub enum MyChannel {}
 
 pub fn app() -> App {
@@ -36,8 +34,4 @@ pub fn app_protos() -> AppProtos {
     ];
 
     APP_PROTOS
-}
-
-pub fn trust_anchors() -> TrustAnchors {
-    TrustAnchors::from_iter(Some(Certificate::from_pem(CERTIFICATE).unwrap()))
 }
