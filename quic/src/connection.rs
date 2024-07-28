@@ -9,7 +9,7 @@ pub struct Connection {
     pub(crate) incoming_streams: BTreeMap<RecvStreamId, IncomingStream>,
     pub(crate) incoming_datagram_channel_sequences: BTreeMap<ChannelId, DatagramSequences>,
 
-    pub(crate) outgoing_streams_channels: BTreeMap<ChannelId, SendStreamId>,
+    pub(crate) outgoing_channel_stream_ids: BTreeMap<ChannelId, SendStreamId>,
     pub(crate) outgoing_datagram_channel_sequences: BTreeMap<ChannelId, DatagramSequences>,
 }
 
@@ -22,7 +22,7 @@ impl Connection {
             incoming_streams: BTreeMap::new(),
             incoming_datagram_channel_sequences: BTreeMap::new(),
 
-            outgoing_streams_channels: BTreeMap::new(),
+            outgoing_channel_stream_ids: BTreeMap::new(),
             outgoing_datagram_channel_sequences: BTreeMap::new(),
         }
     }
