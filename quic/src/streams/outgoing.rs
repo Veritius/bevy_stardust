@@ -66,9 +66,3 @@ impl OutgoingStream {
         debug_assert_eq!(chunk.len(), 0);
     }
 }
-
-fn encode_varint(varint: VarInt) -> Bytes {
-    let mut buf = BytesMut::with_capacity(varint.len() as usize);
-    varint.write(&mut buf).unwrap();
-    return buf.freeze();
-}
