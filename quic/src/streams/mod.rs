@@ -1,4 +1,5 @@
 mod events;
+mod framing;
 mod header;
 mod incoming;
 mod outgoing;
