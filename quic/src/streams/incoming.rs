@@ -11,4 +11,8 @@ impl IncomingStream {
             queue: VecDeque::new(),
         }
     }
+
+    pub(super) fn push(&mut self, chunk: Bytes) {
+        self.queue.push_back(chunk);
+    }
 }

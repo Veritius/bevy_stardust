@@ -1,5 +1,4 @@
 use std::collections::VecDeque;
-use bevy_stardust_extras::numbers::VarInt;
 use bytes::{Bytes, BytesMut};
 use super::framing::FramedHeader;
 
