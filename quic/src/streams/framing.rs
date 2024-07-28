@@ -32,9 +32,34 @@ impl FramedHeader {
 }
 
 #[test]
+fn encoding() {
+    fn subtest(header: FramedHeader, wire: &[u8]) {
+        let encoded = header.alloc().unwrap();
+        assert_eq!(&encoded[..], wire);
+    }
+
+    subtest(FramedHeader { length: 0 }, &[0x0]);
+    subtest(FramedHeader { length: 1 }, &[0x04]);
+    subtest(FramedHeader { length: 2 }, &[0x08]);
+}
+
+#[test]
+fn decoding() {
+    fn subtest(header: FramedHeader, mut wire: &[u8]) {
+        let decoded = FramedHeader::read(&mut wire).unwrap();
+        assert_eq!(header, decoded);
+    }
+
+    subtest(FramedHeader { length: 0 }, &[0x0]);
+    subtest(FramedHeader { length: 1 }, &[0x04]);
+    subtest(FramedHeader { length: 2 }, &[0x08]);
+}
+
+#[test]
 fn encode_decode() {
     fn subtest(original: FramedHeader) {
         let mut encoded = original.alloc().unwrap();
+        dbg!(&encoded);
         let decoded = FramedHeader::read(&mut encoded).unwrap();
         assert_eq!(decoded, original);
     }
