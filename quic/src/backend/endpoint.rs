@@ -13,11 +13,17 @@ where
         &'a mut self,
         backend: &'a Self::Backend,
         socket: UdpSocketRecv<'a>,
+        connections: Connections<'a>,
     );
 
     fn send<'a>(
         &'a mut self,
         backend: &'a Self::Backend,
         socket: UdpSocketSend<'a>,
+        connections: Connections<'a>,
     );
+}
+
+pub struct Connections<'a> {
+    phantom: std::marker::PhantomData<&'a ()>,
 }
