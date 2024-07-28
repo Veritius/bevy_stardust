@@ -1,14 +1,15 @@
 use std::collections::{BTreeMap, VecDeque};
 use bevy_stardust::prelude::ChannelId;
 use hashbrown::HashMap;
-use crate::{ConnectionEvent, IncomingStream, RecvStreamId};
+use crate::{ConnectionEvent, IncomingStream, RecvStreamId, SendStreamId};
 
 /// The core state machine type, representing one QUIC connection.
 pub struct Connection {
     pub(crate) events: VecDeque<ConnectionEvent>,
 
     pub(crate) incoming_streams: HashMap<RecvStreamId, IncomingStream>,
-    pub(crate) incoming_streams_channels: BTreeMap<ChannelId, RecvStreamId>,
+
+    pub(crate) outgoing_streams_channels: BTreeMap<ChannelId, SendStreamId>,
 }
 
 impl Connection {
@@ -18,7 +19,7 @@ impl Connection {
             events: VecDeque::new(),
 
             incoming_streams: HashMap::new(),
-            incoming_streams_channels: BTreeMap::new(),
+            outgoing_streams_channels: BTreeMap::new(),
         }
     }
 
