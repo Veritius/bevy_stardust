@@ -182,7 +182,7 @@ pub(crate) struct IncomingDatagramSequence(Sequence<u16>);
 
 impl IncomingDatagramSequence {
     pub fn new() -> Self {
-        Self(Sequence::default())
+        Self(Sequence::from(u16::MAX))
     }
 
     pub fn latest(&mut self, index: Sequence<u16>) -> bool {
@@ -200,10 +200,12 @@ pub(crate) struct OutgoingDatagramSequence(Sequence<u16>);
 
 impl OutgoingDatagramSequence {
     pub fn new() -> Self {
-        Self(Sequence::default())
+        Self(Sequence::from(u16::MAX))
     }
 
     pub fn next(&mut self) -> Sequence<u16> {
-        todo!()
+        let v = self.0;
+        self.0.increment();
+        return v;
     }
 }
