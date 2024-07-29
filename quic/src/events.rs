@@ -39,26 +39,7 @@ impl ConnectionEventQueue {
         self.events.push_back(event)
     }
 
-    fn pop(&mut self) -> Option<ConnectionEvent> {
+    pub fn pop(&mut self) -> Option<ConnectionEvent> {
         self.events.pop_front()
-    }
-}
-
-/// An iterator of [`ConnectionEvent`] events from a [`Connection`].
-pub struct ConnectionEventIter<'a> {
-    events: &'a mut ConnectionEventQueue,
-}
-
-impl<'a> ConnectionEventIter<'a> {
-    pub(crate) fn new(events: &'a mut ConnectionEventQueue) -> Self {
-        Self { events }
-    }
-}
-
-impl Iterator for ConnectionEventIter<'_> {
-    type Item = ConnectionEvent;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.events.pop()
     }
 }

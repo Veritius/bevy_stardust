@@ -1,5 +1,5 @@
 use std::time::{Duration, Instant};
-use crate::{datagrams::{IncomingDatagrams, OutgoingDatagrams}, ConnectionEventIter, ConnectionEventQueue, IncomingStreams, OutgoingStreams};
+use crate::{datagrams::{IncomingDatagrams, OutgoingDatagrams}, ConnectionEvent, ConnectionEventQueue, IncomingStreams, OutgoingStreams};
 
 /// The core state machine type, representing one QUIC connection.
 pub struct Connection {
@@ -33,17 +33,21 @@ impl Connection {
         }
     }
 
-    /// Returns an iterator over the event queue.
-    pub fn poll(&mut self, now: Instant) -> ConnectionEventIter {
+    /// Handle timeouts.
+    pub fn handle_timeout(&mut self, now: Instant) {
         self.shared.heat.diff(now.duration_since(self.last));
         self.last = now;
 
         if self.shared.heat.is_overheated() {
-            self.shared.events = ConnectionEventQueue::with_capacity(1);
             self.shared.events.push(crate::ConnectionEvent::Overheated);
         }
+    }
 
-        ConnectionEventIter::new(&mut self.shared.events)
+    /// Returns the next event in the queue.
+    /// 
+    /// Before using this method, call [`handle_timeout`](Self::handle_timeout).
+    pub fn poll(&mut self) -> Option<ConnectionEvent> {
+        self.shared.events.pop()
     }
 }
 
