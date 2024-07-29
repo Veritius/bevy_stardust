@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use quinn_proto::{ConnectionHandle, ConnectionEvent as QuinnConnectionEvent};
+use quinn_proto::{ConnectionEvent as QuinnConnectionEvent, ConnectionHandle, EndpointEvent};
 
 /// A QUIC connection using `quinn_proto`.
 /// 
@@ -21,6 +21,10 @@ pub struct Connection {
 impl Connection {
     pub(crate) fn handle_event(&mut self, event: QuinnConnectionEvent) {
         self.quinn.handle_event(event);
+    }
+
+    pub(crate) fn poll_endpoint_events(&mut self) -> Option<EndpointEvent> {
+        self.quinn.poll_endpoint_events()
     }
 }
 

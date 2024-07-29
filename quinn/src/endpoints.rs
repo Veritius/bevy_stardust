@@ -104,6 +104,35 @@ pub(crate) fn udp_recv_system(
     });
 }
 
+pub(crate) fn event_exchange_system(
+    mut endpoints: Query<&mut Endpoint>,
+    connections: Query<&mut Connection>,
+) {
+    endpoints.par_iter_mut().for_each(|mut endpoint| {
+        // Reborrows because borrowck angy
+        let endpoint = &mut *endpoint;
+        let quinn = &mut endpoint.quinn;
+        let cset = &endpoint.connections;
+
+        // Iterator over all connections the endpoint 'owns'
+        let iter = cset.iter()
+            .map(|(handle, token)| {
+                // SAFETY: We know this borrow is unique because ConnectionOwnershipToken is unique
+                let c = unsafe { connections.get_unchecked(token.inner()).unwrap() };
+                (*handle, c)
+            });
+
+        // Exchange events
+        for (handle, mut connection) in iter {
+            while let Some(event) = connection.poll_endpoint_events() {
+                if let Some(event) = quinn.handle_event(handle, event) {
+                    connection.handle_event(event);
+                }
+            }
+        }
+    });
+}
+
 #[cfg(debug_assertions)]
 pub(crate) fn safety_check_system(
     mut tokens: Local<std::collections::BTreeSet<Entity>>,
