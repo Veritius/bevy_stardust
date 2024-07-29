@@ -103,7 +103,7 @@ impl ConnectionInner {
         };
     }
 
-    fn stream_queue_chunk(&mut self, qsid: QuinnStreamId, chunk: Bytes) {
+    fn stream_queue_chunk(&mut self, qsid: QuinnStreamId, chunk: Bytes) -> Result<(), WriteError> {
         let mut stream = self.quinn.send_stream(qsid);
 
         // If there's a queue in the map, that means there's previous data that must be sent
@@ -115,13 +115,33 @@ impl ConnectionInner {
                 // The queue is fully drained, remove it
                 Ok(true) => {
                     self.discard_stream_write_queue(qsid);
+                    return Ok(());
                 },
 
                 // The queue is not finished, leave it
-                Ok(false) => {},
+                Ok(false) => return Ok(()),
 
                 // The stream returned an error while trying to write to it
-                Err(_) => todo!(),
+                Err(err) => return Err(err),
+            }
+        } else {
+            // In this case, there's no queue in the map.
+            // Rather than immediately allocating a queue, we try writing the chunk first,
+            // and only add it to the queue if the full chunk isn't written to the stream.
+            match stream.write(&chunk) {
+                // Do nothing, the full chunk was written
+                Ok(l) if l == chunk.len() => return Ok(()),
+
+                Ok(l) => {
+                    // Take a slice that excludes the written portion, and add it to the queue
+                    let mut queue = StreamWriteQueue::new();
+                    queue.push(chunk.slice(l..));
+                    self.stream_write_queues.insert(qsid, queue);
+                    return Ok(())
+                }
+
+                // The stream returned an error while trying to write to it
+                Err(err) => return Err(err),
             }
         }
     }
