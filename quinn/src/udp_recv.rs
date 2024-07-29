@@ -31,7 +31,34 @@ pub(crate) fn udp_recv_system(
                         BytesMut::from(&buf[..length]),
                         &mut buf,
                     ) {
-                        Some(_) => todo!(),
+                        Some(event) => match event {
+                            // Event for an existing connection
+                            quinn_proto::DatagramEvent::ConnectionEvent(handle, event) => {
+                                // Get the entity from the handle, which we need to access the connection
+                                let entity = endpoint.connections.get(&handle)
+                                    .expect("Quic state machine returned connection handle that wasn't present in the map");
+
+                                // SAFETY: This is a unique borrow as ConnectionOwnershipToken is unique
+                                let mut connection = match unsafe { connections.get_unchecked(entity.inner()) } {
+                                    Ok(v) => v,
+                                    Err(_) => todo!(),
+                                };
+
+                                // Handle the event
+                                connection.handle_event(event);
+                            },
+
+                            // A new connection can potentially be established
+                            quinn_proto::DatagramEvent::NewConnection(incoming) => {
+                                todo!()
+                            },
+
+                            // Immediate response
+                            quinn_proto::DatagramEvent::Response(transmit) => {
+                                todo!()
+                            },
+                        },
+
                         None => todo!(),
                     }
                 },

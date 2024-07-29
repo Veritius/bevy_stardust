@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use quinn_proto::ConnectionHandle;
+use quinn_proto::{ConnectionHandle, ConnectionEvent as QuinnConnectionEvent};
 
 /// A QUIC connection using `quinn_proto`.
 #[derive(Component)]
@@ -13,6 +13,12 @@ pub struct Connection {
 
     #[cfg(debug_assertions)]
     world: bevy::ecs::world::WorldId,
+}
+
+impl Connection {
+    pub(crate) fn handle_event(&mut self, event: QuinnConnectionEvent) {
+        self.quinn.handle_event(event);
+    }
 }
 
 #[cfg(debug_assertions)]

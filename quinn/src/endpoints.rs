@@ -20,7 +20,7 @@ pub struct Endpoint {
 
     pub(crate) quinn: quinn_proto::Endpoint,
 
-    connections: BTreeMap<ConnectionHandle, ConnectionOwnershipToken>,
+    pub(crate) connections: BTreeMap<ConnectionHandle, ConnectionOwnershipToken>,
 
     #[cfg(debug_assertions)]
     world: bevy::ecs::world::WorldId,
