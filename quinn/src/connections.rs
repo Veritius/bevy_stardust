@@ -146,22 +146,26 @@ impl ConnectionInner {
         }
     }
 
-    fn try_drain_stream_queue(&mut self, qsid: QuinnStreamId) {
+    fn try_drain_stream_queue(&mut self, qsid: QuinnStreamId) -> Result<(), WriteError> {
         let mut stream = self.quinn.send_stream(qsid);
         if let Some(queue) = self.stream_write_queues.get_mut(&qsid) {
             match queue.write(&mut stream) {
                 // The queue is fully drained, remove it
                 Ok(true) => {
                     self.discard_stream_write_queue(qsid);
+                    return Ok(());
                 },
 
                 // The queue is not finished, leave it
-                Ok(false) => {},
+                Ok(false) => return Ok(()),
 
                 // The stream returned an error while trying to write to it
-                Err(_) => todo!(),
+                Err(err) => return Err(err),
             }
         }
+
+        // No queue
+        return Ok(());
     }
 
     fn discard_stream_write_queue(&mut self, qsid: QuinnStreamId) {
