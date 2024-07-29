@@ -5,8 +5,8 @@ use bevy::prelude::*;
 pub struct Connection {
     endpoint: Entity,
 
-    quic: quinn_proto::Connection,
-    sm: bevy_stardust_quic::Connection,
+    quinn: quinn_proto::Connection,
+    qsm: bevy_stardust_quic::Connection,
 }
 
 pub(crate) mod token {
