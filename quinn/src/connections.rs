@@ -1,5 +1,4 @@
 use std::time::Instant;
-
 use bevy::prelude::*;
 use bevy_stardust_quic::{RecvStreamId, SendStreamId};
 use quinn_proto::{ConnectionEvent as QuinnConnectionEvent, ConnectionHandle, EndpointEvent, StreamId as QuinnStreamId};
@@ -33,6 +32,27 @@ impl Connection {
     pub(crate) fn poll_endpoint_events(&mut self) -> Option<EndpointEvent> {
         self.quinn.poll_endpoint_events()
     }
+
+    fn drain_quinn_recv_stream(&mut self, id: QuinnStreamId) {
+        match self.quinn.recv_stream(id).read(true) {
+            Ok(mut chunks) => {
+                loop { match chunks.next(1024) {
+                    Ok(Some(chunk)) => {
+                        // Forward the received chunk to the stream state machine
+                        self.qsm.stream_recv(qsid_to_rsid(id), chunk.bytes);
+                    },
+
+                    Ok(None) => break,
+
+                    Err(_) => todo!(),
+                } };
+
+                let _ = chunks.finalize();
+            },
+
+            Err(_) => todo!(),
+        };
+    }
 }
 
 pub(crate) fn connection_events_system(
@@ -53,7 +73,10 @@ pub(crate) fn connection_events_system(
                         todo!()
                     },
 
-                    quinn_proto::StreamEvent::Readable { id } => todo!(),
+                    quinn_proto::StreamEvent::Readable { id } => {
+                        connection.drain_quinn_recv_stream(id);
+                    },
+
                     quinn_proto::StreamEvent::Writable { id } => todo!(),
                     quinn_proto::StreamEvent::Finished { id } => todo!(),
                     quinn_proto::StreamEvent::Stopped { id, error_code } => todo!(),
