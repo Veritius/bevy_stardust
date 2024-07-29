@@ -219,7 +219,9 @@ pub(crate) fn connection_events_system(
                     },
 
                     quinn_proto::StreamEvent::Writable { id } => {
-                        connection.try_drain_stream_queue(id);
+                        if let Err(err) = connection.try_drain_stream_queue(id) {
+                            todo!()
+                        }
                     },
 
                     quinn_proto::StreamEvent::Available { dir: _ } => {},
