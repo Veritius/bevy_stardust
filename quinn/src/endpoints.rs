@@ -21,6 +21,26 @@ pub struct Endpoint {
     /// so setting this field that high may simply waste memory, depending on the operating system.
     pub recv_buf_size: u16,
 
+    inner: Box<ConnectionInner>,
+}
+
+impl Endpoint {
+    /// Returns the local address of the [`Endpoint`].
+    pub fn local_addr(&self) -> SocketAddr {
+        self.inner.socket.local_addr().unwrap()
+    }
+
+    pub(crate) fn remove_connection(&mut self, handle: ConnectionHandle) {
+        self.disassociate(handle);
+        self.inner.quinn.handle_event(handle, EndpointEvent::drained());
+    }
+
+    fn disassociate(&mut self, handle: ConnectionHandle) {
+        self.inner.connections.remove(&handle);
+    }
+}
+
+struct ConnectionInner {
     socket: UdpSocket,
 
     quinn: quinn_proto::Endpoint,
@@ -29,22 +49,6 @@ pub struct Endpoint {
 
     #[cfg(debug_assertions)]
     world: bevy::ecs::world::WorldId,
-}
-
-impl Endpoint {
-    /// Returns the local address of the [`Endpoint`].
-    pub fn local_addr(&self) -> SocketAddr {
-        self.socket.local_addr().unwrap()
-    }
-
-    pub(crate) fn remove_connection(&mut self, handle: ConnectionHandle) {
-        self.disassociate(handle);
-        self.quinn.handle_event(handle, EndpointEvent::drained());
-    }
-
-    fn disassociate(&mut self, handle: ConnectionHandle) {
-        self.connections.remove(&handle);
-    }
 }
 
 pub(crate) fn udp_recv_system(
@@ -60,14 +64,14 @@ pub(crate) fn udp_recv_system(
         let local_ip = endpoint.local_addr().ip();
 
         loop {
-            match endpoint.socket.recv_from(&mut buf) {
+            match endpoint.inner.socket.recv_from(&mut buf) {
                 Ok((length, address)) => {
                     // Log the datagram being received
                     let trace_span = trace_span!("Received datagram", length, address=?address);
                     let _entered = trace_span.entered();
 
                     // Hand the datagram to Quinn
-                    if let Some(event) = endpoint.quinn.handle(
+                    if let Some(event) = endpoint.inner.quinn.handle(
                         Instant::now(),
                         address,
                         Some(local_ip),
@@ -79,7 +83,7 @@ pub(crate) fn udp_recv_system(
                             // Event for an existing connection
                             quinn_proto::DatagramEvent::ConnectionEvent(handle, event) => {
                                 // Get the entity from the handle, which we need to access the connection
-                                let entity = endpoint.connections.get(&handle)
+                                let entity = endpoint.inner.connections.get(&handle)
                                     .expect("Quic state machine returned connection handle that wasn't present in the map");
 
                                 // SAFETY: This is a unique borrow as ConnectionOwnershipToken is unique
@@ -123,7 +127,7 @@ pub(crate) fn event_exchange_system(
         let endpoint = &mut *endpoint;
 
         // Iterator over all connections the endpoint 'owns'
-        let iter = endpoint.connections.iter()
+        let iter = endpoint.inner.connections.iter()
             .map(|(handle, token)| {
                 // SAFETY: We know this borrow is unique because ConnectionOwnershipToken is unique
                 let c = unsafe { connections.get_unchecked(token.inner()).unwrap() };
@@ -140,7 +144,7 @@ pub(crate) fn event_exchange_system(
 
             // Poll until we run out of events
             while let Some(event) = connection.poll_endpoint_events() {
-                if let Some(event) = endpoint.quinn.handle_event(handle, event) {
+                if let Some(event) = endpoint.inner.quinn.handle_event(handle, event) {
                     connection.handle_event(event);
                 }
             }
@@ -155,10 +159,10 @@ pub(crate) fn safety_check_system(
     endpoints: Query<&Endpoint>,
 ) {
     for endpoint in &endpoints {
-        assert_eq!(endpoint.world, world,
+        assert_eq!(endpoint.inner.world, world,
             "An Endpoint had a world ID different from the one it was created in. This is undefined behavior!");
 
-        for connection in endpoint.connections.values() {
+        for connection in endpoint.inner.connections.values() {
             assert!(!tokens.insert(connection.inner()), 
                 "Two ConnectionOwnershipTokens existed simultaneously. This is undefined behavior!");
         }
