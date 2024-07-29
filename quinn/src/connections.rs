@@ -203,9 +203,9 @@ pub(crate) fn qsm_events_system(
         // Reborrow Connection because borrowck gets angy with Mut<T>
         let connection = &mut *connection.inner;
 
-        let mut iter = connection.qsm.poll(Instant::now());
-
-        while let Some(event) = iter.next() {
+        // Event polling loop
+        connection.qsm.handle_timeout(Instant::now());
+        while let Some(event) = connection.qsm.poll() {
             match event {
                 bevy_stardust_quic::ConnectionEvent::StreamEvent(event) => match event {
                     bevy_stardust_quic::StreamEvent::Open { id } => {
