@@ -17,25 +17,17 @@ impl OutgoingStreamsState {
 }
 
 impl Connection {
+    #[inline]
     pub(crate) fn send_wrapped_dgram(&mut self, payload: Bytes) {
-        let id = self.open_stream_inner();
-        self.send_over_stream(id, StreamHeader::WrappedDatagram.alloc());
-        self.send_over_stream(id, payload);
-        self.finish_stream_inner(id);
+        self.send_transient(StreamHeader::WrappedDatagram, payload);
     }
 
+    #[inline]
     pub(crate) fn send_wrapped_dgram_chunks<I>(&mut self, iter: I)
     where
         I: Iterator<Item = Bytes>,
     {
-        let id = self.open_stream_inner();
-        self.send_over_stream(id, StreamHeader::WrappedDatagram.alloc());
-
-        for chunk in iter {
-            self.send_over_stream(id, chunk);
-        }
-
-        self.finish_stream_inner(id);
+        self.send_transient_chunks(StreamHeader::WrappedDatagram, iter);
     }
 
     fn open_stream_inner(&mut self) -> SendStreamId {
@@ -53,5 +45,26 @@ impl Connection {
 
     fn finish_stream_inner(&mut self, id: SendStreamId) {
         self.stream_event(StreamEvent::Finish { id });
+    }
+
+    fn send_transient(&mut self, header: StreamHeader, payload: Bytes) {
+        let id = self.open_stream_inner();
+        self.send_over_stream(id, header.alloc());
+        self.send_over_stream(id, payload);
+        self.finish_stream_inner(id);
+    }
+
+    fn send_transient_chunks<I>(&mut self, header: StreamHeader, iter: I)
+    where
+        I: Iterator<Item = Bytes>,
+    {
+        let id = self.open_stream_inner();
+        self.send_over_stream(id, header.alloc());
+
+        for chunk in iter {
+            self.send_over_stream(id, chunk);
+        }
+
+        self.finish_stream_inner(id);
     }
 }

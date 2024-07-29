@@ -49,7 +49,7 @@ impl StreamHeader {
 
     pub fn alloc(&self) -> Bytes {
         let mut buf = BytesMut::with_capacity(8);
-        self.write(&mut buf);
+        self.write(&mut buf).unwrap();
         return buf.freeze();
     }
 }
