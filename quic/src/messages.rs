@@ -2,6 +2,7 @@ use bevy_stardust::{channels::ChannelRegistry, messages::MessageQueue, prelude::
 use crate::Connection;
 
 /// Context object required to handle outgoing messages.
+#[derive(Clone, Copy)]
 pub struct RecvContext<'a> {
     /// A reference to the application's channel registry.
     pub registry: &'a ChannelRegistry,
@@ -29,22 +30,13 @@ impl Connection {
         context: RecvContext<'a>,
         queue: &'a MessageQueue,
     ) {
-        todo!()
-    }
-
-    /// Handles outgoing [`ChannelMessage`] items from an iterator.
-    pub fn handle_outgoing_iter<'a, I>(
-        &'a mut self,
-        context: RecvContext<'a>,
-        iter: I,
-    ) where
-        I: IntoIterator<Item = ChannelMessage>,
-    {
-
+        for (channel, messages) in queue.iter() {
+            self.handle_outgoing_iter(context, channel, messages);
+        }
     }
 
     /// Handles outgoing messages on a specific channel from an iterator.
-    pub fn handle_outgoing_channel_iter<'a, I>(
+    pub fn handle_outgoing_iter<'a, I>(
         &'a mut self,
         context: RecvContext<'a>,
         channel: ChannelId,
@@ -52,6 +44,26 @@ impl Connection {
     ) where
         I: IntoIterator<Item = Message>,
     {
-        todo!()
+        let config = match context.registry.config(channel) {
+            Some(config) => config,
+            None => todo!(),
+        };
+
+        for message in iter {
+            self.handle_outgoing_inner(
+                context,
+                config,
+                message,
+            );
+        }
+    }
+
+    fn handle_outgoing_inner<'a>(
+        &'a mut self,
+        context: RecvContext<'a>,
+        config: &'a ChannelConfiguration,
+        message: Message,
+    ) {
+
     }
 }
