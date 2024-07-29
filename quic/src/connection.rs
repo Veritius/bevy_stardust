@@ -1,9 +1,12 @@
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, time::{Duration, Instant}};
 use bevy_stardust::prelude::ChannelId;
 use crate::{datagrams::{IncomingDatagramSequence, OutgoingDatagramSequence}, ConnectionEventIter, ConnectionEventQueue, IncomingStream, OutgoingStreamsState, RecvStreamId, SendStreamId};
 
 /// The core state machine type, representing one QUIC connection.
 pub struct Connection {
+    last: Instant,
+
+    pub(crate) heat: Heat,
     pub(crate) events: ConnectionEventQueue,
 
     pub(crate) incoming_streams: BTreeMap<RecvStreamId, IncomingStream>,
@@ -18,6 +21,9 @@ impl Connection {
     /// Creates a new [`Connection`] instance.
     pub fn new() -> Self {
         Self {
+            last: Instant::now(),
+
+            heat: Heat::new(),
             events: ConnectionEventQueue::new(),
 
             incoming_streams: BTreeMap::new(),
@@ -30,12 +36,43 @@ impl Connection {
     }
 
     /// Returns an iterator over the event queue.
-    pub fn poll(&mut self) -> ConnectionEventIter {
+    pub fn poll(&mut self, now: Instant) -> ConnectionEventIter {
+        self.heat.diff(now.duration_since(self.last));
+        self.last = now;
+
+        if self.heat.is_overheated() {
+            todo!()
+        }
+
         ConnectionEventIter::new(&mut self.events)
     }
 }
 
+#[derive(Debug)]
 pub(crate) struct Heat {
-    resource: u32,
-    strange: u32,
+    value: u32,
+}
+
+impl Heat {
+    const LIMIT: u32 = 65535;
+    const COOLING: u32 = 1024;
+
+    fn new() -> Self {
+        Self {
+            value: 0,
+        }
+    }
+
+    fn diff(&mut self, dur: Duration) {
+        let cooling = dur.as_millis() as u32 / Self::COOLING;
+        self.value -= cooling;
+    }
+
+    fn is_overheated(&self) -> bool {
+        self.value >= Self::LIMIT
+    }
+
+    pub fn increase(&mut self, amt: u32) {
+        self.value = self.value.saturating_add(amt);
+    }
 }
