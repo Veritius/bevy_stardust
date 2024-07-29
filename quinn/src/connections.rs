@@ -1,13 +1,14 @@
 use std::{collections::BTreeMap, time::Instant};
-use bevy::prelude::*;
+use bevy::{ecs::component::{ComponentHooks, StorageType}, prelude::*};
 use bevy_stardust_quic::{RecvStreamId, SendStreamId};
 use quinn_proto::{ConnectionEvent as QuinnConnectionEvent, ConnectionHandle, Dir, EndpointEvent, StreamId as QuinnStreamId};
+
+use crate::Endpoint;
 
 /// A QUIC connection using `quinn_proto`.
 /// 
 /// # Safety
 /// This component must not be moved from the [`World`] it was originally added to.
-#[derive(Component)]
 pub struct Connection {
     endpoint: Entity,
 
@@ -55,6 +56,28 @@ impl Connection {
 
             Err(_) => todo!(),
         };
+    }
+}
+
+impl Component for Connection {
+    const STORAGE_TYPE: StorageType = StorageType::Table;
+
+    fn register_component_hooks(hooks: &mut ComponentHooks) {
+        hooks.on_remove(|mut world, entity, _| {
+            // Get the component from the world
+            let this = world.get::<Connection>(entity).unwrap();
+
+            // Check if the component is drained
+            if !this.quinn.is_drained() {
+                warn!("Connection {entity} was dropped while not fully drained");
+            }
+
+            // Inform the endpoint of the connection being dropped
+            let (endpoint, handle) = (this.endpoint, this.handle);
+            if let Some(mut endpoint) = world.get_mut::<Endpoint>(endpoint) {
+                endpoint.remove_connection(handle);
+            }
+        });
     }
 }
 

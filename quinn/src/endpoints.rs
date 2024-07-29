@@ -1,7 +1,7 @@
 use std::{collections::BTreeMap, io::ErrorKind, net::{SocketAddr, UdpSocket}, time::Instant};
 use bevy::prelude::*;
 use bytes::BytesMut;
-use quinn_proto::ConnectionHandle;
+use quinn_proto::{ConnectionHandle, EndpointEvent};
 use crate::{connections::token::ConnectionOwnershipToken, Connection};
 
 /// A QUIC endpoint using `quinn_proto`.
@@ -34,6 +34,15 @@ impl Endpoint {
     /// Returns the local address of the [`Endpoint`].
     pub fn local_addr(&self) -> SocketAddr {
         self.socket.local_addr().unwrap()
+    }
+
+    pub(crate) fn remove_connection(&mut self, handle: ConnectionHandle) {
+        self.disassociate(handle);
+        self.quinn.handle_event(handle, EndpointEvent::drained());
+    }
+
+    fn disassociate(&mut self, handle: ConnectionHandle) {
+        self.connections.remove(&handle);
     }
 }
 
