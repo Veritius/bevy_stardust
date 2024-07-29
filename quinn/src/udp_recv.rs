@@ -23,7 +23,7 @@ pub(crate) fn udp_recv_system(
                     let _entered = trace_span.entered();
 
                     // Hand the datagram to Quinn
-                    match endpoint.quinn.handle(
+                    if let Some(event) = endpoint.quinn.handle(
                         Instant::now(),
                         address,
                         Some(local_ip),
@@ -31,7 +31,7 @@ pub(crate) fn udp_recv_system(
                         BytesMut::from(&buf[..length]),
                         &mut buf,
                     ) {
-                        Some(event) => match event {
+                        match event {
                             // Event for an existing connection
                             quinn_proto::DatagramEvent::ConnectionEvent(handle, event) => {
                                 // Get the entity from the handle, which we need to access the connection
@@ -57,9 +57,7 @@ pub(crate) fn udp_recv_system(
                             quinn_proto::DatagramEvent::Response(transmit) => {
                                 todo!()
                             },
-                        },
-
-                        None => todo!(),
+                        }
                     }
                 },
 
