@@ -81,10 +81,19 @@ pub(crate) fn connection_events_system(
                         connection.drain_quinn_recv_stream(id);
                     },
 
-                    quinn_proto::StreamEvent::Writable { id } => todo!(),
-                    quinn_proto::StreamEvent::Finished { id } => todo!(),
-                    quinn_proto::StreamEvent::Stopped { id, error_code } => todo!(),
-                    quinn_proto::StreamEvent::Available { dir } => todo!(),
+                    quinn_proto::StreamEvent::Finished { id } => {
+                        connection.qsm.stream_finished(qsid_to_rsid(id));
+                    },
+
+                    quinn_proto::StreamEvent::Stopped { id, error_code: _ } => {
+                        connection.qsm.stream_stopped(qsid_to_ssid(id));
+                    },
+
+                    quinn_proto::StreamEvent::Writable { id } => {
+                        todo!()
+                    },
+
+                    quinn_proto::StreamEvent::Available { dir: _ } => {},
                 },
 
                 quinn_proto::Event::Connected => todo!(),
