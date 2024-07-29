@@ -121,11 +121,9 @@ pub(crate) fn event_exchange_system(
     endpoints.par_iter_mut().for_each(|mut endpoint| {
         // Reborrows because borrowck angy
         let endpoint = &mut *endpoint;
-        let quinn = &mut endpoint.quinn;
-        let cset = &endpoint.connections;
 
         // Iterator over all connections the endpoint 'owns'
-        let iter = cset.iter()
+        let iter = endpoint.connections.iter()
             .map(|(handle, token)| {
                 // SAFETY: We know this borrow is unique because ConnectionOwnershipToken is unique
                 let c = unsafe { connections.get_unchecked(token.inner()).unwrap() };
@@ -139,7 +137,7 @@ pub(crate) fn event_exchange_system(
 
             // Poll until we run out of events
             while let Some(event) = connection.poll_endpoint_events() {
-                if let Some(event) = quinn.handle_event(handle, event) {
+                if let Some(event) = endpoint.quinn.handle_event(handle, event) {
                     connection.handle_event(event);
                 }
             }
