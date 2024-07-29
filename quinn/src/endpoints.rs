@@ -120,6 +120,15 @@ pub(crate) fn udp_recv_system(
     });
 }
 
+pub(crate) fn udp_send_system(
+    mut endpoints: Query<&mut Endpoint>,
+    connections: Query<&mut Connection>,
+) {
+    endpoints.par_iter_mut().for_each(|mut endpoint| {
+        todo!()
+    });
+}
+
 pub(crate) fn event_exchange_system(
     mut endpoints: Query<&mut Endpoint>,
     connections: Query<&mut Connection>,
