@@ -1,8 +1,8 @@
-use std::{collections::BTreeMap, time::Instant};
+use std::{collections::{BTreeMap, VecDeque}, time::Instant};
 use bevy::{ecs::component::{ComponentHooks, StorageType}, prelude::*};
 use bevy_stardust::prelude::*;
 use bevy_stardust_quic::{RecvStreamId, SendContext, SendStreamId};
-use quinn_proto::{ConnectionEvent as QuinnConnectionEvent, ConnectionHandle, Dir, EndpointEvent, StreamId as QuinnStreamId, Transmit};
+use quinn_proto::{ConnectionEvent as QuinnConnectionEvent, ConnectionHandle, Dir, EndpointEvent, SendStream, StreamId as QuinnStreamId, Transmit, WriteError};
 use crate::Endpoint;
 
 /// A QUIC connection using `quinn_proto`.
@@ -75,6 +75,8 @@ struct ConnectionInner {
     qsids_to_ssids: BTreeMap<QuinnStreamId, SendStreamId>,
     ssids_to_qsids: BTreeMap<SendStreamId, QuinnStreamId>,
 
+    stream_write_queues: BTreeMap<QuinnStreamId, StreamWriteQueue>,
+
     #[cfg(debug_assertions)]
     world: bevy::ecs::world::WorldId,
 }
@@ -99,6 +101,29 @@ impl ConnectionInner {
 
             Err(_) => todo!(),
         };
+    }
+
+    fn stream_queue_chunk(&mut self, qsid: QuinnStreamId, chunk: Bytes) {
+        let mut stream = self.quinn.send_stream(qsid);
+
+        // If there's a queue in the map, that means there's previous data that must be sent
+        // We just add our chunk to the queue, and then try to write that stream anyway.
+        if let Some(queue) = self.stream_write_queues.get_mut(&qsid) {
+            queue.push(chunk);
+
+            match queue.write(&mut stream) {
+                // The queue is fully drained, remove it
+                Ok(true) => {
+                    self.stream_write_queues.remove(&qsid);
+                },
+
+                // The queue is not finished, leave it
+                Ok(false) => {},
+
+                // The stream returned an error while trying to write to it
+                Err(_) => todo!(),
+            }
+        }
     }
 }
 
@@ -191,10 +216,8 @@ pub(crate) fn qsm_events_system(
                     },
 
                     bevy_stardust_quic::StreamEvent::Transmit { id, chunk } => {
-                        let sid = *(connection.ssids_to_qsids.get(&id).unwrap());
-                        let mut stream = connection.quinn.send_stream(sid);
-
-                        todo!()
+                        let qsid = *(connection.ssids_to_qsids.get(&id).unwrap());
+                        connection.drain_quinn_recv_stream(qsid);
                     },
 
                     bevy_stardust_quic::StreamEvent::SetPriority { id, priority } => {
@@ -246,6 +269,26 @@ pub(crate) fn outgoing_messages_system(
 
         connection.inner.qsm.handle_outgoing(context, outgoing);
     });
+}
+
+struct StreamWriteQueue {
+    queue: VecDeque<Bytes>,
+}
+
+impl StreamWriteQueue {
+    fn new() -> Self {
+        Self {
+            queue: VecDeque::new(),
+        }
+    }
+
+    fn push(&mut self, chunk: Bytes) {
+        todo!()
+    }
+
+    fn write(&mut self, stream: &mut SendStream) -> Result<bool, WriteError> {
+        todo!()
+    }
 }
 
 #[inline]
