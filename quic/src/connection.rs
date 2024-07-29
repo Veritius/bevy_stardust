@@ -1,6 +1,5 @@
-use std::{collections::BTreeMap, time::{Duration, Instant}};
-use bevy_stardust::prelude::ChannelId;
-use crate::{datagrams::{IncomingDatagramSequence, OutgoingDatagramSequence}, ConnectionEventIter, ConnectionEventQueue, IncomingStreams, OutgoingStreams};
+use std::time::{Duration, Instant};
+use crate::{datagrams::{IncomingDatagrams, OutgoingDatagrams}, ConnectionEventIter, ConnectionEventQueue, IncomingStreams, OutgoingStreams};
 
 /// The core state machine type, representing one QUIC connection.
 pub struct Connection {
@@ -9,10 +8,10 @@ pub struct Connection {
     pub(crate) shared: ConnectionShared,
 
     pub(crate) incoming_streams: IncomingStreams,
-    pub(crate) incoming_datagram_channel_sequences: BTreeMap<ChannelId, IncomingDatagramSequence>,
+    pub(crate) incoming_datagrams: IncomingDatagrams,
 
     pub(crate) outgoing_streams: OutgoingStreams,
-    pub(crate) outgoing_datagram_channel_sequences: BTreeMap<ChannelId, OutgoingDatagramSequence>,
+    pub(crate) outgoing_datagrams: OutgoingDatagrams,
 }
 
 impl Connection {
@@ -27,10 +26,10 @@ impl Connection {
             },
 
             incoming_streams: IncomingStreams::new(),
-            incoming_datagram_channel_sequences: BTreeMap::new(),
+            incoming_datagrams: IncomingDatagrams::new(),
 
             outgoing_streams: OutgoingStreams::new(),
-            outgoing_datagram_channel_sequences: BTreeMap::new(),
+            outgoing_datagrams: OutgoingDatagrams::new(),
         }
     }
 

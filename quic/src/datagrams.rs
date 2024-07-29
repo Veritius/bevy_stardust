@@ -1,7 +1,8 @@
+use std::collections::BTreeMap;
 use bevy_stardust::prelude::{ChannelId, ChannelMessage, Message};
 use bevy_stardust_extras::numbers::{Sequence, VarInt};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
-use crate::{Connection, ConnectionEvent, OutgoingStreamsHandle};
+use crate::{Connection, ConnectionEvent};
 
 impl Connection {
     /// Call when a datagram is received.
@@ -20,7 +21,7 @@ impl Connection {
             },
 
             DatagramHeader::StardustSequenced { channel, sequence } => {
-                let seq = self.incoming_datagram_channel_sequences.entry(channel)
+                let seq = self.incoming_datagrams.sequences.entry(channel)
                     .or_insert_with(|| IncomingDatagramSequence::new());
 
                 if seq.latest(sequence) {
@@ -34,7 +35,7 @@ impl Connection {
     }
 
     pub(crate) fn channel_dgram_out_seq(&mut self, channel: ChannelId) -> &mut OutgoingDatagramSequence {
-        self.outgoing_datagram_channel_sequences.entry(channel)
+        self.outgoing_datagrams.sequences.entry(channel)
             .or_insert_with(|| OutgoingDatagramSequence::new())
     }
 
@@ -80,6 +81,30 @@ impl Connection {
 
         // On failure, send it wrapped inside a stream
         self.outgoing_streams_handle().send_wrapped_dgram_chunks([header.alloc(), payload].into_iter());
+    }
+}
+
+pub(crate) struct IncomingDatagrams {
+    sequences: BTreeMap<ChannelId, IncomingDatagramSequence>,
+}
+
+impl IncomingDatagrams {
+    pub fn new() -> Self {
+        Self {
+            sequences: BTreeMap::new(),
+        }
+    }
+}
+
+pub(crate) struct OutgoingDatagrams {
+    sequences: BTreeMap<ChannelId, OutgoingDatagramSequence>,
+}
+
+impl OutgoingDatagrams {
+    pub fn new() -> Self {
+        Self {
+            sequences: BTreeMap::new(),
+        }
     }
 }
 
