@@ -19,6 +19,8 @@ impl Plugin for QuinnPlugin {
         // PostUpdate stage
         app.add_systems(PostUpdate, (
             crate::connections::outgoing_messages_system,
+            crate::connections::qsm_events_system,
+            crate::connections::connection_events_system,
         ).chain().in_set(NetworkSend::Transmit));
 
         #[cfg(debug_assertions)] {
