@@ -1,19 +1,17 @@
 use std::{collections::BTreeMap, time::{Duration, Instant}};
 use bevy_stardust::prelude::ChannelId;
-use crate::{datagrams::{IncomingDatagramSequence, OutgoingDatagramSequence}, ConnectionEventIter, ConnectionEventQueue, IncomingStream, OutgoingStreamsState, RecvStreamId, SendStreamId};
+use crate::{datagrams::{IncomingDatagramSequence, OutgoingDatagramSequence}, ConnectionEventIter, ConnectionEventQueue, IncomingStreams, OutgoingStreams};
 
 /// The core state machine type, representing one QUIC connection.
 pub struct Connection {
     last: Instant,
 
-    pub(crate) heat: Heat,
-    pub(crate) events: ConnectionEventQueue,
+    pub(crate) shared: ConnectionShared,
 
-    pub(crate) incoming_streams: BTreeMap<RecvStreamId, IncomingStream>,
+    pub(crate) incoming_streams: IncomingStreams,
     pub(crate) incoming_datagram_channel_sequences: BTreeMap<ChannelId, IncomingDatagramSequence>,
 
-    pub(crate) outgoing_streams: OutgoingStreamsState,
-    pub(crate) outgoing_channel_stream_ids: BTreeMap<ChannelId, SendStreamId>,
+    pub(crate) outgoing_streams: OutgoingStreams,
     pub(crate) outgoing_datagram_channel_sequences: BTreeMap<ChannelId, OutgoingDatagramSequence>,
 }
 
@@ -23,30 +21,36 @@ impl Connection {
         Self {
             last: Instant::now(),
 
-            heat: Heat::new(),
-            events: ConnectionEventQueue::new(),
+            shared: ConnectionShared {
+                heat: Heat::new(),
+                events: ConnectionEventQueue::new(),
+            },
 
-            incoming_streams: BTreeMap::new(),
+            incoming_streams: IncomingStreams::new(),
             incoming_datagram_channel_sequences: BTreeMap::new(),
 
-            outgoing_streams: OutgoingStreamsState::new(),
-            outgoing_channel_stream_ids: BTreeMap::new(),
+            outgoing_streams: OutgoingStreams::new(),
             outgoing_datagram_channel_sequences: BTreeMap::new(),
         }
     }
 
     /// Returns an iterator over the event queue.
     pub fn poll(&mut self, now: Instant) -> ConnectionEventIter {
-        self.heat.diff(now.duration_since(self.last));
+        self.shared.heat.diff(now.duration_since(self.last));
         self.last = now;
 
-        if self.heat.is_overheated() {
-            self.events = ConnectionEventQueue::with_capacity(1);
-            self.events.push(crate::ConnectionEvent::Overheated);
+        if self.shared.heat.is_overheated() {
+            self.shared.events = ConnectionEventQueue::with_capacity(1);
+            self.shared.events.push(crate::ConnectionEvent::Overheated);
         }
 
-        ConnectionEventIter::new(&mut self.events)
+        ConnectionEventIter::new(&mut self.shared.events)
     }
+}
+
+pub(crate) struct ConnectionShared {
+    pub(crate) heat: Heat,
+    pub(crate) events: ConnectionEventQueue,
 }
 
 #[derive(Debug)]

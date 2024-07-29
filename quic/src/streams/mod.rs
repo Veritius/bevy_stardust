@@ -4,34 +4,14 @@ mod header;
 mod incoming;
 mod outgoing;
 
-use crate::{Connection, ConnectionEvent};
+use crate::{ConnectionEvent, ConnectionShared};
 
-pub(crate) use incoming::IncomingStream;
-pub(crate) use outgoing::OutgoingStreamsState;
+pub(crate) use incoming::IncomingStreams;
+pub(crate) use outgoing::{OutgoingStreams, OutgoingStreamsHandle};
 
 pub use events::StreamEvent;
 
-impl Connection {
-    /// Call when a new incoming stream is opened.
-    pub fn stream_opened(&mut self, stream: RecvStreamId) {
-        self.incoming_streams.insert(stream, IncomingStream::new());
-    }
-
-    /// Call when a stream is reset.
-    pub fn stream_reset(&mut self, stream: RecvStreamId) {
-        self.incoming_streams.remove(&stream);
-    }
-
-    /// Call when a stream is finished.
-    pub fn stream_finished(&mut self, stream: RecvStreamId) {
-        self.incoming_streams.remove(&stream);
-    }
-
-    /// Call when a stream is stopped.
-    pub fn stream_stopped(&mut self, stream: SendStreamId) {
-        todo!()
-    }
-
+impl ConnectionShared {
     fn stream_event(&mut self, event: StreamEvent) {
         self.events.push(ConnectionEvent::StreamEvent(event));
     }

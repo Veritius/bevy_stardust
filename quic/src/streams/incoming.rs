@@ -1,4 +1,4 @@
-use std::collections::VecDeque;
+use std::collections::{BTreeMap, VecDeque};
 use bevy_stardust::prelude::*;
 use bytes::Bytes;
 use crate::Connection;
@@ -6,32 +6,64 @@ use super::RecvStreamId;
 
 impl Connection {
     /// Call when a chunk of data is received on a stream.
-    pub fn stream_recv(&mut self, stream: RecvStreamId, chunk: Bytes) {
-        if !self.incoming_streams.contains_key(&stream) {
-            self.stream_opened(stream);
-        }
-
-        let stream = self.incoming_streams.get_mut(&stream).unwrap();
-        stream.push(chunk);
-
+    pub fn stream_recv(&mut self, id: RecvStreamId, chunk: Bytes) {
         todo!()
+    }
+
+    /// Call when a new incoming stream is opened.
+    pub fn stream_opened(&mut self, id: RecvStreamId) {
+        self.incoming_streams.recv_stream_opened(id)
+    }
+    
+    /// Call when an incoming stream is reset.
+    pub fn stream_reset(&mut self, id: RecvStreamId) {
+        self.incoming_streams.recv_stream_reset(id);
+    }
+    
+    /// Call when an incoming stream is finished.
+    pub fn stream_finished(&mut self, id: RecvStreamId) {
+        self.incoming_streams.recv_stream_finished(id);
     }
 }
 
-pub(crate) struct IncomingStream {
+pub(crate) struct IncomingStreams {
+    streams: BTreeMap<RecvStreamId, IncomingStream>,
+}
+
+impl IncomingStreams {
+    pub fn new() -> Self {
+        Self {
+            streams: BTreeMap::new(),
+        }
+    }
+
+    pub fn recv_stream_opened(&mut self, id: RecvStreamId) {
+        self.streams.insert(id, IncomingStream::new());
+    }
+
+    pub fn recv_stream_reset(&mut self, id: RecvStreamId) {
+        self.streams.remove(&id);
+    }
+
+    pub fn recv_stream_finished(&mut self, id: RecvStreamId) {
+        self.streams.remove(&id);
+    }
+}
+
+struct IncomingStream {
     mode: Option<IncomingStreamMode>,
     queue: VecDeque<Bytes>,
 }
 
 impl IncomingStream {
-    pub fn new() -> Self {
+    fn new() -> Self {
         Self {
             mode: None,
             queue: VecDeque::new(),
         }
     }
 
-    pub(super) fn mode(&self) -> Option<IncomingStreamMode> {
+    fn mode(&self) -> Option<IncomingStreamMode> {
         match self.mode {
             None => {
                 todo!()
@@ -41,11 +73,11 @@ impl IncomingStream {
         }
     }
 
-    pub(super) fn push(&mut self, chunk: Bytes) {
+    fn push(&mut self, chunk: Bytes) {
         self.queue.push_back(chunk);
     }
 
-    pub(super) fn pull(&mut self) -> IncomingStreamChunkIter {
+    fn pull(&mut self) -> IncomingStreamChunkIter {
         IncomingStreamChunkIter { stream: self }
     }
 }

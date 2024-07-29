@@ -1,7 +1,7 @@
 use bevy_stardust::prelude::{ChannelId, ChannelMessage, Message};
 use bevy_stardust_extras::numbers::{Sequence, VarInt};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
-use crate::{Connection, ConnectionEvent};
+use crate::{Connection, ConnectionEvent, OutgoingStreamsHandle};
 
 impl Connection {
     /// Call when a datagram is received.
@@ -13,7 +13,7 @@ impl Connection {
 
         match header {
             DatagramHeader::Stardust { channel } => {
-                self.events.push(ConnectionEvent::ReceivedMessage(ChannelMessage {
+                self.shared.events.push(ConnectionEvent::ReceivedMessage(ChannelMessage {
                     channel,
                     payload: Message::from_bytes(payload),
                 }));
@@ -24,7 +24,7 @@ impl Connection {
                     .or_insert_with(|| IncomingDatagramSequence::new());
 
                 if seq.latest(sequence) {
-                    self.events.push(ConnectionEvent::ReceivedMessage(ChannelMessage {
+                    self.shared.events.push(ConnectionEvent::ReceivedMessage(ChannelMessage {
                         channel,
                         payload: Message::from_bytes(payload),
                     }));
@@ -63,7 +63,7 @@ impl Connection {
         debug_assert_eq!(size, newbuf.len());
 
         // Queue the datagram for transmission by the QUIC implementation
-        self.events.push(crate::ConnectionEvent::TransmitDatagram(newbuf.freeze()));
+        self.shared.events.push(crate::ConnectionEvent::TransmitDatagram(newbuf.freeze()));
 
         // Success
         return true;
@@ -79,7 +79,7 @@ impl Connection {
         if self.try_send_dgram(size_limit, header.clone(), payload.clone()) { return };
 
         // On failure, send it wrapped inside a stream
-        self.send_wrapped_dgram_chunks([header.alloc(), payload].into_iter());
+        self.outgoing_streams_handle().send_wrapped_dgram_chunks([header.alloc(), payload].into_iter());
     }
 }
 

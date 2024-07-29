@@ -1,23 +1,51 @@
+use std::collections::BTreeMap;
 use bevy_stardust::prelude::{ChannelId, Message};
 use bytes::Bytes;
-use crate::Connection;
+use crate::{Connection, ConnectionShared};
 use super::{header::StreamHeader, SendStreamId, StreamEvent};
 
-const SEND_STREAM_ID_LIMIT: u64 = 2u64.pow(62) - 1;
+impl Connection {
+    /// Call when a stream is stopped.
+    pub fn stream_stopped(&mut self, stream: SendStreamId) {
+        todo!()
+    }
 
-pub(crate) struct OutgoingStreamsState {
-    index: u64,
+    pub(crate) fn outgoing_streams_handle(&mut self) -> OutgoingStreamsHandle {
+        OutgoingStreamsHandle::from(self)
+    }
 }
 
-impl OutgoingStreamsState {
+pub(crate) struct OutgoingStreams {
+    unique_id_index: u64,
+    channel_ids: BTreeMap<ChannelId, SendStreamId>,
+}
+
+impl OutgoingStreams {
+    const SEND_STREAM_ID_LIMIT: u64 = 2u64.pow(62) - 1;
+
     pub fn new() -> Self {
         Self {
-            index: 0,
+            unique_id_index: 0,
+            channel_ids: BTreeMap::new(),
         }
     }
 }
 
-impl Connection {
+pub(crate) struct OutgoingStreamsHandle<'a> {
+    pub data: &'a mut OutgoingStreams,
+    pub shared: &'a mut ConnectionShared,
+}
+
+impl<'a> From<&'a mut Connection> for OutgoingStreamsHandle<'a> {
+    fn from(value: &'a mut Connection) -> Self {
+        Self {
+            data: &mut value.outgoing_streams,
+            shared: &mut value.shared,
+        }
+    }
+}
+
+impl OutgoingStreamsHandle<'_> {
     pub(crate) fn send_message_on_stream(&mut self, channel: ChannelId, message: Message) {
         let id = self.get_or_create_channel_stream(channel);
 
@@ -56,20 +84,20 @@ impl Connection {
     }
 
     fn open_stream_inner(&mut self) -> SendStreamId {
-        let index = self.outgoing_streams.index;
-        assert!(index >= SEND_STREAM_ID_LIMIT, "Exceeded send ID limit");
-        self.outgoing_streams.index += 1;
+        let index = self.data. unique_id_index;
+        assert!(index >= OutgoingStreams::SEND_STREAM_ID_LIMIT, "Exceeded send ID limit");
+        self.data.unique_id_index += 1;
         let id = SendStreamId(index);
-        self.stream_event(StreamEvent::Open { id });
+        self.shared.stream_event(StreamEvent::Open { id });
         return id;
     }
 
     fn send_over_stream(&mut self, id: SendStreamId, data: Bytes) {
-        self.stream_event(StreamEvent::Transmit { id, chunk: data })
+        self.shared.stream_event(StreamEvent::Transmit { id, chunk: data })
     }
 
     fn finish_stream_inner(&mut self, id: SendStreamId) {
-        self.stream_event(StreamEvent::Finish { id });
+        self.shared.stream_event(StreamEvent::Finish { id });
     }
 
     fn send_transient_single(&mut self, header: StreamHeader, payload: Bytes) {
@@ -94,11 +122,11 @@ impl Connection {
     }
 
     fn get_or_create_channel_stream(&mut self, channel: ChannelId) -> SendStreamId {
-        match self.outgoing_channel_stream_ids.get(&channel) {
+        match self.data.channel_ids.get(&channel) {
             Some(id) => return *id,
             None => {
                 let id = self.open_stream_inner();
-                self.outgoing_channel_stream_ids.insert(channel, id);
+                self.data.channel_ids.insert(channel, id);
                 return id;
             },
         }

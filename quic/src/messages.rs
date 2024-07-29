@@ -67,18 +67,18 @@ impl Connection {
 
             ChannelConsistency::ReliableUnordered => {
                 for message in iter {
-                    self.send_message_on_stream_and_close(channel, message);
+                    self.outgoing_streams_handle().send_message_on_stream_and_close(channel, message);
                 }
             },
 
             ChannelConsistency::ReliableOrdered => {
-                self.send_messages_on_stream(channel, iter.into_iter());
+                self.outgoing_streams_handle().send_messages_on_stream(channel, iter.into_iter());
             },
 
             // We don't actually know what constraints new consistencies have,
             // but reliable ordered is probably a good guess
             _ => {
-                self.send_messages_on_stream(channel, iter.into_iter());
+                self.outgoing_streams_handle().send_messages_on_stream(channel, iter.into_iter());
             }
         }
     }
