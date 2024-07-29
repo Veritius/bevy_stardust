@@ -2,9 +2,7 @@ use bevy::prelude::*;
 use bevy_stardust::prelude::*;
 
 /// The core plugin for `bevy_stardust_quinn`.
-pub struct QuinnPlugin {
-
-}
+pub struct QuinnPlugin;
 
 impl Plugin for QuinnPlugin {
     fn build(&self, app: &mut App) {
