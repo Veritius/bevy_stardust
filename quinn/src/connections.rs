@@ -1,6 +1,7 @@
 use std::{collections::BTreeMap, time::Instant};
 use bevy::{ecs::component::{ComponentHooks, StorageType}, prelude::*};
-use bevy_stardust_quic::{RecvStreamId, SendStreamId};
+use bevy_stardust::prelude::*;
+use bevy_stardust_quic::{RecvStreamId, SendContext, SendStreamId};
 use quinn_proto::{ConnectionEvent as QuinnConnectionEvent, ConnectionHandle, Dir, EndpointEvent, StreamId as QuinnStreamId};
 use crate::Endpoint;
 
@@ -219,6 +220,20 @@ pub(crate) fn qsm_events_system(
                 bevy_stardust_quic::ConnectionEvent::Overheated => todo!(),
             }
         }
+    });
+}
+
+pub(crate) fn outgoing_messages_system(
+    channels: Channels,
+    mut connections: Query<(&mut Connection, &PeerMessages<Outgoing>)>,
+) {
+    connections.par_iter_mut().for_each(|(mut connection, outgoing)| {
+        let context = SendContext {
+            registry: channels.as_ref(),
+            dgram_max_size: connection.inner.quinn.datagrams().max_size().unwrap(),
+        };
+
+        connection.inner.qsm.handle_outgoing(context, outgoing);
     });
 }
 

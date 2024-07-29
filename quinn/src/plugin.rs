@@ -16,6 +16,11 @@ impl Plugin for QuinnPlugin {
             crate::connections::qsm_events_system,
         ).chain().in_set(NetworkRecv::Receive));
 
+        // PostUpdate stage
+        app.add_systems(PostUpdate, (
+            crate::connections::outgoing_messages_system,
+        ).chain().in_set(NetworkSend::Transmit));
+
         #[cfg(debug_assertions)] {
             app.add_systems(Update, crate::endpoints::safety_check_system);
             app.add_systems(Update, crate::connections::safety_check_system);
