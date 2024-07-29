@@ -8,6 +8,10 @@ description="A QUIC transport layer for bevy_stardust, based off bevy_stardust_q
 repository="https://github.com/veritius/bevy_stardust/"
 keywords=["bevy", "gamedev", "networking"]
 
+[dependencies.bevy]
+version = "0.14"
+default-features = false
+
 [dependencies.bevy_stardust]
 version = "0.6.0"
 path = "../stardust"
