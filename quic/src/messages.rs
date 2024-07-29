@@ -13,7 +13,7 @@ impl Connection {
     pub fn handle_outgoing<'a>(
         &'a mut self,
         context: RecvContext<'a>,
-        queue: PeerMessages<Outgoing>,
+        queue: &'a PeerMessages<Outgoing>,
     ) {
         self.handle_outgoing_queue(
             context,
