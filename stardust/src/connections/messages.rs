@@ -28,10 +28,16 @@ impl<D: MessageDirection> PeerMessages<D> {
         }
     }
 
-    /// Returns a reference to the inner [`MessageQueue`].
+    /// Borrows the internal [`MessageQueue`].
+    #[inline]
+    pub fn inner(&self) -> &MessageQueue {
+        &self.inner
+    }
+
+    /// Mutably borrows the internal [`MessageQueue`].
     /// This **must not** be used to clear the queue, or data will be lost.
     #[inline]
-    pub fn inner(&mut self) -> &mut MessageQueue {
+    pub fn inner_mut(&mut self) -> &mut MessageQueue {
         &mut self.inner
     }
 
