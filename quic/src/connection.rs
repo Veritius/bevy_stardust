@@ -1,6 +1,6 @@
 use std::collections::{BTreeMap, VecDeque};
 use bevy_stardust::prelude::ChannelId;
-use crate::{ConnectionEvent, IncomingDatagramSequence, IncomingStream, OutgoingDatagramSequence, RecvStreamId, SendStreamId};
+use crate::{datagrams::{IncomingDatagramSequence, OutgoingDatagramSequence}, ConnectionEvent, IncomingStream, RecvStreamId, SendStreamId};
 
 /// The core state machine type, representing one QUIC connection.
 pub struct Connection {

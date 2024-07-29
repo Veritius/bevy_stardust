@@ -5,8 +5,9 @@ mod connection;
 mod datagrams;
 mod events;
 mod streams;
+mod messages;
 
 pub use connection::*;
-pub use datagrams::*;
 pub use events::*;
 pub use streams::*;
+pub use messages::*;
