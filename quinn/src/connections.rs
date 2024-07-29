@@ -9,7 +9,10 @@ use crate::Endpoint;
 /// # Safety
 /// A [`Connection`] component being removed from the [`World`] it was created in,
 /// then being added to a different [`World`], is undefined behavior.
+#[derive(Reflect)]
+#[reflect(from_reflect=false, Component)]
 pub struct Connection {
+    #[reflect(ignore)]
     inner: Box<ConnectionInner>,
 }
 

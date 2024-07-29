@@ -9,7 +9,8 @@ use crate::{connections::token::ConnectionOwnershipToken, Connection};
 /// # Safety
 /// An [`Endpoint`] component being removed from the [`World`] it was created in,
 /// then being added to a different [`World`], is undefined behavior.
-#[derive(Component)]
+#[derive(Component, Reflect)]
+#[reflect(from_reflect=false, Component)]
 pub struct Endpoint {
     /// The size of a buffer allocated to receive datagrams.
     /// Higher values allow remote peers to send data more efficiently.
@@ -21,6 +22,7 @@ pub struct Endpoint {
     /// so setting this field that high may simply waste memory, depending on the operating system.
     pub recv_buf_size: u16,
 
+    #[reflect(ignore)]
     inner: Box<ConnectionInner>,
 }
 
