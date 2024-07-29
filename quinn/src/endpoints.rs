@@ -7,7 +7,8 @@ use crate::{connections::token::ConnectionOwnershipToken, Connection};
 /// A QUIC endpoint using `quinn_proto`.
 /// 
 /// # Safety
-/// This component must not be moved from the [`World`] it was originally added to.
+/// An [`Endpoint`] component being removed from the [`World`] it was created in,
+/// then being added to a different [`World`], is undefined behavior.
 #[derive(Component)]
 pub struct Endpoint {
     /// The size of a buffer allocated to receive datagrams.

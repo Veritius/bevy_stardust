@@ -8,7 +8,8 @@ use crate::Endpoint;
 /// A QUIC connection using `quinn_proto`.
 /// 
 /// # Safety
-/// This component must not be moved from the [`World`] it was originally added to.
+/// A [`Connection`] component being removed from the [`World`] it was created in,
+/// then being added to a different [`World`], is undefined behavior.
 pub struct Connection {
     endpoint: Entity,
 
