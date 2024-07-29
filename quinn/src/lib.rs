@@ -4,8 +4,6 @@
 mod connections;
 mod endpoints;
 mod plugin;
-mod udp_recv;
-mod udp_send;
 
 pub use connections::Connection;
 pub use endpoints::Endpoint;
