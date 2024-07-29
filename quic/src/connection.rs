@@ -1,6 +1,6 @@
 use std::collections::{BTreeMap, VecDeque};
 use bevy_stardust::prelude::ChannelId;
-use crate::{datagrams::{IncomingDatagramSequence, OutgoingDatagramSequence}, ConnectionEvent, IncomingStream, OutgoingStreamsState, RecvStreamId, SendStreamId};
+use crate::{datagrams::{IncomingDatagramSequence, OutgoingDatagramSequence}, ConnectionEvent, ConnectionEventIter, IncomingStream, OutgoingStreamsState, RecvStreamId, SendStreamId};
 
 /// The core state machine type, representing one QUIC connection.
 pub struct Connection {
@@ -29,8 +29,8 @@ impl Connection {
         }
     }
 
-    /// Returns an event if one has occurred.
-    pub fn poll(&mut self) -> Option<ConnectionEvent> {
-        self.events.pop_front()
+    /// Returns an iterator over the event queue.
+    pub fn poll(&mut self) -> ConnectionEventIter {
+        ConnectionEventIter::new(self)
     }
 }
