@@ -87,11 +87,7 @@ impl Connection {
     ) {
         // Create the datagram header
         let header = DatagramHeader::Stardust { channel };
-
-        match self.try_send_dgram(context.dgram_max_size, header, message.into()) {
-            true => todo!(),
-            false => todo!(),
-        }
+        self.send_dgram_wrap_on_fail(context.dgram_max_size, header, message.into());
     }
 
     fn handle_outgoing_unrel_seq<'a>(
@@ -110,12 +106,8 @@ impl Connection {
             sequence: sq_mgr.next(),
         };
 
-        match self.try_send_dgram(context.dgram_max_size, header, message.into()) {
-            true => todo!(),
-            false => todo!(),
-        }
-
-        todo!()
+        // Send the datagram
+        self.send_dgram_wrap_on_fail(context.dgram_max_size, header, message.into());
     }
 
     fn handle_outgoing_rel_unord<'a>(

@@ -68,8 +68,22 @@ impl Connection {
         // Success
         return true;
     }
+
+    pub(crate) fn send_dgram_wrap_on_fail(
+        &mut self,
+        size_limit: usize,
+        header: DatagramHeader,
+        payload: Bytes,
+    ) {
+        // Try to send a datagram normally
+        if self.try_send_dgram(size_limit, header.clone(), payload.clone()) { return };
+
+        // On failure, send it wrapped inside a stream
+        self.send_wrapped_dgram_chunks([header.alloc(), payload].into_iter());
+    }
 }
 
+#[derive(Clone)]
 pub(super) enum DatagramHeader {
     Stardust {
         channel: ChannelId,
@@ -135,6 +149,12 @@ impl DatagramHeader {
         }
 
         return Ok(());
+    }
+
+    pub fn alloc(&self) -> Bytes {
+        let mut buf = BytesMut::with_capacity(8);
+        self.write(&mut buf).unwrap();
+        return buf.freeze();
     }
 
     pub fn size(&self) -> usize {
