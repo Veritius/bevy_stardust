@@ -1,6 +1,6 @@
 use bevy_stardust::prelude::{ChannelId, ChannelMessage, Message};
 use bevy_stardust_extras::numbers::{Sequence, VarInt};
-use bytes::{Buf, BufMut, Bytes};
+use bytes::{Buf, BufMut, Bytes, BytesMut};
 use crate::{Connection, ConnectionEvent};
 
 impl Connection {
@@ -31,6 +31,42 @@ impl Connection {
                 }
             },
         }
+    }
+
+    pub(crate) fn channel_dgram_out_seq(&mut self, channel: ChannelId) -> &mut OutgoingDatagramSequence {
+        self.outgoing_datagram_channel_sequences.entry(channel)
+            .or_insert_with(|| OutgoingDatagramSequence::new())
+    }
+
+    /// Try to send a datagram, returns `false` if the size exceeds `size_limit`.
+    pub(crate) fn try_send_dgram(
+        &mut self,
+        size_limit: usize,
+        header: DatagramHeader,
+        payload: Bytes,
+    ) -> bool {
+        // Create the datagram header
+        let size = header.size() + payload.len();
+
+        // Check if it can be sent as a datagram
+        // If it can't, we have to return an error
+        if size > size_limit { return false; }
+
+        // We have to put this in a new allocation as most QUIC implementations
+        // will only take a single slice/Bytes for a datagram payload
+        // This shouldn't panic, since BytesMut grows to fit
+        let mut newbuf = BytesMut::with_capacity(size);
+        header.write(&mut newbuf).unwrap();
+        newbuf.copy_from_slice(&payload);
+
+        // Also check that the sizes are correct
+        debug_assert_eq!(size, newbuf.len());
+
+        // Queue the datagram for transmission by the QUIC implementation
+        self.events.push_back(crate::ConnectionEvent::TransmitDatagram(newbuf.freeze()));
+
+        // Success
+        return true;
     }
 }
 
@@ -100,6 +136,25 @@ impl DatagramHeader {
 
         return Ok(());
     }
+
+    pub fn size(&self) -> usize {
+        let mut tally = 0;
+
+        match self {
+            DatagramHeader::Stardust { channel } => {
+                tally += VarInt::len_u32(0) as usize;
+                tally += VarInt::len_u32((*channel).into()) as usize;
+            },
+
+            DatagramHeader::StardustSequenced { channel, sequence: _ } => {
+                tally += VarInt::len_u32(1) as usize;
+                tally += VarInt::len_u32((*channel).into()) as usize;
+                tally += 2; // sequence value is always 2 bytes
+            },
+        }
+
+        return tally;
+    }
 }
 
 #[derive(Debug)]
@@ -110,7 +165,7 @@ impl IncomingDatagramSequence {
         Self(Sequence::default())
     }
 
-    fn latest(&mut self, index: Sequence<u16>) -> bool {
+    pub fn latest(&mut self, index: Sequence<u16>) -> bool {
         if self.0 > index {
             self.0 = index;
             return true;
@@ -128,7 +183,7 @@ impl OutgoingDatagramSequence {
         Self(Sequence::default())
     }
 
-    fn next(&mut self) -> Sequence<u16> {
+    pub fn next(&mut self) -> Sequence<u16> {
         todo!()
     }
 }

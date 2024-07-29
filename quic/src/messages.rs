@@ -1,5 +1,5 @@
 use bevy_stardust::{channels::ChannelRegistry, messages::MessageQueue, prelude::*};
-use crate::Connection;
+use crate::{datagrams::DatagramHeader, Connection};
 
 /// Context object required to handle outgoing messages.
 #[derive(Clone, Copy)]
@@ -53,13 +53,13 @@ impl Connection {
         };
 
         match config.consistency {
-            ChannelConsistency::UnreliableUnordered => self.handle_outgoing_inner(context, iter.into_iter(), Self::handle_outgoing_unrel_unord),
-            ChannelConsistency::UnreliableSequenced => self.handle_outgoing_inner(context, iter.into_iter(), Self::handle_outgoing_unrel_seq),
-            ChannelConsistency::ReliableUnordered => self.handle_outgoing_inner(context, iter.into_iter(), Self::handle_outgoing_rel_unord),
-            ChannelConsistency::ReliableOrdered => self.handle_outgoing_inner(context, iter.into_iter(), Self::handle_outgoing_rel_ord),
+            ChannelConsistency::UnreliableUnordered => self.handle_outgoing_inner(context, channel, iter.into_iter(), Self::handle_outgoing_unrel_unord),
+            ChannelConsistency::UnreliableSequenced => self.handle_outgoing_inner(context, channel, iter.into_iter(), Self::handle_outgoing_unrel_seq),
+            ChannelConsistency::ReliableUnordered => self.handle_outgoing_inner(context, channel, iter.into_iter(), Self::handle_outgoing_rel_unord),
+            ChannelConsistency::ReliableOrdered => self.handle_outgoing_inner(context, channel, iter.into_iter(), Self::handle_outgoing_rel_ord),
 
             // We don't actually know what constraints new consistencies have, but reliable ordered is probably a good guess
-            _ => self.handle_outgoing_inner(context, iter.into_iter(), Self::handle_outgoing_rel_ord),
+            _ => self.handle_outgoing_inner(context, channel, iter.into_iter(), Self::handle_outgoing_rel_ord),
         }
     }
 
@@ -67,36 +67,61 @@ impl Connection {
     fn handle_outgoing_inner<'a, I, F>(
         &'a mut self,
         context: SendContext<'a>,
+        channel: ChannelId,
         iter: I,
         func: F,
     ) where
         I: Iterator<Item = Message>,
-        F: for<'f> Fn(&'f mut Self, SendContext<'f>, Message),
+        F: for<'f> Fn(&'f mut Self, SendContext<'f>, ChannelId, Message),
     {
         for message in iter {
-            func(self, context, message)
+            func(self, context, channel, message)
         }
     }
 
     fn handle_outgoing_unrel_unord<'a>(
         &'a mut self,
         context: SendContext<'a>,
+        channel: ChannelId,
         message: Message,
     ) {
-        todo!()
+        // Create the datagram header
+        let header = DatagramHeader::Stardust { channel };
+
+        match self.try_send_dgram(context.dgram_max_size, header, message.into()) {
+            true => todo!(),
+            false => todo!(),
+        }
     }
 
     fn handle_outgoing_unrel_seq<'a>(
         &'a mut self,
         context: SendContext<'a>,
+        channel: ChannelId,
         message: Message,
     ) {
+        // Get the sequence values
+        // TODO: Don't lookup every time we want to send a message
+        let sq_mgr = self.channel_dgram_out_seq(channel);
+
+        // Create the datagram header
+        let header = DatagramHeader::StardustSequenced {
+            channel,
+            sequence: sq_mgr.next(),
+        };
+
+        match self.try_send_dgram(context.dgram_max_size, header, message.into()) {
+            true => todo!(),
+            false => todo!(),
+        }
+
         todo!()
     }
 
     fn handle_outgoing_rel_unord<'a>(
         &'a mut self,
         context: SendContext<'a>,
+        channel: ChannelId,
         message: Message,
     ) {
         todo!()
@@ -105,6 +130,7 @@ impl Connection {
     fn handle_outgoing_rel_ord<'a>(
         &'a mut self,
         context: SendContext<'a>,
+        channel: ChannelId,
         message: Message,
     ) {
         todo!()
