@@ -1,3 +1,4 @@
+use bevy_stardust::prelude::{ChannelId, Message};
 use bytes::Bytes;
 use crate::Connection;
 use super::{header::StreamHeader, SendStreamId, StreamEvent};
@@ -17,9 +18,25 @@ impl OutgoingStreamsState {
 }
 
 impl Connection {
+    pub(crate) fn send_message_on_stream<I>(&mut self, channel: ChannelId, message: Message) {
+        todo!()
+    }
+
+    pub(crate) fn send_messages_on_stream<I>(&mut self, channel: ChannelId, iter: I)
+    where
+        I: Iterator<Item = Message>,
+    {
+        todo!()
+    }
+
     #[inline]
-    pub(crate) fn send_wrapped_dgram(&mut self, payload: Bytes) {
-        self.send_transient(StreamHeader::WrappedDatagram, payload);
+    pub(crate) fn send_message_on_stream_and_close(&mut self, channel: ChannelId, message: Message) {
+        self.send_transient_single(StreamHeader::Stardust { channel }, message.into())
+    }
+
+    #[inline]
+    pub(crate) fn send_wrapped_dgram_single(&mut self, payload: Bytes) {
+        self.send_transient_single(StreamHeader::WrappedDatagram, payload);
     }
 
     #[inline]
@@ -47,7 +64,7 @@ impl Connection {
         self.stream_event(StreamEvent::Finish { id });
     }
 
-    fn send_transient(&mut self, header: StreamHeader, payload: Bytes) {
+    fn send_transient_single(&mut self, header: StreamHeader, payload: Bytes) {
         let id = self.open_stream_inner();
         self.send_over_stream(id, header.alloc());
         self.send_over_stream(id, payload);

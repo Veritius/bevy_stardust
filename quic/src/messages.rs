@@ -112,11 +112,11 @@ impl Connection {
 
     fn handle_outgoing_rel_unord<'a>(
         &'a mut self,
-        context: SendContext<'a>,
+        _context: SendContext<'a>,
         channel: ChannelId,
         message: Message,
     ) {
-        todo!()
+        self.send_message_on_stream_and_close(channel, message);
     }
 
     fn handle_outgoing_rel_ord<'a>(
