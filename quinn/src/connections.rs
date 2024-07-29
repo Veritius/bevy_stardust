@@ -73,17 +73,6 @@ pub(crate) fn connection_events_system(
     });
 }
 
-#[cfg(debug_assertions)]
-pub(crate) fn safety_check_system(
-    world: bevy::ecs::world::WorldId,
-    connections: Query<&Connection>,
-) {
-    for connection in &connections {
-        assert_eq!(connection.world, world,
-            "A Connection had a world ID different from the one it was created in. This is undefined behavior!");
-    }
-}
-
 #[inline]
 fn qsid_to_rsid(id: QuinnStreamId) -> RecvStreamId {
     RecvStreamId(id.0)
@@ -102,6 +91,17 @@ fn rsid_to_qsid(id: RecvStreamId) -> QuinnStreamId {
 #[inline]
 fn ssid_to_qsid(id: SendStreamId) -> QuinnStreamId {
     QuinnStreamId(id.0)
+}
+
+#[cfg(debug_assertions)]
+pub(crate) fn safety_check_system(
+    world: bevy::ecs::world::WorldId,
+    connections: Query<&Connection>,
+) {
+    for connection in &connections {
+        assert_eq!(connection.world, world,
+            "A Connection had a world ID different from the one it was created in. This is undefined behavior!");
+    }
 }
 
 pub(crate) mod token {
