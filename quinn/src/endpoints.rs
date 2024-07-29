@@ -29,3 +29,19 @@ impl Endpoint {
         self.socket.local_addr().unwrap()
     }
 }
+
+#[cfg(debug_assertions)]
+pub(crate) fn safety_check_system(
+    endpoints: Query<&Endpoint>,
+) {
+    use std::collections::BTreeSet;
+
+    let mut tokens = BTreeSet::new();
+
+    for endpoint in &endpoints {
+        for connection in endpoint.connections.values() {
+            assert!(!tokens.insert(connection.inner()), 
+                "Two ConnectionOwnershipTokens existed simultaneously. This is undefined behavior!");
+        }
+    }
+}
