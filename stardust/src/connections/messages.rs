@@ -15,7 +15,7 @@ use super::Peer;
 /// [`NetworkSend::Clear`]: crate::scheduling::NetworkSend::Clear
 #[derive(Default, Component)]
 pub struct PeerMessages<D: MessageDirection> {
-    inner: MessageQueue,
+    queue: MessageQueue,
     phantom: PhantomData<D>,
 }
 
@@ -23,41 +23,27 @@ impl<D: MessageDirection> PeerMessages<D> {
     /// Creates a new [`PeerMessages<D>`].
     pub fn new() -> Self {
         Self {
-            inner: MessageQueue::new(),
+            queue: MessageQueue::new(),
             phantom: PhantomData,
         }
-    }
-
-    /// Borrows the internal [`MessageQueue`].
-    #[inline]
-    pub fn inner(&self) -> &MessageQueue {
-        &self.inner
-    }
-
-    /// Mutably borrows the internal [`MessageQueue`].
-    /// 
-    /// This should not be used to clear the queue, as this could cause data loss.
-    #[inline]
-    pub fn inner_mut(&mut self) -> &mut MessageQueue {
-        &mut self.inner
     }
 
     /// Returns the total number of messages stored in the queue.
     #[inline]
     pub fn count(&self) -> usize {
-        self.inner.count()
+        self.queue.count()
     }
 
     /// Returns the sum of bytes from all messages in the queue.
     #[inline]
     pub fn bytes(&self) -> usize {
-        self.inner.bytes()
+        self.queue.bytes()
     }
 
     /// Pushes a single message to the queue.
     #[inline]
     pub fn push_one(&mut self, message: ChannelMessage) {
-        self.inner.push_one(message);
+        self.queue.push_one(message);
     }
 
     /// Pushes many messages from `iter` to the queue.
@@ -67,7 +53,7 @@ impl<D: MessageDirection> PeerMessages<D> {
     where
         I: IntoIterator<Item = ChannelMessage>,
     {
-        self.inner.push_many(iter);
+        self.queue.push_many(iter);
     }
 
     /// Pushes many messages from `iter` to a single channel.
@@ -77,19 +63,19 @@ impl<D: MessageDirection> PeerMessages<D> {
     where
         I: IntoIterator<Item = Message>,
     {
-        self.inner.push_channel(channel, iter);
+        self.queue.push_channel(channel, iter);
     }
 
     /// Returns an iterator over channels, and their associated queues.
     #[inline]
     pub fn iter(&self) -> ChannelIter {
-        self.inner.iter()
+        self.queue.iter()
     }
 
     /// Returns an iterator over all messages in a specific channel.
     #[inline]
     pub fn iter_channel(&self, channel: ChannelId) -> MessageIter {
-        self.inner.iter_channel(channel)
+        self.queue.iter_channel(channel)
     }
 }
 
@@ -99,21 +85,23 @@ impl<'a, D: MessageDirection> IntoIterator for &'a PeerMessages<D> {
 
     #[inline]
     fn into_iter(self) -> Self::IntoIter {
-        self.inner.into_iter()
+        self.queue.into_iter()
     }
 }
 
 impl<D: MessageDirection> AsRef<MessageQueue> for PeerMessages<D> {
+    /// Borrows the inner [`MessageQueue`].
     #[inline]
     fn as_ref(&self) -> &MessageQueue {
-        self.inner()
+        &self.queue
     }
 }
 
 impl<D: MessageDirection> AsMut<MessageQueue> for PeerMessages<D> {
+    /// Mutably borrows the inner [`MessageQueue`].
     #[inline]
     fn as_mut(&mut self) -> &mut MessageQueue {
-        self.inner_mut()
+        &mut self.queue
     }
 }
 
@@ -121,6 +109,6 @@ pub(crate) fn clear_message_queues_system<D: MessageDirection>(
     mut instances: Query<&mut PeerMessages<D>, With<Peer>>,
 ) {
     for mut messages in instances.iter_mut() {
-        messages.inner.clear()
+        messages.queue.clear()
     }
 }

@@ -7,7 +7,7 @@ type IdxVec = SmallVec<[usize; 2]>;
 /// An efficient queue of messages, organised by channel.
 pub struct MessageQueue {
     messages: Vec<Message>,
-    index_map: HashMap<ChannelId, IdxVec>,
+    indexes: HashMap<ChannelId, IdxVec>,
 }
 
 impl MessageQueue {
@@ -15,7 +15,7 @@ impl MessageQueue {
     pub fn new() -> Self {
         Self {
             messages: Vec::new(),
-            index_map: HashMap::new(),
+            indexes: HashMap::new(),
         }
     }
 
@@ -27,7 +27,7 @@ impl MessageQueue {
         self.messages.clear();
 
         // Clear all indexes in the map
-        self.index_map
+        self.indexes
         .iter_mut()
         .for_each(|(_, v)| v.clear())
     }
@@ -48,7 +48,7 @@ impl MessageQueue {
         self.reserve(additional);
 
         // Reserve space in the index vector
-        self.index_map
+        self.indexes
         .entry(channel)
         .or_insert_with(|| SmallVec::new())
         .reserve(additional);
@@ -73,7 +73,7 @@ impl MessageQueue {
         self.messages.push(message.payload);
 
         // Add index to the map
-        self.index_map
+        self.indexes
         .entry(message.channel)
         .or_insert(IdxVec::with_capacity(1))
         .push(idx);
@@ -115,7 +115,7 @@ impl MessageQueue {
         };
 
         // Add index to the map
-        let indexes = self.index_map
+        let indexes = self.indexes
             .entry(channel)
             .or_insert(IdxVec::with_capacity(size));
 
@@ -135,13 +135,13 @@ impl MessageQueue {
     pub fn iter(&self) -> ChannelIter {
         ChannelIter {
             messages: &self.messages,
-            map_iter: self.index_map.iter(),
+            map_iter: self.indexes.iter(),
         }
     }
 
     /// Returns an iterator over all messages in a specific channel.
     pub fn iter_channel(&self, channel: ChannelId) -> MessageIter {
-        match self.index_map.get(&channel) {
+        match self.indexes.get(&channel) {
             // The index map exists, return a real MessageIter
             Some(indexes) => MessageIter {
                 messages: &self.messages,
