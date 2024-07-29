@@ -167,7 +167,9 @@ pub(crate) fn qsm_events_system(
                     },
                 },
 
-                bevy_stardust_quic::ConnectionEvent::TransmitDatagram(_) => todo!(),
+                bevy_stardust_quic::ConnectionEvent::TransmitDatagram(data) => {
+                    connection.quinn.datagrams().send(data, true).unwrap();
+                },
 
                 bevy_stardust_quic::ConnectionEvent::ReceivedMessage(_) => todo!(),
 
