@@ -53,29 +53,33 @@ impl Connection {
         };
 
         match config.consistency {
-            ChannelConsistency::UnreliableUnordered => self.handle_outgoing_inner(context, channel, iter.into_iter(), Self::handle_outgoing_unrel_unord),
-            ChannelConsistency::UnreliableSequenced => self.handle_outgoing_inner(context, channel, iter.into_iter(), Self::handle_outgoing_unrel_seq),
-            ChannelConsistency::ReliableUnordered => self.handle_outgoing_inner(context, channel, iter.into_iter(), Self::handle_outgoing_rel_unord),
-            ChannelConsistency::ReliableOrdered => self.handle_outgoing_inner(context, channel, iter.into_iter(), Self::handle_outgoing_rel_ord),
+            ChannelConsistency::UnreliableUnordered => {
+                for message in iter {
+                    self.handle_outgoing_unrel_unord(context, channel, message);
+                }
+            },
 
-            // We don't actually know what constraints new consistencies have, but reliable ordered is probably a good guess
-            _ => self.handle_outgoing_inner(context, channel, iter.into_iter(), Self::handle_outgoing_rel_ord),
-        }
-    }
+            ChannelConsistency::UnreliableSequenced => {
+                for message in iter {
+                    self.handle_outgoing_unrel_seq(context, channel, message);
+                }
+            },
 
-    #[inline]
-    fn handle_outgoing_inner<'a, I, F>(
-        &'a mut self,
-        context: SendContext<'a>,
-        channel: ChannelId,
-        iter: I,
-        func: F,
-    ) where
-        I: Iterator<Item = Message>,
-        F: for<'f> Fn(&'f mut Self, SendContext<'f>, ChannelId, Message),
-    {
-        for message in iter {
-            func(self, context, channel, message)
+            ChannelConsistency::ReliableUnordered => {
+                for message in iter {
+                    self.send_message_on_stream_and_close(channel, message);
+                }
+            },
+
+            ChannelConsistency::ReliableOrdered => {
+                self.send_messages_on_stream(channel, iter.into_iter());
+            },
+
+            // We don't actually know what constraints new consistencies have,
+            // but reliable ordered is probably a good guess
+            _ => {
+                self.send_messages_on_stream(channel, iter.into_iter());
+            }
         }
     }
 
@@ -108,23 +112,5 @@ impl Connection {
 
         // Send the datagram
         self.send_dgram_wrap_on_fail(context.dgram_max_size, header, message.into());
-    }
-
-    fn handle_outgoing_rel_unord<'a>(
-        &'a mut self,
-        _context: SendContext<'a>,
-        channel: ChannelId,
-        message: Message,
-    ) {
-        self.send_message_on_stream_and_close(channel, message);
-    }
-
-    fn handle_outgoing_rel_ord<'a>(
-        &'a mut self,
-        _context: SendContext<'a>,
-        channel: ChannelId,
-        message: Message,
-    ) {
-        self.send_message_on_stream(channel, message);
     }
 }
