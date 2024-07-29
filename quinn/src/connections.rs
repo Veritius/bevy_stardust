@@ -1,7 +1,7 @@
-use std::time::Instant;
+use std::{collections::BTreeMap, time::Instant};
 use bevy::prelude::*;
 use bevy_stardust_quic::{RecvStreamId, SendStreamId};
-use quinn_proto::{ConnectionEvent as QuinnConnectionEvent, ConnectionHandle, EndpointEvent, StreamId as QuinnStreamId};
+use quinn_proto::{ConnectionEvent as QuinnConnectionEvent, ConnectionHandle, Dir, EndpointEvent, StreamId as QuinnStreamId};
 
 /// A QUIC connection using `quinn_proto`.
 /// 
@@ -15,6 +15,9 @@ pub struct Connection {
 
     quinn: quinn_proto::Connection,
     qsm: bevy_stardust_quic::Connection,
+
+    qsids_to_ssids: BTreeMap<QuinnStreamId, SendStreamId>,
+    ssids_to_qsids: BTreeMap<SendStreamId, QuinnStreamId>,
 
     #[cfg(debug_assertions)]
     world: bevy::ecs::world::WorldId,
@@ -108,6 +111,67 @@ pub(crate) fn connection_events_system(
 
                 // We don't care about this event
                 quinn_proto::Event::HandshakeDataReady => {},
+            }
+        }
+    });
+}
+
+pub(crate) fn qsm_events_system(
+    mut connections: Query<&mut Connection>,
+) {
+    connections.par_iter_mut().for_each(|mut connection| {
+        // Reborrow Connection because borrowck gets angy with Mut<T>
+        let connection = &mut *connection;
+
+        let mut iter = connection.qsm.poll(Instant::now());
+
+        while let Some(event) = iter.next() {
+            match event {
+                bevy_stardust_quic::ConnectionEvent::StreamEvent(event) => match event {
+                    bevy_stardust_quic::StreamEvent::Open { id } => {
+                        // TODO: Handle the None case
+                        let sid = connection.quinn.streams().open(Dir::Uni).unwrap();
+                        connection.qsids_to_ssids.insert(sid, id);
+                        connection.ssids_to_qsids.insert(id, sid);
+                    },
+
+                    bevy_stardust_quic::StreamEvent::Transmit { id, chunk } => {
+                        let sid = *(connection.ssids_to_qsids.get(&id).unwrap());
+                        let mut stream = connection.quinn.send_stream(sid);
+
+                        todo!()
+                    },
+
+                    bevy_stardust_quic::StreamEvent::SetPriority { id, priority } => {
+                        let sid = *(connection.ssids_to_qsids.get(&id).unwrap());
+                        let mut stream = connection.quinn.send_stream(sid);
+                        let priority = (priority as i64) << 2i64.pow(32);
+                        stream.set_priority(priority.try_into().unwrap()).unwrap();
+                    },
+
+                    bevy_stardust_quic::StreamEvent::Reset { id } => {
+                        let sid = *(connection.ssids_to_qsids.get(&id).unwrap());
+                        let mut stream = connection.quinn.send_stream(sid);
+                        stream.reset(todo!()).unwrap();
+                    },
+
+                    bevy_stardust_quic::StreamEvent::Finish { id } => {
+                        let sid = *(connection.ssids_to_qsids.get(&id).unwrap());
+                        let mut stream = connection.quinn.send_stream(sid);
+                        stream.finish().unwrap();
+                    },
+
+                    bevy_stardust_quic::StreamEvent::Stop { id } => {
+                        let mut stream = connection.quinn.recv_stream(rsid_to_qsid(id));
+                        stream.stop(todo!()).unwrap();
+                    },
+                },
+
+                bevy_stardust_quic::ConnectionEvent::TransmitDatagram(_) => todo!(),
+
+                bevy_stardust_quic::ConnectionEvent::ReceivedMessage(_) => todo!(),
+
+                bevy_stardust_quic::ConnectionEvent::Overheated => todo!(),
             }
         }
     });
