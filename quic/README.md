@@ -1,7 +1,6 @@
 # bevy_stardust_quic
-A [sans-IO] wrapper that implements a statemachine for QUIC communication in `bevy_stardust` applications.
+A [sans-IO] protocol that sits between `bevy-stardust` and QUIC implementations, facilitating the exchange of Stardust messages. This protocol works regardless of the QUIC implementation.
 
-
-This crate doesn't actually add a plugin or a QUIC implementation. Instead, it just sits between `bevy_stardust` and a QUIC implementation like `quinn` or `quiche`, dealing with streams and datagrams and such, and outputting Stardust messages for the application.
+Since this crate does not implement QUIC, it's useless by itself. Instead, it's intended to be used by other crates as a dependency, which will deal with I/O and the QUIC protocol.
 
 [sans-IO]: https://sans-io.readthedocs.io/how-to-sans-io.html
