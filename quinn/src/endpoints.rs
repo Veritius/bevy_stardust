@@ -4,6 +4,9 @@ use quinn_proto::ConnectionHandle;
 use crate::connections::token::ConnectionOwnershipToken;
 
 /// A QUIC endpoint using `quinn_proto`.
+/// 
+/// # Safety
+/// This component must not be moved from the [`World`] it was originally added to.
 #[derive(Component)]
 pub struct Endpoint {
     /// The size of a buffer allocated to receive datagrams.

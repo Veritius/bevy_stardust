@@ -2,6 +2,9 @@ use bevy::prelude::*;
 use quinn_proto::{ConnectionHandle, ConnectionEvent as QuinnConnectionEvent};
 
 /// A QUIC connection using `quinn_proto`.
+/// 
+/// # Safety
+/// This component must not be moved from the [`World`] it was originally added to.
 #[derive(Component)]
 pub struct Connection {
     endpoint: Entity,
