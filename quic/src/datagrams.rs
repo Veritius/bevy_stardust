@@ -4,6 +4,16 @@ use bytes::{Buf, BufMut, Bytes};
 use crate::{Connection, ConnectionEvent};
 
 impl Connection {
+    /// Sets the max size of datagrams that will be output.
+    /// Fails if `size` is less than `1200`, which is below the QUIC minimum.
+    /// 
+    /// Defaults to `1200`, the QUIC minimum.
+    pub fn set_dgram_max_size(&mut self, size: usize) -> Result<(), ()> {
+        if size < 1200 { return Err(()) }
+        self.datagram_max_size = size;
+        return Ok(())
+    }
+
     /// Call when a datagram is received.
     pub fn recv_dgram(&mut self, mut payload: Bytes) {
         let header = match DatagramHeader::read(&mut payload) {
