@@ -1,5 +1,8 @@
+use std::time::Instant;
+
 use bevy::prelude::*;
-use quinn_proto::{ConnectionEvent as QuinnConnectionEvent, ConnectionHandle, EndpointEvent};
+use bevy_stardust_quic::{RecvStreamId, SendStreamId};
+use quinn_proto::{ConnectionEvent as QuinnConnectionEvent, ConnectionHandle, EndpointEvent, StreamId as QuinnStreamId};
 
 /// A QUIC connection using `quinn_proto`.
 /// 
@@ -23,9 +26,51 @@ impl Connection {
         self.quinn.handle_event(event);
     }
 
+    pub(crate) fn handle_timeout(&mut self) {
+        self.quinn.handle_timeout(Instant::now())
+    }
+
     pub(crate) fn poll_endpoint_events(&mut self) -> Option<EndpointEvent> {
         self.quinn.poll_endpoint_events()
     }
+}
+
+pub(crate) fn connection_events_system(
+    mut connections: Query<&mut Connection>,
+) {
+    connections.par_iter_mut().for_each(|mut connection| {
+        // Timeouts can produce additional events
+        connection.handle_timeout();
+
+        // Poll until we run out of events
+        while let Some(event) = connection.quinn.poll() {
+            match event {
+                quinn_proto::Event::Stream(event) => match event {
+                    quinn_proto::StreamEvent::Opened { dir } => {
+                        let id = connection.quinn.streams().accept(dir)
+                            .expect("The Opened stream event was raised, but there were no streams to accept");
+
+                        todo!()
+                    },
+
+                    quinn_proto::StreamEvent::Readable { id } => todo!(),
+                    quinn_proto::StreamEvent::Writable { id } => todo!(),
+                    quinn_proto::StreamEvent::Finished { id } => todo!(),
+                    quinn_proto::StreamEvent::Stopped { id, error_code } => todo!(),
+                    quinn_proto::StreamEvent::Available { dir } => todo!(),
+                },
+
+                quinn_proto::Event::Connected => todo!(),
+                quinn_proto::Event::ConnectionLost { reason } => todo!(),
+
+                quinn_proto::Event::DatagramReceived => todo!(),
+                quinn_proto::Event::DatagramsUnblocked => todo!(),
+
+                // We don't care about this event
+                quinn_proto::Event::HandshakeDataReady => {},
+            }
+        }
+    });
 }
 
 #[cfg(debug_assertions)]
@@ -37,6 +82,26 @@ pub(crate) fn safety_check_system(
         assert_eq!(connection.world, world,
             "A Connection had a world ID different from the one it was created in. This is undefined behavior!");
     }
+}
+
+#[inline]
+fn qsid_to_rsid(id: QuinnStreamId) -> RecvStreamId {
+    RecvStreamId(id.0)
+}
+
+#[inline]
+fn qsid_to_ssid(id: QuinnStreamId) -> SendStreamId {
+    SendStreamId(id.0)
+}
+
+#[inline]
+fn rsid_to_qsid(id: RecvStreamId) -> QuinnStreamId {
+    QuinnStreamId(id.0)
+}
+
+#[inline]
+fn ssid_to_qsid(id: SendStreamId) -> QuinnStreamId {
+    QuinnStreamId(id.0)
 }
 
 pub(crate) mod token {

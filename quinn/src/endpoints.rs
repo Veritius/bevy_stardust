@@ -124,6 +124,10 @@ pub(crate) fn event_exchange_system(
 
         // Exchange events
         for (handle, mut connection) in iter {
+            // Timeouts can produce additional events
+            connection.handle_timeout();
+
+            // Poll until we run out of events
             while let Some(event) = connection.poll_endpoint_events() {
                 if let Some(event) = quinn.handle_event(handle, event) {
                     connection.handle_event(event);
