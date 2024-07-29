@@ -86,10 +86,18 @@ pub(crate) fn connection_events_system(
 
                     quinn_proto::StreamEvent::Finished { id } => {
                         connection.qsm.stream_finished(qsid_to_rsid(id));
+
+                        if let Some(ssid) = connection.qsids_to_ssids.remove(&id) {
+                            connection.ssids_to_qsids.remove(&ssid);
+                        }
                     },
 
                     quinn_proto::StreamEvent::Stopped { id, error_code: _ } => {
                         connection.qsm.stream_stopped(qsid_to_ssid(id));
+
+                        if let Some(ssid) = connection.qsids_to_ssids.remove(&id) {
+                            connection.ssids_to_qsids.remove(&ssid);
+                        }
                     },
 
                     quinn_proto::StreamEvent::Writable { id } => {
