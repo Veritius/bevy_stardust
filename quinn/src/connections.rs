@@ -114,7 +114,7 @@ impl ConnectionInner {
             match queue.write(&mut stream) {
                 // The queue is fully drained, remove it
                 Ok(true) => {
-                    self.stream_write_queues.remove(&qsid);
+                    self.discard_stream_write_queue(qsid);
                 },
 
                 // The queue is not finished, leave it
@@ -124,6 +124,28 @@ impl ConnectionInner {
                 Err(_) => todo!(),
             }
         }
+    }
+
+    fn try_drain_stream_queue(&mut self, qsid: QuinnStreamId) {
+        let mut stream = self.quinn.send_stream(qsid);
+        if let Some(queue) = self.stream_write_queues.get_mut(&qsid) {
+            match queue.write(&mut stream) {
+                // The queue is fully drained, remove it
+                Ok(true) => {
+                    self.discard_stream_write_queue(qsid);
+                },
+
+                // The queue is not finished, leave it
+                Ok(false) => {},
+
+                // The stream returned an error while trying to write to it
+                Err(_) => todo!(),
+            }
+        }
+    }
+
+    fn discard_stream_write_queue(&mut self, qsid: QuinnStreamId) {
+        self.stream_write_queues.remove(&qsid);
     }
 }
 
@@ -173,7 +195,7 @@ pub(crate) fn connection_events_system(
                     },
 
                     quinn_proto::StreamEvent::Writable { id } => {
-                        todo!()
+                        connection.try_drain_stream_queue(id);
                     },
 
                     quinn_proto::StreamEvent::Available { dir: _ } => {},
