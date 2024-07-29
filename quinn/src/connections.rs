@@ -42,12 +42,16 @@ pub(crate) fn connection_events_system(
         // Timeouts can produce additional events
         connection.handle_timeout();
 
+        // Reborrows because borrowck
+        let connection = &mut *connection;
+        let quinn = &mut connection.quinn;
+
         // Poll until we run out of events
-        while let Some(event) = connection.quinn.poll() {
+        while let Some(event) = quinn.poll() {
             match event {
                 quinn_proto::Event::Stream(event) => match event {
                     quinn_proto::StreamEvent::Opened { dir } => {
-                        let id = connection.quinn.streams().accept(dir)
+                        let id = quinn.streams().accept(dir)
                             .expect("The Opened stream event was raised, but there were no streams to accept");
 
                         todo!()
