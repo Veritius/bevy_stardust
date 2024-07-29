@@ -234,7 +234,6 @@ pub(crate) mod token {
     use super::*;
 
     #[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
-    #[repr(transparent)]
     pub(crate) struct ConnectionOwnershipToken(Entity);
 
     impl ConnectionOwnershipToken {
