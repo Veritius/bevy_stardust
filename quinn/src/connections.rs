@@ -2,7 +2,6 @@ use std::{collections::BTreeMap, time::Instant};
 use bevy::{ecs::component::{ComponentHooks, StorageType}, prelude::*};
 use bevy_stardust_quic::{RecvStreamId, SendStreamId};
 use quinn_proto::{ConnectionEvent as QuinnConnectionEvent, ConnectionHandle, Dir, EndpointEvent, StreamId as QuinnStreamId};
-
 use crate::Endpoint;
 
 /// A QUIC connection using `quinn_proto`.
@@ -11,6 +10,42 @@ use crate::Endpoint;
 /// A [`Connection`] component being removed from the [`World`] it was created in,
 /// then being added to a different [`World`], is undefined behavior.
 pub struct Connection {
+    inner: Box<ConnectionInner>,
+}
+
+impl Component for Connection {
+    const STORAGE_TYPE: StorageType = StorageType::Table;
+
+    fn register_component_hooks(hooks: &mut ComponentHooks) {
+        hooks.on_remove(|mut world, entity, _| {
+            // Get the component from the world
+            let this = &*world.get::<Connection>(entity).unwrap().inner;
+
+            // Check if the component is drained
+            if !this.quinn.is_drained() {
+                warn!("Connection {entity} was dropped while not fully drained");
+            }
+
+            // Inform the endpoint of the connection being dropped
+            let (endpoint, handle) = (this.endpoint, this.handle);
+            if let Some(mut endpoint) = world.get_mut::<Endpoint>(endpoint) {
+                endpoint.remove_connection(handle);
+            }
+        });
+    }
+}
+
+impl Connection {
+    pub(crate) fn inner(&self) -> &ConnectionInner {
+        &self.inner
+    }
+
+    pub(crate) fn inner_mut(&mut self) -> &mut ConnectionInner {
+        &mut self.inner
+    }
+}
+
+pub(crate) struct ConnectionInner {
     endpoint: Entity,
 
     handle: ConnectionHandle,
@@ -25,7 +60,7 @@ pub struct Connection {
     world: bevy::ecs::world::WorldId,
 }
 
-impl Connection {
+impl ConnectionInner {
     pub(crate) fn handle_event(&mut self, event: QuinnConnectionEvent) {
         self.quinn.handle_event(event);
     }
@@ -60,32 +95,12 @@ impl Connection {
     }
 }
 
-impl Component for Connection {
-    const STORAGE_TYPE: StorageType = StorageType::Table;
-
-    fn register_component_hooks(hooks: &mut ComponentHooks) {
-        hooks.on_remove(|mut world, entity, _| {
-            // Get the component from the world
-            let this = world.get::<Connection>(entity).unwrap();
-
-            // Check if the component is drained
-            if !this.quinn.is_drained() {
-                warn!("Connection {entity} was dropped while not fully drained");
-            }
-
-            // Inform the endpoint of the connection being dropped
-            let (endpoint, handle) = (this.endpoint, this.handle);
-            if let Some(mut endpoint) = world.get_mut::<Endpoint>(endpoint) {
-                endpoint.remove_connection(handle);
-            }
-        });
-    }
-}
-
 pub(crate) fn connection_events_system(
     mut connections: Query<&mut Connection>,
 ) {
     connections.par_iter_mut().for_each(|mut connection| {
+        let connection = &mut *connection.inner;
+
         // Timeouts can produce additional events
         connection.handle_timeout();
 
@@ -153,7 +168,7 @@ pub(crate) fn qsm_events_system(
 ) {
     connections.par_iter_mut().for_each(|mut connection| {
         // Reborrow Connection because borrowck gets angy with Mut<T>
-        let connection = &mut *connection;
+        let connection = &mut *connection.inner;
 
         let mut iter = connection.qsm.poll(Instant::now());
 
@@ -280,7 +295,7 @@ pub(crate) fn safety_check_system(
     connections: Query<&Connection>,
 ) {
     for connection in &connections {
-        assert_eq!(connection.world, world,
+        assert_eq!(connection.inner.world, world,
             "A Connection had a world ID different from the one it was created in. This is undefined behavior!");
     }
 }
