@@ -96,11 +96,15 @@ pub(crate) fn connection_events_system(
                     quinn_proto::StreamEvent::Available { dir: _ } => {},
                 },
 
+                quinn_proto::Event::DatagramReceived => {
+                    let payload = connection.quinn.datagrams().recv().unwrap();
+                    connection.qsm.recv_dgram(payload);
+                },
+
+                quinn_proto::Event::DatagramsUnblocked => todo!(),
+
                 quinn_proto::Event::Connected => todo!(),
                 quinn_proto::Event::ConnectionLost { reason } => todo!(),
-
-                quinn_proto::Event::DatagramReceived => todo!(),
-                quinn_proto::Event::DatagramsUnblocked => todo!(),
 
                 // We don't care about this event
                 quinn_proto::Event::HandshakeDataReady => {},
