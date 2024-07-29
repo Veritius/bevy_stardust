@@ -217,7 +217,7 @@ pub(crate) fn qsm_events_system(
 
                     bevy_stardust_quic::StreamEvent::Transmit { id, chunk } => {
                         let qsid = *(connection.ssids_to_qsids.get(&id).unwrap());
-                        connection.drain_quinn_recv_stream(qsid);
+                        connection.stream_queue_chunk(qsid, chunk);
                     },
 
                     bevy_stardust_quic::StreamEvent::SetPriority { id, priority } => {
