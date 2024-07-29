@@ -12,6 +12,8 @@ impl Plugin for QuinnPlugin {
         app.add_systems(PreUpdate, (
             crate::endpoints::udp_recv_system,
             crate::endpoints::event_exchange_system,
+            crate::connections::connection_events_system,
+            crate::connections::qsm_events_system,
         ).chain().in_set(NetworkRecv::Receive));
 
         #[cfg(debug_assertions)] {
