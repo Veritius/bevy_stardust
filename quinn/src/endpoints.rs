@@ -35,13 +35,10 @@ impl Endpoint {
 
 #[cfg(debug_assertions)]
 pub(crate) fn safety_check_system(
+    mut tokens: Local<std::collections::BTreeSet<Entity>>,
     world: bevy::ecs::world::WorldId,
     endpoints: Query<&Endpoint>,
 ) {
-    use std::collections::BTreeSet;
-
-    let mut tokens = BTreeSet::new();
-
     for endpoint in &endpoints {
         assert_eq!(endpoint.world, world,
             "An Endpoint had a world ID different from the one it was created in. This is undefined behavior!");
@@ -51,4 +48,6 @@ pub(crate) fn safety_check_system(
                 "Two ConnectionOwnershipTokens existed simultaneously. This is undefined behavior!");
         }
     }
+
+    tokens.clear();
 }
