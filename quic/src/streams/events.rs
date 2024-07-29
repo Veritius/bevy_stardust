@@ -1,9 +1,19 @@
 use bevy_stardust::prelude::*;
 use super::{RecvStreamId, SendStreamId};
 
-/// A stream-related event.
+/// An event used by the state machine to control QUIC streams.
 pub enum StreamEvent {
+    /// Open a new stream.
+    /// 
+    /// This is always sent before `Transmit`.
+    Open {
+        /// The stream that is opened.
+        id: SendStreamId,
+    },
+
     /// Send a chunk of data over a stream.
+    /// 
+    /// Only occurs after an `Open` event with the same `id` is sent.
     Transmit {
         /// The stream to send over.
         id: SendStreamId,
