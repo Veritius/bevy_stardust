@@ -1,9 +1,12 @@
 use bevy::prelude::*;
+use quinn_proto::ConnectionHandle;
 
 /// A QUIC connection using `quinn_proto`.
 #[derive(Component)]
 pub struct Connection {
     endpoint: Entity,
+
+    handle: ConnectionHandle,
 
     quinn: quinn_proto::Connection,
     qsm: bevy_stardust_quic::Connection,
