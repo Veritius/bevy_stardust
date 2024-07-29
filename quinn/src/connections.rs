@@ -70,7 +70,11 @@ pub(crate) fn connection_events_system(
                         let id = connection.quinn.streams().accept(dir)
                             .expect("The Opened stream event was raised, but there were no streams to accept");
 
-                        todo!()
+                        // Inform the state machine that a new stream was opened
+                        connection.qsm.stream_opened(qsid_to_rsid(id));
+
+                        // Try to read the stream immediately
+                        connection.drain_quinn_recv_stream(id);
                     },
 
                     quinn_proto::StreamEvent::Readable { id } => {
