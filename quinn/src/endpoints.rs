@@ -39,7 +39,7 @@ impl Endpoint {
 
 pub(crate) fn udp_recv_system(
     mut endpoints: Query<&mut Endpoint>,
-    mut connections: Query<&mut Connection>,
+    connections: Query<&mut Connection>,
 ) {
     endpoints.par_iter_mut().for_each(|mut endpoint| {
         // Buffer for I/O operations
