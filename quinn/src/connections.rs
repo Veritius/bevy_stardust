@@ -2,7 +2,7 @@ use std::{collections::BTreeMap, time::Instant};
 use bevy::{ecs::component::{ComponentHooks, StorageType}, prelude::*};
 use bevy_stardust::prelude::*;
 use bevy_stardust_quic::{RecvStreamId, SendContext, SendStreamId};
-use quinn_proto::{ConnectionEvent as QuinnConnectionEvent, ConnectionHandle, Dir, EndpointEvent, StreamId as QuinnStreamId};
+use quinn_proto::{ConnectionEvent as QuinnConnectionEvent, ConnectionHandle, Dir, EndpointEvent, StreamId as QuinnStreamId, Transmit};
 use crate::Endpoint;
 
 /// A QUIC connection using `quinn_proto`.
@@ -50,6 +50,17 @@ impl Connection {
 
     pub(crate) fn poll_endpoint_events(&mut self) -> Option<EndpointEvent> {
         self.inner.quinn.poll_endpoint_events()
+    }
+
+    pub(crate) fn poll_transmit(
+        &mut self,
+        buf: &mut Vec<u8>,
+    ) -> Option<Transmit> {
+        self.inner.quinn.poll_transmit(
+            Instant::now(),
+            1,
+            buf,
+        )
     }
 }
 

@@ -12,7 +12,7 @@ use crate::{connections::token::ConnectionOwnershipToken, Connection};
 #[derive(Component, Reflect)]
 #[reflect(from_reflect=false, Component)]
 pub struct Endpoint {
-    /// The size of a buffer allocated to receive datagrams.
+    /// The size of the buffer allocated to receive datagrams.
     /// Higher values allow remote peers to send data more efficiently.
     /// 
     /// The amount of space allocated, in bytes, is equal to the value of this field.
@@ -21,6 +21,16 @@ pub struct Endpoint {
     /// Most operating systems also do not buffer UDP datagrams bigger than `65535` bytes,
     /// so setting this field that high may simply waste memory, depending on the operating system.
     pub recv_buf_size: u16,
+
+    /// The size of the buffer allocated to transmit datagrams.
+    /// Higher values allow more efficient transmission of information.
+    /// 
+    /// The amount of space allocated, in bytes, is equal to the value of this field.
+    /// 
+    /// If this is set to below `1280`, QUIC packets may be cut off and become unreadable.
+    /// Most operating systems also do not buffer UDP datagrams bigger than `65535` bytes,
+    /// so setting this field that high may simply waste memory, depending on the operating system.
+    pub send_buf_size: u16,
 
     #[reflect(ignore)]
     inner: Box<ConnectionInner>,
@@ -125,7 +135,35 @@ pub(crate) fn udp_send_system(
     connections: Query<&mut Connection>,
 ) {
     endpoints.par_iter_mut().for_each(|mut endpoint| {
-        todo!()
+        // Buffer for I/O operations
+        debug_assert!(endpoint.send_buf_size < 1280, "Transmit buffer was too small");
+        let mut buf = vec![0u8; endpoint.send_buf_size as usize];
+
+        // Reborrows because borrowck angy
+        let endpoint = &mut *endpoint;
+
+        // Iterator over all connections the endpoint 'owns'
+        let iter = endpoint.inner.connections.iter()
+            .map(|(_, token)| {
+                // SAFETY: We know this borrow is unique because ConnectionOwnershipToken is unique
+                unsafe { connections.get_unchecked(token.inner()).unwrap() }
+            });
+
+        // Iterate over connections
+        for mut connection in iter {
+            // Get as many datagrams as possible
+            while let Some(transmit) = connection.poll_transmit(&mut buf) {
+                match endpoint.inner.socket.send_to(
+                    &buf[..transmit.size],
+                    transmit.destination,
+                ) {
+                    // Success: do nothing
+                    Ok(_) => {},
+
+                    Err(_) => todo!(),
+                }
+            }
+        }
     });
 }
 
