@@ -35,7 +35,8 @@ impl<D: MessageDirection> PeerMessages<D> {
     }
 
     /// Mutably borrows the internal [`MessageQueue`].
-    /// This **must not** be used to clear the queue, or data will be lost.
+    /// 
+    /// This should not be used to clear the queue, as this could cause data loss.
     #[inline]
     pub fn inner_mut(&mut self) -> &mut MessageQueue {
         &mut self.inner
@@ -99,6 +100,20 @@ impl<'a, D: MessageDirection> IntoIterator for &'a PeerMessages<D> {
     #[inline]
     fn into_iter(self) -> Self::IntoIter {
         self.inner.into_iter()
+    }
+}
+
+impl<D: MessageDirection> AsRef<MessageQueue> for PeerMessages<D> {
+    #[inline]
+    fn as_ref(&self) -> &MessageQueue {
+        self.inner()
+    }
+}
+
+impl<D: MessageDirection> AsMut<MessageQueue> for PeerMessages<D> {
+    #[inline]
+    fn as_mut(&mut self) -> &mut MessageQueue {
+        self.inner_mut()
     }
 }
 
