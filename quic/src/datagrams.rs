@@ -13,7 +13,7 @@ impl Connection {
 
         match header {
             DatagramHeader::Stardust { channel } => {
-                self.events.push_back(ConnectionEvent::ReceivedMessage(ChannelMessage {
+                self.events.push(ConnectionEvent::ReceivedMessage(ChannelMessage {
                     channel,
                     payload: Message::from_bytes(payload),
                 }));
@@ -24,7 +24,7 @@ impl Connection {
                     .or_insert_with(|| IncomingDatagramSequence::new());
 
                 if seq.latest(sequence) {
-                    self.events.push_back(ConnectionEvent::ReceivedMessage(ChannelMessage {
+                    self.events.push(ConnectionEvent::ReceivedMessage(ChannelMessage {
                         channel,
                         payload: Message::from_bytes(payload),
                     }));
@@ -63,7 +63,7 @@ impl Connection {
         debug_assert_eq!(size, newbuf.len());
 
         // Queue the datagram for transmission by the QUIC implementation
-        self.events.push_back(crate::ConnectionEvent::TransmitDatagram(newbuf.freeze()));
+        self.events.push(crate::ConnectionEvent::TransmitDatagram(newbuf.freeze()));
 
         // Success
         return true;

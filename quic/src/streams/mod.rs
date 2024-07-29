@@ -33,7 +33,7 @@ impl Connection {
     }
 
     fn stream_event(&mut self, event: StreamEvent) {
-        self.events.push_back(ConnectionEvent::StreamEvent(event));
+        self.events.push(ConnectionEvent::StreamEvent(event));
     }
 }
 
