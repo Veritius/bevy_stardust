@@ -121,10 +121,10 @@ impl Connection {
 
     fn handle_outgoing_rel_ord<'a>(
         &'a mut self,
-        context: SendContext<'a>,
+        _context: SendContext<'a>,
         channel: ChannelId,
         message: Message,
     ) {
-        todo!()
+        self.send_message_on_stream(channel, message);
     }
 }

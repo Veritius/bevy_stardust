@@ -18,15 +18,23 @@ impl OutgoingStreamsState {
 }
 
 impl Connection {
-    pub(crate) fn send_message_on_stream<I>(&mut self, channel: ChannelId, message: Message) {
-        todo!()
+    pub(crate) fn send_message_on_stream(&mut self, channel: ChannelId, message: Message) {
+        let id = self.get_or_create_channel_stream(channel);
+
+        self.send_over_stream(id, StreamHeader::Stardust { channel }.alloc());
+
+        self.send_over_stream(id, message.into());
     }
 
     pub(crate) fn send_messages_on_stream<I>(&mut self, channel: ChannelId, iter: I)
     where
         I: Iterator<Item = Message>,
     {
-        todo!()
+        let id = self.get_or_create_channel_stream(channel);
+
+        for message in iter {
+            self.send_over_stream(id, message.into());
+        }
     }
 
     #[inline]
@@ -83,5 +91,16 @@ impl Connection {
         }
 
         self.finish_stream_inner(id);
+    }
+
+    fn get_or_create_channel_stream(&mut self, channel: ChannelId) -> SendStreamId {
+        match self.outgoing_channel_stream_ids.get(&channel) {
+            Some(id) => return *id,
+            None => {
+                let id = self.open_stream_inner();
+                self.outgoing_channel_stream_ids.insert(channel, id);
+                return id;
+            },
+        }
     }
 }
