@@ -36,16 +36,20 @@ impl Component for Connection {
 }
 
 impl Connection {
-    pub(crate) fn inner(&self) -> &ConnectionInner {
-        &self.inner
+    pub(crate) fn handle_event(&mut self, event: QuinnConnectionEvent) {
+        self.inner.quinn.handle_event(event);
     }
 
-    pub(crate) fn inner_mut(&mut self) -> &mut ConnectionInner {
-        &mut self.inner
+    pub(crate) fn handle_timeout(&mut self) {
+        self.inner.quinn.handle_timeout(Instant::now())
+    }
+
+    pub(crate) fn poll_endpoint_events(&mut self) -> Option<EndpointEvent> {
+        self.inner.quinn.poll_endpoint_events()
     }
 }
 
-pub(crate) struct ConnectionInner {
+struct ConnectionInner {
     endpoint: Entity,
 
     handle: ConnectionHandle,
@@ -61,18 +65,6 @@ pub(crate) struct ConnectionInner {
 }
 
 impl ConnectionInner {
-    pub(crate) fn handle_event(&mut self, event: QuinnConnectionEvent) {
-        self.quinn.handle_event(event);
-    }
-
-    pub(crate) fn handle_timeout(&mut self) {
-        self.quinn.handle_timeout(Instant::now())
-    }
-
-    pub(crate) fn poll_endpoint_events(&mut self) -> Option<EndpointEvent> {
-        self.quinn.poll_endpoint_events()
-    }
-
     fn drain_quinn_recv_stream(&mut self, id: QuinnStreamId) {
         match self.quinn.recv_stream(id).read(true) {
             Ok(mut chunks) => {
@@ -99,10 +91,11 @@ pub(crate) fn connection_events_system(
     mut connections: Query<&mut Connection>,
 ) {
     connections.par_iter_mut().for_each(|mut connection| {
-        let connection = &mut *connection.inner;
-
         // Timeouts can produce additional events
         connection.handle_timeout();
+
+        // Borrow the inner connection state
+        let connection = &mut *connection.inner;
 
         // Poll until we run out of events
         while let Some(event) = connection.quinn.poll() {

@@ -93,7 +93,7 @@ pub(crate) fn udp_recv_system(
                                 };
 
                                 // Handle the event
-                                connection.inner_mut().handle_event(event);
+                                connection.handle_event(event);
                             },
 
                             // A new connection can potentially be established
@@ -136,9 +136,6 @@ pub(crate) fn event_exchange_system(
 
         // Exchange events
         for (handle, mut connection) in iter {
-            // Get access to the inner connection
-            let connection = connection.inner_mut();
-            
             // Timeouts can produce additional events
             connection.handle_timeout();
 
