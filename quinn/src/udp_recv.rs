@@ -18,18 +18,17 @@ pub(crate) fn udp_recv_system(
         loop {
             match endpoint.socket.recv_from(&mut buf) {
                 Ok((length, address)) => {
-                    // More logging stuff
+                    // Log the datagram being received
                     let trace_span = trace_span!("Received datagram", length, address=?address);
                     let _entered = trace_span.entered();
 
-                    let slice = &buf[..length];
-
+                    // Hand the datagram to Quinn
                     match endpoint.quinn.handle(
                         Instant::now(),
                         address,
                         Some(local_ip),
                         None, // TODO
-                        BytesMut::from(slice),
+                        BytesMut::from(&buf[..length]),
                         &mut buf,
                     ) {
                         Some(_) => todo!(),
