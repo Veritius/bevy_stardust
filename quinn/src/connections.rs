@@ -4,15 +4,15 @@ use quinn_proto::ConnectionHandle;
 /// A QUIC connection using `quinn_proto`.
 #[derive(Component)]
 pub struct Connection {
-    #[cfg(debug_assertions)]
-    world: bevy::ecs::world::WorldId,
-
     endpoint: Entity,
 
     handle: ConnectionHandle,
 
     quinn: quinn_proto::Connection,
     qsm: bevy_stardust_quic::Connection,
+
+    #[cfg(debug_assertions)]
+    world: bevy::ecs::world::WorldId,
 }
 
 #[cfg(debug_assertions)]
@@ -22,7 +22,7 @@ pub(crate) fn safety_check_system(
 ) {
     for connection in &connections {
         assert_eq!(connection.world, world,
-            "A Connection had a world ID different from the one it existed in. This is undefined behavior!");
+            "A Connection had a world ID different from the one it was created in. This is undefined behavior!");
     }
 }
 

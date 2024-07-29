@@ -21,6 +21,9 @@ pub struct Endpoint {
     pub(crate) quinn: quinn_proto::Endpoint,
 
     connections: BTreeMap<ConnectionHandle, ConnectionOwnershipToken>,
+
+    #[cfg(debug_assertions)]
+    world: bevy::ecs::world::WorldId,
 }
 
 impl Endpoint {
@@ -32,6 +35,7 @@ impl Endpoint {
 
 #[cfg(debug_assertions)]
 pub(crate) fn safety_check_system(
+    world: bevy::ecs::world::WorldId,
     endpoints: Query<&Endpoint>,
 ) {
     use std::collections::BTreeSet;
@@ -39,6 +43,9 @@ pub(crate) fn safety_check_system(
     let mut tokens = BTreeSet::new();
 
     for endpoint in &endpoints {
+        assert_eq!(endpoint.world, world,
+            "An Endpoint had a world ID different from the one it was created in. This is undefined behavior!");
+
         for connection in endpoint.connections.values() {
             assert!(!tokens.insert(connection.inner()), 
                 "Two ConnectionOwnershipTokens existed simultaneously. This is undefined behavior!");
