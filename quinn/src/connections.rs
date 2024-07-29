@@ -283,7 +283,7 @@ impl StreamWriteQueue {
     }
 
     fn push(&mut self, chunk: Bytes) {
-        todo!()
+        self.queue.push_back(chunk);
     }
 
     fn write(&mut self, stream: &mut SendStream) -> Result<bool, WriteError> {
