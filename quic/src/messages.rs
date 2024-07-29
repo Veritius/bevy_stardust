@@ -52,21 +52,61 @@ impl Connection {
             None => todo!(),
         };
 
-        for message in iter {
-            self.handle_outgoing_inner(
-                context,
-                config,
-                message,
-            );
+        match config.consistency {
+            ChannelConsistency::UnreliableUnordered => self.handle_outgoing_inner(context, iter.into_iter(), Self::handle_outgoing_unrel_unord),
+            ChannelConsistency::UnreliableSequenced => self.handle_outgoing_inner(context, iter.into_iter(), Self::handle_outgoing_unrel_seq),
+            ChannelConsistency::ReliableUnordered => self.handle_outgoing_inner(context, iter.into_iter(), Self::handle_outgoing_rel_unord),
+            ChannelConsistency::ReliableOrdered => self.handle_outgoing_inner(context, iter.into_iter(), Self::handle_outgoing_rel_ord),
+
+            // We don't actually know what constraints new consistencies have, but reliable ordered is probably a good guess
+            _ => self.handle_outgoing_inner(context, iter.into_iter(), Self::handle_outgoing_rel_ord),
         }
     }
 
-    fn handle_outgoing_inner<'a>(
+    #[inline]
+    fn handle_outgoing_inner<'a, I, F>(
         &'a mut self,
         context: SendContext<'a>,
-        config: &'a ChannelConfiguration,
+        iter: I,
+        func: F,
+    ) where
+        I: Iterator<Item = Message>,
+        F: for<'f> Fn(&'f mut Self, SendContext<'f>, Message),
+    {
+        for message in iter {
+            func(self, context, message)
+        }
+    }
+
+    fn handle_outgoing_unrel_unord<'a>(
+        &'a mut self,
+        context: SendContext<'a>,
         message: Message,
     ) {
+        todo!()
+    }
 
+    fn handle_outgoing_unrel_seq<'a>(
+        &'a mut self,
+        context: SendContext<'a>,
+        message: Message,
+    ) {
+        todo!()
+    }
+
+    fn handle_outgoing_rel_unord<'a>(
+        &'a mut self,
+        context: SendContext<'a>,
+        message: Message,
+    ) {
+        todo!()
+    }
+
+    fn handle_outgoing_rel_ord<'a>(
+        &'a mut self,
+        context: SendContext<'a>,
+        message: Message,
+    ) {
+        todo!()
     }
 }
