@@ -9,12 +9,16 @@ pub struct RecvContext<'a> {
 
 impl Connection {
     /// Handle outgoing messages from a [`PeerMessages<Outgoing>`] component.
+    #[inline]
     pub fn handle_outgoing<'a>(
         &'a mut self,
         context: RecvContext<'a>,
         queue: PeerMessages<Outgoing>,
     ) {
-        todo!()
+        self.handle_outgoing_queue(
+            context,
+            queue.as_ref()
+        )
     }
 
     /// Handles outgoing messages from a [`MessageQueue`].
