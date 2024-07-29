@@ -143,8 +143,8 @@ pub(crate) fn udp_send_system(
         let endpoint = &mut *endpoint;
 
         // Iterator over all connections the endpoint 'owns'
-        let iter = endpoint.inner.connections.iter()
-            .map(|(_, token)| {
+        let iter = endpoint.inner.connections.values()
+            .map(|token| {
                 // SAFETY: We know this borrow is unique because ConnectionOwnershipToken is unique
                 unsafe { connections.get_unchecked(token.inner()).unwrap() }
             });
