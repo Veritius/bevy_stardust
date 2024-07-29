@@ -41,7 +41,8 @@ impl Connection {
         self.last = now;
 
         if self.heat.is_overheated() {
-            todo!()
+            self.events = ConnectionEventQueue::with_capacity(1);
+            self.events.push(crate::ConnectionEvent::Overheated);
         }
 
         ConnectionEventIter::new(&mut self.events)
@@ -68,7 +69,7 @@ impl Heat {
         self.value -= cooling;
     }
 
-    fn is_overheated(&self) -> bool {
+    pub fn is_overheated(&self) -> bool {
         self.value >= Self::LIMIT
     }
 

@@ -5,6 +5,10 @@ use crate::StreamEvent;
 
 /// An event sent by the connection state machine.
 pub enum ConnectionEvent {
+    /// Returned when the remote connection behaved strangely,
+    /// and that the connection must be closed.
+    Overheated,
+
     /// A message was received.
     ReceivedMessage(ChannelMessage),
 
@@ -20,9 +24,14 @@ pub(crate) struct ConnectionEventQueue {
 }
 
 impl ConnectionEventQueue {
+    #[inline]
     pub fn new() -> Self {
+        Self::with_capacity(0)
+    }
+
+    pub fn with_capacity(cap: usize) -> Self {
         Self {
-            events: VecDeque::new(),
+            events: VecDeque::with_capacity(cap)
         }
     }
 
