@@ -1,6 +1,6 @@
 use bevy_stardust::prelude::*;
 use bevy_stardust_extras::numbers::VarInt;
-use bytes::{Buf, BufMut};
+use bytes::{Buf, BufMut, BytesMut};
 
 #[derive(Debug, Clone, Copy)]
 pub(super) enum StreamHeader {
@@ -45,5 +45,11 @@ impl StreamHeader {
         }
 
         return Ok(());
+    }
+
+    pub fn alloc(&self) -> Bytes {
+        let mut buf = BytesMut::with_capacity(8);
+        self.write(&mut buf);
+        return buf.freeze();
     }
 }

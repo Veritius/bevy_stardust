@@ -2,10 +2,12 @@ mod events;
 mod framing;
 mod header;
 mod incoming;
+mod outgoing;
 
-use crate::Connection;
+use crate::{Connection, ConnectionEvent};
 
 pub(crate) use incoming::IncomingStream;
+pub(crate) use outgoing::OutgoingStreamsState;
 
 pub use events::StreamEvent;
 
@@ -28,6 +30,10 @@ impl Connection {
     /// Call when a stream is stopped.
     pub fn stream_stopped(&mut self, stream: SendStreamId) {
         todo!()
+    }
+
+    fn stream_event(&mut self, event: StreamEvent) {
+        self.events.push_back(ConnectionEvent::StreamEvent(event));
     }
 }
 
