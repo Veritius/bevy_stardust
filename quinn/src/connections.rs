@@ -341,6 +341,13 @@ impl StreamWriteQueue {
         if let Some(chunk) = self.queue.pop_front() {
             // Try to write
             match stream.write(&chunk[..]) {
+                // No writing was possible due to congestion
+                Err(WriteError::Blocked) => {
+                    // Put the item back into the queue
+                    self.queue.push_front(chunk);
+                    return Ok(false);
+                }
+
                 // Chunk was fully written
                 Ok(l) if l == chunk.len() => {
                     // Return whether or not the queue is drained
