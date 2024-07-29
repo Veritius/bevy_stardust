@@ -93,17 +93,6 @@ fn ssid_to_qsid(id: SendStreamId) -> QuinnStreamId {
     QuinnStreamId(id.0)
 }
 
-#[cfg(debug_assertions)]
-pub(crate) fn safety_check_system(
-    world: bevy::ecs::world::WorldId,
-    connections: Query<&Connection>,
-) {
-    for connection in &connections {
-        assert_eq!(connection.world, world,
-            "A Connection had a world ID different from the one it was created in. This is undefined behavior!");
-    }
-}
-
 pub(crate) mod token {
     use super::*;
 
@@ -145,5 +134,16 @@ pub(crate) mod token {
         fn from(value: &ConnectionOwnershipToken) -> Self {
             value.inner()
         }
+    }
+}
+
+#[cfg(debug_assertions)]
+pub(crate) fn safety_check_system(
+    world: bevy::ecs::world::WorldId,
+    connections: Query<&Connection>,
+) {
+    for connection in &connections {
+        assert_eq!(connection.world, world,
+            "A Connection had a world ID different from the one it was created in. This is undefined behavior!");
     }
 }
