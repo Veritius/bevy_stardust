@@ -6,8 +6,6 @@ use crate::{datagrams::{IncomingDatagramSequence, OutgoingDatagramSequence}, Con
 pub struct Connection {
     pub(crate) events: VecDeque<ConnectionEvent>,
 
-    pub(crate) datagram_max_size: usize,
-
     pub(crate) incoming_streams: BTreeMap<RecvStreamId, IncomingStream>,
     pub(crate) incoming_datagram_channel_sequences: BTreeMap<ChannelId, IncomingDatagramSequence>,
 
@@ -20,8 +18,6 @@ impl Connection {
     pub fn new() -> Self {
         Self {
             events: VecDeque::new(),
-
-            datagram_max_size: 1200,
 
             incoming_streams: BTreeMap::new(),
             incoming_datagram_channel_sequences: BTreeMap::new(),
