@@ -73,24 +73,6 @@ pub(crate) struct BuildingEndpoint {
     socket: UdpSocket,
 }
 
-impl BuildingEndpoint {
-    pub(crate) fn finish(
-        self,
-        meta: EndpointMetadata,
-    ) -> Endpoint {
-        Endpoint {
-            recv_buf_size: 1280,
-            send_buf_size: 1280,
-
-            inner: ConnectionInner::new(
-                self.socket,
-                self.quinn,
-                meta
-            ),
-        }
-    }
-}
-
 impl Endpoint {
     pub(crate) fn meta(&self) -> &EndpointMetadata {
         &self.inner.meta

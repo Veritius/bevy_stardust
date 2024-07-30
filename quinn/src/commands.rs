@@ -1,7 +1,8 @@
 use std::{net::SocketAddr, sync::Arc};
 use bevy::{ecs::world::Command, prelude::*};
 use quinn_proto::{EndpointConfig, ServerConfig};
-use crate::{endpoints::{BuildingEndpoint, EndpointMetadata}, Endpoint};
+
+use crate::{endpoints::BuildingEndpoint, Endpoint};
 
 /// A command to open a new [`Endpoint`](crate::Endpoint).
 pub struct OpenEndpoint {
@@ -43,21 +44,6 @@ impl OpenEndpoint {
 
 impl Command for OpenEndpoint {
     fn apply(self, world: &mut World) {
-        #[cfg(debug_assertions)]
-        let world_id = world.id();
-
-        // Spawn a new entity for our endpoint
-        let mut entity = world.spawn_empty();
-
-        // Endpoint metadata
-        let meta = EndpointMetadata {
-            eid: entity.id(),
-
-            #[cfg(debug_assertions)]
-            world: world_id,
-        };
-
-        // Done: building is complete
-        entity.insert(self.building.finish(meta));
+        todo!()
     }
 }
