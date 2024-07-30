@@ -1,12 +1,15 @@
 use std::{net::{IpAddr, Ipv4Addr, SocketAddr, UdpSocket}, sync::Arc};
 use bevy::{ecs::system::SystemParam, prelude::*};
 use quinn_proto::{EndpointConfig, ServerConfig};
-use crate::{Endpoint, Connection};
+use crate::{endpoints::EndpointMetadata, Connection, Endpoint};
 
 /// A [`SystemParam`] that allows creating [`Endpoint`] entities and [`Connection`] entities.
 #[derive(SystemParam)]
 pub struct QuinnManager<'w, 's> {
-    commands: Commands<'w, 's>
+    commands: Commands<'w, 's>,
+
+    #[cfg(debug_assertions)]
+    world: bevy::ecs::world::WorldId,
 }
 
 impl<'w, 's> QuinnManager<'w, 's> {
@@ -50,8 +53,14 @@ impl<'w, 's> QuinnManager<'w, 's> {
             None,
         );
 
+        // Endpoint metadata, mostly debug stuff
+        let meta = EndpointMetadata {
+            #[cfg(debug_assertions)]
+            world: self.world,
+        };
+
         // Create the endpoint and fetch some data as we're going to lose ownership soon
-        let endpoint = Endpoint::new_inner(socket, quinn);
+        let endpoint = Endpoint::new_inner(socket, quinn, meta);
         let address = endpoint.local_addr();
 
         // Spawn the endpoint as an entity
