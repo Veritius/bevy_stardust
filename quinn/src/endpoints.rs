@@ -2,7 +2,7 @@ use std::{collections::BTreeMap, io::ErrorKind, net::{IpAddr, Ipv4Addr, SocketAd
 use bevy::prelude::*;
 use bytes::BytesMut;
 use quinn_proto::{ClientConfig, ConnectError, ConnectionHandle, EndpointConfig, EndpointEvent, ServerConfig};
-use crate::{connections::{token::ConnectionOwnershipToken, ConnectionMetadata}, manager::QuinnManager, Connection};
+use crate::{connections::{token::ConnectionOwnershipToken, ConnectionMetadata}, appmeta::QuinnAppMeta, Connection};
 
 /// A QUIC endpoint using `quinn_proto`.
 /// 
@@ -64,7 +64,7 @@ impl Endpoint {
     /// If there is already a socket at the given address, `Err` is returned.
     pub fn new(
         &mut self,
-        manager: &mut QuinnManager,
+        manager: &mut QuinnAppMeta,
         quic_config: Arc<EndpointConfig>,
         server_config: Option<Arc<ServerConfig>>,
         bind_address: Option<SocketAddr>,
@@ -132,7 +132,7 @@ impl Endpoint {
     /// At the point of running this, the endpoint cannot
     pub fn connect(
         &mut self,
-        manager: &mut QuinnManager,
+        manager: &mut QuinnAppMeta,
         config: ClientConfig,
         remote: SocketAddr,
         server_name: &str,
