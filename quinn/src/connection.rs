@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use bevy_stardust::prelude::*;
 use bevy_stardust_quic::Connection as ConnectionState;
 use quinn::{Connecting, Connection};
 
@@ -21,4 +22,20 @@ impl QuinnConnection {
 enum ConnectionInner {
     Connecting(Connecting),
     Established(Connection),
+}
+
+pub(crate) fn message_recv_system(
+    mut query: Query<(&mut QuinnConnection, &mut PeerMessages<Incoming>)>,
+) {
+    query.par_iter_mut().for_each(|(mut connection, mut messages)| {
+        todo!()
+    });
+}
+
+pub(crate) fn message_send_system(
+    mut query: Query<(&mut QuinnConnection, &PeerMessages<Outgoing>)>,
+) {
+    query.par_iter_mut().for_each(|(mut connection, mut messages)| {
+        todo!()
+    });
 }
