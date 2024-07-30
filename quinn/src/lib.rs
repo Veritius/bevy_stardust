@@ -4,6 +4,7 @@
 mod connection;
 mod endpoint;
 mod plugin;
+mod runtime;
 
 pub use connection::QuinnConnection;
 pub use endpoint::QuinnEndpoint;
