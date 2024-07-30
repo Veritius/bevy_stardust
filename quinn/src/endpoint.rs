@@ -1,7 +1,7 @@
 use std::{net::{SocketAddr, UdpSocket}, sync::Arc};
 use anyhow::Result;
 use bevy::prelude::*;
-use quinn::{ClientConfig, Endpoint, EndpointConfig, ServerConfig, TokioRuntime};
+use quinn::{ClientConfig, Endpoint, EndpointConfig, ServerConfig, TokioRuntime, VarInt};
 use crate::QuinnConnection;
 
 /// Represents one Quinn endpoint.
@@ -41,5 +41,10 @@ impl QuinnEndpoint {
         )?;
 
         return Ok(QuinnConnection::connecting(connecting));
+    }
+
+    /// Closes all connections immediately and stops accepting new connections.
+    pub fn close(&self, code: u32, reason: &[u8]) {
+        self.endpoint.close(VarInt::from_u32(code), reason);
     }
 }
