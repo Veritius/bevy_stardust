@@ -68,8 +68,8 @@ impl Endpoint {
         }
     }
 
-    pub(crate) fn entity_id(&self) -> Entity {
-        self.inner.meta.eid
+    pub(crate) fn meta(&self) -> &EndpointMetadata {
+        &self.inner.meta
     }
 
     fn disassociate(&mut self, handle: ConnectionHandle) {

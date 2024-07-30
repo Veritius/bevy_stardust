@@ -1,6 +1,6 @@
 use std::{net::{IpAddr, Ipv4Addr, SocketAddr, UdpSocket}, sync::Arc};
 use bevy::{ecs::system::SystemParam, prelude::*};
-use quinn_proto::{EndpointConfig, ServerConfig};
+use quinn_proto::{ClientConfig, EndpointConfig, ServerConfig};
 use crate::{endpoints::EndpointMetadata, Connection, Endpoint};
 
 /// A [`SystemParam`] that allows creating [`Endpoint`] entities and [`Connection`] entities.
@@ -72,5 +72,16 @@ impl<'w, 's> QuinnManager<'w, 's> {
 
         // Return the address
         return Ok(address);
+    }
+
+    /// Tries to connect to the given address through `endpoint`.
+    pub fn connect(
+        &mut self,
+        endpoint: &mut Endpoint,
+        address: SocketAddr,
+        client_config: Arc<ClientConfig>,
+        server_name: &str,
+    ) -> anyhow::Result<Entity> {
+        todo!()
     }
 }

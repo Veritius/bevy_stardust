@@ -31,7 +31,7 @@ impl Component for Connection {
             }
 
             // Inform the endpoint of the connection being dropped
-            let (endpoint, handle) = (this.endpoint, this.handle);
+            let (endpoint, handle) = (this.meta.endpoint, this.meta.handle);
             if let Some(mut endpoint) = world.get_mut::<Endpoint>(endpoint) {
                 endpoint.remove_connection(handle);
             }
@@ -40,6 +40,20 @@ impl Component for Connection {
 }
 
 impl Connection {
+    pub(crate) fn new(
+        quinn: quinn_proto::Connection,
+        meta: ConnectionMetadata,
+    ) -> Self {
+        Self { inner: ConnectionInner::new(
+            quinn,
+            meta,
+        ) }
+    }
+
+    pub(crate) fn meta(&self) -> &ConnectionMetadata {
+        &self.inner.meta
+    }
+
     pub(crate) fn handle_event(&mut self, event: QuinnConnectionEvent) {
         self.inner.quinn.handle_event(event);
     }
@@ -65,10 +79,6 @@ impl Connection {
 }
 
 struct ConnectionInner {
-    endpoint: Entity,
-
-    handle: ConnectionHandle,
-
     quinn: quinn_proto::Connection,
     qsm: bevy_stardust_quic::Connection,
 
@@ -77,11 +87,27 @@ struct ConnectionInner {
 
     stream_write_queues: BTreeMap<QuinnStreamId, StreamWriteQueue>,
 
-    #[cfg(debug_assertions)]
-    world: bevy::ecs::world::WorldId,
+    meta: ConnectionMetadata,
 }
 
 impl ConnectionInner {
+    fn new(
+        quinn: quinn_proto::Connection,
+        meta: ConnectionMetadata,
+    ) -> Box<Self> {
+        Box::new(Self {
+            quinn,
+            qsm: bevy_stardust_quic::Connection::new(),
+
+            qsids_to_ssids: BTreeMap::new(),
+            ssids_to_qsids: BTreeMap::new(),
+
+            stream_write_queues: BTreeMap::new(),
+
+            meta,
+        })
+    }
+
     fn drain_quinn_recv_stream(&mut self, id: QuinnStreamId) {
         match self.quinn.recv_stream(id).read(true) {
             Ok(mut chunks) => {
@@ -438,13 +464,21 @@ pub(crate) mod token {
     }
 }
 
+pub(crate) struct ConnectionMetadata {
+    pub endpoint: Entity,
+    pub handle: ConnectionHandle,
+
+    #[cfg(debug_assertions)]
+    pub world: bevy::ecs::world::WorldId,
+}
+
 #[cfg(debug_assertions)]
 pub(crate) fn safety_check_system(
     world: bevy::ecs::world::WorldId,
     connections: Query<&Connection>,
 ) {
     for connection in &connections {
-        assert_eq!(connection.inner.world, world,
+        assert_eq!(connection.inner.meta.world, world,
             "A Connection had a world ID different from the one it was created in. This is undefined behavior!");
     }
 }
