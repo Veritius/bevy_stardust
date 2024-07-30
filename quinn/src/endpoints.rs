@@ -1,7 +1,7 @@
 use std::{collections::BTreeMap, io::ErrorKind, net::{IpAddr, Ipv4Addr, SocketAddr, UdpSocket}, sync::Arc, time::Instant};
 use bevy::prelude::*;
 use bytes::BytesMut;
-use quinn_proto::{ClientConfig, ConnectionHandle, EndpointConfig, EndpointEvent, ServerConfig};
+use quinn_proto::{ClientConfig, ConnectError, ConnectionHandle, EndpointConfig, EndpointEvent, ServerConfig};
 use crate::{connections::token::ConnectionOwnershipToken, Connection};
 
 /// A QUIC endpoint using `quinn_proto`.
@@ -65,6 +65,20 @@ impl Endpoint {
 
     pub(crate) fn meta(&self) -> &EndpointMetadata {
         &self.inner.meta
+    }
+
+    pub(crate) fn connect(
+        &mut self,
+        config: ClientConfig,
+        remote: SocketAddr,
+        server_name: &str,
+    ) -> Result<(ConnectionHandle, quinn_proto::Connection), ConnectError> {
+        self.inner.quinn.connect(
+            Instant::now(),
+            config,
+            remote,
+            server_name
+        )
     }
 
     pub(crate) fn remove_connection(&mut self, handle: ConnectionHandle) {

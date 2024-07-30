@@ -1,7 +1,7 @@
 use std::{net::{IpAddr, Ipv4Addr, SocketAddr, UdpSocket}, sync::Arc};
 use bevy::{ecs::system::SystemParam, prelude::*};
 use quinn_proto::{ClientConfig, EndpointConfig, ServerConfig};
-use crate::{endpoints::EndpointMetadata, Connection, Endpoint};
+use crate::{connections::ConnectionMetadata, endpoints::EndpointMetadata, Connection, Endpoint};
 
 /// A [`SystemParam`] that allows creating [`Endpoint`] entities and [`Connection`] entities.
 #[derive(SystemParam)]
@@ -79,9 +79,29 @@ impl<'w, 's> QuinnManager<'w, 's> {
         &mut self,
         endpoint: &mut Endpoint,
         address: SocketAddr,
-        client_config: Arc<ClientConfig>,
+        client_config: ClientConfig,
         server_name: &str,
     ) -> anyhow::Result<Entity> {
-        todo!()
+        // Give the connection request to the endpoint
+        let (handle, quinn) = endpoint.connect(
+            client_config,
+            address,
+            server_name,
+        )?;
+
+        // Create the endpoint metadata
+        let meta = ConnectionMetadata {
+            endpoint: endpoint.meta().eid,
+            handle,
+
+            #[cfg(debug_assertions)]
+            world: self.world,
+        };
+
+        // Spawn the entity
+        let entity = self.commands.spawn(Connection::new(quinn, meta)).id();
+
+        // done :)
+        return Ok(entity);
     }
 }
