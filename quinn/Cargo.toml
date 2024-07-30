@@ -20,6 +20,9 @@ path = "../stardust"
 version = "0.1.0"
 path = "../quic"
 
+[dependencies.bevy-tokio-tasks]
+version = "0.14.0"
+
 [dependencies.crossbeam-channel]
 version = "0.5.13"
 
