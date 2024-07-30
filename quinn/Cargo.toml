@@ -20,14 +20,10 @@ path = "../stardust"
 version = "0.1.0"
 path = "../quic"
 
-[dependencies.bevy-tokio-tasks]
-version = "0.14.0"
-
-[dependencies.crossbeam-channel]
-version = "0.5.13"
-
 [dependencies.quinn]
 version = "0.11.2"
+features = ["log", "ring", "rustls"]
+default-features = false
 
 [dependencies.bytes]
 version = "1.5.0"

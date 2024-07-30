@@ -6,15 +6,15 @@ use quinn::{Connecting, Connection};
 /// Represents one Quinn connection.
 #[derive(Component)]
 pub struct QuinnConnection {
-    connection: ConnectionInner,
-    qs_state: Box<ConnectionState>,
+    qn_state: ConnectionInner,
+    sp_state: Box<ConnectionState>,
 }
 
 impl QuinnConnection {
     pub(crate) fn connecting(connecting: Connecting) -> Self {
         Self {
-            connection: ConnectionInner::Connecting(connecting),
-            qs_state: Box::new(ConnectionState::new()),
+            qn_state: ConnectionInner::Connecting(connecting),
+            sp_state: Box::new(ConnectionState::new()),
         }
     }
 }
@@ -28,7 +28,15 @@ pub(crate) fn message_recv_system(
     mut query: Query<(&mut QuinnConnection, &mut PeerMessages<Incoming>)>,
 ) {
     query.par_iter_mut().for_each(|(mut connection, mut messages)| {
-        todo!()
+        match &mut connection.qn_state {
+            ConnectionInner::Connecting(connecting) => {
+                todo!()
+            },
+
+            ConnectionInner::Established(connected) => {
+                todo!()
+            },
+        }
     });
 }
 
