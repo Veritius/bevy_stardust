@@ -33,7 +33,7 @@ pub struct Endpoint {
     pub send_buf_size: u16,
 
     #[reflect(ignore)]
-    inner: Box<ConnectionInner>,
+    inner: Box<EndpointInner>,
 }
 
 impl Endpoint {
@@ -118,7 +118,7 @@ impl Endpoint {
             recv_buf_size: 1280,
             send_buf_size: 1280,
 
-            inner: ConnectionInner::new(
+            inner: EndpointInner::new(
                 socket,
                 quinn,
                 meta,
@@ -154,7 +154,7 @@ impl Endpoint {
     }
 }
 
-struct ConnectionInner {
+struct EndpointInner {
     socket: UdpSocket,
 
     quinn: quinn_proto::Endpoint,
@@ -164,7 +164,7 @@ struct ConnectionInner {
     meta: EndpointMetadata,
 }
 
-impl ConnectionInner {
+impl EndpointInner {
     fn new(
         socket: UdpSocket,
         quinn: quinn_proto::Endpoint,
