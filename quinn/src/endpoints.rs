@@ -2,7 +2,7 @@ use std::{collections::BTreeMap, io::ErrorKind, net::{IpAddr, Ipv4Addr, SocketAd
 use bevy::prelude::*;
 use bytes::BytesMut;
 use quinn_proto::{ClientConfig, ConnectError, ConnectionHandle, EndpointConfig, EndpointEvent, ServerConfig};
-use crate::{connections::{token::ConnectionOwnershipToken, ConnectionMetadata}, appmeta::QuinnAppMeta, Connection};
+use crate::{appmeta::QuinnAppMeta, connections::{token::ConnectionOwnershipToken, ConnectionMetadata}, events::ConnectionEventSender, Connection};
 
 /// A QUIC endpoint using `quinn_proto`.
 /// 
@@ -156,7 +156,7 @@ impl Endpoint {
 
         // SAFETY: We just spawned this entity
         let token = unsafe { ConnectionOwnershipToken::new(id) };
-        self.inner.connections.insert(handle, token);
+        self.inner.connections.insert(handle, todo!());
 
         return Ok(id);
     }
@@ -180,7 +180,7 @@ struct EndpointInner {
 
     quinn: quinn_proto::Endpoint,
 
-    connections: BTreeMap<ConnectionHandle, ConnectionOwnershipToken>,
+    connections: BTreeMap<ConnectionHandle, EndpointConnection>,
 
     meta: EndpointMetadata,
 }
@@ -200,6 +200,10 @@ impl EndpointInner {
             meta,
         })
     }
+}
+
+struct EndpointConnection {
+    events: ConnectionEventSender,
 }
 
 pub(crate) fn udp_recv_system(
@@ -238,7 +242,7 @@ pub(crate) fn udp_recv_system(
                                     .expect("Quic state machine returned connection handle that wasn't present in the map");
 
                                 // SAFETY: This is a unique borrow as ConnectionOwnershipToken is unique
-                                let mut connection = match unsafe { connections.get_unchecked(entity.inner()) } {
+                                let mut connection = match unsafe { connections.get_unchecked(todo!()) } {
                                     Ok(v) => v,
                                     Err(_) => todo!(),
                                 };
@@ -285,7 +289,7 @@ pub(crate) fn udp_send_system(
         let iter = endpoint.inner.connections.values()
             .map(|token| {
                 // SAFETY: We know this borrow is unique because ConnectionOwnershipToken is unique
-                unsafe { connections.get_unchecked(token.inner()).unwrap() }
+                unsafe { connections.get_unchecked(todo!()).unwrap() }
             });
 
         // Iterate over connections
@@ -318,7 +322,7 @@ pub(crate) fn event_exchange_system(
         let iter = endpoint.inner.connections.iter()
             .map(|(handle, token)| {
                 // SAFETY: We know this borrow is unique because ConnectionOwnershipToken is unique
-                let c = unsafe { connections.get_unchecked(token.inner()).unwrap() };
+                let c = unsafe { connections.get_unchecked(todo!()).unwrap() };
                 (*handle, c)
             });
 
@@ -355,7 +359,7 @@ pub(crate) fn safety_check_system(
             "An Endpoint was moved from the world it was originally added to. This is undefined behavior!");
 
         for connection in endpoint.inner.connections.values() {
-            assert!(!tokens.insert(connection.inner()), 
+            assert!(!tokens.insert(todo!()), 
                 "Two ConnectionOwnershipTokens existed simultaneously. This is undefined behavior!");
         }
     }
