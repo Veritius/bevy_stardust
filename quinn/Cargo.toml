@@ -23,6 +23,9 @@ path = "../quic"
 [dependencies.bevy-tokio-tasks]
 version = "0.14.0"
 
+[dependencies.crossbeam-channel]
+version = "0.5.13"
+
 [dependencies.quinn]
 version = "0.11.2"
 
