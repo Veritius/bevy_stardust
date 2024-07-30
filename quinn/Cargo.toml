@@ -31,3 +31,6 @@ version = "0.11.2"
 
 [dependencies.bytes]
 version = "1.5.0"
+
+[dependencies.anyhow]
+version = "1"
