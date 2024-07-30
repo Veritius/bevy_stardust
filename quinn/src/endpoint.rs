@@ -2,7 +2,6 @@ use std::{net::{SocketAddr, UdpSocket}, sync::Arc};
 use anyhow::Result;
 use bevy::prelude::*;
 use quinn::{ClientConfig, Endpoint, EndpointConfig, ServerConfig, TokioRuntime};
-
 use crate::QuinnConnection;
 
 /// Represents one Quinn endpoint.
