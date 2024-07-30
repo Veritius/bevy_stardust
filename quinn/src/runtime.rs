@@ -1,4 +1,4 @@
-use std::{net::UdpSocket, pin, time::Instant};
+use std::{net::UdpSocket, time::Instant};
 use bevy::tasks::ComputeTaskPool;
 use quinn::{AsyncTimer, AsyncUdpSocket, Runtime};
 
@@ -30,7 +30,7 @@ impl AsyncUdpSocket for Socket {
     }
 
     fn try_send(&self, transmit: &quinn::udp::Transmit) -> std::io::Result<()> {
-        todo!()
+        self.socket.send_to(transmit.contents, transmit.destination).map(|_| ())
     }
 
     fn poll_recv(
