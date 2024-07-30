@@ -53,8 +53,12 @@ impl<'w, 's> QuinnManager<'w, 's> {
             None,
         );
 
+        let entity = self.commands.spawn_empty().id();
+
         // Endpoint metadata, mostly debug stuff
         let meta = EndpointMetadata {
+            eid: entity,
+
             #[cfg(debug_assertions)]
             world: self.world,
         };
@@ -64,7 +68,7 @@ impl<'w, 's> QuinnManager<'w, 's> {
         let address = endpoint.local_addr();
 
         // Spawn the endpoint as an entity
-        let entity = self.commands.spawn(endpoint).id();
+        self.commands.entity(entity).insert(endpoint);
 
         // Return the address
         return Ok(address);

@@ -236,6 +236,8 @@ pub(crate) fn event_exchange_system(
 }
 
 pub(crate) struct EndpointMetadata {
+    pub eid: Entity,
+
     #[cfg(debug_assertions)]
     pub world: bevy::ecs::world::WorldId,
 }
