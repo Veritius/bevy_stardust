@@ -78,6 +78,20 @@ impl Endpoint {
         return Ok(Endpoint::new_inner(socket, quinn));
     }
 
+    /// Returns the local address of the [`Endpoint`].
+    /// 
+    /// This is the address of the local socket, and not the address that people over WAN will use to reach this endpoint.
+    pub fn local_addr(&self) -> SocketAddr {
+        self.inner.socket.local_addr().unwrap()
+    }
+}
+
+impl Endpoint {
+    pub(crate) fn remove_connection(&mut self, handle: ConnectionHandle) {
+        self.disassociate(handle);
+        self.inner.quinn.handle_event(handle, EndpointEvent::drained());
+    }
+
     fn new_inner(
         socket: UdpSocket,
         quinn: quinn_proto::Endpoint,
@@ -91,18 +105,6 @@ impl Endpoint {
                 quinn,
             ),
         }
-    }
-}
-
-impl Endpoint {
-    /// Returns the local address of the [`Endpoint`].
-    pub fn local_addr(&self) -> SocketAddr {
-        self.inner.socket.local_addr().unwrap()
-    }
-
-    pub(crate) fn remove_connection(&mut self, handle: ConnectionHandle) {
-        self.disassociate(handle);
-        self.inner.quinn.handle_event(handle, EndpointEvent::drained());
     }
 
     fn disassociate(&mut self, handle: ConnectionHandle) {
