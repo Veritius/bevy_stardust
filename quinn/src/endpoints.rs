@@ -46,11 +46,6 @@ impl Endpoint {
 }
 
 impl Endpoint {
-    pub(crate) fn remove_connection(&mut self, handle: ConnectionHandle) {
-        self.disassociate(handle);
-        self.inner.quinn.handle_event(handle, EndpointEvent::drained());
-    }
-
     pub(crate) fn new_inner(
         socket: UdpSocket,
         quinn: quinn_proto::Endpoint,
@@ -70,6 +65,11 @@ impl Endpoint {
 
     pub(crate) fn meta(&self) -> &EndpointMetadata {
         &self.inner.meta
+    }
+
+    pub(crate) fn remove_connection(&mut self, handle: ConnectionHandle) {
+        self.disassociate(handle);
+        self.inner.quinn.handle_event(handle, EndpointEvent::drained());
     }
 
     fn disassociate(&mut self, handle: ConnectionHandle) {
