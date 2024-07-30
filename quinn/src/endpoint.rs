@@ -1,12 +1,12 @@
-use std::net::UdpSocket;
+use std::{net::UdpSocket, sync::Arc};
 use anyhow::Result;
 use bevy::prelude::*;
-use quinn::{EndpointConfig, ServerConfig};
+use quinn::{Endpoint, EndpointConfig, ServerConfig, TokioRuntime};
 
 /// Represents one Quinn endpoint.
 #[derive(Component)]
 pub struct QuinnEndpoint {
-
+    endpoint: Endpoint,
 }
 
 impl QuinnEndpoint {
@@ -16,6 +16,13 @@ impl QuinnEndpoint {
         server_config: Option<ServerConfig>,
         udp_socket: UdpSocket,
     ) -> Result<Self> {
-        todo!()
+        Ok(Self {
+            endpoint: Endpoint::new(
+                endpoint_config,
+                server_config,
+                udp_socket,
+                Arc::new(TokioRuntime),
+            )?,
+        })
     }
 }
