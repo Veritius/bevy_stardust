@@ -37,47 +37,6 @@ pub struct Endpoint {
 }
 
 impl Endpoint {
-    /// Create a new endpoint.
-    /// 
-    /// ## Servers
-    /// If `server_config` is `None`, the endpoint will not be able to act as a server.
-    /// The server config can be added or replaced at any time by using [`set_server_config`](Endpoint::set_server_config).
-    /// 
-    /// Endpoints will always be able to act as a client, through the [`connect`](Endpoint::connect) method.
-    /// 
-    /// ## Binding
-    /// If `bind_address` is `None`, the OS will automatically assign an address to the socket.
-    /// This is useful for clients, which don't need to have a known IP/port, but can make servers
-    /// unreachable, such as in cases where port forwarding is needed.
-    /// 
-    /// If there is already a socket at the given address, `Err` is returned.
-    pub fn new(
-        quic_config: Arc<EndpointConfig>,
-        server_config: Option<Arc<ServerConfig>>,
-        bind_address: Option<SocketAddr>,
-    ) -> anyhow::Result<Self> {
-        // Giving this address to the OS means it assigns one for us
-        const UNSPECIFIED: SocketAddr = SocketAddr::new(
-            IpAddr::V4(Ipv4Addr::UNSPECIFIED),
-            0
-        );
-
-        // Bind and configure the socket
-        let socket = UdpSocket::bind(bind_address.unwrap_or(UNSPECIFIED))?;
-        socket.set_nonblocking(true)?;
-
-        // Build the inner endpoint
-        let quinn = quinn_proto::Endpoint::new(
-            quic_config,
-            server_config,
-            true,
-            None,
-        );
-
-        // done :)
-        return Ok(Endpoint::new_inner(socket, quinn));
-    }
-
     /// Returns the local address of the [`Endpoint`].
     /// 
     /// This is the address of the local socket, and not the address that people over WAN will use to reach this endpoint.
@@ -92,7 +51,7 @@ impl Endpoint {
         self.inner.quinn.handle_event(handle, EndpointEvent::drained());
     }
 
-    fn new_inner(
+    pub(crate) fn new_inner(
         socket: UdpSocket,
         quinn: quinn_proto::Endpoint,
     ) -> Self {
