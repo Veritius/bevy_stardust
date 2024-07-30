@@ -2,7 +2,7 @@ use std::{collections::BTreeMap, io::ErrorKind, net::{IpAddr, Ipv4Addr, SocketAd
 use bevy::prelude::*;
 use bytes::BytesMut;
 use quinn_proto::{ClientConfig, ConnectError, ConnectionHandle, EndpointConfig, EndpointEvent, ServerConfig};
-use crate::{connections::token::ConnectionOwnershipToken, manager::QuinnManager, Connection};
+use crate::{connections::{token::ConnectionOwnershipToken, ConnectionMetadata}, manager::QuinnManager, Connection};
 
 /// A QUIC endpoint using `quinn_proto`.
 /// 
@@ -126,22 +126,43 @@ impl Endpoint {
         }
     }
 
-    pub(crate) fn meta(&self) -> &EndpointMetadata {
-        &self.inner.meta
-    }
-
-    pub(crate) fn connect(
+    /// Opens a connection.
+    /// 
+    /// The error case occurs if the client or related parameters are misconfigured.
+    /// At the point of running this, the endpoint cannot
+    pub fn connect(
         &mut self,
+        manager: &mut QuinnManager,
         config: ClientConfig,
         remote: SocketAddr,
         server_name: &str,
-    ) -> Result<(ConnectionHandle, quinn_proto::Connection), ConnectError> {
-        self.inner.quinn.connect(
+    ) -> anyhow::Result<Entity> {
+        let (handle, quinn) = self.inner.quinn.connect(
             Instant::now(),
             config,
             remote,
             server_name
-        )
+        )?;
+
+        let meta = ConnectionMetadata {
+            endpoint: self.meta().eid,
+            handle,
+
+            #[cfg(debug_assertions)]
+            world: manager.world,
+        };
+
+        let id = manager.commands.spawn(Connection::new(quinn, meta)).id();
+
+        // SAFETY: We just spawned this entity
+        let token = unsafe { ConnectionOwnershipToken::new(id) };
+        self.inner.connections.insert(handle, token);
+
+        return Ok(id);
+    }
+
+    pub(crate) fn meta(&self) -> &EndpointMetadata {
+        &self.inner.meta
     }
 
     pub(crate) fn remove_connection(&mut self, handle: ConnectionHandle) {
