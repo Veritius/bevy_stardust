@@ -1,7 +1,7 @@
-use std::{collections::BTreeMap, io::ErrorKind, net::{SocketAddr, UdpSocket}, time::Instant};
+use std::{collections::BTreeMap, io::ErrorKind, net::{IpAddr, Ipv4Addr, SocketAddr, UdpSocket}, sync::Arc, time::Instant};
 use bevy::prelude::*;
 use bytes::BytesMut;
-use quinn_proto::{ConnectionHandle, EndpointEvent};
+use quinn_proto::{ClientConfig, ConnectionHandle, EndpointConfig, EndpointEvent, ServerConfig};
 use crate::{connections::token::ConnectionOwnershipToken, Connection};
 
 /// A QUIC endpoint using `quinn_proto`.
@@ -37,6 +37,64 @@ pub struct Endpoint {
 }
 
 impl Endpoint {
+    /// Create a new endpoint.
+    /// 
+    /// ## Servers
+    /// If `server_config` is `None`, the endpoint will not be able to act as a server.
+    /// The server config can be added or replaced at any time by using [`set_server_config`](Endpoint::set_server_config).
+    /// 
+    /// Endpoints will always be able to act as a client, through the [`connect`](Endpoint::connect) method.
+    /// 
+    /// ## Binding
+    /// If `bind_address` is `None`, the OS will automatically assign an address to the socket.
+    /// This is useful for clients, which don't need to have a known IP/port, but can make servers
+    /// unreachable, such as in cases where port forwarding is needed.
+    /// 
+    /// If there is already a socket at the given address, `Err` is returned.
+    pub fn new(
+        quic_config: Arc<EndpointConfig>,
+        server_config: Option<Arc<ServerConfig>>,
+        bind_address: Option<SocketAddr>,
+    ) -> anyhow::Result<Self> {
+        // Giving this address to the OS means it assigns one for us
+        const UNSPECIFIED: SocketAddr = SocketAddr::new(
+            IpAddr::V4(Ipv4Addr::UNSPECIFIED),
+            0
+        );
+
+        // Bind and configure the socket
+        let socket = UdpSocket::bind(bind_address.unwrap_or(UNSPECIFIED))?;
+        socket.set_nonblocking(true)?;
+
+        // Build the inner endpoint
+        let quinn = quinn_proto::Endpoint::new(
+            quic_config,
+            server_config,
+            true,
+            None,
+        );
+
+        // done :)
+        return Ok(Endpoint::new_inner(socket, quinn));
+    }
+
+    fn new_inner(
+        socket: UdpSocket,
+        quinn: quinn_proto::Endpoint,
+    ) -> Self {
+        Self {
+            recv_buf_size: 1280,
+            send_buf_size: 1280,
+
+            inner: ConnectionInner::new(
+                socket,
+                quinn,
+            ),
+        }
+    }
+}
+
+impl Endpoint {
     /// Returns the local address of the [`Endpoint`].
     pub fn local_addr(&self) -> SocketAddr {
         self.inner.socket.local_addr().unwrap()
@@ -58,9 +116,20 @@ struct ConnectionInner {
     quinn: quinn_proto::Endpoint,
 
     connections: BTreeMap<ConnectionHandle, ConnectionOwnershipToken>,
+}
 
-    #[cfg(debug_assertions)]
-    world: bevy::ecs::world::WorldId,
+impl ConnectionInner {
+    fn new(
+        socket: UdpSocket,
+        quinn: quinn_proto::Endpoint,
+    ) -> Box<Self> {
+        Box::new(Self {
+            socket,
+            quinn,
+
+            connections: BTreeMap::new(),
+        })
+    }
 }
 
 pub(crate) fn udp_recv_system(
@@ -205,9 +274,6 @@ pub(crate) fn safety_check_system(
     endpoints: Query<&Endpoint>,
 ) {
     for endpoint in &endpoints {
-        assert_eq!(endpoint.inner.world, world,
-            "An Endpoint had a world ID different from the one it was created in. This is undefined behavior!");
-
         for connection in endpoint.inner.connections.values() {
             assert!(!tokens.insert(connection.inner()), 
                 "Two ConnectionOwnershipTokens existed simultaneously. This is undefined behavior!");
