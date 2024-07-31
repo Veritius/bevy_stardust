@@ -1,8 +1,8 @@
-use std::{collections::BTreeMap, io::ErrorKind, net::{IpAddr, Ipv4Addr, SocketAddr, UdpSocket}, sync::Arc, time::Instant};
+use std::{collections::BTreeMap, io::ErrorKind, net::{SocketAddr, UdpSocket}, sync::Arc, time::Instant};
 use bevy::prelude::*;
 use bytes::BytesMut;
-use quinn_proto::{ClientConfig, ConnectError, ConnectionHandle, EndpointConfig, EndpointEvent, ServerConfig};
-use crate::{appmeta::QuinnAppMeta, connections::{token::ConnectionOwnershipToken, ConnectionMetadata}, events::ConnectionEventSender, Connection};
+use quinn_proto::{ConnectionHandle, EndpointConfig, EndpointEvent, ServerConfig};
+use crate::{events::ConnectionEventSender, Connection};
 
 /// A QUIC endpoint using `quinn_proto`.
 /// 
@@ -64,105 +64,11 @@ impl Endpoint {
     /// If there is already a socket at the given address, `Err` is returned.
     pub fn new(
         &mut self,
-        manager: &mut QuinnAppMeta,
         quic_config: Arc<EndpointConfig>,
         server_config: Option<Arc<ServerConfig>>,
         bind_address: Option<SocketAddr>,
-    ) -> anyhow::Result<SocketAddr> {
-        // Giving this address to the OS means it assigns one for us
-        const UNSPECIFIED: SocketAddr = SocketAddr::new(
-            IpAddr::V4(Ipv4Addr::UNSPECIFIED),
-            0
-        );
-
-        // Bind and configure the socket
-        let socket = UdpSocket::bind(bind_address.unwrap_or(UNSPECIFIED))?;
-        socket.set_nonblocking(true)?;
-
-        // Build the inner endpoint
-        let quinn = quinn_proto::Endpoint::new(
-            quic_config,
-            server_config,
-            true,
-            None,
-        );
-
-        // Spawn a new entity with no components, we'll add them later
-        let entity = manager.commands.spawn_empty().id();
-
-        // Endpoint metadata, mostly debug stuff
-        let meta = EndpointMetadata {
-            eid: entity,
-
-            #[cfg(debug_assertions)]
-            world: manager.world,
-        };
-
-        // Create the endpoint and fetch some data as we're going to lose ownership soon
-        let endpoint = Endpoint::new_inner(socket, quinn, meta);
-        let address = endpoint.local_addr();
-
-        // Insert the endpoint component into our new entity
-        manager.commands.entity(entity).insert(endpoint);
-
-        // Return the address
-        return Ok(address);
-    }
-
-    pub(crate) fn new_inner(
-        socket: UdpSocket,
-        quinn: quinn_proto::Endpoint,
-        meta: EndpointMetadata,
-    ) -> Self {
-        Self {
-            recv_buf_size: 1280,
-            send_buf_size: 1280,
-
-            inner: EndpointInner::new(
-                socket,
-                quinn,
-                meta,
-            ),
-        }
-    }
-
-    /// Opens a connection.
-    /// 
-    /// The error case occurs if the client or related parameters are misconfigured.
-    /// At the point of running this, the endpoint cannot
-    pub fn connect(
-        &mut self,
-        manager: &mut QuinnAppMeta,
-        config: ClientConfig,
-        remote: SocketAddr,
-        server_name: &str,
-    ) -> anyhow::Result<Entity> {
-        let (handle, quinn) = self.inner.quinn.connect(
-            Instant::now(),
-            config,
-            remote,
-            server_name
-        )?;
-
-        let meta = ConnectionMetadata {
-            endpoint: self.meta().eid,
-            handle,
-
-            #[cfg(debug_assertions)]
-            world: manager.world,
-        };
-
-        let id = manager.commands.spawn(Connection::new(quinn, meta)).id();
-
-        // SAFETY: We just spawned this entity
-        let token = unsafe { ConnectionOwnershipToken::new(id) };
-        self.inner.connections.insert(handle, todo!());
-
-        return Ok(id);
-    }
-
-    pub(crate) fn meta(&self) -> &EndpointMetadata {
-        &self.inner.meta
+    ) -> anyhow::Result<Self> {
+        todo!()
     }
 
     pub(crate) fn remove_connection(&mut self, handle: ConnectionHandle) {
