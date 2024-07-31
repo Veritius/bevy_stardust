@@ -2,7 +2,7 @@ use std::{collections::BTreeMap, io::ErrorKind, net::{SocketAddr, UdpSocket}, sy
 use bevy::prelude::*;
 use bytes::BytesMut;
 use quinn_proto::{ConnectionHandle, EndpointConfig, EndpointEvent, ServerConfig};
-use crate::{events::ConnectionEventSender, Connection};
+use crate::Connection;
 
 /// A QUIC endpoint using `quinn_proto`.
 /// 
@@ -86,7 +86,7 @@ struct EndpointInner {
 
     quinn: quinn_proto::Endpoint,
 
-    connections: BTreeMap<ConnectionHandle, EndpointConnection>,
+    connections: BTreeMap<ConnectionHandle, ()>,
 
     meta: EndpointMetadata,
 }
@@ -106,10 +106,6 @@ impl EndpointInner {
             meta,
         })
     }
-}
-
-struct EndpointConnection {
-    events: ConnectionEventSender,
 }
 
 pub(crate) fn udp_recv_system(

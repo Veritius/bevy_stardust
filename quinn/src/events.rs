@@ -1,78 +1,94 @@
-use std::{collections::VecDeque, sync::{Arc, Mutex, MutexGuard}};
+use std::{collections::VecDeque, ops::{Deref, DerefMut}, sync::{Arc, Mutex, MutexGuard}};
 
-pub(crate) fn event_pair() -> (ConnectionEventSender, ConnectionEventReceiver) {
-    let queue = EventQueue(Arc::new(Mutex::new(EventQueueInner {
+pub(crate) fn event_pair<T>() -> (EventSender<T>, EventReader<T>) {
+    let events = Events {
         queue: VecDeque::new(),
-    })));
+    };
+
+    let arc = EventsArc(
+        Arc::new(Mutex::new(events))
+    );
 
     return (
-        ConnectionEventSender(queue.clone()),
-        ConnectionEventReceiver(queue),
+        EventSender(arc.clone()),
+        EventReader(arc.clone()),
     )
 }
 
-pub(crate) struct ConnectionEventSender(EventQueue);
+pub(crate) struct EventSender<T>(EventsArc<T>);
 
-impl ConnectionEventSender {
-    pub fn lock(&self) -> EventSenderLock {
+impl<T> EventSender<T> {
+    pub fn lock(&self) -> EventSenderLock<'_, T> {
         EventSenderLock(self.0.lock())
     }
 }
 
+pub(crate) struct EventSenderLock<'a, T>(EventsLock<'a, T>);
 
-pub(crate) struct EventSenderLock<'a>(EventQueueLock<'a>);
-
-impl EventSenderLock<'_> {
-    pub fn push(&mut self, event: ConnectionEvent) {
-        self.0.0.push(event)
+impl<T> EventSenderLock<'_, T> {
+    pub fn push(&mut self, event: T) {
+        self.0.push(event)
     }
 }
 
-pub(crate) struct ConnectionEventReceiver(EventQueue);
+pub(crate) struct EventReader<T>(EventsArc<T>);
 
-impl ConnectionEventReceiver {
-    pub fn lock(&self) -> EventReceiverLock {
-        EventReceiverLock(self.0.lock())
+impl<T> EventReader<T> {
+    pub fn lock(&self) -> EventReaderLock<'_, T> {
+        EventReaderLock(self.0.lock())
     }
 }
 
-pub(crate) struct EventReceiverLock<'a>(EventQueueLock<'a>);
+pub(crate) struct EventReaderLock<'a, T>(EventsLock<'a, T>);
 
-impl EventSenderLock<'_> {
-    pub fn pop(&mut self) -> Option<ConnectionEvent> {
-        self.0.0.pop()
+impl<T> EventReaderLock<'_, T> {
+    pub fn pop(&mut self) -> Option<T> {
+        self.0.pop()
     }
 }
 
-#[derive(Clone)]
-struct EventQueue(Arc<Mutex<EventQueueInner>>);
+struct EventsArc<T>(Arc<Mutex<Events<T>>>);
 
-impl EventQueue {
-    fn lock(&self) -> EventQueueLock {
-        EventQueueLock(self.0.lock().unwrap())
+impl<T> EventsArc<T> {
+    fn lock(&self) -> EventsLock<'_, T> {
+        EventsLock { lock: self.0.lock().unwrap() }
     }
 }
 
-struct EventQueueLock<'a>(MutexGuard<'a, EventQueueInner>);
-
-struct EventQueueInner {
-    queue: VecDeque<ConnectionEvent>,
-}
-
-impl EventQueueInner {
-    fn push(&mut self, event: ConnectionEvent) {
-        self.queue.push_back(event);
-    }
-
-    fn pop(&mut self) -> Option<ConnectionEvent> {
-        return self.queue.pop_front();
-    }
-
-    fn clear(&mut self) {
-        self.queue.clear();
+impl<T> Clone for EventsArc<T> {
+    fn clone(&self) -> Self {
+        Self(self.0.clone())
     }
 }
 
-pub(crate) enum ConnectionEvent {
+struct Events<T> {
+    queue: VecDeque<T>,
+}
 
+impl<T> Events<T> {
+    fn push(&mut self, event: T) {
+        self.queue.push_back(event)
+    }
+
+    fn pop(&mut self) -> Option<T> {
+        self.queue.pop_front()
+    }
+}
+
+struct EventsLock<'a, T> {
+    lock: MutexGuard<'a, Events<T>>,
+}
+
+impl<T> Deref for EventsLock<'_, T> {
+    type Target = Events<T>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.lock
+    }
+}
+
+impl<T> DerefMut for EventsLock<'_, T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.lock
+    }
 }

@@ -3,7 +3,6 @@ use bevy::prelude::*;
 use bevy_stardust::prelude::*;
 use bevy_stardust_quic::{RecvStreamId, SendContext, SendStreamId};
 use quinn_proto::{ConnectionEvent as QuinnConnectionEvent, Dir, EndpointEvent, SendStream, StreamId as QuinnStreamId, Transmit, WriteError};
-use crate::events::ConnectionEventReceiver;
 
 /// A QUIC connection using `quinn_proto`.
 /// 
@@ -51,8 +50,6 @@ impl Connection {
 }
 
 struct ConnectionInner {
-    events: ConnectionEventReceiver,
-
     quinn: quinn_proto::Connection,
     qsm: bevy_stardust_quic::Connection,
 
@@ -67,8 +64,6 @@ impl ConnectionInner {
         quinn: quinn_proto::Connection,
     ) -> Box<Self> {
         Box::new(Self {
-            events: todo!(),
-
             quinn,
             qsm: bevy_stardust_quic::Connection::new(),
 
