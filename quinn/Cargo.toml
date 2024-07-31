@@ -27,7 +27,10 @@ default-features = false
 
 [dependencies.tokio]
 version = "1.39.2"
-features = ["net"]
+features = ["net", "time"]
+
+[dependencies.pin-project-lite]
+version = "0.2.14"
 
 [dependencies.bytes]
 version = "1.5.0"
