@@ -87,23 +87,18 @@ struct EndpointInner {
     quinn: quinn_proto::Endpoint,
 
     connections: BTreeMap<ConnectionHandle, ()>,
-
-    meta: EndpointMetadata,
 }
 
 impl EndpointInner {
     fn new(
         socket: UdpSocket,
         quinn: quinn_proto::Endpoint,
-        meta: EndpointMetadata,
     ) -> Box<Self> {
         Box::new(Self {
             socket,
             quinn,
 
             connections: BTreeMap::new(),
-
-            meta,
         })
     }
 }
@@ -241,30 +236,4 @@ pub(crate) fn event_exchange_system(
             }
         }
     });
-}
-
-pub(crate) struct EndpointMetadata {
-    pub eid: Entity,
-
-    #[cfg(debug_assertions)]
-    pub world: bevy::ecs::world::WorldId,
-}
-
-#[cfg(debug_assertions)]
-pub(crate) fn safety_check_system(
-    mut tokens: Local<std::collections::BTreeSet<Entity>>,
-    world: bevy::ecs::world::WorldId,
-    endpoints: Query<&Endpoint>,
-) {
-    for endpoint in &endpoints {
-        assert_eq!(world, endpoint.inner.meta.world,
-            "An Endpoint was moved from the world it was originally added to. This is undefined behavior!");
-
-        for connection in endpoint.inner.connections.values() {
-            assert!(!tokens.insert(todo!()), 
-                "Two ConnectionOwnershipTokens existed simultaneously. This is undefined behavior!");
-        }
-    }
-
-    tokens.clear();
 }
