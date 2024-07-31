@@ -1,6 +1,7 @@
-use std::{io::ErrorKind, net::UdpSocket, time::Instant};
+use std::{io::ErrorKind, time::Instant};
 use bevy::tasks::ComputeTaskPool;
 use quinn::{AsyncTimer, AsyncUdpSocket, Runtime};
+use tokio::net::UdpSocket;
 
 #[derive(Debug)]
 pub(crate) struct BevyRuntime;
@@ -30,7 +31,7 @@ impl AsyncUdpSocket for Socket {
     }
 
     fn try_send(&self, transmit: &quinn::udp::Transmit) -> std::io::Result<()> {
-        match self.socket.send_to(transmit.contents, transmit.destination) {
+        match self.socket.try_send_to(transmit.contents, transmit.destination) {
             Ok(_) => return Ok(()),
 
             Err(err) if err.kind() == ErrorKind::WouldBlock => {
