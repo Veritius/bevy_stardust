@@ -37,3 +37,16 @@ version = "1.5.0"
 
 [dependencies.anyhow]
 version = "1"
+
+[[example]]
+name = "star_client"
+path = "examples/star/client.rs"
+
+[[example]]
+name = "star_server"
+path = "examples/star/server.rs"
+
+[[example]]
+name = "star_shared"
+path = "examples/star/shared.rs"
+crate-type = ["lib"]
