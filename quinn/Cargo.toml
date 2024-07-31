@@ -25,10 +25,6 @@ version = "0.11.2"
 features = ["log", "ring", "rustls"]
 default-features = false
 
-[dependencies.tokio]
-version = "1.39.2"
-features = ["net"]
-
 [dependencies.bytes]
 version = "1.5.0"
 
