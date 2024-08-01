@@ -15,6 +15,8 @@ impl Runtime for BevyRuntime {
     }
 
     fn wrap_udp_socket(&self, t: std::net::UdpSocket) -> std::io::Result<std::sync::Arc<dyn quinn::AsyncUdpSocket>> {
+        t.set_nonblocking(true)?;
+
         return Ok(Arc::new(Socket {
             state: UdpSocketState::new((&t).into())?,
             socket: t,
