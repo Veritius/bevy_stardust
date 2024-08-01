@@ -5,6 +5,7 @@ mod connection;
 mod endpoint;
 mod plugin;
 mod runtime;
+mod tokio;
 
 pub use connection::QuinnConnection;
 pub use endpoint::QuinnEndpoint;

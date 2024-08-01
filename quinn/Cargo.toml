@@ -22,12 +22,12 @@ path = "../quic"
 
 [dependencies.quinn]
 version = "0.11.2"
-features = ["log", "ring", "rustls"]
+features = ["log", "ring", "rustls", "runtime-tokio"]
 default-features = false
 
 [dependencies.tokio]
 version = "1.39.2"
-features = ["net", "time"]
+features = ["rt", "net", "time"]
 
 [dependencies.pin-project-lite]
 version = "0.2.14"
