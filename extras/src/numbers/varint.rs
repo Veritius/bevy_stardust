@@ -228,8 +228,8 @@ mod octs {
     impl Encode for VarInt {
         type Error = ();
 
-        fn encode(&self, dst: &mut impl octs::Write) -> Result<(), octs::BufTooShortOr<Self::Error>> {
-            self.write(dst).map_err(|_| octs::BufTooShortOr::TooShort)
+        fn encode(&self, mut dst: impl octs::Write) -> Result<(), octs::BufTooShortOr<Self::Error>> {
+            self.write(&mut dst).map_err(|_| octs::BufTooShortOr::TooShort)
         }
     }
 
@@ -247,8 +247,8 @@ mod octs {
     impl Decode for VarInt {
         type Error = ();
 
-        fn decode(src: &mut impl octs::Read) -> Result<Self, octs::BufTooShortOr<Self::Error>> {
-            VarInt::read(src).map_err(|_| octs::BufTooShortOr::TooShort)
+        fn decode(mut src: impl octs::Read) -> Result<Self, octs::BufTooShortOr<Self::Error>> {
+            VarInt::read(&mut src).map_err(|_| octs::BufTooShortOr::TooShort)
         }
     }
 }
