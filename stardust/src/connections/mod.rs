@@ -20,6 +20,7 @@
 //! Components that store peer-related data on peer entities
 //! are prefixed with `Peer`, such as [`PeerUid`].
 
+mod lifestage;
 mod messages;
 mod peer;
 mod stats;
@@ -30,4 +31,5 @@ pub mod events;
 
 pub use messages::*;
 pub use peer::*;
-pub use stats::PeerRtt;
+pub use stats::*;
+pub use lifestage::*;
