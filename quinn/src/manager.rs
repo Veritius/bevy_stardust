@@ -27,9 +27,23 @@ impl Manager<'_> {
         &mut self,
         endpoint: Entity,
         client_config: ClientConfig,
-        remote: SocketAddr,
-        server_name: &str,
+        remote_address: SocketAddr,
+        server_name: Arc<str>,
     ) -> Result<Entity> {
         todo!()
     }
+}
+
+pub(crate) struct QueuedEndpointOpen {
+    pub entity: Entity,
+    pub endpoint: Box<quinn_proto::Endpoint>,
+}
+
+pub(crate) struct QueuedConnectionOpen {
+    pub entity: Entity,
+    pub endpoint: Entity,
+
+    pub client_config: ClientConfig,
+    pub remote_address: SocketAddr,
+    pub server_name: Arc<str>,
 }
