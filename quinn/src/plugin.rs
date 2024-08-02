@@ -21,10 +21,5 @@ impl Plugin for QuinnPlugin {
             crate::endpoints::event_exchange_system,
             crate::endpoints::udp_send_system,
         ).chain().in_set(NetworkSend::Transmit));
-
-        #[cfg(debug_assertions)] {
-            app.add_systems(Update, crate::endpoints::safety_check_system);
-            app.add_systems(Update, crate::connections::safety_check_system);
-        }
     }
 }

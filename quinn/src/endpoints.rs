@@ -1,8 +1,8 @@
-use std::{collections::BTreeMap, io::ErrorKind, net::{IpAddr, Ipv4Addr, SocketAddr, UdpSocket}, sync::Arc, time::Instant};
+use std::{collections::BTreeMap, io::ErrorKind, net::{SocketAddr, UdpSocket}, time::Instant};
 use bevy::prelude::*;
 use bytes::BytesMut;
-use quinn_proto::{ClientConfig, ConnectError, ConnectionHandle, EndpointConfig, EndpointEvent, ServerConfig};
-use crate::{connections::{token::ConnectionOwnershipToken, ConnectionMetadata}, Connection};
+use quinn_proto::{ConnectionHandle, EndpointEvent};
+use crate::Connection;
 
 /// A QUIC endpoint using `quinn_proto`.
 /// 
@@ -46,10 +46,6 @@ impl Endpoint {
 }
 
 impl Endpoint {
-    pub(crate) fn meta(&self) -> &EndpointMetadata {
-        &self.inner.meta
-    }
-
     pub(crate) fn remove_connection(&mut self, handle: ConnectionHandle) {
         self.disassociate(handle);
         self.inner.quinn.handle_event(handle, EndpointEvent::drained());
@@ -65,33 +61,28 @@ struct EndpointInner {
 
     quinn: quinn_proto::Endpoint,
 
-    connections: BTreeMap<ConnectionHandle, ConnectionOwnershipToken>,
-
-    meta: EndpointMetadata,
+    connections: BTreeMap<ConnectionHandle, Entity>,
 }
 
 impl EndpointInner {
     fn new(
         socket: UdpSocket,
         quinn: quinn_proto::Endpoint,
-        meta: EndpointMetadata,
     ) -> Box<Self> {
         Box::new(Self {
             socket,
             quinn,
 
             connections: BTreeMap::new(),
-
-            meta,
         })
     }
 }
 
 pub(crate) fn udp_recv_system(
     mut endpoints: Query<&mut Endpoint>,
-    connections: Query<&mut Connection>,
+    mut connections: Query<&mut Connection>,
 ) {
-    endpoints.par_iter_mut().for_each(|mut endpoint| {
+    for mut endpoint in &mut endpoints {
         // Buffer for I/O operations
         debug_assert!(endpoint.recv_buf_size < 1280, "Receive buffer was too small");
         let mut buf = vec![0u8; endpoint.recv_buf_size as usize];
@@ -123,7 +114,7 @@ pub(crate) fn udp_recv_system(
                                     .expect("Quic state machine returned connection handle that wasn't present in the map");
 
                                 // SAFETY: This is a unique borrow as ConnectionOwnershipToken is unique
-                                let mut connection = match unsafe { connections.get_unchecked(entity.inner()) } {
+                                let mut connection = match connections.get_mut(*entity) {
                                     Ok(v) => v,
                                     Err(_) => todo!(),
                                 };
@@ -151,30 +142,22 @@ pub(crate) fn udp_recv_system(
                 Err(e) => todo!(),
             }
         }
-    });
+    }
 }
 
 pub(crate) fn udp_send_system(
     mut endpoints: Query<&mut Endpoint>,
-    connections: Query<&mut Connection>,
+    mut connections: Query<&mut Connection>,
 ) {
-    endpoints.par_iter_mut().for_each(|mut endpoint| {
+    for endpoint in &mut endpoints {
         // Buffer for I/O operations
         debug_assert!(endpoint.send_buf_size < 1280, "Transmit buffer was too small");
         let mut buf = vec![0u8; endpoint.send_buf_size as usize];
 
-        // Reborrows because borrowck angy
-        let endpoint = &mut *endpoint;
-
-        // Iterator over all connections the endpoint 'owns'
-        let iter = endpoint.inner.connections.values()
-            .map(|token| {
-                // SAFETY: We know this borrow is unique because ConnectionOwnershipToken is unique
-                unsafe { connections.get_unchecked(token.inner()).unwrap() }
-            });
-
         // Iterate over connections
-        for mut connection in iter {
+        for entity in endpoint.inner.connections.values() {
+            let mut connection = connections.get_mut(*entity).unwrap();
+
             // Get as many datagrams as possible
             while let Some(transmit) = connection.poll_transmit(&mut buf) {
                 match endpoint.inner.socket.send_to(
@@ -188,62 +171,30 @@ pub(crate) fn udp_send_system(
                 }
             }
         }
-    });
+    }
 }
 
 pub(crate) fn event_exchange_system(
     mut endpoints: Query<&mut Endpoint>,
-    connections: Query<&mut Connection>,
+    mut connections: Query<&mut Connection>,
 ) {
-    endpoints.par_iter_mut().for_each(|mut endpoint| {
+    for mut endpoint in &mut endpoints {
         // Reborrows because borrowck angy
         let endpoint = &mut *endpoint;
 
-        // Iterator over all connections the endpoint 'owns'
-        let iter = endpoint.inner.connections.iter()
-            .map(|(handle, token)| {
-                // SAFETY: We know this borrow is unique because ConnectionOwnershipToken is unique
-                let c = unsafe { connections.get_unchecked(token.inner()).unwrap() };
-                (*handle, c)
-            });
-
         // Exchange events
-        for (handle, mut connection) in iter {
+        for (handle, entity) in endpoint.inner.connections.iter() {
+            let mut connection = connections.get_mut(*entity).unwrap();
+
             // Timeouts can produce additional events
             connection.handle_timeout();
 
             // Poll until we run out of events
             while let Some(event) = connection.poll_endpoint_events() {
-                if let Some(event) = endpoint.inner.quinn.handle_event(handle, event) {
+                if let Some(event) = endpoint.inner.quinn.handle_event(*handle, event) {
                     connection.handle_event(event);
                 }
             }
         }
-    });
-}
-
-pub(crate) struct EndpointMetadata {
-    pub eid: Entity,
-
-    #[cfg(debug_assertions)]
-    pub world: bevy::ecs::world::WorldId,
-}
-
-#[cfg(debug_assertions)]
-pub(crate) fn safety_check_system(
-    mut tokens: Local<std::collections::BTreeSet<Entity>>,
-    world: bevy::ecs::world::WorldId,
-    endpoints: Query<&Endpoint>,
-) {
-    for endpoint in &endpoints {
-        assert_eq!(world, endpoint.inner.meta.world,
-            "An Endpoint was moved from the world it was originally added to. This is undefined behavior!");
-
-        for connection in endpoint.inner.connections.values() {
-            assert!(!tokens.insert(connection.inner()), 
-                "Two ConnectionOwnershipTokens existed simultaneously. This is undefined behavior!");
-        }
     }
-
-    tokens.clear();
 }

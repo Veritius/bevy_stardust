@@ -31,10 +31,7 @@ impl Component for Connection {
             }
 
             // Inform the endpoint of the connection being dropped
-            let (endpoint, handle) = (this.meta.endpoint, this.meta.handle);
-            if let Some(mut endpoint) = world.get_mut::<Endpoint>(endpoint) {
-                endpoint.remove_connection(handle);
-            }
+            todo!()
         });
     }
 }
@@ -42,16 +39,10 @@ impl Component for Connection {
 impl Connection {
     pub(crate) fn new(
         quinn: quinn_proto::Connection,
-        meta: ConnectionMetadata,
     ) -> Self {
         Self { inner: ConnectionInner::new(
             quinn,
-            meta,
         ) }
-    }
-
-    pub(crate) fn meta(&self) -> &ConnectionMetadata {
-        &self.inner.meta
     }
 
     pub(crate) fn handle_event(&mut self, event: QuinnConnectionEvent) {
@@ -86,14 +77,11 @@ struct ConnectionInner {
     ssids_to_qsids: BTreeMap<SendStreamId, QuinnStreamId>,
 
     stream_write_queues: BTreeMap<QuinnStreamId, StreamWriteQueue>,
-
-    meta: ConnectionMetadata,
 }
 
 impl ConnectionInner {
     fn new(
         quinn: quinn_proto::Connection,
-        meta: ConnectionMetadata,
     ) -> Box<Self> {
         Box::new(Self {
             quinn,
@@ -103,8 +91,6 @@ impl ConnectionInner {
             ssids_to_qsids: BTreeMap::new(),
 
             stream_write_queues: BTreeMap::new(),
-
-            meta,
         })
     }
 
@@ -419,66 +405,4 @@ fn rsid_to_qsid(id: RecvStreamId) -> QuinnStreamId {
 #[inline]
 fn ssid_to_qsid(id: SendStreamId) -> QuinnStreamId {
     QuinnStreamId(id.0)
-}
-
-pub(crate) mod token {
-    use super::*;
-
-    #[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
-    pub(crate) struct ConnectionOwnershipToken(Entity);
-
-    impl ConnectionOwnershipToken {
-        /// Creates a new [`ConnectionOwnershipToken`] from an [`Entity`] identifier.
-        /// 
-        /// # SAFETY
-        /// There must only be one token for one `id` value in the `World`.
-        pub unsafe fn new(id: Entity) -> Self {
-            Self(id)
-        }
-
-        #[inline]
-        pub fn inner(&self) -> Entity {
-            self.0
-        }
-    }
-
-    impl PartialEq<Entity> for ConnectionOwnershipToken {
-        #[inline]
-        fn eq(&self, other: &Entity) -> bool {
-            self.0.eq(other)
-        }
-    }
-
-    impl PartialEq<ConnectionOwnershipToken> for Entity {
-        #[inline]
-        fn eq(&self, other: &ConnectionOwnershipToken) -> bool {
-            self.eq(&other.0)
-        }
-    }
-
-    impl From<&ConnectionOwnershipToken> for Entity {
-        #[inline]
-        fn from(value: &ConnectionOwnershipToken) -> Self {
-            value.inner()
-        }
-    }
-}
-
-pub(crate) struct ConnectionMetadata {
-    pub endpoint: Entity,
-    pub handle: ConnectionHandle,
-
-    #[cfg(debug_assertions)]
-    pub world: bevy::ecs::world::WorldId,
-}
-
-#[cfg(debug_assertions)]
-pub(crate) fn safety_check_system(
-    world: bevy::ecs::world::WorldId,
-    connections: Query<&Connection>,
-) {
-    for connection in &connections {
-        assert_eq!(connection.inner.meta.world, world,
-            "A Connection had a world ID different from the one it was created in. This is undefined behavior!");
-    }
 }
