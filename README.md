@@ -62,8 +62,8 @@ fn main() {
     // The ChannelRegistry is effectively a giant table of every registered channel.
     app.add_channel::<MyChannel>(ChannelConfiguration {
         // Controls the reliability and ordering of messages.
-        // Read the documentation for ChannelConsistency for a full explanation.
-        consistency: ChannelConsistency::ReliableOrdered,
+        // Read the documentation for MessageConsistency for a full explanation.
+        consistency: MessageConsistency::ReliableOrdered,
 
         // Higher priority messages will be sent before others.
         priority: 0,
@@ -102,7 +102,7 @@ fn send_words_system(
         // You can send them to as many peers as you want once created.
         outgoing.push_one(ChannelMessage {
             channel,
-            payload: MESSAGE,
+            message: MESSAGE,
         });
 
         println!("Sent a message to {entity:?}");
