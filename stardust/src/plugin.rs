@@ -2,34 +2,60 @@
 
 use bevy::prelude::*;
 use crate::prelude::*;
+use crate::channels;
+use crate::connections::*;
+use crate::diagnostics::*;
 
 /// The Stardust multiplayer plugin.
 /// Adds the core functionality of Stardust, but does not add a transport layer.
 pub struct StardustPlugin;
 
 impl Plugin for StardustPlugin {
-    fn build(&self, app: &mut App) {
-        crate::channels::channel_build(app);
+    fn name(&self) -> &str { "StardustPlugin" }
 
-        // Add systems
-        app.add_systems(Last, crate::connections::systems::despawn_closed_connections_system);
-        app.add_systems(PostUpdate, (
-            crate::messages::systems::clear_message_queue_system::<Outgoing>,
-            crate::messages::systems::clear_message_queue_system::<Incoming>,
-        ).in_set(NetworkWrite::Clear));
+    fn build(&self, app: &mut App) {
+        // Register connection types
+        app.register_type::<Peer>();
+        app.register_type::<PeerUid>();
+        app.register_type::<PeerLifestage>();
+
+        // Register diagnostic types
+        app.register_type::<PeerStats>();
+        app.register_type::<DropPackets>();
+        app.register_type::<SimulateLatency>();
+
+        // Register channel types
+        app.register_type::<ChannelId>();
+        app.register_type::<channels::ChannelConfiguration>();
+        app.register_type::<channels::MessageConsistency>();
+
+        // Register messaging types
+        app.register_type::<NetDirection>();
+        app.register_type::<Incoming>();
+        app.register_type::<Outgoing>();
+
+        // Register events
+        app.add_event::<DisconnectPeerEvent>();
+        app.add_event::<PeerConnectingEvent>();
+        app.add_event::<PeerConnectedEvent>();
+        app.add_event::<PeerDisconnectingEvent>();
+        app.add_event::<PeerDisconnectedEvent>();
 
         // Setup orderings
         crate::scheduling::configure_scheduling(app);
 
-        // Hashing-related functionality
-        #[cfg(feature="hashing")] {
-            use crate::hashing::*;
-            app.insert_resource(PendingHashValues::new());
-            app.add_systems(PreStartup, finalise_hasher_system);    
-        }
+        // Setup channels
+        channels::plugin_build(app);
+
+        // Add systems
+        app.add_systems(PostUpdate, (
+            crate::connections::clear_message_queues_system::<Outgoing>,
+            crate::connections::clear_message_queues_system::<Incoming>,
+        ).in_set(NetworkSend::Clear));
     }
 
-    fn finish(&self, app: &mut App) {
-        crate::channels::channel_finish(app);
+    fn cleanup(&self, app: &mut App) {
+        // Finish channels
+        channels::plugin_cleanup(app);
     }
 }

@@ -4,29 +4,37 @@ use bevy::prelude::*;
 
 /// Systems dealing with receiving messages. Run in the [`PreUpdate`] schedule.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, SystemSet)]
-pub enum NetworkRead {
-    /// Transport layers receive packets or other transmission media.
+pub enum NetworkRecv {
+    /// Transport layers insert received messages into [`PeerMessages<Incoming>`](crate::connections::PeerMessages) components.
     Receive,
-    /// Game systems process messages and mutate the World before [`Update`].
-    /// You can still read messages at any time before [`Receive`](NetworkRead::Receive).
-    Read,
+
+    /// Systems update game state and deal with after-effects of received messages,
+    /// before the main game systems in [`Update`] are run.
+    /// 
+    /// You can still read messages at any time after [`Receive`](NetworkRecv::Receive).
+    Synchronise,
 }
 
-/// Systems dealing with outgoing octet strings. Run in the [`PostUpdate`] schedule.
+/// Systems dealing with sending messages. Run in the [`PostUpdate`] schedule.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, SystemSet)]
-pub enum NetworkWrite {
-    /// Transport layers send messages queued by game systems.
-    Send,
-    /// Queued messages (both the incoming and outgoing buffers) are cleared.
+pub enum NetworkSend {
+    /// Transport layers send messages queued in [`PeerMessages<Outgoing>`](crate::connections::PeerMessages) components.
+    Transmit,
+
+    /// Network statistics and diagnostics are recorded.
+    Diagnostics,
+
+    /// Queued messages (both the incoming and outgoing `PeerMessages` buffers) are cleared.
     Clear,
 }
 
 pub(super) fn configure_scheduling(app: &mut App) {
     app.configure_sets(PreUpdate, (
-        NetworkRead::Read.after(NetworkRead::Receive),
+        NetworkRecv::Synchronise.after(NetworkRecv::Receive),
     ));
 
     app.configure_sets(PostUpdate, (
-       NetworkWrite::Clear.after(NetworkWrite::Send),
+        NetworkSend::Diagnostics.after(NetworkSend::Transmit),
+        NetworkSend::Clear.after(NetworkSend::Diagnostics),
     ));
 }
