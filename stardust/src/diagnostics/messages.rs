@@ -9,7 +9,7 @@ impl Plugin for MessageCountDiagnosticsPlugin {
         app.register_diagnostic(Diagnostic::new(Self::INCOMING_COUNT));
         app.register_diagnostic(Diagnostic::new(Self::OUTGOING_COUNT));
 
-        app.add_systems(PreUpdate, diagnostic_system::<Incoming>.in_set(NetworkRecv::Read));
+        app.add_systems(PreUpdate, diagnostic_system::<Incoming>.in_set(NetworkRecv::Synchronise));
         app.add_systems(PostUpdate, diagnostic_system::<Outgoing>.in_set(NetworkSend::Diagnostics));
     }
 }
