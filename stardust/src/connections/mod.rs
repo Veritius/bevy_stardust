@@ -29,7 +29,7 @@ pub(crate) use messages::clear_message_queues_system;
 
 pub mod events;
 
-pub use messages::*;
-pub use peer::*;
-pub use stats::*;
-pub use lifestage::*;
+pub use messages::PeerMessages;
+pub use peer::{Peer, PeerAddress, PeerUid};
+pub use stats::PeerRtt;
+pub use lifestage::{PeerLifestage, Established};

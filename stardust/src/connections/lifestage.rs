@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::{ecs::{query::{QueryData, QueryFilter, WorldQuery}, storage::TableRow}, prelude::*};
 
 /// The lifestage of a connection.
 /// 
@@ -24,4 +24,34 @@ pub enum PeerLifestage {
 
     /// The connection is closed.
     Closed,
+}
+
+/// A [`QueryFilter`] for entities in the [`Established`](PeerLifestage::Established) lifestage.
+/// 
+/// ```rust
+/// # use bevy::prelude::*;
+/// # use bevy_stardust::prelude::*;
+/// #
+/// fn my_system(query: Query<&Peer, Established>) {
+///     for peer in &query {
+///         println!("Hello, world!");
+///     }
+/// }
+/// ```
+#[derive(QueryData)]
+pub struct Established<'w> {
+    lifestage: Option<&'w PeerLifestage>,
+}
+
+impl<'w> QueryFilter for Established<'w> {
+    const IS_ARCHETYPAL: bool = false;
+
+    unsafe fn filter_fetch(
+        fetch: &mut Self::Fetch<'_>,
+        entity: Entity,
+        table_row: TableRow,
+    ) -> bool {
+        Self::fetch(fetch, entity, table_row).lifestage
+            .is_some_and(|e| *e == PeerLifestage::Established)
+    }
 }
