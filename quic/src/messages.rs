@@ -53,25 +53,25 @@ impl Connection {
         };
 
         match config.consistency {
-            ChannelConsistency::UnreliableUnordered => {
+            MessageConsistency::UnreliableUnordered => {
                 for message in iter {
                     self.handle_outgoing_unrel_unord(context, channel, message);
                 }
             },
 
-            ChannelConsistency::UnreliableSequenced => {
+            MessageConsistency::UnreliableSequenced => {
                 for message in iter {
                     self.handle_outgoing_unrel_seq(context, channel, message);
                 }
             },
 
-            ChannelConsistency::ReliableUnordered => {
+            MessageConsistency::ReliableUnordered => {
                 for message in iter {
                     self.outgoing_streams_handle().send_message_on_stream_and_close(channel, message);
                 }
             },
 
-            ChannelConsistency::ReliableOrdered => {
+            MessageConsistency::ReliableOrdered => {
                 self.outgoing_streams_handle().send_messages_on_stream(channel, iter.into_iter());
             },
 
