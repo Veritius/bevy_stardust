@@ -1,4 +1,4 @@
-use std::{net::SocketAddr, sync::Arc};
+use std::{net::{SocketAddr, UdpSocket}, sync::Arc};
 use anyhow::Result;
 use bevy::{ecs::{entity::Entities, system::SystemParam}, prelude::*};
 use quinn_proto::{ClientConfig, EndpointConfig, ServerConfig};
@@ -17,6 +17,16 @@ impl Manager<'_> {
         server_config: Option<Arc<ServerConfig>>,
         bind_address: SocketAddr,
     ) -> Result<Entity> {
+        let socket = UdpSocket::bind(bind_address)?;
+        socket.set_nonblocking(true)?;
+
+        let quinn = quinn_proto::Endpoint::new(
+            endpoint_config,
+            server_config,
+            true,
+            None,
+        );
+
         todo!()
     }
 
@@ -37,12 +47,18 @@ impl Manager<'_> {
 pub(crate) struct QueuedEndpointOpen {
     pub entity: Entity,
     pub endpoint: Box<quinn_proto::Endpoint>,
+
+    pub connections: Vec<ConnectionConfig>,
 }
 
 pub(crate) struct QueuedConnectionOpen {
     pub entity: Entity,
     pub endpoint: Entity,
 
+    pub config: ConnectionConfig,
+}
+
+pub(crate) struct ConnectionConfig {
     pub client_config: ClientConfig,
     pub remote_address: SocketAddr,
     pub server_name: Arc<str>,
