@@ -2,9 +2,10 @@
 Stardust is a flexible networking crate built for Bevy, with a focus on extensibility and parallelism.
 <br></br>
 
-![License](https://img.shields.io/badge/license-MIT_or_Apache_2.0-green)
-[![Bevy version](https://img.shields.io/badge/bevy-0.13-blue?color=blue)](https://bevyengine.org/)
-[![Crates.io](https://img.shields.io/crates/v/bevy_stardust)](https://crates.io/crates/bevy_stardust)
+[![License](https://img.shields.io/badge/license-MIT_or_Apache_2.0-green)](#license)
+[![Bevy version](https://img.shields.io/badge/bevy-0.14-blue?color=blue)](https://bevyengine.org/)
+[![crates.io](https://img.shields.io/crates/v/bevy_stardust)](https://crates.io/crates/bevy_stardust)
+[![docs.rs](https://img.shields.io/docsrs/bevy_stardust)](https://docs.rs/bevy_stardust/latest/bevy_stardust/)
 
 ## Why Stardust?
 ### ECS-integrated
@@ -62,8 +63,8 @@ fn main() {
     // The ChannelRegistry is effectively a giant table of every registered channel.
     app.add_channel::<MyChannel>(ChannelConfiguration {
         // Controls the reliability and ordering of messages.
-        // Read the documentation for ChannelConsistency for a full explanation.
-        consistency: ChannelConsistency::ReliableOrdered,
+        // Read the documentation for MessageConsistency for a full explanation.
+        consistency: MessageConsistency::ReliableOrdered,
 
         // Higher priority messages will be sent before others.
         priority: 0,
@@ -102,7 +103,7 @@ fn send_words_system(
         // You can send them to as many peers as you want once created.
         outgoing.push_one(ChannelMessage {
             channel,
-            payload: MESSAGE,
+            message: MESSAGE,
         });
 
         println!("Sent a message to {entity:?}");

@@ -2,23 +2,15 @@ use std::{ops::Deref, str::{from_utf8, Utf8Error}};
 use bytes::Bytes;
 use crate::channels::ChannelId;
 
-/// Individual, cheaply clonable, contiguous octet (byte) strings.
+/// An individual, whole message. The most basic communication primitive.
 /// 
-/// An individual message has the following guarantees:
-/// - Complete: messages are never received piecemeal.
-/// - Correct: a received message is exactly what was sent.
+/// Messages are cheaply clonable and contiguous, being a `#[repr(transparent)]` wrapper around a [`Bytes`].
 /// 
-/// These guarantees **are not** enforced by this type.
-/// Instead, they are enforced by the transport layer handling I/O.
-/// These guarantees are also not to be used for unsafe code.
-/// All messages should be considered untrusted input, and
-/// defensive programming should be employed when using them.
-/// 
-/// A `Message` is a wrapper around a [`Bytes`], with an intentionally simplified API.
-/// Functions like [`Bytes::slice`] are not present, as a `Message` is complete.
-/// If you want to use slicing operations, convert this into a `Bytes` with [`Into<Bytes>`].
-/// [`From<Bytes>`] exists for use by transport layers. A slice of a `Message` is considered
-/// a violation of the 'completeness' guarantee.
+/// ## Constraints
+/// A `Message` is **unaltered** - it is exactly the same series of bytes as what was sent by the peer.
+/// All outside data is untrusted, and you should employ defensive programming when handling user data.
+/// It's recommended to use the `untrusted` crate or the `octs` crate, but not `bytes`,
+/// since `bytes` methods panic rather than returning an error.
 #[derive(Clone)]
 #[repr(transparent)]
 pub struct Message(Bytes);
@@ -116,14 +108,14 @@ pub struct ChannelMessage {
     pub channel: ChannelId,
 
     /// The contents of the message.
-    pub payload: Message,
+    pub message: Message,
 }
 
 impl From<(ChannelId, Message)> for ChannelMessage {
     fn from(value: (ChannelId, Message)) -> Self {
         Self {
             channel: value.0,
-            payload: value.1,
+            message: value.1,
         }
     }
 }
@@ -132,14 +124,21 @@ impl From<(ChannelId, Bytes)> for ChannelMessage {
     fn from(value: (ChannelId, Bytes)) -> Self {
         Self {
             channel: value.0,
-            payload: Message::from_bytes(value.1),
+            message: Message::from_bytes(value.1),
         }
+    }
+}
+
+impl AsRef<Message> for ChannelMessage {
+    #[inline]
+    fn as_ref(&self) -> &Message {
+        &self.message
     }
 }
 
 impl AsRef<[u8]> for ChannelMessage {
     #[inline]
     fn as_ref(&self) -> &[u8] {
-        self.payload.as_ref()
+        self.message.as_ref()
     }
 }

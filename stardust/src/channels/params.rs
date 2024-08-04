@@ -5,7 +5,7 @@ use super::*;
 
 /// Access to registered channels and channel data.
 /// 
-/// This is only available after [`StardustPlugin`]`::`[`cleanup`] is called.
+/// This is only available after [`StardustPlugin::cleanup`](crate::plugin::StardustPlugin::cleanup) is called.
 /// Attempts to access this type before this point will cause a panic.
 /// 
 /// For asynchronous contexts, [`clone_arc`](Self::clone_arc) can be used
