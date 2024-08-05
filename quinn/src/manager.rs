@@ -52,7 +52,7 @@ impl<'a> EndpointCommands<'a> {
         client_config: ClientConfig,
         remote_address: SocketAddr,
         server_name: Arc<str>,
-    ) -> EndpointCommands<'a> {
+    ) -> ConnectionCommands<'a> {
         todo!()
     }
 }
