@@ -13,30 +13,21 @@ pub struct QuinnConnection {
 impl QuinnConnection {
     pub(crate) fn connecting(connecting: Connecting) -> Self {
         Self {
-            qn_state: ConnectionInner::Connecting(connecting),
+            qn_state: todo!(),
             sp_state: Box::new(ConnectionState::new()),
         }
     }
 }
 
-enum ConnectionInner {
-    Connecting(Connecting),
-    Established(Connection),
+struct ConnectionInner {
+
 }
 
 pub(crate) fn message_recv_system(
     mut query: Query<(&mut QuinnConnection, &mut PeerMessages<Incoming>)>,
 ) {
     query.par_iter_mut().for_each(|(mut connection, mut messages)| {
-        match &mut connection.qn_state {
-            ConnectionInner::Connecting(connecting) => {
-                todo!()
-            },
-
-            ConnectionInner::Established(connected) => {
-                todo!()
-            },
-        }
+        todo!()
     });
 }
 
