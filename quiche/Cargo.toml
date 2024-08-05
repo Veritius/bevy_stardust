@@ -1,10 +1,10 @@
 [package]
-name="bevy_stardust_quinn"
+name="bevy_stardust_quiche"
 version="0.1.0"
 edition="2021"
 authors=["Veritius <veritiusgaming@gmail.com>"]
 license="MIT OR Apache-2.0"
-description="Sans-IO QUIC for bevy_stardust"
+description="Quiche-based QUIC transport layer for bevy_stardust"
 repository="https://github.com/veritius/bevy_stardust/"
 keywords=["bevy", "gamedev", "networking"]
 
@@ -13,12 +13,12 @@ version = "0.14"
 default-features = false
 
 [dependencies.bevy_stardust]
-version = "0.6.0"
+version = "0.6"
 path = "../stardust"
 
 [dependencies.bevy_stardust_quic]
-version = "0.1.0"
+version = "0.1"
 path = "../quic"
 
-[dependencies.quinn-proto]
-version = "0.11.6"
+[dependencies.quiche]
+version = "0.22"

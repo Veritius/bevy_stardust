@@ -4,5 +4,5 @@ members = [
     "stardust",
     "extras",
     "quic",
-    "quinn"
+    "quiche"
 ]

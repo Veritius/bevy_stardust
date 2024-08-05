@@ -5,4 +5,4 @@ mod endpoint;
 mod plugin;
 
 pub use endpoint::Endpoint;
-pub use plugin::QuinnPlugin;
+pub use plugin::QuichePlugin;

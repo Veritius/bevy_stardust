@@ -1,5 +1,4 @@
 use bevy::prelude::*;
-use quinn_proto::Endpoint as QuinnEndpoint;
 
 /// A QUIC endpoint.
 #[derive(Component, Reflect)]
@@ -10,5 +9,5 @@ pub struct Endpoint {
 }
 
 struct EndpointInner {
-    quinn: QuinnEndpoint,
+
 }
