@@ -16,13 +16,11 @@ impl Endpoints<'_, '_> {
         endpoint_config: Arc<EndpointConfig>,
         server_config: Option<Arc<ServerConfig>>,
         bind_address: impl ToSocketAddrs,
-    ) -> anyhow::Result<EndpointCommands> {
+    ) -> EndpointCommands {
         todo!()
     }
 
-    /// Queues a new connection to be opened.
-    /// 
-    /// Note that even if this returns `Ok`, the connection may fail to open.
+    /// Gets an [`EndpointCommands`] for an existing endpoint.
     pub fn endpoint(
         &mut self,
         endpoint: Entity,
