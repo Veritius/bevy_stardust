@@ -39,7 +39,7 @@ impl Endpoints<'_, '_> {
 pub struct EndpointBuilder<'a> {
     entities: &'a Entities,
 
-    endpoint: QueuedEndpoint,
+    pub(crate) endpoint: QueuedEndpoint,
 }
 
 impl<'a> EndpointBuilder<'a> {
@@ -77,15 +77,15 @@ impl<'a> EndpointBuilder<'a> {
     }
 }
 
-struct QueuedEndpoint {
-    entity: Entity,
+pub(crate) struct QueuedEndpoint {
+    pub entity: Entity,
 
-    endpoint_config: Arc<EndpointConfig>,
-    server_config: Option<Arc<ServerConfig>>,
-    bind_address: SocketAddr,
+    pub endpoint_config: Arc<EndpointConfig>,
+    pub server_config: Option<Arc<ServerConfig>>,
+    pub bind_address: SocketAddr,
 
-    connections: Vec<QueuedConnection>,
-    commands: Vec<Box<dyn EntityCommand>>,
+    pub connections: Vec<QueuedConnection>,
+    pub commands: Vec<Box<dyn EntityCommand>>,
 }
 
 pub struct ConnectionBuilder<'a> {
@@ -107,12 +107,12 @@ impl<'a> ConnectionBuilder<'a> {
     }
 }
 
-struct QueuedConnection {
-    entity: Entity,
+pub(crate) struct QueuedConnection {
+    pub entity: Entity,
 
-    client_config: ClientConfig,
-    remote_address: SocketAddr,
-    server_name: Arc<str>,
+    pub client_config: ClientConfig,
+    pub remote_address: SocketAddr,
+    pub server_name: Arc<str>,
 
-    commands: Vec<Box<dyn EntityCommand>>,
+    pub commands: Vec<Box<dyn EntityCommand>>,
 }
