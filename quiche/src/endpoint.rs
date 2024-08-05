@@ -1,7 +1,7 @@
 use std::{collections::BTreeMap, io::ErrorKind, net::{SocketAddr, UdpSocket}};
 use anyhow::Result;
 use bevy::prelude::*;
-use crate::{events::{event_pair, EndpointEvents}, Connection};
+use crate::{events::{event_pair, ConnectionEvent, EndpointEvents}, Connection};
 
 /// A QUIC endpoint.
 #[derive(Component, Reflect)]
@@ -95,6 +95,14 @@ impl Endpoint {
     }
 }
 
+impl EndpointInner {
+    fn disconnect(&mut self, address: SocketAddr) {
+        if let Some(mut handle) = self.connections.remove(&address) {
+            let _ = handle.events.try_send(ConnectionEvent::Closed);
+        }
+    }
+}
+
 struct ConnectionHandle {
     events: EndpointEvents,
 }
@@ -170,6 +178,43 @@ pub(crate) fn endpoint_recv_packets_system(
 
                 Err(_) => todo!(),
             }
+        }
+    });
+}
+
+pub(crate) fn endpoint_handle_events_system(
+    mut endpoints: Query<&mut Endpoint>,
+) {
+    endpoints.par_iter_mut().for_each(|mut endpoint| {
+        let endpoint = &mut *endpoint;
+
+        let mut queued_removals = Vec::new();
+
+        for (address, handle) in endpoint.inner.connections.iter_mut() {
+            loop {
+                let event = match handle.events.try_recv() {
+                    Ok(Some(event)) => event,
+                    Ok(None) => break,
+                    Err(_) => todo!(),
+                };
+
+                match event {
+                    crate::events::EndpointEvent::Closed => {
+                        queued_removals.push(*address);
+                    },
+
+                    crate::events::EndpointEvent::SendPacket { payload } => {
+                        match endpoint.inner.socket.send_to(&payload, address) {
+                            Ok(_) => todo!(),
+                            Err(_) => todo!(),
+                        }
+                    },
+                }
+            }
+        }
+
+        for address in queued_removals.drain(..) {
+            endpoint.inner.connections.remove(&address);
         }
     });
 }

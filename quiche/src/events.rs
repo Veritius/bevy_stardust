@@ -53,6 +53,16 @@ impl EndpointEvents {
     pub fn try_send_payload(&mut self, slice: &[u8]) -> Result<(), TrySendError<ConnectionEvent>> {
         self.try_send(ConnectionEvent::RecvPacket { payload: slice.into() })
     }
+
+    pub fn try_recv(&mut self) -> Result<Option<EndpointEvent>, TryRecvError> {
+        match self.recv.try_recv() {
+            Ok(event) => Ok(Some(event)),
+
+            Err(TryRecvError::Empty) => Ok(None),
+
+            Err(e) => Err(e),
+        }
+    }
 }
 
 /// Endpoint to connection directed event.
