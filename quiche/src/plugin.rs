@@ -9,11 +9,13 @@ impl Plugin for QuichePlugin {
         app.add_systems(PreUpdate, (
             crate::endpoint::endpoint_recv_packets_system,
             crate::connection::connection_event_handling_system,
+            crate::endpoint::endpoint_handle_events_system,
         ).chain().in_set(NetworkRecv::Receive));
 
         app.add_systems(PostUpdate, (
             crate::connection::connection_message_queue_system,
             crate::connection::connection_event_handling_system,
+            crate::endpoint::endpoint_handle_events_system,
         ).chain().in_set(NetworkSend::Transmit));
     }
 }
