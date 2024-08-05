@@ -44,7 +44,7 @@
 //! # use bevy_stardust::prelude::*;
 //! # fn _p() {
 //! let config = ChannelConfiguration {
-//!     consistency: ChannelConsistency::ReliableOrdered,
+//!     consistency: MessageConsistency::ReliableOrdered,
 //!     priority: 128,
 //! };
 //! # }
@@ -77,7 +77,7 @@
 //!     app.add_plugins(StardustPlugin);
 //! 
 //!     app.add_channel::<MyChannel>(ChannelConfiguration {
-//!         consistency: ChannelConsistency::ReliableOrdered,
+//!         consistency: MessageConsistency::ReliableOrdered,
 //!         priority: 128,
 //!     });
 //! }
@@ -124,7 +124,7 @@
 //! 
 //!     // And register it as a channel
 //!     app.add_channel::<MovementEvent>(ChannelConfiguration {
-//!         consistency: ChannelConsistency::UnreliableUnordered,
+//!         consistency: MessageConsistency::UnreliableUnordered,
 //!         priority: 32,
 //!     });
 //! }
@@ -152,7 +152,7 @@ mod id;
 mod params;
 mod registry;
 
-pub use config::{ChannelConfiguration, ChannelConsistency};
+pub use config::{ChannelConfiguration, MessageConsistency};
 pub use id::{Channel, ChannelId, ToChannelId};
 pub use registry::{ChannelRegistry, ChannelMetadata};
 pub use params::{Channels, ChannelData};

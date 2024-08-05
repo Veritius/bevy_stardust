@@ -30,7 +30,7 @@ pub fn setup(app: &mut App) {
     app.add_event::<MovementEvent>();
 
     app.add_channel::<MovementEvent>(ChannelConfiguration {
-        consistency: ChannelConsistency::UnreliableSequenced,
+        consistency: MessageConsistency::UnreliableSequenced,
         priority: 32,
     });
 }

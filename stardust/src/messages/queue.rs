@@ -70,7 +70,7 @@ impl MessageQueue {
     pub fn push_one(&mut self, message: ChannelMessage) {
         // Add to the messages vec
         let idx = self.messages.len();
-        self.messages.push(message.payload);
+        self.messages.push(message.message);
 
         // Add index to the map
         self.indexes

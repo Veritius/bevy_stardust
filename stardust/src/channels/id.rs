@@ -20,9 +20,8 @@ impl<T: Any> Channel for T {}
 /// `World` belonging to the `App` they were registered to.
 /// Using them in a different `World` or `App` may panic,
 /// or have additional consequences because of transport
-/// layers, such as causing undefined behavior. Stardust
-/// will never cause UB by itself no matter how badly you
-/// misuse it, but it's worth reading transport layer docs.
+/// layers, such as causing undefined behavior. Make sure
+/// you read the documentation!
 #[derive(Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord, Reflect)]
 #[repr(transparent)]
 pub struct ChannelId(u32);
