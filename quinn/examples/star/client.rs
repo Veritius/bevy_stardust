@@ -22,7 +22,8 @@ fn main() {
         let endpoint = QuinnEndpoint::new(
             EndpointConfig::default(),
             None,
-            udp_socket
+            udp_socket,
+            todo!(),
         ).unwrap();
 
         let config = ClientConfig::with_root_certificates(roots()).unwrap();

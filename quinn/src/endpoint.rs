@@ -1,7 +1,7 @@
 use std::{net::{SocketAddr, UdpSocket}, sync::Arc};
 use anyhow::Result;
 use bevy::prelude::*;
-use quinn::{ClientConfig, Endpoint, EndpointConfig, ServerConfig, VarInt};
+use quinn::{ClientConfig, Endpoint, EndpointConfig, Runtime, ServerConfig, VarInt};
 use crate::QuinnConnection;
 
 /// Represents one Quinn endpoint.
@@ -16,13 +16,14 @@ impl QuinnEndpoint {
         endpoint_config: EndpointConfig,
         server_config: Option<ServerConfig>,
         udp_socket: UdpSocket,
+        runtime: Arc<dyn Runtime>,
     ) -> Result<Self> {
         Ok(Self {
             endpoint: Endpoint::new(
                 endpoint_config,
                 server_config,
                 udp_socket,
-                Arc::new(quinn::TokioRuntime),
+                runtime,
             )?,
         })
     }
