@@ -61,7 +61,7 @@ struct QueuedEndpoint {
 
     endpoint: Box<quinn_proto::Endpoint>,
 
-    connections: Vec<Box<QueuedConnection>>,
+    connections: Vec<QueuedConnection>,
 
     commands: Vec<Box<dyn EntityCommand>>,
 }
