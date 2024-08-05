@@ -27,7 +27,7 @@ impl Plugin for StardustPlugin {
         // Register channel types
         app.register_type::<ChannelId>();
         app.register_type::<channels::ChannelConfiguration>();
-        app.register_type::<channels::ChannelConsistency>();
+        app.register_type::<channels::MessageConsistency>();
 
         // Register messaging types
         app.register_type::<NetDirection>();

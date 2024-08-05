@@ -225,8 +225,8 @@ mod octs {
         type Error = T::Error;
 
         #[inline]
-        fn encode(&self, dst: &mut impl octs::Write) -> Result<(), octs::BufTooShortOr<Self::Error>> {
-            self.0.encode(dst)
+        fn encode(&self, mut dst: impl octs::Write) -> Result<(), octs::BufTooShortOr<Self::Error>> {
+            self.0.encode(&mut dst)
         }
     }
 
@@ -238,8 +238,8 @@ mod octs {
         type Error = T::Error;
 
         #[inline]
-        fn decode(src: &mut impl octs::Read) -> Result<Self, octs::BufTooShortOr<Self::Error>> {
-            T::decode(src).map(|v| Self(v))
+        fn decode(mut src: impl octs::Read) -> Result<Self, octs::BufTooShortOr<Self::Error>> {
+            T::decode(&mut src).map(|v| Self(v))
         }
     }
 }

@@ -84,8 +84,8 @@ fn send_link_data(
     query.par_iter_mut().for_each(|(mut link, queue)| {
         let sender = &link.0.sender;
         'outer: for (channel, queue) in queue {
-            for payload in queue {
-                match sender.send(ChannelMessage { channel, payload }) {
+            for message in queue {
+                match sender.send(ChannelMessage { channel, message }) {
                     Ok(_) => {},
                     Err(_) => {
                         link.0.disconnected = true;

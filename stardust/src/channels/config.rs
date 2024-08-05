@@ -6,11 +6,12 @@ use bevy::reflect::Reflect;
 pub struct ChannelConfiguration {
     /// Guarantees that the transport layer must make
     /// for messages sent on this channel. See the
-    /// documentation of [`ChannelConsistency`].
-    pub consistency: ChannelConsistency,
+    /// documentation of [`MessageConsistency`].
+    pub consistency: MessageConsistency,
 
     /// The priority of messages on this channel.
-    /// Transport values will send messages on channels with higher `priority` values first.
+    /// Transport values will try to send messages on
+    /// channels with higher `priority` values first.
     pub priority: u32,
 }
 
@@ -47,7 +48,7 @@ pub struct ChannelConfiguration {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Reflect)]
 #[reflect(Debug, PartialEq, Hash)]
 #[non_exhaustive]
-pub enum ChannelConsistency {
+pub enum MessageConsistency {
     /// Messages lost in transport will not be resent.
     /// They are added to the queue in the order they're received,
     /// which may be different to the order they were sent in.
@@ -85,24 +86,24 @@ pub enum ChannelConsistency {
     ReliableOrdered,
 }
 
-impl ChannelConsistency {
+impl MessageConsistency {
     /// Returns `true` if messages in this channel must be sent reliably.
     pub fn is_reliable(&self) -> bool {
         match self {
-            ChannelConsistency::UnreliableUnordered => false,
-            ChannelConsistency::UnreliableSequenced => false,
-            ChannelConsistency::ReliableUnordered   => true,
-            ChannelConsistency::ReliableOrdered     => true,
+            MessageConsistency::UnreliableUnordered => false,
+            MessageConsistency::UnreliableSequenced => false,
+            MessageConsistency::ReliableUnordered   => true,
+            MessageConsistency::ReliableOrdered     => true,
         }
     }
 
     /// Returns `true` if messages in this channel have any ordering constraints applied.
     pub fn is_ordered(&self) -> bool {
         match self {
-            ChannelConsistency::UnreliableUnordered => false,
-            ChannelConsistency::UnreliableSequenced => true,
-            ChannelConsistency::ReliableUnordered   => false,
-            ChannelConsistency::ReliableOrdered     => true,
+            MessageConsistency::UnreliableUnordered => false,
+            MessageConsistency::UnreliableSequenced => true,
+            MessageConsistency::ReliableUnordered   => false,
+            MessageConsistency::ReliableOrdered     => true,
         }
     }
 }

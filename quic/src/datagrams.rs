@@ -16,7 +16,7 @@ impl Connection {
             DatagramHeader::Stardust { channel } => {
                 self.shared.events.push(ConnectionEvent::ReceivedMessage(ChannelMessage {
                     channel,
-                    payload: Message::from_bytes(payload),
+                    message: Message::from_bytes(payload),
                 }));
             },
 
@@ -27,7 +27,7 @@ impl Connection {
                 if seq.latest(sequence) {
                     self.shared.events.push(ConnectionEvent::ReceivedMessage(ChannelMessage {
                         channel,
-                        payload: Message::from_bytes(payload),
+                        message: Message::from_bytes(payload),
                     }));
                 }
             },
