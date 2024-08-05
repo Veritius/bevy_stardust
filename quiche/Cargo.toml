@@ -23,5 +23,11 @@ path = "../quic"
 [dependencies.quiche]
 version = "0.22"
 
+[dependencies.bytes]
+version = "1.5.0"
+
+[dependencies.crossbeam-channel]
+version = "0.5.13"
+
 [dependencies.anyhow]
 version = "1"
