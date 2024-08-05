@@ -1,3 +1,4 @@
+use std::net::UdpSocket;
 use bevy::prelude::*;
 
 /// A QUIC endpoint.
@@ -9,5 +10,5 @@ pub struct Endpoint {
 }
 
 struct EndpointInner {
-
+    socket: UdpSocket,
 }
