@@ -1,10 +1,7 @@
 mod shared;
 
-use std::sync::Arc;
-
 use bevy::prelude::*;
-use bevy_stardust_quinn::{Endpoints, PrivateKeyDer};
-use quinn_proto::{EndpointConfig, ServerConfig};
+use bevy_stardust_quinn::PrivateKeyDer;
 use rustls_pemfile::Item;
 
 // NOTE: It is very, very, very bad practice to compile-in private keys.
@@ -25,17 +22,6 @@ fn main() {
     let mut app = App::new();
 
     shared::setup(&mut app);
-
-    app.add_systems(Startup, |mut endpoints: Endpoints| {
-        endpoints.create(
-            Arc::new(EndpointConfig::default()),
-            Some(Arc::new(ServerConfig::with_single_cert(
-                vec![shared::certificate()],
-                private_key(),
-            ).unwrap())),
-            shared::SERVER_ADDRESS,
-        );
-    });
 
     app.run();
 }
