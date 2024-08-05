@@ -1,3 +1,4 @@
+use std::net::SocketAddr;
 use bevy::prelude::*;
 
 /// A QUIC connection.
@@ -8,11 +9,13 @@ pub struct Connection {
     inner: ConnectionInner,
 }
 
-pub(crate) struct ConnectionInner {
+struct ConnectionInner {
 
 }
 
 pub(crate) struct ConnectionState {
+    address: SocketAddr,
+
     quiche: quiche::Connection,
     state: bevy_stardust_quic::Connection,
 }
