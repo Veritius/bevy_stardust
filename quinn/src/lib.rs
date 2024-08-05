@@ -3,6 +3,7 @@
 
 mod connections;
 mod endpoints;
+mod events;
 mod plugin;
 
 pub use connections::Connection;
