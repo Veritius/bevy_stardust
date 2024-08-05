@@ -12,6 +12,8 @@ pub struct QuinnEndpoint {
 
 impl QuinnEndpoint {
     /// Create a new endpoint attached to `udp_socket`.
+    /// 
+    /// `runtime` will be dropped when all connection and endpoint components are dropped.
     pub fn new(
         endpoint_config: EndpointConfig,
         server_config: Option<ServerConfig>,
