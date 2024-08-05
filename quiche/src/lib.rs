@@ -2,6 +2,7 @@
 #![warn(missing_docs)]
 
 mod connection;
+mod crypto;
 mod endpoint;
 mod events;
 mod plugin;

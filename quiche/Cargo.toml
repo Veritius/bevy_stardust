@@ -22,6 +22,11 @@ path = "../quic"
 
 [dependencies.quiche]
 version = "0.22"
+default-features = false
+features = ["boringssl-boring-crate"]
+
+[dependencies.boring]
+version = "4"
 
 [dependencies.bytes]
 version = "1.5.0"
