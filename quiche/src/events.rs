@@ -1,5 +1,4 @@
-use bytes::Bytes;
-use crossbeam_channel::{unbounded, Receiver, Sender, TrySendError};
+use crossbeam_channel::{unbounded, Receiver, Sender, TryRecvError, TrySendError};
 
 pub(crate) fn event_pair() -> (ConnectionEvents, EndpointEvents) {
     let (end_send, end_recv) = unbounded();
@@ -7,43 +6,52 @@ pub(crate) fn event_pair() -> (ConnectionEvents, EndpointEvents) {
 
     return (
         ConnectionEvents {
-            recv: end_recv,
-            send: con_send,
+            recv: con_recv,
+            send: end_send,
         },
 
         EndpointEvents {
-            recv: con_recv,
-            send: end_send,
+            recv: end_recv,
+            send: con_send,
         },
     )
 }
 
 /// A connection's handles to events.
 pub(crate) struct ConnectionEvents {
-    recv: Receiver<EndpointEvent>,
-    send: Sender<ConnectionEvent>,
+    recv: Receiver<ConnectionEvent>,
+    send: Sender<EndpointEvent>,
 }
 
 impl ConnectionEvents {
-    pub fn try_send(&mut self, event: ConnectionEvent) -> Result<(), TrySendError<ConnectionEvent>> {
+    pub fn try_send(&mut self, event: EndpointEvent) -> Result<(), TrySendError<EndpointEvent>> {
         self.send.try_send(event)
+    }
+
+    pub fn try_recv(&mut self) -> Result<Option<ConnectionEvent>, TryRecvError> {
+        match self.recv.try_recv() {
+            Ok(event) => Ok(Some(event)),
+
+            Err(TryRecvError::Empty) => Ok(None),
+
+            Err(e) => Err(e),
+        }
     }
 }
 
 /// An endpoint's handles to events.
 pub(crate) struct EndpointEvents {
-    recv: Receiver<ConnectionEvent>,
-    send: Sender<EndpointEvent>,
+    recv: Receiver<EndpointEvent>,
+    send: Sender<ConnectionEvent>,
 }
 
 impl EndpointEvents {
-    pub fn try_send(&mut self, event: EndpointEvent) -> Result<(), TrySendError<EndpointEvent>> {
+    pub fn try_send(&mut self, event: ConnectionEvent) -> Result<(), TrySendError<ConnectionEvent>> {
         self.send.try_send(event)
     }
 
-    pub fn try_send_payload(&mut self, slice: &[u8]) -> Result<(), TrySendError<EndpointEvent>> {
-        let payload = Bytes::copy_from_slice(slice);
-        self.try_send(EndpointEvent::SendPacket { payload })
+    pub fn try_send_payload(&mut self, slice: &[u8]) -> Result<(), TrySendError<ConnectionEvent>> {
+        self.try_send(ConnectionEvent::RecvPacket { payload: slice.into() })
     }
 }
 
@@ -52,7 +60,7 @@ pub(crate) enum ConnectionEvent {
     Closed,
 
     RecvPacket {
-        payload: Bytes,
+        payload: Box<[u8]>,
     },
 }
 
@@ -61,6 +69,6 @@ pub(crate) enum EndpointEvent {
     Closed,
 
     SendPacket {
-        payload: Bytes,
+        payload: Box<[u8]>,
     },
 }

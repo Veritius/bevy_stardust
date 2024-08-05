@@ -88,6 +88,7 @@ impl Endpoint {
         // Return the new connection
         return Ok(Connection::new(
             remote_address,
+            self.inner.address,
             qcon,
             con_evts,
         ));
@@ -144,6 +145,7 @@ pub(crate) fn endpoint_recv_packets_system(
                                     commands.command_scope(|mut commands| {
                                         commands.spawn(Connection::new(
                                             addr,
+                                            endpoint.inner.address,
                                             qcon,
                                             con_evts,
                                         ));
