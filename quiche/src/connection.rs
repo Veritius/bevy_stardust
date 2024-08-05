@@ -1,6 +1,7 @@
 use std::net::SocketAddr;
 use bevy::prelude::*;
-use bevy_stardust::prelude::{Incoming, PeerMessages};
+use bevy_stardust::prelude::*;
+use bevy_stardust_quic::SendContext;
 use quiche::RecvInfo;
 use crate::events::{ConnectionEvent, ConnectionEvents};
 
@@ -118,5 +119,21 @@ pub(crate) fn connection_event_handling_system(
                 },
             }
         }
+    });
+}
+
+pub(crate) fn connection_message_queue_system(
+    channels: Channels,
+    mut connections: Query<(&mut Connection, &PeerMessages<Outgoing>)>,
+) {
+    connections.par_iter_mut().for_each(|(mut connection, outgoing)| {
+        // Create the send context device
+        let send_context = SendContext {
+            registry: channels.as_ref(),
+            dgram_max_size: connection.inner.quiche.dgram_max_writable_len().unwrap_or(1280),
+        };
+
+        // Handle the outgoing message queue
+        connection.inner.state.handle_outgoing(send_context, outgoing);
     });
 }
