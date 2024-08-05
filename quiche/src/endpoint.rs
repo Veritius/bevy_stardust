@@ -1,4 +1,5 @@
-use std::net::UdpSocket;
+use std::net::{SocketAddr, UdpSocket};
+use anyhow::Result;
 use bevy::prelude::*;
 
 /// A QUIC endpoint.
@@ -11,4 +12,22 @@ pub struct Endpoint {
 
 struct EndpointInner {
     socket: UdpSocket,
+}
+
+impl Endpoint {
+    /// Creates a new [`Endpoint`].
+    pub fn new(
+        bind_address: SocketAddr,
+    ) -> Result<Self> {
+        // Bind the socket
+        let socket = UdpSocket::bind(bind_address)?;
+        socket.set_nonblocking(true)?;
+
+        // Return component
+        return Ok(Self {
+            inner: Box::new(EndpointInner {
+                socket,
+            }),
+        });
+    }
 }

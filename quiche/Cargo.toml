@@ -22,3 +22,6 @@ path = "../quic"
 
 [dependencies.quiche]
 version = "0.22"
+
+[dependencies.anyhow]
+version = "1"
