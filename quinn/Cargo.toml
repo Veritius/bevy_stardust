@@ -25,6 +25,9 @@ version = "0.11.2"
 features = ["log", "ring", "rustls"]
 default-features = false
 
+[dependencies.crossbeam-channel]
+version = "0.5"
+
 [dependencies.bytes]
 version = "1.5.0"
 
