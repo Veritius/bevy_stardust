@@ -1,6 +1,6 @@
-use std::{net::{SocketAddr, ToSocketAddrs}, sync::Arc};
+use std::{marker::PhantomData, net::{SocketAddr, ToSocketAddrs}, sync::Arc};
 use anyhow::Result;
-use bevy::{ecs::{query::QueryEntityError, system::{EntityCommands, SystemParam}}, prelude::*};
+use bevy::{ecs::{entity::Entities, query::QueryEntityError, system::{EntityCommand, EntityCommands, SystemParam}, world::CommandQueue}, prelude::*};
 use quinn_proto::{ClientConfig, EndpointConfig, ServerConfig};
 
 /// Utility for opening endpoints.
@@ -30,17 +30,18 @@ impl Endpoints<'_, '_> {
 }
 
 pub struct EndpointCommands<'a> {
-    commands: EntityCommands<'a>,
+    connection: QueuedEndpoint,
+    entities: &'a Entities,
 }
 
 impl<'a> EndpointCommands<'a> {
     pub fn id(&self) -> Entity {
-        self.commands.id()
+        self.connection.entity
     }
 
-    pub fn insert(
+    pub fn add(
         &mut self,
-        components: impl Bundle,
+        command: impl EntityCommand,
     ) -> EndpointCommands<'a> {
         todo!()
     }
@@ -55,39 +56,41 @@ impl<'a> EndpointCommands<'a> {
     }
 }
 
+struct QueuedEndpoint {
+    entity: Entity,
+
+    endpoint: Box<quinn_proto::Endpoint>,
+
+    connections: Vec<Box<QueuedConnection>>,
+
+    commands: Vec<Box<dyn EntityCommand>>,
+}
+
 pub struct ConnectionCommands<'a> {
-    commands: EntityCommands<'a>,
+    connection: QueuedConnection,
+    _ph: PhantomData<&'a ()>,
 }
 
 impl<'a> ConnectionCommands<'a> {
     pub fn id(&self) -> Entity {
-        self.commands.id()
+        self.connection.entity
     }
 
-    pub fn insert(
+    pub fn add(
         &mut self,
-        components: impl Bundle,
-    ) -> ConnectionCommands<'a> {
-        todo!()
+        command: impl EntityCommand,
+    ) -> &mut ConnectionCommands<'a> {
+        self.connection.commands.push(Box::new(command));
+        return self;
     }
 }
 
-pub(crate) struct QueuedEndpointOpen {
-    pub entity: Entity,
-    pub endpoint: Box<quinn_proto::Endpoint>,
+struct QueuedConnection {
+    entity: Entity,
 
-    pub connections: Vec<ConnectionConfig>,
-}
+    client_config: ClientConfig,
+    remote_address: SocketAddr,
+    server_name: Arc<str>,
 
-pub(crate) struct QueuedConnectionOpen {
-    pub entity: Entity,
-    pub endpoint: Entity,
-
-    pub config: ConnectionConfig,
-}
-
-pub(crate) struct ConnectionConfig {
-    pub client_config: ClientConfig,
-    pub remote_address: SocketAddr,
-    pub server_name: Arc<str>,
+    commands: Vec<Box<dyn EntityCommand>>,
 }
