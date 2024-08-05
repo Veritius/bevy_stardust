@@ -1,12 +1,12 @@
 use std::{marker::PhantomData, net::{SocketAddr, ToSocketAddrs}, sync::Arc};
-use anyhow::Result;
-use bevy::{ecs::{entity::Entities, query::QueryEntityError, system::{EntityCommand, EntityCommands, SystemParam}, world::CommandQueue}, prelude::*};
+use bevy::{ecs::{entity::Entities, system::{EntityCommand, SystemParam}}, prelude::*};
 use quinn_proto::{ClientConfig, EndpointConfig, ServerConfig};
 
 /// Utility for opening endpoints.
 #[derive(SystemParam)]
 pub struct Endpoints<'w, 's> {
     commands: Commands<'w, 's>,
+    entities: &'w Entities,
 }
 
 impl Endpoints<'_, '_> {
@@ -16,34 +16,43 @@ impl Endpoints<'_, '_> {
         endpoint_config: Arc<EndpointConfig>,
         server_config: Option<Arc<ServerConfig>>,
         bind_address: impl ToSocketAddrs,
-    ) -> EndpointCommands {
-        todo!()
-    }
+    ) -> EndpointBuilder {
+        let id = self.entities.reserve_entity();
 
-    /// Gets an [`EndpointCommands`] for an existing endpoint.
-    pub fn endpoint(
-        &mut self,
-        endpoint: Entity,
-    ) -> Result<EndpointCommands, QueryEntityError> {
-        todo!()
+        return EndpointBuilder {
+            entities: self.entities,
+
+            endpoint: QueuedEndpoint {
+                entity: id,
+
+                endpoint_config,
+                server_config,
+                bind_address: todo!(),
+
+                connections: Vec::new(),
+                commands: Vec::new(),
+            },
+        };
     }
 }
 
-pub struct EndpointCommands<'a> {
-    connection: QueuedEndpoint,
+pub struct EndpointBuilder<'a> {
     entities: &'a Entities,
+
+    endpoint: QueuedEndpoint,
 }
 
-impl<'a> EndpointCommands<'a> {
+impl<'a> EndpointBuilder<'a> {
     pub fn id(&self) -> Entity {
-        self.connection.entity
+        self.endpoint.entity
     }
 
     pub fn add(
         &mut self,
         command: impl EntityCommand,
-    ) -> EndpointCommands<'a> {
-        todo!()
+    ) -> &mut EndpointBuilder<'a> {
+        self.endpoint.commands.push(Box::new(command));
+        return self;
     }
 
     pub fn connect(
@@ -51,27 +60,40 @@ impl<'a> EndpointCommands<'a> {
         client_config: ClientConfig,
         remote_address: SocketAddr,
         server_name: Arc<str>,
-    ) -> ConnectionCommands<'a> {
-        todo!()
+    ) -> ConnectionBuilder<'a> {
+        let id = self.entities.reserve_entity();
+
+        return ConnectionBuilder {
+            connection: QueuedConnection {
+                entity: id,
+                client_config,
+                remote_address,
+                server_name,
+                commands: Vec::new(),
+            },
+
+            _ph: PhantomData,
+        };
     }
 }
 
 struct QueuedEndpoint {
     entity: Entity,
 
-    endpoint: Box<quinn_proto::Endpoint>,
+    endpoint_config: Arc<EndpointConfig>,
+    server_config: Option<Arc<ServerConfig>>,
+    bind_address: SocketAddr,
 
     connections: Vec<QueuedConnection>,
-
     commands: Vec<Box<dyn EntityCommand>>,
 }
 
-pub struct ConnectionCommands<'a> {
+pub struct ConnectionBuilder<'a> {
     connection: QueuedConnection,
     _ph: PhantomData<&'a ()>,
 }
 
-impl<'a> ConnectionCommands<'a> {
+impl<'a> ConnectionBuilder<'a> {
     pub fn id(&self) -> Entity {
         self.connection.entity
     }
@@ -79,7 +101,7 @@ impl<'a> ConnectionCommands<'a> {
     pub fn add(
         &mut self,
         command: impl EntityCommand,
-    ) -> &mut ConnectionCommands<'a> {
+    ) -> &mut ConnectionBuilder<'a> {
         self.connection.commands.push(Box::new(command));
         return self;
     }
