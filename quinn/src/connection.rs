@@ -26,9 +26,9 @@ struct ConnectionHandle {
 }
 
 pub(crate) fn message_recv_system(
-    mut connections: Query<(&mut QuinnConnection, &mut PeerMessages<Incoming>)>,
+    mut connections: Query<(&QuinnConnection, &mut PeerMessages<Incoming>)>,
 ) {
-    connections.par_iter_mut().for_each(|(mut connection, mut incoming)| {
+    connections.par_iter_mut().for_each(|(connection, mut incoming)| {
         loop {
             match connection.handle.incoming_messages.try_recv() {
                 Ok(message) => incoming.push_one(message),
@@ -40,9 +40,9 @@ pub(crate) fn message_recv_system(
 }
 
 pub(crate) fn message_send_system(
-    mut connections: Query<(&mut QuinnConnection, &PeerMessages<Outgoing>)>,
+    connections: Query<(&QuinnConnection, &PeerMessages<Outgoing>)>,
 ) {
-    connections.par_iter_mut().for_each(|(mut connection, outgoing)| {
+    connections.par_iter().for_each(|(connection, outgoing)| {
         'outer: for (channel, messages) in outgoing.iter() {
             for message in messages {
                 // Try to send the message, continue if successful (guard)
