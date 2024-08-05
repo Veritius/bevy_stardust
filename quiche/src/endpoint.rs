@@ -99,7 +99,7 @@ struct ConnectionHandle {
 }
 
 pub(crate) fn endpoint_recv_packets_system(
-    mut commands: ParallelCommands,
+    commands: ParallelCommands,
     mut endpoints: Query<&mut Endpoint>,
 ) {
     endpoints.par_iter_mut().for_each(|mut endpoint| {
