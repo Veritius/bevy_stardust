@@ -1,4 +1,4 @@
-use std::{net::{SocketAddr, UdpSocket}, sync::Arc};
+use std::{net::{SocketAddr, ToSocketAddrs, UdpSocket}, sync::Arc};
 use anyhow::Result;
 use bevy::{ecs::{entity::Entities, system::SystemParam}, prelude::*};
 use quinn_proto::{ClientConfig, EndpointConfig, ServerConfig};
@@ -15,7 +15,7 @@ impl Manager<'_> {
         &mut self,
         endpoint_config: Arc<EndpointConfig>,
         server_config: Option<Arc<ServerConfig>>,
-        bind_address: SocketAddr,
+        bind_address: impl ToSocketAddrs,
     ) -> Result<Entity> {
         let socket = UdpSocket::bind(bind_address)?;
         socket.set_nonblocking(true)?;

@@ -12,3 +12,4 @@ pub use manager::Manager;
 pub use plugin::QuinnPlugin;
 
 pub use quinn_proto::{self, ClientConfig, ServerConfig, EndpointConfig};
+pub use rustls::{self, pki_types::{CertificateDer, PrivateKeyDer}};
