@@ -31,3 +31,11 @@ impl Endpoint {
         });
     }
 }
+
+pub(crate) fn endpoint_recv_packets_system(
+    mut endpoints: Query<&mut Endpoint>,
+) {
+    endpoints.par_iter_mut().for_each(|mut endpoint| {
+
+    });
+}
