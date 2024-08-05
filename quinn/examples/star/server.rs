@@ -3,7 +3,7 @@ mod shared;
 use std::sync::Arc;
 
 use bevy::prelude::*;
-use bevy_stardust_quinn::{Manager, PrivateKeyDer};
+use bevy_stardust_quinn::{Endpoints, PrivateKeyDer};
 use quinn_proto::{EndpointConfig, ServerConfig};
 use rustls_pemfile::Item;
 
@@ -26,15 +26,15 @@ fn main() {
 
     shared::setup(&mut app);
 
-    app.add_systems(Startup, |mut manager: Manager| {
-        manager.open_endpoint(
+    app.add_systems(Startup, |mut endpoints: Endpoints| {
+        endpoints.create(
             Arc::new(EndpointConfig::default()),
             Some(Arc::new(ServerConfig::with_single_cert(
                 vec![shared::certificate()],
                 private_key(),
             ).unwrap())),
             shared::SERVER_ADDRESS,
-        ).unwrap();
+        );
     });
 
     app.run();

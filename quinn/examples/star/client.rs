@@ -2,7 +2,7 @@ mod shared;
 
 use std::sync::Arc;
 use bevy::prelude::*;
-use bevy_stardust_quinn::Manager;
+use bevy_stardust_quinn::Endpoints;
 use quinn_proto::EndpointConfig;
 
 fn main() {
@@ -10,12 +10,12 @@ fn main() {
 
     shared::setup(&mut app);
 
-    app.add_systems(Startup, |mut manager: Manager| {
-        manager.open_endpoint(
+    app.add_systems(Startup, |mut endpoints: Endpoints| {
+        endpoints.create(
             Arc::new(EndpointConfig::default()),
             None,
             shared::WILDCARD_ADDRESS,
-        ).unwrap();
+        );
 
         todo!()
     });

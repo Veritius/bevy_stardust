@@ -1,45 +1,75 @@
-use std::{net::{SocketAddr, ToSocketAddrs, UdpSocket}, sync::Arc};
+use std::{net::{SocketAddr, ToSocketAddrs}, sync::Arc};
 use anyhow::Result;
-use bevy::{ecs::{entity::Entities, system::SystemParam}, prelude::*};
+use bevy::{ecs::{query::QueryEntityError, system::{EntityCommands, SystemParam}}, prelude::*};
 use quinn_proto::{ClientConfig, EndpointConfig, ServerConfig};
 
 /// Utility for opening endpoints.
 #[derive(SystemParam)]
-pub struct Manager<'w> {
-    entities: &'w Entities,
+pub struct Endpoints<'w, 's> {
+    commands: Commands<'w, 's>,
 }
 
-impl Manager<'_> {
+impl Endpoints<'_, '_> {
     /// Queues a new endpoint to be opened.
-    pub fn open_endpoint(
+    pub fn create(
         &mut self,
         endpoint_config: Arc<EndpointConfig>,
         server_config: Option<Arc<ServerConfig>>,
         bind_address: impl ToSocketAddrs,
-    ) -> Result<Entity> {
-        let socket = UdpSocket::bind(bind_address)?;
-        socket.set_nonblocking(true)?;
-
-        let quinn = quinn_proto::Endpoint::new(
-            endpoint_config,
-            server_config,
-            true,
-            None,
-        );
-
+    ) -> anyhow::Result<EndpointCommands> {
         todo!()
     }
 
     /// Queues a new connection to be opened.
     /// 
     /// Note that even if this returns `Ok`, the connection may fail to open.
-    pub fn open_connection(
+    pub fn endpoint(
         &mut self,
         endpoint: Entity,
+    ) -> Result<EndpointCommands, QueryEntityError> {
+        todo!()
+    }
+}
+
+pub struct EndpointCommands<'a> {
+    commands: EntityCommands<'a>,
+}
+
+impl<'a> EndpointCommands<'a> {
+    pub fn id(&self) -> Entity {
+        self.commands.id()
+    }
+
+    pub fn insert(
+        &mut self,
+        components: impl Bundle,
+    ) -> EndpointCommands<'a> {
+        todo!()
+    }
+
+    pub fn connect(
+        &mut self,
         client_config: ClientConfig,
         remote_address: SocketAddr,
         server_name: Arc<str>,
-    ) -> Result<Entity> {
+    ) -> EndpointCommands<'a> {
+        todo!()
+    }
+}
+
+pub struct ConnectionCommands<'a> {
+    commands: EntityCommands<'a>,
+}
+
+impl<'a> ConnectionCommands<'a> {
+    pub fn id(&self) -> Entity {
+        self.commands.id()
+    }
+
+    pub fn insert(
+        &mut self,
+        components: impl Bundle,
+    ) -> ConnectionCommands<'a> {
         todo!()
     }
 }
