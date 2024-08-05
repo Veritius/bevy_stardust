@@ -1,6 +1,7 @@
 use std::net::{SocketAddr, UdpSocket};
 use anyhow::Result;
 use bevy::prelude::*;
+use quiche::Connection;
 
 /// A QUIC endpoint.
 #[derive(Component, Reflect)]
@@ -52,6 +53,15 @@ impl Endpoint {
                 socket,
             }),
         });
+    }
+
+    /// Opens a new connection.
+    pub fn connect(
+        server_name: Option<&str>,
+        remote_address: SocketAddr,
+        config: (), // TODO
+    ) -> Result<Connection> {
+        todo!()
     }
 }
 
