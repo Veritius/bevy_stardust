@@ -45,9 +45,9 @@ struct ConnectionInner {
 }
 
 pub(crate) fn connection_event_handling_system(
-    mut connections: Query<(&mut Connection, &mut PeerMessages<Incoming>)>,
+    mut connections: Query<&mut Connection>,
 ) {
-    connections.par_iter_mut().for_each(|(mut connection, mut incoming)| {
+    connections.par_iter_mut().for_each(|mut connection| {
         let recv_info = RecvInfo {
             from: connection.inner.endpoint,
             to: connection.inner.address,
@@ -79,10 +79,6 @@ pub(crate) fn connection_event_handling_system(
         while let Some(event) = connection.inner.state.poll() {
             match event {
                 bevy_stardust_quic::ConnectionEvent::Overheated => todo!(),
-
-                bevy_stardust_quic::ConnectionEvent::ReceivedMessage(message) => {
-                    incoming.push_one(message);
-                },
 
                 bevy_stardust_quic::ConnectionEvent::StreamEvent(event) => {
                     match event {
@@ -122,7 +118,17 @@ pub(crate) fn connection_event_handling_system(
     });
 }
 
-pub(crate) fn connection_message_queue_system(
+pub(crate) fn connection_message_recv_system(
+    mut connections: Query<(&mut Connection, &mut PeerMessages<Incoming>)>,
+) {
+    connections.par_iter_mut().for_each(|(mut connection, mut messages)| {
+        while let Some(message) = connection.inner.state.poll_messages() {
+            messages.push_one(message);
+        }
+    });
+}
+
+pub(crate) fn connection_message_send_system(
     channels: Channels,
     mut connections: Query<(&mut Connection, &PeerMessages<Outgoing>)>,
 ) {

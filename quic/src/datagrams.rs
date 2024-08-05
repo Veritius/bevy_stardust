@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 use bevy_stardust::prelude::{ChannelId, ChannelMessage, Message};
 use bevy_stardust_extras::numbers::{Sequence, VarInt};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
-use crate::{Connection, ConnectionEvent};
+use crate::Connection;
 
 impl Connection {
     /// Call when a datagram is received.
@@ -14,10 +14,10 @@ impl Connection {
 
         match header {
             DatagramHeader::Stardust { channel } => {
-                self.shared.events.push(ConnectionEvent::ReceivedMessage(ChannelMessage {
+                self.shared.recv_queue.push_back(ChannelMessage {
                     channel,
                     message: Message::from_bytes(payload),
-                }));
+                });
             },
 
             DatagramHeader::StardustSequenced { channel, sequence } => {
@@ -25,10 +25,10 @@ impl Connection {
                     .or_insert_with(|| IncomingDatagramSequence::new());
 
                 if seq.latest(sequence) {
-                    self.shared.events.push(ConnectionEvent::ReceivedMessage(ChannelMessage {
+                    self.shared.recv_queue.push_back(ChannelMessage {
                         channel,
                         message: Message::from_bytes(payload),
-                    }));
+                    });
                 }
             },
         }
@@ -64,7 +64,7 @@ impl Connection {
         debug_assert_eq!(size, newbuf.len());
 
         // Queue the datagram for transmission by the QUIC implementation
-        self.shared.events.push(crate::ConnectionEvent::TransmitDatagram(newbuf.freeze()));
+        self.shared.event_queue.push(crate::ConnectionEvent::TransmitDatagram(newbuf.freeze()));
 
         // Success
         return true;

@@ -13,7 +13,7 @@ pub use events::StreamEvent;
 
 impl ConnectionShared {
     fn stream_event(&mut self, event: StreamEvent) {
-        self.events.push(ConnectionEvent::StreamEvent(event));
+        self.event_queue.push(ConnectionEvent::StreamEvent(event));
     }
 }
 

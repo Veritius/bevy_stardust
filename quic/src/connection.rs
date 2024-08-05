@@ -1,5 +1,6 @@
-use std::time::{Duration, Instant};
-use crate::{datagrams::{IncomingDatagrams, OutgoingDatagrams}, ConnectionEvent, ConnectionEventQueue, IncomingStreams, OutgoingStreams};
+use std::{collections::VecDeque, time::{Duration, Instant}};
+use bevy_stardust::prelude::*;
+use crate::{datagrams::{IncomingDatagrams, OutgoingDatagrams}, ConnectionEvent, ConnectionEventQueue, IncomingStreams, OutgoingStreams, StreamEvent};
 
 /// The core state machine type, representing one QUIC connection.
 pub struct Connection {
@@ -22,7 +23,8 @@ impl Connection {
 
             shared: ConnectionShared {
                 heat: Heat::new(),
-                events: ConnectionEventQueue::new(),
+                event_queue: ConnectionEventQueue::new(),
+                recv_queue: VecDeque::new(),
             },
 
             incoming_streams: IncomingStreams::new(),
@@ -39,7 +41,7 @@ impl Connection {
         self.last = now;
 
         if self.shared.heat.is_overheated() {
-            self.shared.events.push(crate::ConnectionEvent::Overheated);
+            self.shared.event_queue.push(crate::ConnectionEvent::Overheated);
         }
     }
 
@@ -47,13 +49,19 @@ impl Connection {
     /// 
     /// Before using this method, call [`handle_timeout`](Self::handle_timeout).
     pub fn poll(&mut self) -> Option<ConnectionEvent> {
-        self.shared.events.pop()
+        self.shared.event_queue.pop()
+    }
+
+    /// Returns the oldest message that has been received.
+    pub fn poll_messages(&mut self) -> Option<ChannelMessage> {
+        self.shared.recv_queue.pop_front()
     }
 }
 
 pub(crate) struct ConnectionShared {
     pub(crate) heat: Heat,
-    pub(crate) events: ConnectionEventQueue,
+    pub(crate) event_queue: ConnectionEventQueue,
+    pub(crate) recv_queue: VecDeque<ChannelMessage>,
 }
 
 #[derive(Debug)]
