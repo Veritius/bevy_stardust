@@ -1,5 +1,5 @@
 use std::{collections::BTreeMap, io::ErrorKind, net::{SocketAddr, UdpSocket}, time::Instant};
-use bevy::prelude::*;
+use bevy::{ecs::component::{ComponentHooks, StorageType}, prelude::*};
 use bytes::BytesMut;
 use quinn_proto::{ConnectionHandle, EndpointEvent};
 use crate::Connection;
@@ -9,7 +9,7 @@ use crate::Connection;
 /// # Safety
 /// An [`Endpoint`] component being removed from the [`World`] it was created in,
 /// then being added to a different [`World`], is undefined behavior.
-#[derive(Component, Reflect)]
+#[derive(Reflect)]
 #[reflect(from_reflect=false, Component)]
 pub struct Endpoint {
     /// The size of the buffer allocated to receive datagrams.
@@ -33,7 +33,34 @@ pub struct Endpoint {
     pub send_buf_size: u16,
 
     #[reflect(ignore)]
+    connections: BTreeMap<ConnectionHandle, Entity>,
+
+    #[reflect(ignore)]
     inner: Box<EndpointInner>,
+}
+
+impl Component for Endpoint {
+    const STORAGE_TYPE: StorageType = StorageType::Table;
+
+    fn register_component_hooks(hooks: &mut ComponentHooks) {
+        hooks.on_remove(|mut world, entity, _| {
+            // Get the component from the world
+            let this = &mut *world.get_mut::<Endpoint>(entity).unwrap();
+
+            // Discard each connection
+            for handle in this.connections.keys() {
+                this.inner.detach(*handle);
+            }
+
+            // Iterator over all connections
+            let ids = this.connections.values().cloned().collect::<Box<[_]>>();
+
+            // Remove the connection component from each connection
+            for id in ids.iter() {
+                world.commands().entity(*id).remove::<Connection>();
+            }
+        });
+    }
 }
 
 impl Endpoint {
@@ -43,16 +70,10 @@ impl Endpoint {
     pub fn local_addr(&self) -> SocketAddr {
         self.inner.socket.local_addr().unwrap()
     }
-}
 
-impl Endpoint {
-    pub(crate) fn remove_connection(&mut self, handle: ConnectionHandle) {
-        self.disassociate(handle);
+    pub(crate) fn detach(&mut self, handle: ConnectionHandle) {
+        self.connections.remove(&handle);
         self.inner.quinn.handle_event(handle, EndpointEvent::drained());
-    }
-
-    fn disassociate(&mut self, handle: ConnectionHandle) {
-        self.inner.connections.remove(&handle);
     }
 }
 
@@ -60,8 +81,6 @@ struct EndpointInner {
     socket: UdpSocket,
 
     quinn: quinn_proto::Endpoint,
-
-    connections: BTreeMap<ConnectionHandle, Entity>,
 }
 
 impl EndpointInner {
@@ -72,9 +91,11 @@ impl EndpointInner {
         Box::new(Self {
             socket,
             quinn,
-
-            connections: BTreeMap::new(),
         })
+    }
+
+    pub(crate) fn detach(&mut self, handle: ConnectionHandle) {
+        self.quinn.handle_event(handle, EndpointEvent::drained());
     }
 }
 
@@ -110,7 +131,7 @@ pub(crate) fn udp_recv_system(
                             // Event for an existing connection
                             quinn_proto::DatagramEvent::ConnectionEvent(handle, event) => {
                                 // Get the entity from the handle, which we need to access the connection
-                                let entity = endpoint.inner.connections.get(&handle)
+                                let entity = endpoint.connections.get(&handle)
                                     .expect("Quic state machine returned connection handle that wasn't present in the map");
 
                                 // SAFETY: This is a unique borrow as ConnectionOwnershipToken is unique
@@ -155,7 +176,7 @@ pub(crate) fn udp_send_system(
         let mut buf = vec![0u8; endpoint.send_buf_size as usize];
 
         // Iterate over connections
-        for entity in endpoint.inner.connections.values() {
+        for entity in endpoint.connections.values() {
             let mut connection = connections.get_mut(*entity).unwrap();
 
             // Get as many datagrams as possible
@@ -183,7 +204,7 @@ pub(crate) fn event_exchange_system(
         let endpoint = &mut *endpoint;
 
         // Exchange events
-        for (handle, entity) in endpoint.inner.connections.iter() {
+        for (handle, entity) in endpoint.connections.iter() {
             let mut connection = connections.get_mut(*entity).unwrap();
 
             // Timeouts can produce additional events

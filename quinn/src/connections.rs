@@ -14,6 +14,9 @@ use crate::Endpoint;
 #[reflect(from_reflect=false, Component)]
 pub struct Connection {
     #[reflect(ignore)]
+    endpoint: Option<Entity>,
+
+    #[reflect(ignore)]
     inner: Box<ConnectionInner>,
 }
 
@@ -23,10 +26,10 @@ impl Component for Connection {
     fn register_component_hooks(hooks: &mut ComponentHooks) {
         hooks.on_remove(|mut world, entity, _| {
             // Get the component from the world
-            let this = &*world.get::<Connection>(entity).unwrap().inner;
+            let this = &mut *world.get_mut::<Connection>(entity).unwrap();
 
             // Check if the component is drained
-            if !this.quinn.is_drained() {
+            if !this.inner.quinn.is_drained() {
                 warn!("Connection {entity} was dropped while not fully drained");
             }
 
@@ -40,9 +43,17 @@ impl Connection {
     pub(crate) fn new(
         quinn: quinn_proto::Connection,
     ) -> Self {
-        Self { inner: ConnectionInner::new(
-            quinn,
-        ) }
+        Self {
+            endpoint: None,
+
+            inner: ConnectionInner::new(
+                quinn,
+            ),
+        }
+    }
+
+    pub(crate) fn detach(&mut self) {
+        self.endpoint = None;
     }
 
     pub(crate) fn handle_event(&mut self, event: QuinnConnectionEvent) {
