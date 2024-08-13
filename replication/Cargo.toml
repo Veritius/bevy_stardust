@@ -9,7 +9,7 @@ repository="https://github.com/veritius/bevy_stardust/"
 keywords=["bevy", "gamedev", "networking"]
 
 [dependencies.bevy]
-version = "0.13"
+version = "0.14"
 default-features = false
 
 [dependencies.bevy_stardust]
@@ -41,7 +41,7 @@ optional = true
 
 [dev-dependencies]
 fastrand = "2"
-bevy = { version = "0.13" }
+bevy = { version = "0.14" }
 
 [features]
 default = ["serde"]
