@@ -2,7 +2,8 @@ mod shared;
 
 use std::sync::Arc;
 use bevy::prelude::*;
-use bevy_stardust_quinn::RootCertStore;
+use bevy_stardust_quinn::{Endpoints, RootCertStore};
+use quinn_proto::{ClientConfig, EndpointConfig};
 
 fn root_certs() -> Arc<RootCertStore> {
     let mut certs = RootCertStore::empty();
@@ -14,6 +15,20 @@ fn main() {
     let mut app = App::new();
 
     shared::setup(&mut app);
+
+    app.add_systems(Startup, |mut endpoints: Endpoints| {
+        let mut endpoint = endpoints.create(
+            Arc::new(EndpointConfig::default()),
+            None,
+            shared::WILDCARD_ADDRESS,
+        );
+
+        endpoint.connect(
+            ClientConfig::with_root_certificates(root_certs()).unwrap(),
+            todo!(),
+            "example.com".into(),
+        );
+    });
 
     app.run();
 }

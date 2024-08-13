@@ -3,11 +3,12 @@
 
 mod connections;
 mod endpoints;
-mod events;
+mod manager;
 mod plugin;
 
 pub use connections::Connection;
 pub use endpoints::Endpoint;
+pub use manager::Endpoints;
 pub use plugin::QuinnPlugin;
 
 pub use quinn_proto::{self, ClientConfig, ServerConfig, EndpointConfig};
