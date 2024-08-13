@@ -27,26 +27,27 @@ impl Component for Connection {
         hooks.on_remove(|mut world, entity, _| {
             // Get the component from the world
             let this = &mut *world.get_mut::<Connection>(entity).unwrap();
-
-            // Check if the component is drained
-            if !this.inner.quinn.is_drained() {
-                warn!("Connection {entity} was dropped while not fully drained");
-            }
+            let (handle, endpoint) = (this.inner.handle, this.endpoint);
 
             // Inform the endpoint of the connection being dropped
-            todo!()
+            if let Some(endpoint) = endpoint {
+                let endpoint = &mut *world.get_mut::<Endpoint>(endpoint).unwrap();
+                endpoint.detach(handle);
+            }
         });
     }
 }
 
 impl Connection {
     pub(crate) fn new(
+        handle: ConnectionHandle,
         quinn: quinn_proto::Connection,
     ) -> Self {
         Self {
             endpoint: None,
 
             inner: ConnectionInner::new(
+                handle,
                 quinn,
             ),
         }
@@ -81,6 +82,8 @@ impl Connection {
 }
 
 struct ConnectionInner {
+    handle: ConnectionHandle,
+
     quinn: quinn_proto::Connection,
     qsm: bevy_stardust_quic::Connection,
 
@@ -90,11 +93,23 @@ struct ConnectionInner {
     stream_write_queues: BTreeMap<QuinnStreamId, StreamWriteQueue>,
 }
 
+impl Drop for ConnectionInner {
+    fn drop(&mut self) {
+        // Check if the component is drained
+        if !self.quinn.is_drained() {
+            warn!("Connection was dropped while not fully drained");
+        }
+    }
+}
+
 impl ConnectionInner {
     fn new(
+        handle: ConnectionHandle,
         quinn: quinn_proto::Connection,
     ) -> Box<Self> {
         Box::new(Self {
+            handle,
+
             quinn,
             qsm: bevy_stardust_quic::Connection::new(),
 
