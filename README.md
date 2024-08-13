@@ -2,9 +2,10 @@
 Stardust is a flexible networking crate built for Bevy, with a focus on extensibility and parallelism.
 <br></br>
 
-![License](https://img.shields.io/badge/license-MIT_or_Apache_2.0-green)
-[![Bevy version](https://img.shields.io/badge/bevy-0.13-blue?color=blue)](https://bevyengine.org/)
-[![Crates.io](https://img.shields.io/crates/v/bevy_stardust)](https://crates.io/crates/bevy_stardust)
+[![License](https://img.shields.io/badge/license-MIT_or_Apache_2.0-green)](#license)
+[![Bevy version](https://img.shields.io/badge/bevy-0.14-blue?color=blue)](https://bevyengine.org/)
+[![crates.io](https://img.shields.io/crates/v/bevy_stardust)](https://crates.io/crates/bevy_stardust)
+[![docs.rs](https://img.shields.io/docsrs/bevy_stardust)](https://docs.rs/bevy_stardust/latest/bevy_stardust/)
 
 ## Why Stardust?
 ### ECS-integrated
@@ -24,17 +25,10 @@ You can use any transport layer you want. Use UDP, TCP, QUIC, HTTP, some homebre
 
 You can use any replication or extra features you want. If you prefer a specific crate for replication, it's really easy to integrate it into Stardust, as long as it has some kind of API for taking in and outputting bytes.
 
-## Planned extensions
-The following features are planned to be created as additional crates, as part of the overall project.
-
-- Replication plugin
-- UDP, QUIC, and WebTransport plugins
-- Real time voice plugin
-
 ## Usage
 | Bevy | Stardust |
 | ---- | -------- |
-| 0.13 | 0.6      |
+| 0.14 | 0.6      |
 | 0.12 | 0.2      |
 | 0.11 | 0.1      |
 
@@ -45,17 +39,13 @@ The following features are planned to be created as additional crates, as part o
 
 **A simple example project:**
 ```rust
-// This example assumes that you don't have the reflect feature flag.
-// If you do, make sure your channel types implement TypePath.
-// Additionally, spawning NetworkPeer entities is handled by transport layer plugins.
-// For the purpose of this example, we'll assume they magically appeared somehow.
-
 use std::any::TypeId;
 use bevy::{prelude::*, app::{ScheduleRunnerPlugin, MainSchedulePlugin}};
 use bevy_stardust::prelude::*;
 
 // Channels are accessed with types in the type system.
-// Simply put, you just need to create simple types like this.
+// Any type that implements Any is usable in Stardust.
+// Simply put, you just need to create a field-less struct like this.
 // You can use Rust's privacy system to control channel access.
 // Channels must also implement TypePath: this is easy to derive.
 #[derive(TypePath)]
@@ -74,16 +64,9 @@ fn main() {
     // Once you do this, it becomes visible in the ChannelRegistry.
     // The ChannelRegistry is effectively a giant table of every registered channel.
     app.add_channel::<MyChannel>(ChannelConfiguration {
-        // 'Reliable' messages will be detected if lost.
-        reliable: ReliabilityGuarantee::Reliable,
-
-        // 'Ordered' messages will be received in the same order they're sent.
-        ordered: OrderingGuarantee::Ordered,
-
-        // 'Fragmentable' messages will be broken up for transmission if need be.
-        // This is actually just a flag to say that the messages *might* need to be fragmented.
-        // Whether or not things are fragmented is up to the transport layer.
-        fragmented: true,
+        // Controls the reliability and ordering of messages.
+        // Read the documentation for MessageConsistency for a full explanation.
+        consistency: MessageConsistency::ReliableOrdered,
 
         // Higher priority messages will be sent before others.
         priority: 0,
@@ -100,27 +83,31 @@ fn main() {
     app.add_systems(Update, (send_words_system, read_words_system));
 }
 
-// Messages use the Bytes type.
-// This is cheaply clonable and you can send the same message to multiple peers.
-// For this example, we create one from the bytes of a static str.
-const MESSAGE: Bytes = Bytes::from_static("Hello, world!".as_bytes());
+// Messages use the Message type, which is a wrapper around the Bytes type.
+// This is cheaply clonable and you can send the same message to multiple peers without copying.
+// Here, we simply use the from_static_str method, which is very cheap.
+const MESSAGE: Message = Message::from_static_str("Hello, world!");
 
 // Queueing messages just requires component access.
 // This means you can use query filters to achieve better parallelism.
 fn send_words_system(
-    registry: Res<ChannelRegistry>,
-    mut query: Query<(Entity, &mut NetworkMessages<Outgoing>), With<NetworkPeer>>
+    channels: Channels,
+    mut query: Query<(Entity, &mut PeerMessages<Outgoing>), With<Peer>>
 ) {
     // The ChannelId must be retrieved from the registry.
     // These are more friendly to store since they're just numbers.
     // You can cache them if you want, as long as they aren't used in different Worlds.
-    let channel = registry.channel_id(TypeId::of::<MyChannel>()).unwrap();
+    let channel = channels.id(TypeId::of::<MyChannel>()).unwrap();
 
     // You can also iterate in parallel, if you have a lot of things.
     for (entity, mut outgoing) in query.iter_mut() {
         // Bytes objects are cheaply clonable, reference counted storages.
         // You can send them to as many peers as you want once created.
-        outgoing.push(channel, MESSAGE);
+        outgoing.push_one(ChannelMessage {
+            channel,
+            message: MESSAGE,
+        });
+
         println!("Sent a message to {entity:?}");
     }
 }
@@ -129,26 +116,43 @@ fn send_words_system(
 // The reading queue is a different component from the sending queue.
 // This means you can read and send bytes in parallel, or in different systems.
 fn read_words_system(
-    registry: Res<ChannelRegistry>,
-    query: Query<(Entity, &NetworkMessages<Incoming>), With<NetworkPeer>>
+    channels: Channels,
+    query: Query<(Entity, &PeerMessages<Incoming>), With<Peer>>
 ) {
-    let channel = registry.channel_id(TypeId::of::<MyChannel>()).unwrap();
+    let channel = channels.id(TypeId::of::<MyChannel>()).unwrap();
     for (entity, incoming) in query.iter() {
+<<<<<<< HEAD
         let messages = incoming.get(channel);
         for message in messages.iter() {
+=======
+        for message in incoming.iter_channel(channel) {
+>>>>>>> main
             // Stardust only outputs bytes, so you need to convert to the desired type.
-            // Also, in real products, don't unwrap, write checks. Never trust user data.
-            let string = std::str::from_utf8(&*message).unwrap();
+            // We unwrap here for the sake of an example. In real code, you should
+            // program defensively, and handle error cases appropriately.
+            let string = message.as_str().unwrap();
             println!("Received a message from {entity:?}: {string:?}");
         }
     }
 }
 ```
 
-Available feature flags:
-- `hashing`: Stable (identical across machines) hashing functionality
+## Related crates
+### Existing
+The following crates are parts of the project that are out of scope for the `bevy_stardust` crate, and are distributed separately, such as transport layers.
 
-**Please note:** The `hashing` feature flag is dependent on `gxhash`, which will not compile on targets without AES intrinsics. It's made available for local testing, but will break in production. See the [tracking issue](https://github.com/Veritius/bevy_stardust/issues/31) for more.
+| Crate                  | Description                 |
+|------------------------|-----------------------------|
+| `bevy_stardust_extras` | A collection of misc. tools |
+
+### Planned
+The following crates are planned to be implemented as part of the overall project, but aren't done yet. They're also too significant or too different to end up in `bevy_stardust` or `bevy_stardust_extras`.
+
+| Crate                     | Description              |
+|---------------------------|--------------------------|
+| `bevy_stardust_quic`      | QUIC transport layer     |
+| `bevy_stardust_voip`      | Voice chat plugin        |
+| `bevy_stardust_replicate` | State replication plugin |
 
 ## License
 bevy_stardust is free and open source software. It's licensed under:

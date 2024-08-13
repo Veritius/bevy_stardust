@@ -1,10 +1,10 @@
 [package]
-name="bevy_stardust"
-version="0.6.0"
+name="bevy_stardust_extras"
+version="0.1.0"
 edition="2021"
 authors=["Veritius <veritiusgaming@gmail.com>"]
 license="MIT OR Apache-2.0"
-description="A networking crate for the Bevy game engine."
+description="Miscellaneous utilities for bevy_stardust"
 repository="https://github.com/veritius/bevy_stardust/"
 keywords=["bevy", "gamedev", "networking"]
 
@@ -12,8 +12,13 @@ keywords=["bevy", "gamedev", "networking"]
 version = "0.14"
 default-features = false
 
-[dependencies.bytes]
-version = "1.5.0"
+[dependencies.bevy_stardust]
+version = "0.6"
+path = "../stardust"
 
-[dependencies.smallvec]
-version = "1.11.1"
+[dependencies.octs]
+version = "0.4.0"
+optional = true
+
+[features]
+octs = ["dep:octs"]

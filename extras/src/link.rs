@@ -6,8 +6,7 @@
 
 use std::sync::{mpsc::{channel, Receiver, Sender, TryRecvError}, Mutex};
 use bevy::prelude::*;
-use bytes::Bytes;
-use crate::prelude::*;
+use bevy_stardust::prelude::*;
 
 /// Adds a simple transport plugin for apps part of the same process.
 /// See the [top level documentation](self) for more information.
@@ -16,10 +15,10 @@ pub struct LinkTransportPlugin;
 impl Plugin for LinkTransportPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(PreUpdate, (recv_link_data, remove_disconnected)
-            .chain().in_set(NetworkRead::Receive));
+            .chain().in_set(NetworkRecv::Receive));
 
         app.add_systems(PostUpdate, (send_link_data, remove_disconnected)
-            .chain().in_set(NetworkWrite::Send));
+            .chain().in_set(NetworkSend::Transmit));
     }
 }
 
@@ -50,29 +49,26 @@ pub fn pair() -> (Link, Link) {
 }
 
 struct SideInner {
-    sender: Sender<Message>,
+    sender: Sender<ChannelMessage>,
     // Makes the struct Sync, so it can be in a Component.
     // Use Exclusive when it's stabilised.
-    receiver: Mutex<Receiver<Message>>,
+    receiver: Mutex<Receiver<ChannelMessage>>,
     disconnected: bool,
 }
 
-struct Message {
-    channel: ChannelId,
-    payload: Bytes,
-}
-
 fn recv_link_data(
-    mut query: Query<(&mut Link, &mut NetworkMessages<Incoming>), With<NetworkPeer>>,
+    mut query: Query<(&mut Link, &mut PeerMessages<Incoming>), With<Peer>>,
 ) {
     query.par_iter_mut().for_each(|(mut link, mut queue)| {
         let receiver = link.0.receiver.get_mut().unwrap();
         loop {
             match receiver.try_recv() {
                 Ok(message) => {
-                    queue.push(message.channel, message.payload);
+                    queue.push_one(message);
                 },
+
                 Err(TryRecvError::Empty) => { break },
+
                 Err(TryRecvError::Disconnected) => {
                     link.0.disconnected = true;
                     break;
@@ -83,13 +79,13 @@ fn recv_link_data(
 }
 
 fn send_link_data(
-    mut query: Query<(&mut Link, &NetworkMessages<Outgoing>), With<NetworkPeer>>,
+    mut query: Query<(&mut Link, &PeerMessages<Outgoing>), With<Peer>>,
 ) {
     query.par_iter_mut().for_each(|(mut link, queue)| {
         let sender = &link.0.sender;
-        'outer: for (channel, queue) in queue.iter() {
-            for payload in queue.iter().cloned() {
-                match sender.send(Message { channel, payload }) {
+        'outer: for (channel, queue) in queue {
+            for payload in queue {
+                match sender.send(ChannelMessage { channel, message: payload }) {
                     Ok(_) => {},
                     Err(_) => {
                         link.0.disconnected = true;
@@ -103,14 +99,22 @@ fn send_link_data(
 
 fn remove_disconnected(
     mut commands: Commands,
-    mut query: Query<(Entity, &Link, Option<&mut NetworkPeerLifestage>)>,
+    mut query: Query<(Entity, &Link, Option<&mut PeerLifestage>)>,
+    mut events: EventWriter<PeerDisconnectedEvent>,
 ) {
     for (entity, link, stage) in query.iter_mut() {
         if link.0.disconnected {
             debug!("Link on entity {entity:?} disconnected");
             commands.entity(entity).remove::<Link>();
+
+            events.send(PeerDisconnectedEvent {
+                peer: entity,
+                reason: DisconnectReason::Unspecified,
+                comment: None,
+            });
+
             if let Some(mut stage) = stage {
-                *stage = NetworkPeerLifestage::Closed;
+                *stage = PeerLifestage::Closed;
             }
         }
     }

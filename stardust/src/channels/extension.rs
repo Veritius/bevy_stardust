@@ -1,8 +1,9 @@
 //! Adds `add_channel` to the `App`.
 
 use bevy::app::App;
-use crate::channels::config::ChannelConfiguration;
-use super::{id::Channel, ChannelRegistryMut};
+use super::config::ChannelConfiguration;
+use super::ChannelId;
+use super::{id::Channel, ChannelRegistryBuilder};
 
 mod sealed {
     pub trait Sealed {}
@@ -12,24 +13,21 @@ mod sealed {
 /// Adds channel-related functions to the `App`.
 pub trait ChannelSetupAppExt: sealed::Sealed {
     /// Registers a channel with type `C` and the config and components given.
-    fn add_channel<C: Channel>(&mut self, config: ChannelConfiguration);
+    /// Returns the sequential `ChannelId` now associated with the channel.
+    fn add_channel<C: Channel>(&mut self, config: ChannelConfiguration) -> ChannelId;
 }
 
 impl ChannelSetupAppExt for App {
     fn add_channel<C: Channel>(
         &mut self,
         config: ChannelConfiguration,
-    ) {
-        // Change hash value
-        #[cfg(feature="hashing")] {
-            use crate::hashing::HashingAppExt;
-            self.net_hash_value("channel");
-            self.net_hash_value(C::type_path());
-            self.net_hash_value(&config);
-        }
+    ) -> ChannelId {
+        // Get the registry
+        let mut registry = self.world_mut()
+            .get_resource_mut::<ChannelRegistryBuilder>()
+            .expect("Cannot add channels after plugin cleanup");
 
         // Add to registry
-        let mut registry = self.world.resource_mut::<ChannelRegistryMut>();
-        registry.0.register_channel::<C>(config);
+        return registry.0.register_channel::<C>(config);
     }
 }
