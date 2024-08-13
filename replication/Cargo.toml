@@ -18,5 +18,11 @@ version = "0.6"
 [dependencies.anyhow]
 version = "1"
 
+[dependencies.bitcode]
+version = "0.6"
+optional = true
+
 [features]
 default = []
+
+bitcode = ["dep:bitcode"]
