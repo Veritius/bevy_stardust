@@ -97,6 +97,17 @@ pub enum Side {
     Right,
 }
 
+impl Not for Side {
+    type Output = Self;
+
+    fn not(self) -> Self::Output {
+        match self {
+            Side::Left => Side::Right,
+            Side::Right => Side::Left,
+        }
+    }
+}
+
 #[test]
 fn ident_bits_test() {
     fn test_id(value: NetId, side: Side, index: u64) {
