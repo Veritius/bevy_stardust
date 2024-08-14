@@ -11,9 +11,6 @@ pub trait DetectNetChanges: DetectChanges {
     /// Returns `true` if the value was last changed by a remote connection.
     fn is_changed_remotely(&self) -> bool;
 
-    /// Returns the last time the value was changed by this application.
-    fn last_changed_locally(&self) -> Option<Tick>;
-
     /// Returns the last time the value was changed by a remote connection.
     fn last_changed_remotely(&self) -> Option<Tick>;
 }
@@ -67,7 +64,7 @@ pub struct NetChanges<'a, T>
 where
     T: Component,
 {
-    component: &'a T,
+    component: Ref<'a, T>,
     tick_state: &'a NetChangeState<T>,
     sys_ticks: SystemTickData,
 }
@@ -101,6 +98,44 @@ where
     #[inline]
     fn as_ref(&self) -> &ReplicationTicks {
         &self.tick_state.ticks
+    }
+}
+
+impl<T> DetectChanges for NetChanges<'_, T>
+where
+    T: Component,
+{
+    #[inline]
+    fn is_added(&self) -> bool {
+        self.component.is_added()
+    }
+
+    #[inline]
+    fn is_changed(&self) -> bool {
+        self.component.is_changed()
+    }
+
+    #[inline]
+    fn last_changed(&self) -> Tick {
+        self.component.last_changed()
+    }
+}
+
+impl<T> DetectNetChanges for NetChanges<'_, T>
+where
+    T: Component,
+{
+    fn is_changed_locally(&self) -> bool {
+        todo!()
+    }
+
+    fn is_changed_remotely(&self) -> bool {
+        todo!()
+    }
+
+    #[inline]
+    fn last_changed_remotely(&self) -> Option<Tick> {
+        self.tick_state.ticks.last_changed_remotely()
     }
 }
 
@@ -157,6 +192,44 @@ where
     #[inline]
     fn as_ref(&self) -> &ReplicationTicks {
         &self.tick_state.ticks
+    }
+}
+
+impl<T> DetectChanges for NetChangesMut<'_, T>
+where
+    T: Component,
+{
+    #[inline]
+    fn is_added(&self) -> bool {
+        self.component.is_added()
+    }
+
+    #[inline]
+    fn is_changed(&self) -> bool {
+        self.component.is_changed()
+    }
+
+    #[inline]
+    fn last_changed(&self) -> Tick {
+        self.component.last_changed()
+    }
+}
+
+impl<T> DetectNetChanges for NetChangesMut<'_, T>
+where
+    T: Component,
+{
+    fn is_changed_locally(&self) -> bool {
+        todo!()
+    }
+
+    fn is_changed_remotely(&self) -> bool {
+        todo!()
+    }
+
+    #[inline]
+    fn last_changed_remotely(&self) -> Option<Tick> {
+        self.tick_state.ticks.last_changed_remotely()
     }
 }
 
