@@ -1,5 +1,29 @@
 //! Unique network identifier values for sharing across connections.
 
+/// A type which is used to create new, unique [`NetId`] values.
+#[derive(Debug, Clone)]
+pub struct IdGenerator {
+    side: Side,
+    index: u64,
+}
+
+impl IdGenerator {
+    /// Creates a new `IdGenerator`.
+    pub fn new(side: Side) -> Self {
+        Self {
+            side,
+            index: 0,
+        }
+    }
+
+    /// Generates a new [`NetId`].
+    pub fn next(&mut self) -> NetId {
+        let id = NetId::new(self.side, self.index);
+        self.index += 1;
+        return id;
+    }
+}
+
 /// A unique network identifier.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[repr(transparent)]
