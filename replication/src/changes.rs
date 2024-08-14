@@ -209,7 +209,11 @@ where
     T: Component,
 {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        // TODO
+        // Set change ticks
+        self.component.set_changed();
+        self.tick_state.ticks.local = Some(self.sys_ticks.this_run);
+
+        // Return the component
         return self.component.as_mut();
     }
 }
