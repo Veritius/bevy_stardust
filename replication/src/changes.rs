@@ -315,7 +315,9 @@ unsafe impl WorldQuery for SystemTickData {
         _state: &Self::State,
         _archetype: &'w bevy::ecs::archetype::Archetype,
         _table: &'w bevy::ecs::storage::Table,
-    ) {}
+    ) {
+        // Do nothing
+    }
 
     unsafe fn set_table<'w>(
         _fetch: &mut Self::Fetch<'w>,
