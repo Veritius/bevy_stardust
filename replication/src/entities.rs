@@ -1,12 +1,12 @@
 //! Entity replication.
 
 use bevy::prelude::*;
-use crate::{config::ReplicateOpt, identifiers::NetId};
+use crate::{config::Clusivity, identifiers::NetId};
 
 /// Adds functionality for replicating entities.
 pub struct EntityReplicationPlugin {
     /// Whether or not to replicate entities by default.
-    pub opt: ReplicateOpt,
+    pub opt: Clusivity,
 }
 
 impl Plugin for EntityReplicationPlugin {

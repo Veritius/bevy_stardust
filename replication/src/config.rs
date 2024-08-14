@@ -1,11 +1,11 @@
 //! Various types used to configure replication behaviors.
 
-/// Whether to opt in or out of replication by default.
+/// Inclusivity and exclusivity.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ReplicateOpt {
-    /// Do not replicate by default.
+pub enum Clusivity {
+    /// Exclude by default.
     In,
 
-    /// Components are automatically replicated.
+    /// Include by default.
     Out,
 }
