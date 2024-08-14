@@ -3,6 +3,7 @@
 
 pub mod changes;
 pub mod components;
+pub mod config;
 pub mod connections;
 pub mod entities;
 pub mod identifiers;

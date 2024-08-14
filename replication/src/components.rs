@@ -2,7 +2,7 @@
 
 use std::any::type_name;
 use bevy::{ecs::schedule::InternedScheduleLabel, prelude::*};
-use crate::{changes::NetChangeState, entities::{EntityReplicationPlugin, Replicated}, serialisation::SerialisationFns};
+use crate::{changes::NetChangeState, config::ReplicateOpt, entities::{EntityReplicationPlugin, Replicated}, serialisation::SerialisationFns};
 
 /// Adds functionality for replicating components.
 /// 
@@ -18,6 +18,9 @@ pub struct ComponentReplicationPlugin<T> {
 
     /// Functions used to serialise and deserialise `T`.
     pub serialise_fns: SerialisationFns<T>,
+
+    /// When to replicate.
+    pub opt: ReplicateOpt,
 }
 
 impl<T> Plugin for ComponentReplicationPlugin<T>

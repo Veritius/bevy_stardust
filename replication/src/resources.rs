@@ -1,7 +1,7 @@
 //! Resource replication.
 
 use bevy::{ecs::schedule::InternedScheduleLabel, prelude::*};
-use crate::serialisation::SerialisationFns;
+use crate::{config::ReplicateOpt, serialisation::SerialisationFns};
 
 /// Adds functionality for replicating resources.
 pub struct ResourceReplicationPlugin<T> {
@@ -15,6 +15,9 @@ pub struct ResourceReplicationPlugin<T> {
 
     /// Functions used to serialise and deserialise `T`.
     pub serialise_fns: SerialisationFns<T>,
+
+    /// When to replicate.
+    pub opt: ReplicateOpt,
 }
 
 impl<T> Plugin for ResourceReplicationPlugin<T>
