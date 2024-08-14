@@ -352,7 +352,7 @@ unsafe impl WorldQuery for SystemTickData {
     fn get_state(
         _components: &bevy::ecs::component::Components,
     ) -> Option<Self::State> {
-        None
+        Some(())
     }
 
     fn matches_component_set(
