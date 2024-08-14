@@ -188,6 +188,7 @@ where
     fn deref_mut(&mut self) -> &mut Self::Target {
         // Set change ticks
         self.component.set_changed();
+        self.tick_state.ticks.remote = Some(self.sys_ticks.this_run);
 
         // Return the component
         return self.component.as_mut();
