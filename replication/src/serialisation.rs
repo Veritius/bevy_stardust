@@ -16,6 +16,7 @@ pub type DeserialiseDiffFn<T> = fn(Bytes, &mut T) -> anyhow::Result<()>;
 
 /// A set of common serialisation functions.
 #[allow(missing_docs)]
+#[derive(Clone)]
 pub struct SerialisationFns<T> {
     pub serialise: SerialiseFn<T>,
     pub serialise_diff: Option<SerialiseDiffFn<T>>,
