@@ -14,6 +14,15 @@ pub type DeserialiseFn<T> = fn(Bytes) -> anyhow::Result<T>;
 /// A function that updates `T` in place based on a set of bytes.
 pub type DeserialiseDiffFn<T> = fn(Bytes, &mut T) -> anyhow::Result<()>;
 
+/// A set of common serialisation functions.
+#[allow(missing_docs)]
+pub struct SerialisationFns<T> {
+    pub serialise: SerialiseFn<T>,
+    pub serialise_diff: Option<SerialiseDiffFn<T>>,
+    pub deserialise: DeserialiseFn<T>,
+    pub deserialise_diff: Option<DeserialiseDiffFn<T>>,
+}
+
 /// Serialisation and deserialisation using the `bitcode` crate.
 #[cfg(feature="bitcode")]
 pub mod bitcode {
