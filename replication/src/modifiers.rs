@@ -47,24 +47,24 @@ impl<T> Freeze<T> {
     /// Prevent `peer` from receiving updates.
     pub fn refuse(&mut self, peer: Entity) {
         match self.cls {
-            Clusivity::In => self.set.insert(peer),
-            Clusivity::Out => self.set.remove(&peer),
+            Clusivity::Exclude => self.set.insert(peer),
+            Clusivity::Include => self.set.remove(&peer),
         };
     }
 
     /// Allow `peer` to receive updates.
     pub fn allow(&mut self, peer: Entity) {
         match self.cls {
-            Clusivity::In => self.set.remove(&peer),
-            Clusivity::Out => self.set.insert(peer),
+            Clusivity::Exclude => self.set.remove(&peer),
+            Clusivity::Include => self.set.insert(peer),
         };
     }
 
     /// Returns `true` if `peer` receives updates.
     pub fn allowed(&self, peer: Entity) -> bool {
         match self.cls {
-            Clusivity::In => !self.set.contains(&peer),
-            Clusivity::Out => self.set.contains(&peer),
+            Clusivity::Exclude => !self.set.contains(&peer),
+            Clusivity::Include => self.set.contains(&peer),
         }
     }
 }

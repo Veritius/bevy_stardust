@@ -10,7 +10,7 @@ impl PluginGroup for ReplicationPlugins {
     fn build(self) -> PluginGroupBuilder {
         PluginGroupBuilder::start::<Self>()
             .add(crate::entities::EntityReplicationPlugin {
-                opt: Clusivity::Out,
+                opt: Clusivity::Include,
             })
     }
 }

@@ -4,8 +4,8 @@
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Clusivity {
     /// Exclude by default.
-    In,
+    Exclude,
 
     /// Include by default.
-    Out,
+    Include,
 }
