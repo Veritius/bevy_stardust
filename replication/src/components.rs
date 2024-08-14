@@ -2,7 +2,7 @@
 
 use std::any::type_name;
 use bevy::{ecs::schedule::InternedScheduleLabel, prelude::*};
-use crate::{changes::NetChangeState, config::ReplicateOpt, entities::{EntityReplicationPlugin, Replicated}, serialisation::SerialisationFns};
+use crate::{changes::NetChangeState, config::ReplicateOpt, entities::{EntityReplicationPlugin, Replicated}, modifiers::Override, serialisation::SerialisationFns};
 
 /// Adds functionality for replicating components.
 /// 
@@ -46,5 +46,6 @@ fn replicated_component_removal_observer<T: Component>(
 
     // Remove any replication-related components
     commands.entity(trigger.entity())
-        .remove::<NetChangeState<T>>();
+        .remove::<NetChangeState<T>>()
+        .remove::<Override<T>>();
 }
