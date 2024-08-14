@@ -1,7 +1,7 @@
 //! Change detection for replicated objects.
 
 use std::{marker::PhantomData, ops::{Deref, DerefMut}};
-use bevy::{ecs::{component::{StorageType, Tick}, query::QueryData}, prelude::*};
+use bevy::{ecs::{component::{StorageType, Tick}, query::{QueryData, WorldQuery}}, prelude::*};
 
 /// Change detection state.
 #[derive(Debug, Clone)]
@@ -47,6 +47,82 @@ impl<T: Component> Component for NetChangeState<T> {
 }
 
 impl<T: Resource> Resource for NetChangeState<T> {}
+
+#[derive(Clone, Copy)]
+struct SystemTickData {
+    last_run: Tick,
+    this_run: Tick,
+}
+
+unsafe impl WorldQuery for SystemTickData {
+    type Item<'a> = Self;
+    type Fetch<'a> = Self;
+    type State = ();
+
+    fn shrink<'wlong: 'wshort, 'wshort>(item: Self::Item<'wlong>) -> Self::Item<'wshort> {
+        item
+    }
+
+    unsafe fn init_fetch<'w>(
+        _world: bevy::ecs::world::unsafe_world_cell::UnsafeWorldCell<'w>,
+        _state: &Self::State,
+        last_run: Tick,
+        this_run: Tick,
+    ) -> Self::Fetch<'w> {
+        Self {
+            last_run,
+            this_run,
+        }
+    }
+
+    const IS_DENSE: bool = true;
+
+    unsafe fn set_archetype<'w>(
+        _fetch: &mut Self::Fetch<'w>,
+        _state: &Self::State,
+        _archetype: &'w bevy::ecs::archetype::Archetype,
+        _table: &'w bevy::ecs::storage::Table,
+    ) {}
+
+    unsafe fn set_table<'w>(fetch: &mut Self::Fetch<'w>, state: &Self::State, table: &'w bevy::ecs::storage::Table) {
+        todo!()
+    }
+
+    unsafe fn fetch<'w>(
+        fetch: &mut Self::Fetch<'w>,
+        _entity: Entity,
+        _table_row: bevy::ecs::storage::TableRow,
+    ) -> Self::Item<'w> {
+        Self {
+            last_run: fetch.last_run,
+            this_run: fetch.this_run,
+        }
+    }
+
+    fn update_component_access(
+        _state: &Self::State,
+        _access: &mut bevy::ecs::query::FilteredAccess<bevy::ecs::component::ComponentId>,
+    ) {
+        // Do nothing.
+    }
+
+    fn init_state(world: &mut World) -> Self::State {
+        ()
+    }
+
+    fn get_state(
+        _components: &bevy::ecs::component::Components
+    ) -> Option<Self::State> {
+        None
+    }
+
+    fn matches_component_set(
+        _state: &Self::State,
+        _set_contains_id: &impl Fn(bevy::ecs::component::ComponentId) -> bool,
+    ) -> bool {
+        false
+    }
+}
 
 /// Access to a component and its associated change detection state.
 #[derive(QueryData)]
