@@ -24,7 +24,7 @@ impl<T: Component> Component for Override<T> {
 
 impl<T: Resource> Resource for Override<T> {}
 
-/// Prevents changes to `T` from being replicated for a select set of peers.
+/// Prevents changes to `T` from being replicated to certain peers.
 /// 
 /// Automatically removed if `T` is removed.
 #[derive(Debug)]
