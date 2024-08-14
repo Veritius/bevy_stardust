@@ -32,7 +32,7 @@ impl Iterator for IdGenerator {
     }
 }
 
-/// A unique network identifier.
+/// A unique identifier for an object replicated over the network.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[repr(transparent)]
 pub struct NetId(u64);
