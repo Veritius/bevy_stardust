@@ -17,10 +17,18 @@ impl IdGenerator {
     }
 
     /// Generates a new [`NetId`].
-    pub fn next(&mut self) -> NetId {
+    pub fn gen(&mut self) -> NetId {
         let id = NetId::new(self.side, self.index);
         self.index += 1;
         return id;
+    }
+}
+
+impl Iterator for IdGenerator {
+    type Item = NetId;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        Some(self.gen())
     }
 }
 
