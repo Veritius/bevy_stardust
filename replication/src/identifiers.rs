@@ -27,7 +27,7 @@ impl NetId {
     /// 
     /// If you don't need to check, use [`new`](Self::new).
     pub fn new_checked(side: Side, index: u64) -> Result<Self, ()> {
-        if index & 1u64 << 63 > 0 { return Err(()) }
+        if index & 1u64 >> 63 != 0 { return Err(()) }
         return Ok(Self::new(side, index));
     }
 
@@ -46,14 +46,14 @@ impl NetId {
     /// Returns the [`Side`] that created this ID.
     pub fn side(&self) -> Side {
         match self.0 >> 63 == 0 {
-            true => Side::Right,
-            false => Side::Left,
+            true => Side::Left,
+            false => Side::Right,
         }
     }
 
     /// Returns the index of the identifier.
     pub fn index(&self) -> u64 {
-        self.0 & u64::MAX >> 63
+        self.0 & u64::MAX >> 1
     }
 }
 
@@ -71,4 +71,17 @@ fn ident_bits_test() {
         assert_eq!(value.side(), side);
         assert_eq!(value.index(), index);
     }
+
+    test_id(NetId::new(Side::Left, 0), Side::Left, 0);
+    test_id(NetId::new(Side::Right, 0), Side::Right, 0);
+    test_id(NetId::new(Side::Left, 1), Side::Left, 1);
+    test_id(NetId::new(Side::Right, 1), Side::Right, 1);
+    test_id(NetId::new(Side::Left, 5), Side::Left, 5);
+    test_id(NetId::new(Side::Right, 5), Side::Right, 5);
+    test_id(NetId::new(Side::Left, 25), Side::Left, 25);
+    test_id(NetId::new(Side::Right, 25), Side::Right, 25);
+    test_id(NetId::new(Side::Left, 543), Side::Left, 543);
+    test_id(NetId::new(Side::Right, 543), Side::Right, 543);
+    test_id(NetId::new(Side::Left, 23553), Side::Left, 23553);
+    test_id(NetId::new(Side::Right, 23553), Side::Right, 23553);
 }
