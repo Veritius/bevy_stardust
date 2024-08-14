@@ -25,8 +25,8 @@ impl ReplicationTicks {
     pub fn is_changed_locally(
         &self,
         local_last_change: Tick,
-        last_tick: Tick,
-        this_tick: Tick,
+        last_run: Tick,
+        this_run: Tick,
     ) -> bool {
         todo!()
     }
@@ -34,8 +34,8 @@ impl ReplicationTicks {
     pub fn is_changed_remotely(
         &self,
         local_last_change: Tick,
-        last_tick: Tick,
-        this_tick: Tick,
+        last_run: Tick,
+        this_run: Tick,
     ) -> bool {
         todo!()
     }
@@ -125,12 +125,22 @@ impl<T> DetectNetChanges for NetChanges<'_, T>
 where
     T: Component,
 {
+    #[inline]
     fn is_changed_locally(&self) -> bool {
-        todo!()
+        self.tick_state.ticks.is_changed_locally(
+            self.component.last_changed(),
+            self.sys_ticks.last_run,
+            self.sys_ticks.this_run,
+        )
     }
 
+    #[inline]
     fn is_changed_remotely(&self) -> bool {
-        todo!()
+        self.tick_state.ticks.is_changed_remotely(
+            self.component.last_changed(),
+            self.sys_ticks.last_run,
+            self.sys_ticks.this_run,
+        )
     }
 
     #[inline]
@@ -219,12 +229,22 @@ impl<T> DetectNetChanges for NetChangesMut<'_, T>
 where
     T: Component,
 {
+    #[inline]
     fn is_changed_locally(&self) -> bool {
-        todo!()
+        self.tick_state.ticks.is_changed_locally(
+            self.component.last_changed(),
+            self.sys_ticks.last_run,
+            self.sys_ticks.this_run,
+        )
     }
 
+    #[inline]
     fn is_changed_remotely(&self) -> bool {
-        todo!()
+        self.tick_state.ticks.is_changed_remotely(
+            self.component.last_changed(),
+            self.sys_ticks.last_run,
+            self.sys_ticks.this_run,
+        )
     }
 
     #[inline]
