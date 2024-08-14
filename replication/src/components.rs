@@ -2,7 +2,7 @@
 
 use std::any::type_name;
 use bevy::{ecs::schedule::InternedScheduleLabel, prelude::*};
-use crate::{changes::NetChangeState, entities::EntityReplicationPlugin, serialisation::SerialisationFns};
+use crate::{changes::NetChangeState, entities::{EntityReplicationPlugin, Replicated}, serialisation::SerialisationFns};
 
 /// Adds functionality for replicating components.
 /// 
@@ -35,10 +35,11 @@ where
 
 fn replicated_component_removal_observer<T: Component>(
     trigger: Trigger<OnRemove, T>,
+    query: Query<&Replicated, With<T>>,
     mut commands: Commands,
 ) {
-    // We do not care about placeholders
-    if trigger.entity() == Entity::PLACEHOLDER { return }
+    // If it's not in the query, we don't care
+    if !query.contains(trigger.entity()) { return }
 
     // Remove any replication-related components
     commands.entity(trigger.entity())
