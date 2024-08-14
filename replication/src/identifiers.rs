@@ -1,5 +1,7 @@
 //! Unique network identifier values for sharing across connections.
 
+use std::ops::Not;
+
 /// A type which is used to create new, unique [`NetId`] values.
 #[derive(Debug, Clone)]
 pub struct IdGenerator {
