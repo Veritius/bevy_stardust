@@ -23,21 +23,3 @@ pub struct SerialisationFns<T> {
     pub deserialise: DeserialiseFn<T>,
     pub deserialise_diff: Option<DeserialiseDiffFn<T>>,
 }
-
-/// Serialisation and deserialisation using the `bitcode` crate.
-#[cfg(feature="bitcode")]
-pub mod bitcode {
-    use super::*;
-    use ::bitcode;
-
-    /// Shortcut for using `bitcode` serialisation.
-    pub fn encode<T: bitcode::Encode>() -> SerialiseFn<T> {
-        |t| Ok(Bytes::from(bitcode::encode(t)))
-    }
-
-    /// Shortcut for using `bitcode` deserialisation.
-    pub fn decode<T: bitcode::DecodeOwned>() -> DeserialiseFn<T> {
-        |b| bitcode::decode(&b[..])
-            .map_err(|e| anyhow::anyhow!(e))
-    }
-}

@@ -24,5 +24,3 @@ optional = true
 
 [features]
 default = []
-
-bitcode = ["dep:bitcode"]
