@@ -25,19 +25,27 @@ impl ReplicationTicks {
     pub fn is_changed_locally(
         &self,
         local_last_change: Tick,
-        last_run: Tick,
+        // last_run: Tick,
         this_run: Tick,
     ) -> bool {
-        todo!()
+        if let Some(tick) = self.remote {
+            return local_last_change.is_newer_than(tick, this_run);
+        }
+
+        return true;
     }
 
     pub fn is_changed_remotely(
         &self,
         local_last_change: Tick,
-        last_run: Tick,
+        // last_run: Tick,
         this_run: Tick,
     ) -> bool {
-        todo!()
+        if let Some(tick) = self.remote {
+            return tick.is_newer_than(local_last_change, this_run);
+        }
+
+        return false;
     }
 
     /// The last time the value was changed by a remote application.
@@ -129,7 +137,7 @@ where
     fn is_changed_locally(&self) -> bool {
         self.tick_state.ticks.is_changed_locally(
             self.component.last_changed(),
-            self.sys_ticks.last_run,
+            // self.sys_ticks.last_run,
             self.sys_ticks.this_run,
         )
     }
@@ -138,7 +146,7 @@ where
     fn is_changed_remotely(&self) -> bool {
         self.tick_state.ticks.is_changed_remotely(
             self.component.last_changed(),
-            self.sys_ticks.last_run,
+            // self.sys_ticks.last_run,
             self.sys_ticks.this_run,
         )
     }
@@ -233,7 +241,7 @@ where
     fn is_changed_locally(&self) -> bool {
         self.tick_state.ticks.is_changed_locally(
             self.component.last_changed(),
-            self.sys_ticks.last_run,
+            // self.sys_ticks.last_run,
             self.sys_ticks.this_run,
         )
     }
@@ -242,7 +250,7 @@ where
     fn is_changed_remotely(&self) -> bool {
         self.tick_state.ticks.is_changed_remotely(
             self.component.last_changed(),
-            self.sys_ticks.last_run,
+            // self.sys_ticks.last_run,
             self.sys_ticks.this_run,
         )
     }
