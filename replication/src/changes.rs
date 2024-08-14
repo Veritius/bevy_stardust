@@ -1,7 +1,7 @@
 //! Change detection for replicated objects.
 
 use std::{marker::PhantomData, ops::{Deref, DerefMut}};
-use bevy::{ecs::{component::{StorageType, Tick}, query::{QueryData, WorldQuery}}, prelude::*};
+use bevy::{ecs::{component::{StorageType, Tick}, query::{QueryData, ReadOnlyQueryData, WorldQuery}}, prelude::*};
 
 /// Change detection state.
 #[derive(Debug, Clone)]
@@ -48,6 +48,7 @@ impl<T: Component> Component for NetChangeState<T> {
 
 impl<T: Resource> Resource for NetChangeState<T> {}
 
+// A hack to get tick state in a query
 #[derive(Clone, Copy)]
 struct SystemTickData {
     last_run: Tick,
@@ -84,8 +85,12 @@ unsafe impl WorldQuery for SystemTickData {
         _table: &'w bevy::ecs::storage::Table,
     ) {}
 
-    unsafe fn set_table<'w>(fetch: &mut Self::Fetch<'w>, state: &Self::State, table: &'w bevy::ecs::storage::Table) {
-        todo!()
+    unsafe fn set_table<'w>(
+        _fetch: &mut Self::Fetch<'w>,
+        _state: &Self::State,
+        _table: &'w bevy::ecs::storage::Table,
+    ) {
+        // Do nothing
     }
 
     unsafe fn fetch<'w>(
@@ -106,12 +111,14 @@ unsafe impl WorldQuery for SystemTickData {
         // Do nothing.
     }
 
-    fn init_state(world: &mut World) -> Self::State {
+    fn init_state(
+        _world: &mut World,
+    ) -> Self::State {
         ()
     }
 
     fn get_state(
-        _components: &bevy::ecs::component::Components
+        _components: &bevy::ecs::component::Components,
     ) -> Option<Self::State> {
         None
     }
@@ -124,6 +131,12 @@ unsafe impl WorldQuery for SystemTickData {
     }
 }
 
+unsafe impl QueryData for SystemTickData {
+    type ReadOnly = Self;
+}
+
+unsafe impl ReadOnlyQueryData for SystemTickData {}
+
 /// Access to a component and its associated change detection state.
 #[derive(QueryData)]
 pub struct NetChanges<'a, T>
@@ -131,7 +144,8 @@ where
     T: Component,
 {
     component: &'a T,
-    ticks: &'a NetChangeState<T>,
+    tick_state: &'a NetChangeState<T>,
+    sys_ticks: SystemTickData,
 }
 
 impl<T> Deref for NetChanges<'_, T>
@@ -162,7 +176,7 @@ where
 {
     #[inline]
     fn as_ref(&self) -> &ReplicationTicks {
-        &self.ticks.ticks
+        &self.tick_state.ticks
     }
 }
 
@@ -174,7 +188,8 @@ where
     T: Component,
 {
     component: Mut<'a, T>,
-    ticks: &'a mut NetChangeState<T>,
+    tick_state: &'a mut NetChangeState<T>,
+    sys_ticks: SystemTickData,
 }
 
 impl<T> Deref for NetChangesMut<'_, T>
@@ -214,7 +229,7 @@ where
 {
     #[inline]
     fn as_ref(&self) -> &ReplicationTicks {
-        &self.ticks.ticks
+        &self.tick_state.ticks
     }
 }
 
