@@ -3,13 +3,10 @@
 use std::collections::BTreeMap;
 use aery::edges::RelationCommands;
 use bevy::{ecs::system::EntityCommands, prelude::*};
-use crate::{config::Clusivity, identifiers::{IdGenerator, NetId, Side}, modifiers::*};
+use crate::{identifiers::{IdGenerator, NetId, Side}, modifiers::*};
 
 /// Adds functionality for replicating entities.
-pub struct EntityReplicationPlugin {
-    /// Whether or not to replicate entities by default.
-    pub opt: Clusivity,
-}
+pub struct EntityReplicationPlugin;
 
 impl Plugin for EntityReplicationPlugin {
     fn build(&self, app: &mut App) {
