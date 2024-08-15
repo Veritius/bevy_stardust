@@ -9,7 +9,7 @@ pub struct ReplicationGroupsPlugin;
 
 impl Plugin for ReplicationGroupsPlugin {
     fn build(&self, app: &mut App) {
-
+        app.register_type::<ReplicationGroup>();
     }
 }
 
@@ -18,7 +18,8 @@ impl Plugin for ReplicationGroupsPlugin {
 pub struct GroupMember;
 
 /// A replication group, allowing configuration to be applied to many peers at once.
-#[derive(Debug, Component)]
+#[derive(Debug, Component, Reflect)]
+#[reflect(Component)]
 pub struct ReplicationGroup {
     /// Whether related members are considered excluded or included by their relation.
     pub clusivity: Clusivity,
