@@ -1,3 +1,5 @@
+//! Authority configuration.
+
 use std::marker::PhantomData;
 use bevy::{ecs::{component::StorageType, query::{QueryData, QueryFilter, WorldQuery}}, prelude::*};
 
