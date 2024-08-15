@@ -46,6 +46,5 @@ fn replicated_component_removal_observer<T: Component>(
 
     // Remove any replication-related components
     commands.entity(trigger.entity())
-        .remove::<NetChangeState<T>>()
-        .remove::<Freeze<T>>();
+        .remove::<NetChangeState<T>>();
 }
