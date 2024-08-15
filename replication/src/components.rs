@@ -1,6 +1,7 @@
 //! Component replication.
 
 use std::any::type_name;
+use aery::edges::RelationCommands;
 use bevy::{ecs::schedule::InternedScheduleLabel, prelude::*};
 use crate::{changes::NetChangeState, config::Clusivity, entities::{EntityReplicationPlugin, Replicated}, modifiers::*, serialisation::SerialisationFns};
 
@@ -44,7 +45,15 @@ fn replicated_component_removal_observer<T: Component>(
     // If it's not in the query, we don't care
     if !query.contains(trigger.entity()) { return }
 
-    // Remove any replication-related components
-    commands.entity(trigger.entity())
-        .remove::<NetChangeState<T>>();
+    // Get commands for the target entity
+    let mut entity = commands.entity(trigger.entity());
+
+    // Remove replication components
+    entity.remove::<NetChangeState<T>>();
+
+    // Remove replication relations
+    entity.withdraw::<Visible<T>>();
+    entity.withdraw::<Hidden<T>>();
+    entity.withdraw::<Thawed<T>>();
+    entity.withdraw::<Frozen<T>>();
 }
