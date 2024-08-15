@@ -1,25 +1,15 @@
 //! Authority configuration.
 
-use std::marker::PhantomData;
-use bevy::{ecs::{component::StorageType, query::{QueryData, QueryFilter, WorldQuery}}, prelude::*};
+use bevy::{ecs::query::{QueryData, QueryFilter, WorldQuery}, prelude::*};
 
-pub(crate) struct AuthorityData<T = Entity>
-where
-    T: Send + Sync + 'static,
-{
-    _ph: PhantomData<T>,
-
+#[derive(Component)]
+pub(crate) struct AuthorityData {
     id: AuthorityId,
 }
 
-impl<T> AuthorityData<T>
-where
-    T: Send + Sync + 'static,
-{
+impl AuthorityData {
     pub fn new(authority: AuthorityId) -> Self {
         Self {
-            _ph: PhantomData,
-
             id: authority,
         }
     }
@@ -33,32 +23,19 @@ where
     }
 }
 
-impl<T> Component for AuthorityData<T>
-where
-    T: Send + Sync + 'static,
-{
-    const STORAGE_TYPE: StorageType = StorageType::Table;
-}
-
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub(crate) enum AuthorityId {
     Local,
     Remote(Entity)
 }
 
-/// A [`QueryFilter`] for entities and components that we have authority over.
+/// A [`QueryFilter`] for entities this peer holds authority over.
 #[derive(QueryData)]
-pub struct Controller<'a, T = Entity>
-where
-    T: Send + Sync + 'static,
-{
-    authority: &'a AuthorityData<T>,
+pub struct Controller<'a> {
+    authority: &'a AuthorityData,
 }
 
-impl<'a, T> QueryFilter for Controller<'a, T>
-where
-    T: Send + Sync + 'static,
-{
+impl<'a> QueryFilter for Controller<'a> {
     const IS_ARCHETYPAL: bool = false;
 
     #[inline]
@@ -73,19 +50,13 @@ where
     }
 }
 
-/// A [`QueryFilter`] for entities and components that another peer has authority over.
+/// A [`QueryFilter`] for entities that another peer has authority over.
 #[derive(QueryData)]
-pub struct Controlled<'a, T = Entity>
-where
-    T: Send + Sync + 'static,
-{
-    authority: &'a AuthorityData<T>,
+pub struct Controlled<'a> {
+    authority: &'a AuthorityData,
 }
 
-impl<'a, T> QueryFilter for Controlled<'a, T>
-where
-    T: Send + Sync + 'static,
-{
+impl<'a> QueryFilter for Controlled<'a> {
     const IS_ARCHETYPAL: bool = false;
 
     #[inline]
