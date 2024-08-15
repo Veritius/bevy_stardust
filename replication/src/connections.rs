@@ -1,13 +1,14 @@
 //! Configuration for peers that use replication.
 
 use bevy::prelude::*;
-
-use crate::identifiers::Side;
+use crate::identifiers::*;
 
 /// A component attached to [peers](bevy_stardust::connections::Peer) to enable replication.
 #[derive(Debug, Component)]
 pub struct ReplicationPeer {
     side: Side,
+
+    idgen: IdGenerator,
 }
 
 impl ReplicationPeer {
@@ -17,6 +18,8 @@ impl ReplicationPeer {
     ) -> Self {
         Self {
             side,
+
+            idgen: IdGenerator::new(side),
         }
     }
 
