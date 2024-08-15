@@ -21,9 +21,5 @@ version = "0.7"
 [dependencies.anyhow]
 version = "1"
 
-[dependencies.bitcode]
-version = "0.6"
-optional = true
-
 [features]
 default = []
