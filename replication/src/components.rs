@@ -2,7 +2,7 @@
 
 use std::any::type_name;
 use aery::edges::RelationCommands;
-use bevy::{ecs::schedule::InternedScheduleLabel, prelude::*};
+use bevy::{ecs::{schedule::InternedScheduleLabel, system::EntityCommands}, prelude::*};
 use crate::{changes::NetChangeState, config::Clusivity, entities::{EntityReplicationPlugin, Replicated}, modifiers::*, serialisation::SerialisationFns};
 
 /// Adds functionality for replicating components.
@@ -33,11 +33,21 @@ where
             "{} requires {}, but it was not added", type_name::<Self>(), type_name::<EntityReplicationPlugin>());
 
         // Various observers for replication related events
-        app.observe(replicated_component_removal_observer::<T>);
+        app.observe(entity_replication_removal_observer::<T>);
+        app.observe(component_replication_removal_observer::<T>);
     }
 }
 
-fn replicated_component_removal_observer<T: Component>(
+fn entity_replication_removal_observer<T: Component>(
+    trigger: Trigger<OnRemove, Replicated>,
+    mut commands: Commands,
+) {
+    // Get commands for the target entity
+    let commands = commands.entity(trigger.entity());
+    clear_replication_components::<T>(commands);
+}
+
+fn component_replication_removal_observer<T: Component>(
     trigger: Trigger<OnRemove, T>,
     query: Query<&Replicated, With<T>>,
     mut commands: Commands,
@@ -46,8 +56,13 @@ fn replicated_component_removal_observer<T: Component>(
     if !query.contains(trigger.entity()) { return }
 
     // Get commands for the target entity
-    let mut entity = commands.entity(trigger.entity());
+    let commands = commands.entity(trigger.entity());
+    clear_replication_components::<T>(commands);
+}
 
+fn clear_replication_components<T: Component>(
+    mut entity: EntityCommands,
+) {
     // Remove replication components
     entity.remove::<NetChangeState<T>>();
 
