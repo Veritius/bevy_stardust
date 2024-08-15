@@ -31,11 +31,11 @@ pub(crate) enum AuthorityId {
 
 /// A [`QueryFilter`] for entities this peer holds authority over.
 #[derive(QueryData)]
-pub struct Controller<'a> {
+pub struct Controlling<'a> {
     authority: &'a AuthorityData,
 }
 
-impl<'a> QueryFilter for Controller<'a> {
+impl<'a> QueryFilter for Controlling<'a> {
     const IS_ARCHETYPAL: bool = false;
 
     #[inline]
