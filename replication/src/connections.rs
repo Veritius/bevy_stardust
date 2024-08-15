@@ -7,8 +7,6 @@ use crate::identifiers::*;
 #[derive(Debug, Component)]
 pub struct ReplicationPeer {
     side: Side,
-
-    idgen: IdGenerator,
 }
 
 impl ReplicationPeer {
@@ -18,8 +16,6 @@ impl ReplicationPeer {
     ) -> Self {
         Self {
             side,
-
-            idgen: IdGenerator::new(side),
         }
     }
 
