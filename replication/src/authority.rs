@@ -59,6 +59,7 @@ where
 {
     const IS_ARCHETYPAL: bool = false;
 
+    #[inline]
     unsafe fn filter_fetch(
         fetch: &mut Self::Fetch<'_>,
         entity: Entity,
@@ -85,6 +86,7 @@ where
 {
     const IS_ARCHETYPAL: bool = false;
 
+    #[inline]
     unsafe fn filter_fetch(
         fetch: &mut Self::Fetch<'_>,
         entity: Entity,
