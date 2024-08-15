@@ -1,7 +1,7 @@
 //! Change detection for replicated objects.
 
 use std::{marker::PhantomData, ops::{Deref, DerefMut}};
-use bevy::{ecs::{component::{StorageType, Tick}, query::{QueryData, ReadOnlyQueryData, WorldQuery}}, prelude::*};
+use bevy::{ecs::{component::{StorageType, Tick}, query::{QueryData, QueryFilter, ReadOnlyQueryData, WorldQuery}}, prelude::*};
 
 /// An extension of change detection for use in replication.
 pub trait DetectNetChanges: DetectChanges {
@@ -135,7 +135,6 @@ where
     fn is_changed_locally(&self) -> bool {
         self.tick_state.ticks.is_changed_locally(
             self.component.last_changed(),
-            // self.sys_ticks.last_run,
             self.sys_ticks.this_run,
         )
     }
@@ -144,7 +143,6 @@ where
     fn is_changed_remotely(&self) -> bool {
         self.tick_state.ticks.is_changed_remotely(
             self.component.last_changed(),
-            // self.sys_ticks.last_run,
             self.sys_ticks.this_run,
         )
     }
@@ -240,7 +238,6 @@ where
     fn is_changed_locally(&self) -> bool {
         self.tick_state.ticks.is_changed_locally(
             self.component.last_changed(),
-            // self.sys_ticks.last_run,
             self.sys_ticks.this_run,
         )
     }
@@ -249,7 +246,6 @@ where
     fn is_changed_remotely(&self) -> bool {
         self.tick_state.ticks.is_changed_remotely(
             self.component.last_changed(),
-            // self.sys_ticks.last_run,
             self.sys_ticks.this_run,
         )
     }
@@ -269,6 +265,27 @@ where
     changes: NetChanges<'a, T>,
 }
 
+impl<'a, T> QueryFilter for ChangedLocally<'a, T>
+where
+    T: Component
+{
+    const IS_ARCHETYPAL: bool = false;
+
+    #[inline]
+    unsafe fn filter_fetch(
+        fetch: &mut Self::Fetch<'_>,
+        entity: Entity,
+        table_row: bevy::ecs::storage::TableRow,
+    ) -> bool {
+        // SAFETY: The invariants are upheld by the caller
+        let f = unsafe { Self::fetch(fetch, entity, table_row) };
+        f.changes.tick_state.ticks.is_changed_locally(
+            f.changes.component.last_changed(),
+            f.changes.sys_ticks.this_run,
+        )
+    }
+}
+
 /// Filters for entities that have been changed by the remote application.
 #[derive(QueryData)]
 pub struct ChangedRemotely<'a, T>
@@ -276,6 +293,27 @@ where
     T: Component,
 {
     changes: NetChanges<'a, T>,
+}
+
+impl<'a, T> QueryFilter for ChangedRemotely<'a, T>
+where
+    T: Component
+{
+    const IS_ARCHETYPAL: bool = false;
+
+    #[inline]
+    unsafe fn filter_fetch(
+        fetch: &mut Self::Fetch<'_>,
+        entity: Entity,
+        table_row: bevy::ecs::storage::TableRow,
+    ) -> bool {
+        // SAFETY: The invariants are upheld by the caller
+        let f = unsafe { Self::fetch(fetch, entity, table_row) };
+        f.changes.tick_state.ticks.is_changed_remotely(
+            f.changes.component.last_changed(),
+            f.changes.sys_ticks.this_run,
+        )
+    }
 }
 
 // A hack to get tick state in a query
