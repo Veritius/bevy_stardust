@@ -16,7 +16,6 @@ impl Plugin for HierarchyReplicationPlugin {
     }
 }
 
-
 /// When added to an entity, it and all its children are set to be replicated.
 /// Any children added after the fact will also be set to be replicated.
 #[derive(Debug, Component)]
