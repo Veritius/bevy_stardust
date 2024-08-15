@@ -1,8 +1,6 @@
 #![doc = include_str!("../README.md")]
 #![warn(missing_docs)]
 
-mod utils;
-
 pub mod changes;
 pub mod components;
 pub mod config;
