@@ -10,5 +10,4 @@ pub mod groups;
 pub mod identifiers;
 pub mod modifiers;
 pub mod plugins;
-pub mod resources;
 pub mod serialisation;

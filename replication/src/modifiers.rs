@@ -1,4 +1,4 @@
-//! 'Modifiers' that can be attached to replicated components and resources to change their behavior.
+//! 'Modifiers' that can be attached to replicated entities to change their behavior.
 
 use std::marker::PhantomData;
 use aery::prelude::*;

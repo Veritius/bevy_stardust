@@ -64,8 +64,6 @@ impl<T: Component> Component for NetChangeState<T> {
     const STORAGE_TYPE: StorageType = StorageType::Table;
 }
 
-impl<T: Resource> Resource for NetChangeState<T> {}
-
 /// Access to a component and its associated change detection state.
 #[derive(QueryData)]
 pub struct NetChanges<'a, T>
