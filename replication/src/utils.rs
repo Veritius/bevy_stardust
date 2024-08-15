@@ -1,47 +1,39 @@
-use std::{cmp::Ordering, sync::Arc};
+pub(crate) mod archandle {
+    use std::{marker::PhantomData, sync::{atomic::{AtomicUsize, Ordering}, Arc}};
 
-#[derive(Clone)]
-pub(crate) struct ArcHandle(Arc<()>);
-
-impl ArcHandle {
-    /// Creates a new unique [`ArcHandle`].
-    pub fn new() -> Self {
-        ArcHandle(Arc::new(()))
+    pub(crate) struct ArcHandleSource<T> {
+        index: AtomicUsize,
+        _ph: PhantomData<T>,
     }
 
-    #[inline]
-    pub fn count(&self) -> usize {
-        Arc::<()>::strong_count(&self.0)
+    impl<T> ArcHandleSource<T> {
+        pub const fn new() -> Self {
+            ArcHandleSource {
+                index: AtomicUsize::new(0),
+                _ph: PhantomData,
+            }
+        }
+
+        pub fn next(&self) -> ArcHandle<T> {
+            let v = self.index.fetch_add(0, Ordering::AcqRel);
+
+            return ArcHandle { 
+                ptr: Arc::new(v),
+                _ph: PhantomData,
+            };
+        }
     }
 
-    #[inline]
-    fn addr(&self) -> *const () {
-        Arc::<()>::as_ptr(&self.0)
+    #[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
+    pub(crate) struct ArcHandle<T> {
+        ptr: Arc<usize>,
+        _ph: PhantomData<T>,
     }
+
+    impl<T> ArcHandle<T> {
+        #[inline]
+        pub fn count(&self) -> usize {
+            Arc::<usize>::strong_count(&self.ptr)
+        }
 }
-
-impl PartialEq for ArcHandle {
-    #[inline]
-    fn eq(&self, other: &Self) -> bool {
-        std::ptr::eq(
-            self.addr(),
-            other.addr()
-        )
-    }
-}
-
-impl Eq for ArcHandle {}
-
-impl PartialOrd for ArcHandle {
-    #[inline]
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        self.addr().partial_cmp(&other.addr())
-    }
-}
-
-impl Ord for ArcHandle {
-    #[inline]
-    fn cmp(&self, other: &Self) -> Ordering {
-        self.addr().cmp(&other.addr())
-    }
 }
