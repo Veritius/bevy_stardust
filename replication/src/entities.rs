@@ -3,7 +3,7 @@
 use std::collections::BTreeMap;
 use aery::edges::RelationCommands;
 use bevy::{ecs::system::EntityCommands, prelude::*};
-use crate::{identifiers::{IdGenerator, NetId, Side}, modifiers::*};
+use crate::{identifiers::{IdGenerator, NetId, Side}, scope::*};
 
 /// Adds functionality for replicating entities.
 pub struct EntityReplicationPlugin;
@@ -73,6 +73,4 @@ fn clear_replication_components(
     // Remove replication relations
     entity.withdraw::<Visible>();
     entity.withdraw::<Hidden>();
-    entity.withdraw::<Thawed>();
-    entity.withdraw::<Frozen>();
 }

@@ -3,7 +3,7 @@
 use std::any::type_name;
 use aery::edges::RelationCommands;
 use bevy::{ecs::{schedule::InternedScheduleLabel, system::EntityCommands}, prelude::*};
-use crate::{changes::NetChangeState, config::Clusivity, entities::{EntityReplicationPlugin, Replicated}, modifiers::*, serialisation::SerialisationFns};
+use crate::{changes::NetChangeState, config::Clusivity, entities::{EntityReplicationPlugin, Replicated}, scope::*, serialisation::SerialisationFns};
 
 /// Adds functionality for replicating components.
 /// 
@@ -69,6 +69,4 @@ fn clear_replication_components<T: Component>(
     // Remove replication relations
     entity.withdraw::<Visible<T>>();
     entity.withdraw::<Hidden<T>>();
-    entity.withdraw::<Thawed<T>>();
-    entity.withdraw::<Frozen<T>>();
 }
