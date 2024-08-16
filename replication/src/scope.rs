@@ -4,15 +4,6 @@ use std::{collections::BTreeSet, marker::PhantomData};
 use bevy::{ecs::component::StorageType, prelude::*};
 use aery::prelude::*;
 
-/// Adds functionality for defining scopes, which control which peers can see what entities.
-pub struct EntityScopePlugin;
-
-impl Plugin for EntityScopePlugin {
-    fn build(&self, app: &mut App) {
-
-    }
-}
-
 /// An [entity relation](aery) that allows an entity to be replicated to a peer.
 /// Targeted from the peer (the host) to the entity being replicated (the target).
 #[derive(Relation)]
@@ -47,4 +38,13 @@ impl<T> VisibilityCache<T> {
 
 impl<T: Send + Sync + 'static> Component for VisibilityCache<T> {
     const STORAGE_TYPE: StorageType = StorageType::Table;
+}
+
+/// Adds functionality for defining scopes, which control which peers can see what entities.
+pub struct EntityScopePlugin;
+
+impl Plugin for EntityScopePlugin {
+    fn build(&self, app: &mut App) {
+
+    }
 }
