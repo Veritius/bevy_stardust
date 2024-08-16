@@ -13,6 +13,8 @@ impl Plugin for RoomsPlugin {
         app.register_type::<ReplicationRoom>();
 
         // Various observers
+        app.observe(peer_component_removed_observer);
+        app.observe(room_component_removed_observer);
         app.observe(member_relation_insert_observer);
         app.observe(member_relation_remove_observer);
     }
@@ -44,6 +46,20 @@ impl ReplicationRoom {
     pub fn contains(&self, peer: Entity) -> bool {
         self.member_cache.contains(&peer)
     }
+}
+
+fn peer_component_removed_observer(
+    trigger: Trigger<OnRemove, ReplicationPeer>,
+    mut commands: Commands,
+) {
+    commands.entity(trigger.entity()).unset_all::<Member>();
+}
+
+fn room_component_removed_observer(
+    trigger: Trigger<OnRemove, ReplicationRoom>,
+    mut commands: Commands,
+) {
+    commands.entity(trigger.entity()).unset_all::<Member>();
 }
 
 fn member_relation_insert_observer(
