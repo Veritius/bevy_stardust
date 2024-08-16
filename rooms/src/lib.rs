@@ -243,14 +243,6 @@ fn room_component_remove_observer(
 fn member_relation_insert_observer(
     trigger: Trigger<SetEvent<Member>>,
     mut commands: Commands,
-    mut rooms: Query<(&mut Room, Relations<Member>)>,
-) {
-    todo!()
-}
-
-fn member_relation_remove_observer(
-    trigger: Trigger<UnsetEvent<Member>>,
-    mut commands: Commands,
     peers: Query<(), With<Peer>>,
     mut rooms: Query<((Entity, &mut Room), Relations<Member>)>,
 ) {
@@ -287,6 +279,14 @@ fn member_relation_remove_observer(
             });
         },
     }
+}
+
+fn member_relation_remove_observer(
+    trigger: Trigger<UnsetEvent<Member>>,
+    mut commands: Commands,
+    mut rooms: Query<(&mut Room, Relations<Member>)>,
+) {
+    todo!()
 }
 
 #[cfg(test)]
