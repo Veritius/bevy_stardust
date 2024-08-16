@@ -2,7 +2,7 @@
 #![warn(missing_docs)]
 
 use std::collections::BTreeSet;
-use bevy::prelude::*;
+use bevy::{ecs::{system::EntityCommands, world::Command}, prelude::*};
 use bevy_stardust::prelude::*;
 use aery::prelude::*;
 
@@ -101,6 +101,111 @@ pub struct JoinedRoom {
 pub struct LeftRoom {
     /// The ID of the peer that joined the room.
     pub peer: Entity,
+}
+
+/// An extension API for working with rooms.
+pub trait RoomCommands {
+    /// Creates a direct membership with `room`, using [`JoinRoom`].
+    fn join(&mut self, room: Entity) -> &mut Self;
+
+    /// Removes a direct membership with `room` if one exists, using [`LeaveRoom`].
+    fn leave(&mut self, room: Entity) -> &mut Self;
+}
+
+impl RoomCommands for EntityCommands<'_> {
+    fn join(&mut self, room: Entity) -> &mut Self {
+        let peer = self.id();
+
+        self.commands().add(JoinRoom {
+            peer,
+            room,
+        });
+
+        return self;
+    }
+
+    fn leave(&mut self, room: Entity) -> &mut Self {
+        let peer = self.id();
+
+        self.commands().add(LeaveRoom {
+            peer,
+            room,
+        });
+
+        return self;
+    }
+}
+
+impl RoomCommands for EntityWorldMut<'_> {
+    fn join(&mut self, room: Entity) -> &mut Self {
+        let peer = self.id();
+
+        let command = JoinRoom {
+            peer,
+            room,
+        };
+
+        self.world_scope(|world| {
+            Command::apply(command, world);
+        });
+
+        self.update_location();
+
+        return self;
+    }
+
+    fn leave(&mut self, room: Entity) -> &mut Self {
+        let peer = self.id();
+
+        let command = LeaveRoom {
+            peer,
+            room,
+        };
+
+        self.world_scope(|world| {
+            Command::apply(command, world);
+        });
+
+        self.update_location();
+
+        return self;
+    }
+}
+
+/// A command to add a direct membership from a [`Peer`] (or `Room`) to a [`Room`].
+#[derive(Debug, Clone)]
+pub struct JoinRoom {
+    /// The peer that is to become a member of the room.
+    /// May also be a room itself.
+    pub peer: Entity,
+
+    /// The room that the peer is to become a member of.
+    pub room: Entity,
+}
+
+impl Command for JoinRoom {
+    #[inline]
+    fn apply(self, world: &mut World) {
+        Set::<Member>::new(self.peer, self.room).apply(world)
+    }
+}
+
+/// A command to remove a direct membership from a [`Peer`] (or `Room`) from a [`Room`].
+#[derive(Debug, Clone)]
+pub struct LeaveRoom {
+    /// The peer that is to have its membership with the room removed.
+    /// May also be a room itself.
+    pub peer: Entity,
+
+    /// The room that the membership is to removed from.
+    pub room: Entity,
+}
+
+impl Command for LeaveRoom {
+    #[inline]
+    fn apply(self, world: &mut World) {
+        Unset::<Member>::new(self.peer, self.room).apply(world)
+    }
 }
 
 fn peer_component_insert_observer(
