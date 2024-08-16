@@ -14,6 +14,7 @@ default-features = false
 
 [dependencies.bevy_stardust]
 version = "0.6"
+path = "../stardust"
 
 [dependencies.aery]
 version = "0.7"
@@ -21,5 +22,11 @@ version = "0.7"
 [dependencies.anyhow]
 version = "1"
 
+[dependencies.bevy_stardust_rooms]
+version = "0.1"
+path = "../rooms"
+optional = true
+
 [features]
-default = []
+default = ["rooms"]
+rooms = ["dep:bevy_stardust_rooms"]
