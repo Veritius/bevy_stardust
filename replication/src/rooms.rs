@@ -30,6 +30,14 @@ pub struct ReplicationRoom {
     member_cache: BTreeSet<Entity>,
 }
 
+impl Default for ReplicationRoom {
+    fn default() -> Self {
+        Self {
+            member_cache: BTreeSet::new(),
+        }
+    }
+}
+
 fn member_relation_insert_observer(
     trigger: Trigger<SetEvent<Member>>,
     peers: Query<&ReplicationPeer>,
@@ -82,4 +90,58 @@ fn member_relation_remove_observer(
 
     if !peers.contains(host) { return; }
     if !rooms.contains(target) { return; }
+}
+
+mod tests {
+    use std::ops::Not;
+
+    use super::*;
+
+    fn room(world: &mut World) -> Entity {
+        world.spawn(ReplicationRoom::default()).id()
+    }
+
+    fn peer(world: &mut World) -> Entity {
+        use crate::identifiers::Side;
+        world.spawn(ReplicationPeer::new(Side::Left)).id()
+    }
+
+    fn room_cache(world: &World, id: Entity) -> &BTreeSet<Entity> {
+        &world.get::<ReplicationRoom>(id).unwrap().member_cache
+    }
+
+    #[test]
+    fn member_cache_addition() {
+        let mut world = World::new();
+        world.observe(member_relation_insert_observer);
+
+        let room_a = room(&mut world);
+        let room_b = room(&mut world);
+
+        let peer_a = peer(&mut world);
+        let peer_b = peer(&mut world);
+        let peer_c = peer(&mut world);
+
+        // The room cache should start empty
+        assert_eq!(room_cache(&world, room_a).len(), 0);
+
+        world.entity_mut(peer_a).set::<Member>(room_a);
+        assert!(room_cache(&world, room_a).contains(&peer_a));
+
+        world.entity_mut(peer_b).set::<Member>(room_a);
+        assert!(room_cache(&world, room_a).contains(&peer_a));
+        assert!(room_cache(&world, room_a).contains(&peer_b));
+
+        world.entity_mut(peer_c).set::<Member>(room_b);
+        assert!(room_cache(&world, room_a).contains(&peer_a));
+        assert!(room_cache(&world, room_a).contains(&peer_b));
+        assert!(room_cache(&world, room_a).contains(&peer_c).not());
+        assert!(room_cache(&world, room_b).contains(&peer_c));
+
+        world.entity_mut(room_b).set::<Member>(room_a);
+        assert!(room_cache(&world, room_a).contains(&peer_a));
+        assert!(room_cache(&world, room_a).contains(&peer_b));
+        assert!(room_cache(&world, room_a).contains(&peer_c));
+        assert!(room_cache(&world, room_b).contains(&peer_c));
+    }
 }
