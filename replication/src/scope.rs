@@ -4,6 +4,8 @@ use std::{collections::BTreeSet, marker::PhantomData};
 use bevy::{ecs::component::StorageType, prelude::*};
 use aery::prelude::*;
 
+use crate::entities::Replicated;
+
 /// An [entity relation](aery) that allows an entity to be replicated to a peer.
 /// Targeted from the peer (the host) to the entity being replicated (the target).
 #[derive(Relation)]
@@ -45,6 +47,14 @@ pub struct EntityScopePlugin;
 
 impl Plugin for EntityScopePlugin {
     fn build(&self, app: &mut App) {
-
+        // Various observers
+        app.observe(visibility_relation_removed_observer);
     }
+}
+
+fn visibility_relation_removed_observer(
+    trigger: Trigger<UnsetEvent<Visible>>,
+    mut caches: Query<&mut VisibilityCache, With<Replicated>>,
+) {
+
 }
