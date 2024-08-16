@@ -2,7 +2,6 @@
 
 use bevy::prelude::*;
 use aery::prelude::*;
-use crate::config::Clusivity;
 
 /// Adds support for [replication rooms](ReplicationRoom).
 pub struct RoomsPlugin;
@@ -21,6 +20,5 @@ pub struct RoomMember;
 #[derive(Debug, Component, Reflect)]
 #[reflect(Component)]
 pub struct ReplicationRoom {
-    /// Whether related members are considered excluded or included by their relation.
-    pub clusivity: Clusivity,
+
 }
