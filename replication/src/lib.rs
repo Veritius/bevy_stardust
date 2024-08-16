@@ -10,6 +10,5 @@ pub mod hierarchy;
 pub mod identifiers;
 pub mod plugins;
 pub mod relations;
-pub mod rooms;
 pub mod scope;
 pub mod serialisation;

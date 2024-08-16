@@ -1,0 +1,19 @@
+[package]
+name="bevy_stardust_rooms"
+version="0.1.0"
+edition="2021"
+authors=["Veritius <veritiusgaming@gmail.com>"]
+license="MIT OR Apache-2.0"
+description="Organisational tools for collections of peers"
+repository="https://github.com/veritius/bevy_stardust/"
+keywords=["bevy", "gamedev", "networking"]
+
+[dependencies.bevy]
+version = "0.14"
+default-features = false
+
+[dependencies.bevy_stardust]
+version = "0.6"
+
+[dependencies.aery]
+version = "0.7"
