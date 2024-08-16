@@ -142,6 +142,8 @@ mod tests {
         assert!(room_cache(&world, room_a).contains(&peer_a));
         assert!(room_cache(&world, room_a).contains(&peer_b));
         assert!(room_cache(&world, room_a).contains(&peer_c));
+        assert!(room_cache(&world, room_b).contains(&peer_a).not());
+        assert!(room_cache(&world, room_b).contains(&peer_b).not());
         assert!(room_cache(&world, room_b).contains(&peer_c));
     }
 }
