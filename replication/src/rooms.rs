@@ -48,6 +48,30 @@ impl ReplicationRoom {
     }
 }
 
+/// Raised when a peer joins a [`ReplicationRoom`].
+/// 
+/// This differs from the addition of the [`Member`] relation,
+/// as being considered a member can be indirect, such as a peer
+/// being a member of group A, which is a member of group B,
+/// so the peer is considered a member of group A and B.
+#[derive(Event)]
+pub struct JoinedRoom {
+    /// The peer that joined.
+    pub peer: Entity,
+}
+
+/// Raised when a peer leaves a [`ReplicationRoom`].
+/// 
+/// This differs from the addition of the [`Member`] relation,
+/// as being considered a member can be indirect, such as a peer
+/// being a member of group A, which is a member of group B,
+/// so the peer is considered a member of group A and B.
+#[derive(Event)]
+pub struct LeftRoom {
+    /// The peer that left.
+    pub peer: Entity,
+}
+
 fn peer_component_removed_observer(
     trigger: Trigger<OnRemove, ReplicationPeer>,
     mut commands: Commands,
@@ -65,7 +89,8 @@ fn room_component_removed_observer(
 fn member_relation_insert_observer(
     trigger: Trigger<SetEvent<Member>>,
     peers: Query<&ReplicationPeer>,
-    mut rooms: Query<(&mut ReplicationRoom, Relations<Member>)>,
+    mut rooms: Query<((Entity, &mut ReplicationRoom), Relations<Member>)>,
+    mut commands: Commands,
 ) {
     let host = trigger.entity();
     let target = trigger.event().target;
@@ -79,13 +104,16 @@ fn member_relation_insert_observer(
         true => {
             // Copy the cache into its own set so it can be iterated over
             // This is necessary since we need mutable access to the query later
-            let (room, _) = rooms.get(host).unwrap();
+            let ((_, room), _) = rooms.get(host).unwrap();
             let set = room.member_cache.iter().cloned().collect::<Vec<_>>();
 
             // If the relation is a target from one room to another,
             // the target gains all the members from the first room
-            rooms.traverse_mut::<Member>([target]).for_each(|room, _| {
-                room.member_cache.extend(&set);
+            rooms.traverse_mut::<Member>([target]).for_each(|(id, room), _| {
+                for peer in set.iter().cloned() {
+                    room.member_cache.insert(peer);
+                    commands.trigger_targets(JoinedRoom { peer }, *id);
+                }
             });
         },
 
@@ -97,8 +125,9 @@ fn member_relation_insert_observer(
 
             // If the relation host is just a replication peer,
             // it's simply inserted into all descendants
-            rooms.traverse_mut::<Member>([target]).for_each(|room, _| {
+            rooms.traverse_mut::<Member>([target]).for_each(|(id, room), _| {
                 room.member_cache.insert(host);
+                commands.trigger_targets(JoinedRoom { peer: host }, *id);
             });
         },
     }
