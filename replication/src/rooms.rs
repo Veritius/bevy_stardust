@@ -46,10 +46,10 @@ fn member_relation_insert_observer(
     let host = trigger.entity();
     let target = trigger.event().target;
 
-    if !peers.contains(host) {
-        warn!("{host} is not a replication peer but was made the host of a member relation");
-        return;
-    }
+    // if !peers.contains(host) {
+    //     warn!("{host} is not a replication peer but was made the host of a member relation");
+    //     return;
+    // }
 
     if !rooms.contains(target) {
         warn!("Replication peer {host} was made a member of a non-room entity {target}");
@@ -58,15 +58,15 @@ fn member_relation_insert_observer(
 
     match rooms.contains(host) {
         true => {
-            let mut discovered = BTreeSet::new();
-            discovered.insert(host);
+            // Copy the cache into its own set so it can be iterated over
+            // This is necessary since we need mutable access to the query later
+            let (room, _) = rooms.get(host).unwrap();
+            let set = room.member_cache.iter().cloned().collect::<Vec<_>>();
 
             // If the relation is a target from one room to another,
             // the target gains all the members from the first room
             rooms.traverse_mut::<Member>([target]).for_each(|room, _| {
-                discovered.extend(&room.member_cache);
-                room.member_cache.extend(&discovered);
-                room.member_cache.insert(host);
+                room.member_cache.extend(&set);
             });
         },
 
@@ -92,9 +92,9 @@ fn member_relation_remove_observer(
     if !rooms.contains(target) { return; }
 }
 
+#[cfg(test)]
 mod tests {
     use std::ops::Not;
-
     use super::*;
 
     fn room(world: &mut World) -> Entity {
