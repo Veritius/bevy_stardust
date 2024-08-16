@@ -14,18 +14,18 @@ impl Plugin for EntityScopePlugin {
 }
 
 /// An [entity relation](aery) that allows an entity to be replicated to a peer.
-/// Targeted from the entity to be replicated (the host) to the peer (the target).
+/// Targeted from the peer (the host) to the entity being replicated (the target).
 #[derive(Relation)]
 pub struct Visible<T = Entity>(PhantomData<T>);
 
 /// An [entity relation](aery) that prevents an entity from being replicated to a peer.
-/// Targeted from the entity to be replicated (the host) to the peer (the target).
+/// Targeted from the peer (the host) to the entity being replicated (the target).
 #[derive(Relation)]
 pub struct Hidden<T = Entity>(PhantomData<T>);
 
-/// An [entity relation](aery) that makes the entity inherit the visibility of its target.
-/// Targeted from the inheritor (the host) to the inherited (the target).
-pub struct Inherit<T = Entity>(PhantomData<T>);
+/// An [entity relation](aery) that makes the entity visible if any of its targets are visible.
+#[derive(Relation)]
+pub struct Connect<T = Entity>(PhantomData<T>);
 
 /// Added to entities to cache which peers can see this entity.
 #[derive(Debug)]
