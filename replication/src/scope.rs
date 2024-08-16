@@ -23,6 +23,10 @@ pub struct Visible<T = Entity>(PhantomData<T>);
 #[derive(Relation)]
 pub struct Hidden<T = Entity>(PhantomData<T>);
 
+/// An [entity relation](aery) that makes the entity inherit the visibility of its target.
+/// Targeted from the inheritor (the host) to the inherited (the target).
+pub struct Inherit<T = Entity>(PhantomData<T>);
+
 /// Added to entities to cache which peers can see this entity.
 #[derive(Debug)]
 pub struct VisibilityCache<T = Entity> {
