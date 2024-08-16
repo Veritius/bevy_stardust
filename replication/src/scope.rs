@@ -19,7 +19,12 @@ pub struct Hidden<T = Entity>(PhantomData<T>);
 #[derive(Relation)]
 pub struct Connect<T = Entity>(PhantomData<T>);
 
-/// Added to entities to cache which peers can see this entity.
+/// Add to entities to cache which peers can see this entity.
+/// 
+/// This dramatically increases performance at the cost of additional memory usage.
+/// It also adds some additional overhead to changing scope relations.
+/// If your component is changed very infrequently, and is replicated to a large number
+/// of peers, it may be worth omitting this component.
 #[derive(Debug)]
 pub struct VisibilityCache<T = Entity> {
     cache: BTreeSet<Entity>,
