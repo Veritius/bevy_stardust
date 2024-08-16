@@ -61,14 +61,14 @@ fn visible_relation_removed_observer(
 }
 
 fn hidden_relation_removed_observer(
-    trigger: Trigger<UnsetEvent<Visible>>,
+    trigger: Trigger<UnsetEvent<Hidden>>,
     mut caches: Query<&mut VisibilityCache, With<Replicated>>,
 ) {
 
 }
 
 fn connect_relation_removed_observer(
-    trigger: Trigger<UnsetEvent<Visible>>,
+    trigger: Trigger<UnsetEvent<Connect>>,
     mut caches: Query<&mut VisibilityCache, With<Replicated>>,
 ) {
 
