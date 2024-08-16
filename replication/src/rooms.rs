@@ -38,6 +38,14 @@ impl Default for ReplicationRoom {
     }
 }
 
+impl ReplicationRoom {
+    /// Returns `true` if the room contains `peer`.
+    #[inline]
+    pub fn contains(&self, peer: Entity) -> bool {
+        self.member_cache.contains(&peer)
+    }
+}
+
 fn member_relation_insert_observer(
     trigger: Trigger<SetEvent<Member>>,
     peers: Query<&ReplicationPeer>,
