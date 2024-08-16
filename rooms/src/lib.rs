@@ -47,12 +47,16 @@ impl Room {
     }
 
     /// Returns `true` if `peer` is considered a member of the room.
+    /// 
+    /// This is meaningless unless the component is part of the `World`.
     #[inline]
     pub fn contains(&self, peer: Entity) -> bool {
         self.cache.contains(&peer)
     }
 
     /// Returns an iterator over all the members of the room.
+    /// 
+    /// This is meaningless unless the component is part of the `World`.
     pub fn iter(&self) -> RoomIter {
         RoomIter {
             iter: self.cache.iter(),
