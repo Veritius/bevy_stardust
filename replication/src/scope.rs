@@ -52,27 +52,51 @@ pub struct EntityScopePlugin;
 impl Plugin for EntityScopePlugin {
     fn build(&self, app: &mut App) {
         // Various observers
-        app.observe(visible_relation_removed_observer);
-        app.observe(hidden_relation_removed_observer);
-        app.observe(connect_relation_removed_observer);
+        app.observe(visible_relation_insert_observer);
+        app.observe(hidden_relation_insert_observer);
+        app.observe(connect_relation_insert_observer);
+        app.observe(visible_relation_remove_observer);
+        app.observe(hidden_relation_remove_observer);
+        app.observe(connect_relation_remove_observer);
     }
 }
 
-fn visible_relation_removed_observer(
+fn visible_relation_insert_observer(
+    trigger: Trigger<SetEvent<Visible>>,
+    mut caches: Query<&mut VisibilityCache, With<Replicated>>,
+) {
+
+}
+
+fn hidden_relation_insert_observer(
+    trigger: Trigger<SetEvent<Hidden>>,
+    mut caches: Query<&mut VisibilityCache, With<Replicated>>,
+) {
+
+}
+
+fn connect_relation_insert_observer(
+    trigger: Trigger<SetEvent<Connect>>,
+    mut caches: Query<&mut VisibilityCache, With<Replicated>>,
+) {
+
+}
+
+fn visible_relation_remove_observer(
     trigger: Trigger<UnsetEvent<Visible>>,
     mut caches: Query<&mut VisibilityCache, With<Replicated>>,
 ) {
 
 }
 
-fn hidden_relation_removed_observer(
+fn hidden_relation_remove_observer(
     trigger: Trigger<UnsetEvent<Hidden>>,
     mut caches: Query<&mut VisibilityCache, With<Replicated>>,
 ) {
 
 }
 
-fn connect_relation_removed_observer(
+fn connect_relation_remove_observer(
     trigger: Trigger<UnsetEvent<Connect>>,
     mut caches: Query<&mut VisibilityCache, With<Replicated>>,
 ) {
