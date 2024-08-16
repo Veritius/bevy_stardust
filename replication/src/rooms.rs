@@ -32,16 +32,53 @@ pub struct ReplicationRoom {
 
 fn member_relation_insert_observer(
     trigger: Trigger<SetEvent<Member>>,
-    mut rooms: Query<&mut ReplicationRoom>,
     peers: Query<&ReplicationPeer>,
+    mut rooms: Query<(&mut ReplicationRoom, Relations<Member>)>,
 ) {
+    let host = trigger.entity();
+    let target = trigger.event().target;
 
+    if !peers.contains(host) {
+        warn!("{host} is not a replication peer but was made the host of a member relation");
+        return;
+    }
+
+    if !rooms.contains(target) {
+        warn!("Replication peer {host} was made a member of a non-room entity {target}");
+        return;
+    }
+
+    match rooms.contains(host) {
+        true => {
+            let mut discovered = BTreeSet::new();
+            discovered.insert(host);
+
+            // If the relation is a target from one room to another,
+            // the target gains all the members from the first room
+            rooms.traverse_mut::<Member>([target]).for_each(|room, _| {
+                discovered.extend(&room.member_cache);
+                room.member_cache.extend(&discovered);
+                room.member_cache.insert(host);
+            });
+        },
+
+        false => {
+            // If the relation host is just a replication peer,
+            // it's simply inserted into all descendants
+            rooms.traverse_mut::<Member>([target]).for_each(|room, _| {
+                room.member_cache.insert(host);
+            });
+        },
+    }
 }
 
 fn member_relation_remove_observer(
     trigger: Trigger<UnsetEvent<Member>>,
-    mut rooms: Query<&mut ReplicationRoom>,
     peers: Query<&ReplicationPeer>,
+    mut rooms: Query<(&mut ReplicationRoom, Relations<Member>)>,
 ) {
+    let host = trigger.entity();
+    let target = trigger.event().target;
 
+    todo!()
 }
