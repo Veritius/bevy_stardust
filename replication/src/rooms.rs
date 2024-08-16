@@ -80,5 +80,6 @@ fn member_relation_remove_observer(
     let host = trigger.entity();
     let target = trigger.event().target;
 
-    todo!()
+    if !peers.contains(host) { return; }
+    if !rooms.contains(target) { return; }
 }
