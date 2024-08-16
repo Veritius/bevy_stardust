@@ -46,11 +46,6 @@ fn member_relation_insert_observer(
     let host = trigger.entity();
     let target = trigger.event().target;
 
-    // if !peers.contains(host) {
-    //     warn!("{host} is not a replication peer but was made the host of a member relation");
-    //     return;
-    // }
-
     if !rooms.contains(target) {
         warn!("Replication peer {host} was made a member of a non-room entity {target}");
         return;
@@ -71,6 +66,11 @@ fn member_relation_insert_observer(
         },
 
         false => {
+            if !peers.contains(host) {
+                warn!("{host} is not a replication peer but was made the host of a member relation");
+                return;
+            }
+
             // If the relation host is just a replication peer,
             // it's simply inserted into all descendants
             rooms.traverse_mut::<Member>([target]).for_each(|room, _| {
