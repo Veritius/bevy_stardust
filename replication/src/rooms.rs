@@ -20,7 +20,12 @@ impl Plugin for RoomsPlugin {
     }
 }
 
-/// A [`Relation`] identifying a [`ReplicationPeer`] as a member of a [`ReplicationRoom`].
+/// An [entity relation](aery) that defines a peer as a member of a [`ReplicationRoom`].
+/// 
+/// Most often, this relation is created from a [`ReplicationPeer`] to a [`ReplicationRoom`].
+/// The peer will then be considered a member of the room, and included in its set.
+/// However, a relation can also be created between two rooms. If room A is made a
+/// member of room B, all members of room A will also be members of room B.
 #[derive(Relation)]
 #[aery(Poly)]
 pub struct Member;
