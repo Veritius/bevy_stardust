@@ -3,7 +3,6 @@ Highly configurable authoritative replication for [bevy_stardust].
 
 ## Features
 - Replicating entities and components
-- Replication groups (rooms)
 - Configurable authoritativeness
 - Fine-grained control over replication
 - Extensive query filters

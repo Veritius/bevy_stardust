@@ -1,10 +1,10 @@
 [package]
-name="bevy_stardust_replication"
+name="bevy_stardust_rooms"
 version="0.1.0"
 edition="2021"
 authors=["Veritius <veritiusgaming@gmail.com>"]
 license="MIT OR Apache-2.0"
-description="Authoritative replication functionality for Stardust."
+description="Organisational tools for collections of peers"
 repository="https://github.com/veritius/bevy_stardust/"
 keywords=["bevy", "gamedev", "networking"]
 
@@ -14,19 +14,6 @@ default-features = false
 
 [dependencies.bevy_stardust]
 version = "0.6"
-path = "../stardust"
 
 [dependencies.aery]
 version = "0.7"
-
-[dependencies.anyhow]
-version = "1"
-
-[dependencies.bevy_stardust_rooms]
-version = "0.1"
-path = "../rooms"
-optional = true
-
-[features]
-default = ["rooms"]
-rooms = ["dep:bevy_stardust_rooms"]
