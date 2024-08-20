@@ -8,7 +8,11 @@ description="Miscellaneous utilities for bevy_stardust"
 repository="https://github.com/veritius/bevy_stardust/"
 keywords=["bevy", "gamedev", "networking"]
 
-[dependencies.bevy]
+[dependencies.bevy_ecs]
+version = "0.14"
+default-features = false
+
+[dependencies.bevy_app]
 version = "0.14"
 default-features = false
 
