@@ -2,7 +2,9 @@
 
 use std::time::{Duration, Instant};
 use bevy_ecs::prelude::*;
-use bevy_reflect::prelude::*;
+
+#[cfg(feature="reflect")]
+use bevy_reflect::{Reflect, prelude::ReflectDefault};
 
 /// A statistics tracking component for [peer entities].
 /// 
@@ -15,8 +17,8 @@ use bevy_reflect::prelude::*;
 /// 
 /// [peer entities]: crate::connections
 /// [`PeerRtt`]: crate::connections::PeerRtt
-#[derive(Debug, Default, Clone, Component, Reflect)]
-#[reflect(Default, Component)]
+#[derive(Debug, Default, Clone, Component)]
+#[cfg_attr(feature="reflect", derive(Reflect), reflect(Debug, Default, Component))]
 #[non_exhaustive]
 pub struct PeerStats {
     /// The last time any data was received by the transport layer.
@@ -43,8 +45,8 @@ pub struct PeerStats {
 /// Instructs transport layers to drop packets randomly, simulating an unstable connection.
 /// 
 /// This value ranges between `0.0` (never drop) to `1.0` (always drop), with `0.5` dropping 50% of the time.
-#[derive(Debug, Default, Clone, Component, Reflect)]
-#[reflect(Debug, Default, Component)]
+#[derive(Debug, Default, Clone, Component)]
+#[cfg_attr(feature="reflect", derive(Reflect), reflect(Debug, Default, Component))]
 pub struct DropPackets(#[reflect(@0.0..=1.0)] pub f32);
 
 impl DropPackets {
@@ -59,8 +61,8 @@ impl DropPackets {
 /// 
 /// This latency increase is implemented by the transport layer, as a minimum latency value.
 /// You can think of it as a function `min(a,b)` where `a` is their real latency, and `b` is the value in this component.
-#[derive(Debug, Default, Clone, Component, Reflect)]
-#[reflect(Debug, Default, Component)]
+#[derive(Debug, Default, Clone, Component)]
+#[cfg_attr(feature="reflect", derive(Reflect), reflect(Debug, Default, Component))]
 pub struct SimulateLatency(pub Duration);
 
 impl From<Duration> for SimulateLatency {
