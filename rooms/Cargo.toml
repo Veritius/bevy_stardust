@@ -1,0 +1,29 @@
+[package]
+name="bevy_stardust_rooms"
+version="0.1.0"
+edition="2021"
+authors=["Veritius <veritiusgaming@gmail.com>"]
+license="MIT OR Apache-2.0"
+description="Organisational tools for collections of peers"
+repository="https://github.com/veritius/bevy_stardust/"
+keywords=["bevy", "gamedev", "networking"]
+
+[dependencies.bevy_app]
+version = "0.14"
+default-features = false
+
+[dependencies.bevy_ecs]
+version = "0.14"
+default-features = false
+
+[dependencies.bevy_reflect]
+version = "0.14"
+default-features = false
+optional = true
+
+[dependencies.bevy_stardust]
+version = "0.7"
+path = "../stardust"
+
+[features]
+reflect = ["dep:bevy_reflect", "bevy_app/bevy_reflect", "bevy_ecs/bevy_reflect"]
