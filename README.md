@@ -28,7 +28,7 @@ You can use any replication or extra features you want. If you prefer a specific
 ## Usage
 | Bevy | Stardust |
 | ---- | -------- |
-| 0.14 | 0.6      |
+| 0.14 | 0.7      |
 | 0.12 | 0.2      |
 | 0.11 | 0.1      |
 
@@ -133,7 +133,7 @@ fn read_words_system(
 ```
 </details>
 
-## Feature flags
+### Feature flags
 | Flag          | Description               |
 |---------------|---------------------------|
 | `reflect`     | `bevy_reflect` support    |
