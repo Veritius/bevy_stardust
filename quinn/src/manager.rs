@@ -1,5 +1,6 @@
-use std::{marker::PhantomData, net::{SocketAddr, ToSocketAddrs}, sync::Arc};
-use bevy::{ecs::{entity::Entities, system::{EntityCommand, SystemParam}}, prelude::*};
+use std::{net::ToSocketAddrs, sync::Arc};
+use anyhow::Result;
+use bevy::{ecs::{entity::Entities, system::{EntityCommands, SystemParam}}, prelude::*};
 use quinn_proto::{ClientConfig, EndpointConfig, ServerConfig};
 
 /// Utility for opening endpoints.
@@ -11,108 +12,67 @@ pub struct Endpoints<'w, 's> {
 
 impl Endpoints<'_, '_> {
     /// Queues a new endpoint to be opened.
-    pub fn create(
+    pub fn open(
         &mut self,
-        endpoint_config: Arc<EndpointConfig>,
-        server_config: Option<Arc<ServerConfig>>,
-        bind_address: impl ToSocketAddrs,
-    ) -> EndpointBuilder {
-        let id = self.entities.reserve_entity();
-
-        return EndpointBuilder {
-            entities: self.entities,
-
-            endpoint: QueuedEndpoint {
-                entity: id,
-
-                endpoint_config,
-                server_config,
-                bind_address: todo!(),
-
-                connections: Vec::new(),
-                commands: Vec::new(),
-            },
+        f: impl FnOnce(&mut EndpointBuilder),
+    ) {
+        let mut builder = EndpointBuilder {
+            commands: self.commands.reborrow(),
         };
+
+        f(&mut builder);
     }
 }
 
 pub struct EndpointBuilder<'a> {
-    entities: &'a Entities,
-
-    pub(crate) endpoint: QueuedEndpoint,
+    commands: Commands<'a, 'a>,
 }
 
 impl<'a> EndpointBuilder<'a> {
-    pub fn id(&self) -> Entity {
-        self.endpoint.entity
-    }
-
-    pub fn add(
+    pub fn simple(
         &mut self,
-        command: impl EntityCommand,
-    ) -> &mut EndpointBuilder<'a> {
-        self.endpoint.commands.push(Box::new(command));
-        return self;
-    }
-
-    pub fn connect(
-        &mut self,
-        client_config: ClientConfig,
-        remote_address: SocketAddr,
-        server_name: Arc<str>,
-    ) -> ConnectionBuilder<'a> {
-        let id = self.entities.reserve_entity();
-
-        return ConnectionBuilder {
-            connection: QueuedConnection {
-                entity: id,
-                client_config,
-                remote_address,
-                server_name,
-                commands: Vec::new(),
-            },
-
-            _ph: PhantomData,
-        };
+        endpoint_config: Arc<EndpointConfig>,
+        server_config: Option<Arc<ServerConfig>>,
+        bind_address: impl ToSocketAddrs,
+    ) -> Result<EndpointCommands<'a>> {
+        todo!()
     }
 }
 
-pub(crate) struct QueuedEndpoint {
-    pub entity: Entity,
+pub struct EndpointCommands<'a> {
+    commands: EntityCommands<'a>,
+}
 
-    pub endpoint_config: Arc<EndpointConfig>,
-    pub server_config: Option<Arc<ServerConfig>>,
-    pub bind_address: SocketAddr,
+impl<'a> EndpointCommands<'a> {
+    pub fn connect(
+        &mut self,
+        f: impl FnOnce(&mut ConnectionBuilder),
+    ) {
+        let mut builder = ConnectionBuilder {
+            endpoint: self.commands.id(),
+            commands: self.commands.commands(),
+        };
 
-    pub connections: Vec<QueuedConnection>,
-    pub commands: Vec<Box<dyn EntityCommand>>,
+        f(&mut builder);
+    }
 }
 
 pub struct ConnectionBuilder<'a> {
-    connection: QueuedConnection,
-    _ph: PhantomData<&'a ()>,
+    endpoint: Entity,
+    commands: Commands<'a, 'a>,
 }
 
 impl<'a> ConnectionBuilder<'a> {
-    pub fn id(&self) -> Entity {
-        self.connection.entity
-    }
-
-    pub fn add(
+    pub fn simple(
         &mut self,
-        command: impl EntityCommand,
-    ) -> &mut ConnectionBuilder<'a> {
-        self.connection.commands.push(Box::new(command));
-        return self;
+        client_config: ClientConfig,
+        remote_address: impl ToSocketAddrs,
+        server_name: Arc<str>,
+    ) -> Result<ConnectionCommands> {
+        todo!()
     }
 }
 
-pub(crate) struct QueuedConnection {
-    pub entity: Entity,
-
-    pub client_config: ClientConfig,
-    pub remote_address: SocketAddr,
-    pub server_name: Arc<str>,
-
-    pub commands: Vec<Box<dyn EntityCommand>>,
+pub struct ConnectionCommands<'a> {
+    commands: EntityCommands<'a>,
 }

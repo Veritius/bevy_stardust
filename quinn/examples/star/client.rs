@@ -17,17 +17,19 @@ fn main() {
     shared::setup(&mut app);
 
     app.add_systems(Startup, |mut endpoints: Endpoints| {
-        let mut endpoint = endpoints.create(
-            Arc::new(EndpointConfig::default()),
-            None,
-            shared::WILDCARD_ADDRESS,
-        );
-
-        endpoint.connect(
-            ClientConfig::with_root_certificates(root_certs()).unwrap(),
-            todo!(),
-            "example.com".into(),
-        );
+        endpoints.open(|builder| {
+            builder.simple(
+                Arc::new(EndpointConfig::default()),
+                None,
+                shared::WILDCARD_ADDRESS,
+            ).unwrap().connect(|builder| {
+                builder.simple(
+                    ClientConfig::with_root_certificates(root_certs()).unwrap(),
+                    shared::SERVER_ADDRESS,
+                    "example.com".into()
+                ).unwrap();
+            })
+        });
     });
 
     app.run();
