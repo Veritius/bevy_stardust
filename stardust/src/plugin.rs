@@ -1,10 +1,11 @@
 //! The Stardust core plugin.
 
-use bevy::prelude::*;
+use bevy_app::prelude::*;
+use bevy_ecs::prelude::*;
+
 use crate::prelude::*;
 use crate::channels;
 use crate::connections::*;
-use crate::diagnostics::*;
 
 /// The Stardust multiplayer plugin.
 /// Adds the core functionality of Stardust, but does not add a transport layer.
@@ -19,10 +20,14 @@ impl Plugin for StardustPlugin {
         app.register_type::<PeerUid>();
         app.register_type::<PeerLifestage>();
 
-        // Register diagnostic types
-        app.register_type::<PeerStats>();
-        app.register_type::<DropPackets>();
-        app.register_type::<SimulateLatency>();
+        // Register connnection debug_tools types
+        #[cfg(feature="debug_tools")] {
+            use crate::connections::debug_tools::*;
+
+            app.register_type::<PeerStats>();
+            app.register_type::<DropPackets>();
+            app.register_type::<SimulateLatency>();
+        }
 
         // Register channel types
         app.register_type::<ChannelId>();

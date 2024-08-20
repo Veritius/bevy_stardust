@@ -1,8 +1,9 @@
-use bevy::reflect::Reflect;
+#[cfg(feature="reflect")]
+use bevy_reflect::Reflect;
 
 /// Configuration for a channel.
-#[derive(Debug, Clone, Hash, Reflect)]
-#[reflect(Debug, Hash)]
+#[derive(Debug, Clone, Hash)]
+#[cfg_attr(feature="reflect", derive(Reflect), reflect(Debug, Hash))]
 pub struct ChannelConfiguration {
     /// Guarantees that the transport layer must make
     /// for messages sent on this channel. See the
@@ -45,8 +46,8 @@ pub struct ChannelConfiguration {
 /// received in order, the application sees `[1,2,3,4,5]`. However, if the
 /// messages are received in the order `[1,3,2,5,4]`, the application will
 /// only see the messages `[1,3,5]`.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Reflect)]
-#[reflect(Debug, PartialEq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[cfg_attr(feature="reflect", derive(Reflect), reflect(Debug, PartialEq, Hash))]
 #[non_exhaustive]
 pub enum MessageConsistency {
     /// Messages lost in transport will not be resent.

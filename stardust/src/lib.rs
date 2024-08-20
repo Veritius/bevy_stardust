@@ -3,8 +3,10 @@
 
 pub mod channels;
 pub mod connections;
-pub mod diagnostics;
 pub mod messages;
 pub mod plugin;
 pub mod prelude;
 pub mod scheduling;
+
+#[cfg(feature="diagnostics")]
+pub mod diagnostics;

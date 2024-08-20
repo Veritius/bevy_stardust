@@ -1,11 +1,15 @@
-use bevy::{ecs::{query::{QueryData, QueryFilter, WorldQuery}, storage::TableRow}, prelude::*};
+use bevy_ecs::{query::{QueryData, QueryFilter, WorldQuery}, storage::TableRow};
+use bevy_ecs::prelude::*;
+
+#[cfg(feature="reflect")]
+use bevy_reflect::Reflect;
 
 /// The lifestage of a connection.
 /// 
 /// This exists to model the average lifecycle of a connection, from an initial handshake to being disconnected.
 /// An `Ord` implementation is provided, with variants being 'greater' if they're later in the model lifecycle.
-#[derive(Debug, Component, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Reflect)]
-#[reflect(Debug, Component, PartialEq)]
+#[derive(Debug, Component, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[cfg_attr(feature="reflect", derive(Reflect), reflect(Debug, Component, PartialEq))]
 #[non_exhaustive]
 pub enum PeerLifestage {
     /// Midway through a [handshake].

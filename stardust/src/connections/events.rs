@@ -1,7 +1,7 @@
 //! Connection events.
 
 use std::{fmt::Display, sync::Arc, time::Duration};
-use bevy::prelude::*;
+use bevy_ecs::prelude::*;
 
 /// Sent by transport layers when a peer is connecting.
 /// 

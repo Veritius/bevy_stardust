@@ -1,6 +1,6 @@
 [package]
 name="bevy_stardust_extras"
-version="0.1.0"
+version="0.2.0"
 edition="2021"
 authors=["Veritius <veritiusgaming@gmail.com>"]
 license="MIT OR Apache-2.0"
@@ -8,12 +8,16 @@ description="Miscellaneous utilities for bevy_stardust"
 repository="https://github.com/veritius/bevy_stardust/"
 keywords=["bevy", "gamedev", "networking"]
 
-[dependencies.bevy]
+[dependencies.bevy_ecs]
+version = "0.14"
+default-features = false
+
+[dependencies.bevy_app]
 version = "0.14"
 default-features = false
 
 [dependencies.bevy_stardust]
-version = "0.6"
+version = "0.7"
 path = "../stardust"
 
 [dependencies.octs]

@@ -158,7 +158,7 @@ pub use registry::{ChannelRegistry, ChannelMetadata};
 pub use params::{Channels, ChannelData};
 pub use extension::ChannelSetupAppExt;
 
-use bevy::prelude::*;
+use bevy_app::App;
 use registry::ChannelRegistryBuilder;
 
 pub(crate) fn plugin_build(app: &mut App) {
