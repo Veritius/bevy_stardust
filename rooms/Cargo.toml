@@ -25,5 +25,9 @@ optional = true
 version = "0.7"
 path = "../stardust"
 
+[dependencies.smallvec]
+version = "1"
+features = ["union", "const_generics"]
+
 [features]
 reflect = ["dep:bevy_reflect", "bevy_app/bevy_reflect", "bevy_ecs/bevy_reflect"]

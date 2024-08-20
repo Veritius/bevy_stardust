@@ -5,6 +5,7 @@ use std::collections::BTreeSet;
 use bevy_app::prelude::*;
 use bevy_ecs::{prelude::*, system::EntityCommands, world::Command};
 use bevy_stardust::prelude::*;
+use smallvec::SmallVec;
 
 #[cfg(feature="reflect")]
 use bevy_reflect::prelude::*;
@@ -16,11 +17,33 @@ impl Plugin for RoomsPlugin {
     fn build(&self, app: &mut App) {
         #[cfg(feature="reflect")]
         app.register_type::<Room>();
+
+        // Observers
+        app.observe(peer_comp_removed_observer);
+        app.observe(room_comp_removed_observer);
     }
 }
 
-/// An entity relation that makes a peer a member of a room.
-pub struct Member;
+fn peer_comp_removed_observer(
+    trigger: Trigger<OnRemove, Peer>,
+    mut memberships: Query<&mut Memberships>,
+    mut rooms: Query<&mut Room>,
+) {
+
+}
+
+fn room_comp_removed_observer(
+    trigger: Trigger<OnRemove, Room>,
+    mut memberships: Query<&mut Memberships>,
+    mut rooms: Query<&mut Room>,
+) {
+
+}
+
+#[derive(Debug, Component)]
+struct Memberships {
+    set: SmallVec<[Entity; 7]>,
+}
 
 /// A collection of peers.
 /// 
