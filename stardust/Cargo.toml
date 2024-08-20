@@ -37,4 +37,4 @@ version = "0.14"
 [features]
 debug_tools = []
 diagnostics = ["dep:bevy_diagnostic"]
-reflect = ["dep:bevy_reflect", "bevy_ecs/bevy_reflect"]
+reflect = ["dep:bevy_reflect", "bevy_ecs/bevy_reflect", "bevy_app/bevy_reflect"]
