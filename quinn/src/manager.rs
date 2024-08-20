@@ -11,31 +11,25 @@ pub struct Endpoints<'w, 's> {
 }
 
 impl Endpoints<'_, '_> {
-    /// Queues a new endpoint to be opened.
+    /// Opens a new endpoint.
+    /// 
+    /// Returns an error immediately if the configuration is invalid.
     pub fn open(
-        &mut self,
-        f: impl FnOnce(&mut EndpointBuilder),
-    ) {
-        let mut builder = EndpointBuilder {
-            commands: self.commands.reborrow(),
-        };
-
-        f(&mut builder);
-    }
-}
-
-pub struct EndpointBuilder<'a> {
-    commands: Commands<'a, 'a>,
-}
-
-impl<'a> EndpointBuilder<'a> {
-    pub fn simple(
         &mut self,
         endpoint_config: Arc<EndpointConfig>,
         server_config: Option<Arc<ServerConfig>>,
         bind_address: impl ToSocketAddrs,
-    ) -> Result<EndpointCommands<'a>> {
-        todo!()
+        f: impl FnOnce(&mut EndpointCommands),
+    ) -> Result<()> {
+        todo!();
+
+        let mut ep_cmds = EndpointCommands {
+            commands: todo!(),
+        };
+
+        f(&mut ep_cmds);
+
+        return Ok(());
     }
 }
 
@@ -44,32 +38,24 @@ pub struct EndpointCommands<'a> {
 }
 
 impl<'a> EndpointCommands<'a> {
+    /// Attempts to connect through an endpoint.
+    /// 
+    /// Returns an error immediately if the configuration is invalud.
+    /// This may still fail later after creation.
     pub fn connect(
-        &mut self,
-        f: impl FnOnce(&mut ConnectionBuilder),
-    ) {
-        let mut builder = ConnectionBuilder {
-            endpoint: self.commands.id(),
-            commands: self.commands.commands(),
-        };
-
-        f(&mut builder);
-    }
-}
-
-pub struct ConnectionBuilder<'a> {
-    endpoint: Entity,
-    commands: Commands<'a, 'a>,
-}
-
-impl<'a> ConnectionBuilder<'a> {
-    pub fn simple(
         &mut self,
         client_config: ClientConfig,
         remote_address: impl ToSocketAddrs,
         server_name: Arc<str>,
-    ) -> Result<ConnectionCommands> {
-        todo!()
+        f: impl FnOnce(&mut ConnectionCommands),
+    ) -> Result<()> {
+        todo!();
+
+        let mut cn_cmds = ConnectionCommands {
+            commands: todo!(),
+        };
+
+        f(&mut cn_cmds);
     }
 }
 
