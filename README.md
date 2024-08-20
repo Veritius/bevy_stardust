@@ -36,8 +36,10 @@ You can use any replication or extra features you want. If you prefer a specific
 
 `bevy_stardust` is the core 'interface' crate. It provides everything you need to write netcode, but doesn't deal with Internet communication or things like replication - that's left up to other crates.
 
+### Examples
+<details>
+<summary>Setup and API demonstration</summary>
 
-**A simple example project:**
 ```rust
 use std::any::TypeId;
 use bevy::{prelude::*, app::{ScheduleRunnerPlugin, MainSchedulePlugin}};
@@ -129,6 +131,14 @@ fn read_words_system(
     }
 }
 ```
+</details>
+
+## Feature flags
+| Flag          | Description               |
+|---------------|---------------------------|
+| `reflect`     | `bevy_reflect` support    |
+| `diagnostics` | `bevy_diagnostic` support |
+| `debug_tools` | Various debugging types   |
 
 ## Related crates
 ### Existing
