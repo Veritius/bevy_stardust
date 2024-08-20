@@ -54,6 +54,13 @@ impl Connection {
         }
     }
 
+    pub(crate) unsafe fn set_endpoint(
+        &mut self,
+        endpoint: Option<Entity>,
+    ) {
+        self.endpoint = endpoint;
+    }
+
     pub(crate) fn detach(&mut self) {
         self.endpoint = None;
     }

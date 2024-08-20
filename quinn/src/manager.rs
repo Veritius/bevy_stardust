@@ -1,7 +1,9 @@
-use std::{net::ToSocketAddrs, sync::Arc};
+use std::{net::{ToSocketAddrs, UdpSocket}, sync::Arc};
 use anyhow::Result;
 use bevy::{ecs::{entity::Entities, system::{EntityCommands, SystemParam}}, prelude::*};
 use quinn_proto::{ClientConfig, EndpointConfig, ServerConfig};
+
+use crate::Endpoint;
 
 /// Utility for opening endpoints.
 #[derive(SystemParam)]
@@ -21,19 +23,45 @@ impl Endpoints<'_, '_> {
         bind_address: impl ToSocketAddrs,
         f: impl FnOnce(&mut EndpointCommands),
     ) -> Result<()> {
-        todo!();
+        // Bind and configure the UDP socket for communication
+        let socket = UdpSocket::bind(bind_address)?;
+        socket.set_nonblocking(true)?;
 
+        // Create the Quinn endpoint we will be using
+        let endpoint = quinn_proto::Endpoint::new(
+            endpoint_config,
+            server_config,
+            true,
+            None
+        );
+
+        // Create the endpoint component
+        let mut endpoint = Endpoint::new(
+            socket,
+            endpoint
+        );
+
+        // Spawn the new endpoint entity
+        let commands = self.commands.spawn_empty();
+
+        // Create the commands object
         let mut ep_cmds = EndpointCommands {
+            endpoint: &mut endpoint,
             commands: todo!(),
         };
 
+        // Run the user commands thingy
         f(&mut ep_cmds);
+
+        // Insert the endpoint component into the entity
+        commands.insert(endpoint);
 
         return Ok(());
     }
 }
 
 pub struct EndpointCommands<'a> {
+    endpoint: &'a mut Endpoint,
     commands: EntityCommands<'a>,
 }
 
@@ -46,7 +74,7 @@ impl<'a> EndpointCommands<'a> {
         &mut self,
         client_config: ClientConfig,
         remote_address: impl ToSocketAddrs,
-        server_name: Arc<str>,
+        server_name: &str,
         f: impl FnOnce(&mut ConnectionCommands),
     ) -> Result<()> {
         todo!();

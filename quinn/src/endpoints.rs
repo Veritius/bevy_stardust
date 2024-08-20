@@ -1,7 +1,8 @@
-use std::{collections::BTreeMap, io::ErrorKind, net::{SocketAddr, UdpSocket}, time::Instant};
+use std::{collections::BTreeMap, io::ErrorKind, net::{SocketAddr, ToSocketAddrs, UdpSocket}, time::Instant};
+use anyhow::{anyhow, Result};
 use bevy::{ecs::component::{ComponentHooks, StorageType}, prelude::*};
 use bytes::BytesMut;
-use quinn_proto::{ConnectionHandle, EndpointEvent};
+use quinn_proto::{ClientConfig, ConnectionHandle, EndpointEvent};
 use crate::Connection;
 
 /// A QUIC endpoint using `quinn_proto`.
@@ -69,6 +70,42 @@ impl Endpoint {
     /// This is the address of the local socket, and not the address that people over WAN will use to reach this endpoint.
     pub fn local_addr(&self) -> SocketAddr {
         self.inner.socket.local_addr().unwrap()
+    }
+
+    pub(crate) fn new(
+        socket: UdpSocket,
+        quinn: quinn_proto::Endpoint,
+    ) -> Self {
+        Self {
+            recv_buf_size: 1478,
+            send_buf_size: 1478,
+
+            connections: BTreeMap::new(),
+
+            inner: EndpointInner::new(
+                socket,
+                quinn
+            ),
+        }
+    }
+
+    pub(crate) fn connect(
+        &mut self,
+        client_config: ClientConfig,
+        remote_address: impl ToSocketAddrs,
+        server_name: &str,
+    ) -> Result<Connection> {
+        let (handle, quinn) = self.inner.quinn.connect(
+            Instant::now(),
+            client_config,
+            remote_address.to_socket_addrs()?.next().ok_or_else(|| anyhow!("No valid connections"))?,
+            server_name,
+        )?;
+
+        let mut comp = Connection::new(handle, quinn);
+        todo!();
+
+        return Ok(comp);
     }
 
     pub(crate) fn detach(&mut self, handle: ConnectionHandle) {
