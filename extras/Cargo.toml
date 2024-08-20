@@ -17,7 +17,7 @@ version = "0.14"
 default-features = false
 
 [dependencies.bevy_stardust]
-version = "0.6"
+version = "0.7"
 path = "../stardust"
 
 [dependencies.octs]
