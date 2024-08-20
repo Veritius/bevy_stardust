@@ -28,6 +28,7 @@ impl Component for Connection {
             // Get the component from the world
             let this = &mut *world.get_mut::<Connection>(entity).unwrap();
             let (handle, endpoint) = (this.inner.handle, this.endpoint);
+            this.endpoint = None; // Detach from the endpoint
 
             // Inform the endpoint of the connection being dropped
             if let Some(endpoint) = endpoint {
