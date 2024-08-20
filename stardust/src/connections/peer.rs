@@ -1,5 +1,6 @@
 use std::{net::IpAddr, time::Instant};
-use bevy::prelude::*;
+use bevy_ecs::prelude::*;
+use bevy_reflect::prelude::*;
 
 /// A component for entities that represent a virtual connection.
 #[derive(Debug, Component, Reflect)]

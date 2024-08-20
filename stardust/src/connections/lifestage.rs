@@ -1,4 +1,6 @@
-use bevy::{ecs::{query::{QueryData, QueryFilter, WorldQuery}, storage::TableRow}, prelude::*};
+use bevy_ecs::{query::{QueryData, QueryFilter, WorldQuery}, storage::TableRow};
+use bevy_ecs::prelude::*;
+use bevy_reflect::prelude::*;
 
 /// The lifestage of a connection.
 /// 

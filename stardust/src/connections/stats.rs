@@ -1,5 +1,6 @@
 use std::{ops::{Deref, DerefMut}, time::Duration};
-use bevy::prelude::*;
+use bevy_ecs::prelude::*;
+use bevy_reflect::prelude::*;
 
 /// Round-trip time estimate for [peer entities].
 /// 
@@ -9,7 +10,8 @@ use bevy::prelude::*;
 /// the transport layer managing a connection.
 /// 
 /// [peer entities]: crate::connections
-#[derive(Debug, Default, Clone, Copy, Component)]
+#[derive(Debug, Default, Clone, Copy, Component, Reflect)]
+#[reflect(Component)]
 pub struct PeerRtt(pub Duration);
 
 impl Deref for PeerRtt {

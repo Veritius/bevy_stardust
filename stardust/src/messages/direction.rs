@@ -1,5 +1,6 @@
 use std::fmt::Debug;
-use bevy::reflect::Reflect;
+
+use bevy_reflect::Reflect;
 
 /// The direction a message is going, as an enum for dynamic use.
 /// 

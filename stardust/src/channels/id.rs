@@ -1,5 +1,5 @@
 use std::any::Any;
-use bevy::prelude::*;
+use bevy_reflect::Reflect;
 use super::ChannelRegistry;
 
 /// Types that can be used to identify channels within the type system.

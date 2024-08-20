@@ -1,5 +1,8 @@
 use std::{any::TypeId, marker::PhantomData, sync::Arc, ops::Deref};
-use bevy::ecs::{component::Tick, system::{SystemMeta, SystemParam}, world::unsafe_world_cell::UnsafeWorldCell};
+use bevy_ecs::component::Tick;
+use bevy_ecs::prelude::*;
+use bevy_ecs::system::{SystemMeta, SystemParam};
+use bevy_ecs::world::unsafe_world_cell::UnsafeWorldCell;
 use super::registry::*;
 use super::*;
 

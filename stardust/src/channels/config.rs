@@ -1,4 +1,4 @@
-use bevy::reflect::Reflect;
+use bevy_reflect::Reflect;
 
 /// Configuration for a channel.
 #[derive(Debug, Clone, Hash, Reflect)]
