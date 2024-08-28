@@ -126,10 +126,10 @@ pub struct LeftRoom {
 
 /// An extension API for working with rooms.
 pub trait RoomCommands {
-    /// Creates a direct membership with `room`, using [`JoinRoom`].
+    /// Creates a direct membership with `room`, using [`Join`].
     fn join(&mut self, room: Entity) -> &mut Self;
 
-    /// Removes a direct membership with `room` if one exists, using [`LeaveRoom`].
+    /// Removes a direct membership with `room` if one exists, using [`Leave`].
     fn leave(&mut self, room: Entity) -> &mut Self;
 }
 
