@@ -42,12 +42,12 @@ impl Endpoints<'_, '_> {
         );
 
         // Spawn the new endpoint entity
-        let commands = self.commands.spawn_empty();
+        let mut commands = self.commands.spawn_empty();
 
         // Create the commands object
         let mut ep_cmds = EndpointCommands {
             endpoint: &mut endpoint,
-            commands: todo!(),
+            commands: commands.reborrow(),
         };
 
         // Run the user commands thingy
@@ -77,13 +77,17 @@ impl<'a> EndpointCommands<'a> {
         server_name: &str,
         f: impl FnOnce(&mut ConnectionCommands),
     ) -> Result<()> {
-        todo!();
+        // Spawn the new endpoint entity
+        let mut commands = self.commands.commands();
+        let mut commands = commands.spawn_empty();
 
         let mut cn_cmds = ConnectionCommands {
-            commands: todo!(),
+            commands: commands.reborrow(),
         };
 
         f(&mut cn_cmds);
+
+        return Ok(())
     }
 }
 
