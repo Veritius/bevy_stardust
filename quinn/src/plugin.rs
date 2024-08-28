@@ -6,6 +6,9 @@ pub struct QuinnPlugin;
 
 impl Plugin for QuinnPlugin {
     fn build(&self, app: &mut App) {
+        // default crypto provider for tls
+        install_default_crypto_provider();
+
         // PreUpdate stage
         app.add_systems(PreUpdate, (
             crate::endpoints::udp_recv_system,
@@ -22,4 +25,10 @@ impl Plugin for QuinnPlugin {
             crate::endpoints::udp_send_system,
         ).chain().in_set(NetworkSend::Transmit));
     }
+}
+
+fn install_default_crypto_provider() -> bool {
+    rustls::crypto::ring::default_provider()
+        .install_default()
+        .is_ok()
 }
