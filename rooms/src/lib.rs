@@ -137,7 +137,7 @@ impl RoomCommands for EntityCommands<'_> {
     fn join(&mut self, room: Entity) -> &mut Self {
         let peer = self.id();
 
-        self.commands().add(JoinRoom {
+        self.commands().add(Join {
             peer,
             room,
         });
@@ -148,7 +148,7 @@ impl RoomCommands for EntityCommands<'_> {
     fn leave(&mut self, room: Entity) -> &mut Self {
         let peer = self.id();
 
-        self.commands().add(LeaveRoom {
+        self.commands().add(Leave {
             peer,
             room,
         });
@@ -161,7 +161,7 @@ impl RoomCommands for EntityWorldMut<'_> {
     fn join(&mut self, room: Entity) -> &mut Self {
         let peer = self.id();
 
-        let command = JoinRoom {
+        let command = Join {
             peer,
             room,
         };
@@ -178,7 +178,7 @@ impl RoomCommands for EntityWorldMut<'_> {
     fn leave(&mut self, room: Entity) -> &mut Self {
         let peer = self.id();
 
-        let command = LeaveRoom {
+        let command = Leave {
             peer,
             room,
         };
@@ -195,7 +195,7 @@ impl RoomCommands for EntityWorldMut<'_> {
 
 /// A command to add a direct membership from a [`Peer`] (or `Room`) to a [`Room`].
 #[derive(Debug, Clone)]
-pub struct JoinRoom {
+pub struct Join {
     /// The peer that is to become a member of the room.
     /// May also be a room itself.
     pub peer: Entity,
@@ -204,7 +204,7 @@ pub struct JoinRoom {
     pub room: Entity,
 }
 
-impl Command for JoinRoom {
+impl Command for Join {
     #[inline]
     fn apply(self, world: &mut World) {
         todo!()
@@ -213,7 +213,7 @@ impl Command for JoinRoom {
 
 /// A command to remove a direct membership from a [`Peer`] (or `Room`) from a [`Room`].
 #[derive(Debug, Clone)]
-pub struct LeaveRoom {
+pub struct Leave {
     /// The peer that is to have its membership with the room removed.
     /// May also be a room itself.
     pub peer: Entity,
@@ -222,7 +222,7 @@ pub struct LeaveRoom {
     pub room: Entity,
 }
 
-impl Command for LeaveRoom {
+impl Command for Leave {
     #[inline]
     fn apply(self, world: &mut World) {
         todo!()
