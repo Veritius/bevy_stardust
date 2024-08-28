@@ -142,7 +142,7 @@ pub(crate) fn udp_recv_system(
 ) {
     for mut endpoint in &mut endpoints {
         // Buffer for I/O operations
-        debug_assert!(endpoint.recv_buf_size < 1280, "Receive buffer was too small");
+        debug_assert!(endpoint.recv_buf_size > 1280, "Receive buffer was too small");
         let mut buf = vec![0u8; endpoint.recv_buf_size as usize];
 
         // Store some things ahead of time
@@ -209,7 +209,7 @@ pub(crate) fn udp_send_system(
 ) {
     for endpoint in &mut endpoints {
         // Buffer for I/O operations
-        debug_assert!(endpoint.send_buf_size < 1280, "Transmit buffer was too small");
+        debug_assert!(endpoint.send_buf_size > 1280, "Transmit buffer was too small");
         let mut buf = vec![0u8; endpoint.send_buf_size as usize];
 
         // Iterate over connections
