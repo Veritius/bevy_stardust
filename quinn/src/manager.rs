@@ -1,6 +1,7 @@
 use std::{net::{ToSocketAddrs, UdpSocket}, sync::Arc};
 use anyhow::Result;
-use bevy::{ecs::{entity::Entities, system::{EntityCommands, SystemParam}}, prelude::*};
+use bevy_ecs::{entity::Entities, prelude::*, system::{EntityCommands, SystemParam}};
+use bevy_app::prelude::*;
 use quinn_proto::{ClientConfig, EndpointConfig, ServerConfig};
 
 use crate::Endpoint;

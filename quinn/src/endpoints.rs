@@ -1,17 +1,11 @@
 use std::{collections::BTreeMap, io::ErrorKind, net::{SocketAddr, ToSocketAddrs, UdpSocket}, time::Instant};
 use anyhow::{anyhow, Result};
-use bevy::{ecs::component::{ComponentHooks, StorageType}, prelude::*};
+use bevy_ecs::{component::{ComponentHooks, StorageType}, prelude::*};
 use bytes::BytesMut;
 use quinn_proto::{ClientConfig, ConnectionHandle, EndpointEvent};
 use crate::Connection;
 
 /// A QUIC endpoint using `quinn_proto`.
-/// 
-/// # Safety
-/// An [`Endpoint`] component being removed from the [`World`] it was created in,
-/// then being added to a different [`World`], is undefined behavior.
-#[derive(Reflect)]
-#[reflect(from_reflect=false, Component)]
 pub struct Endpoint {
     /// The size of the buffer allocated to receive datagrams.
     /// Higher values allow remote peers to send data more efficiently.
@@ -33,10 +27,8 @@ pub struct Endpoint {
     /// so setting this field that high may simply waste memory, depending on the operating system.
     pub send_buf_size: u16,
 
-    #[reflect(ignore)]
     connections: BTreeMap<ConnectionHandle, Entity>,
 
-    #[reflect(ignore)]
     inner: Box<EndpointInner>,
 }
 
@@ -151,9 +143,11 @@ pub(crate) fn udp_recv_system(
         loop {
             match endpoint.inner.socket.recv_from(&mut buf) {
                 Ok((length, address)) => {
-                    // Log the datagram being received
-                    let trace_span = trace_span!("Received datagram", length, address=?address);
-                    let _entered = trace_span.entered();
+                    #[cfg(feature="log")] {
+                        // Log the datagram being received
+                        let trace_span = bevy_log::trace_span!("Received datagram", length, address=?address);
+                        let _entered = trace_span.entered();
+                    }
 
                     // Hand the datagram to Quinn
                     if let Some(event) = endpoint.inner.quinn.handle(

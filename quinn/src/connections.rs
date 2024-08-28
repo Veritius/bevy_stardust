@@ -1,22 +1,14 @@
 use std::{collections::{BTreeMap, VecDeque}, time::Instant};
-use bevy::{ecs::component::{ComponentHooks, StorageType}, prelude::*};
+use bevy_ecs::{component::{ComponentHooks, StorageType}, prelude::*};
 use bevy_stardust::prelude::*;
 use bevy_stardust_quic::{RecvStreamId, SendContext, SendStreamId};
 use quinn_proto::{ConnectionEvent as QuinnConnectionEvent, ConnectionHandle, Dir, EndpointEvent, SendStream, StreamId as QuinnStreamId, Transmit, WriteError};
 use crate::Endpoint;
 
 /// A QUIC connection using `quinn_proto`.
-/// 
-/// # Safety
-/// A [`Connection`] component being removed from the [`World`] it was created in,
-/// then being added to a different [`World`], is undefined behavior.
-#[derive(Reflect)]
-#[reflect(from_reflect=false, Component)]
 pub struct Connection {
-    #[reflect(ignore)]
     endpoint: Option<Entity>,
 
-    #[reflect(ignore)]
     inner: Box<ConnectionInner>,
 }
 
@@ -101,11 +93,12 @@ struct ConnectionInner {
     stream_write_queues: BTreeMap<QuinnStreamId, StreamWriteQueue>,
 }
 
+#[cfg(feature="log")]
 impl Drop for ConnectionInner {
     fn drop(&mut self) {
         // Check if the component is drained
         if !self.quinn.is_drained() {
-            warn!("Connection was dropped while not fully drained");
+            bevy_log::warn!("Connection was dropped while not fully drained");
         }
     }
 }

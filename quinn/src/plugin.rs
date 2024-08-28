@@ -1,4 +1,5 @@
-use bevy::prelude::*;
+use bevy_ecs::prelude::*;
+use bevy_app::prelude::*;
 use bevy_stardust::prelude::*;
 
 /// The core plugin for `bevy_stardust_quinn`.

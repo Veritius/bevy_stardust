@@ -1,4 +1,5 @@
-use bevy::prelude::*;
+use bevy_ecs::prelude::*;
+use bevy_app::{prelude::*, ScheduleRunnerPlugin};
 use bevy_stardust::prelude::*;
 use bevy_stardust_quinn::{CertificateDer, QuinnPlugin};
 use rustls_pemfile::Item;
@@ -20,7 +21,7 @@ pub fn certificate() -> CertificateDer<'static> {
 
 pub fn setup(app: &mut App) {
     app.add_plugins((
-        DefaultPlugins,
+        ScheduleRunnerPlugin::default(),
         StardustPlugin,
         QuinnPlugin,
     ));
@@ -35,5 +36,5 @@ pub fn setup(app: &mut App) {
 
 #[derive(Debug, Event)]
 pub struct MovementEvent {
-    degree: Vec2,
+    direction: [f32; 2],
 }

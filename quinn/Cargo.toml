@@ -8,7 +8,11 @@ description="A QUIC transport layer for bevy_stardust, based off bevy_stardust_q
 repository="https://github.com/veritius/bevy_stardust/"
 keywords=["bevy", "gamedev", "networking"]
 
-[dependencies.bevy]
+[dependencies.bevy_ecs]
+version = "0.14"
+default-features = false
+
+[dependencies.bevy_app]
 version = "0.14"
 default-features = false
 
@@ -32,6 +36,10 @@ version = "1.5.0"
 [dependencies.anyhow]
 version = "1"
 
+[dependencies.bevy_log]
+version = "0.14"
+optional = true
+
 [dev-dependencies.rustls-pemfile]
 version = "2"
 
@@ -47,3 +55,6 @@ path = "examples/star/server.rs"
 name = "star_shared"
 path = "examples/star/shared.rs"
 crate-type = ["lib"]
+
+[features]
+log = ["bevy_log"]
