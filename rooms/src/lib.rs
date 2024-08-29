@@ -49,10 +49,10 @@ struct DirectMemberships {
 /// A collection of peers.
 /// 
 /// Rooms are defined by their [members](crate::Member).
-#[derive(Debug, Component, Reflect)]
-#[reflect(Default, Component)]
+#[derive(Debug, Component)]
+#[cfg_attr(feature="reflect", derive(Reflect), reflect(Default, Component))]
 pub struct Room {
-    #[reflect(ignore)]
+    #[cfg_attr(feature="reflect", reflect(ignore))]
     cache: BTreeSet<Entity>,
 }
 
