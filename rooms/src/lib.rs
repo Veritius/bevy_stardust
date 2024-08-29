@@ -227,7 +227,7 @@ impl Command for Join {
         // Check that the room entity exists
         if world.entities().get(self.room).is_none() {
             #[cfg(feature="log")]
-            bevy_log::debug!("Room {} does not exist and cannot be the target of a membership", self.peer);
+            bevy_log::debug!("Room {} does not exist and cannot be the target of a membership", self.room);
 
             return;
         }
