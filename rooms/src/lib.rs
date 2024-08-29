@@ -295,8 +295,14 @@ impl Command for Join {
             Err(_) => None,
         };
 
+        let mut collected = Vec::new();
         while let Some(node) = dfs.next(&mut func) {
-            todo!()
+            collected.push(node);
+        }
+
+        for node in collected {
+            let mut room = rooms.get_mut(world, node).unwrap();
+            room.cache.insert(self.peer);
         }
 
         #[cfg(feature="log")]
