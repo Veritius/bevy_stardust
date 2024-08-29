@@ -230,6 +230,27 @@ impl Command for Leave {
     }
 }
 
+fn must_check_for_cycle(
+    query: Query<&Memberships>,
+    parent: Entity,
+    child: Entity,
+) -> bool {
+    debug_assert_ne!(parent, child);
+
+    let (has_parents, has_children) = match query.get(parent) {
+        Ok(val) => (
+            val.incoming.len() == 0,
+            val.outgoing.len() == 0,
+        ),
+
+        // With no Memberships component, the entity has no parents or children
+        Err(_) => (false, false),
+    };
+
+    // If the node has no parents or no children, there cannot be a cycle
+    return !has_parents || !has_children
+}
+
 struct Dfs {
     stack: Vec<Entity>,
     discovered: Vec<Entity>,
