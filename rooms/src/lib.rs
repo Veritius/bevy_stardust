@@ -235,7 +235,7 @@ impl Command for Join {
         // Membership query + test that the host is not already a direct of the target
         let mut memberships = world.query::<&mut DirectMemberships>();
         if let Ok(membership) = memberships.get_manual(world, self.peer) {
-            if membership.incoming.binary_search(&self.room).is_ok() {
+            if membership.incoming.contains(&self.room) {
                 #[cfg(feature="log")]
                 bevy_log::debug!("Peer {} was already a member of {}", self.peer, self.room);
 
