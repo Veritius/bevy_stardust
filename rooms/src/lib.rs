@@ -230,6 +230,49 @@ impl Command for Leave {
     }
 }
 
+struct Dfs {
+    stack: Vec<Entity>,
+    discovered: Vec<Entity>,
+}
+
+impl Dfs {
+    fn new(start: Entity) -> Self {
+        let mut stack = Vec::with_capacity(4);
+        stack.push(start);
+
+        Self {
+            stack,
+            discovered: Vec::with_capacity(16),
+        }
+    }
+
+    fn reset(&mut self, from: Entity) {
+        self.stack.clear();
+        self.discovered.clear();
+        self.stack.push(from);
+    }
+
+    fn next<F, I>(&mut self, mut func: F)
+    where
+        F: FnMut(Entity) -> I,
+        I: Iterator<Item = Entity>,
+    {
+        // Repeatedly pop from the stack
+        // This loop ends only when we've run out of nodes
+        while let Some(node) = self.stack.pop() {
+            // Check that we haven't already discovered this node
+            if self.discovered.contains(&node) { continue }
+            self.discovered.push(node);
+
+            // Add newly discovered nodes to the stack
+            for next in func(node) {
+                if self.discovered.contains(&next) { continue }
+                self.stack.push(next);
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::ops::Not;
