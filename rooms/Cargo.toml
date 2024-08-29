@@ -21,6 +21,10 @@ version = "0.14"
 default-features = false
 optional = true
 
+[dependencies.bevy_log]
+version = "0.14"
+optional = true
+
 [dependencies.bevy_stardust]
 version = "0.7"
 path = "../stardust"
@@ -31,3 +35,4 @@ features = ["union", "const_generics"]
 
 [features]
 reflect = ["dep:bevy_reflect", "bevy_app/bevy_reflect", "bevy_ecs/bevy_reflect"]
+log = ["dep:bevy_log"]

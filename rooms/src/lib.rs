@@ -40,10 +40,22 @@ fn room_comp_removed_observer(
 
 }
 
-#[derive(Debug, Component)]
+#[derive(Debug, Default, Component)]
 struct Memberships {
     incoming: SmallVec<[Entity; 3]>,
     outgoing: SmallVec<[Entity; 3]>,
+}
+
+impl Memberships {
+    fn with_incoming(mut self, id: Entity) -> Self {
+        self.incoming.push(id);
+        return self;
+    }
+
+    fn with_outgoing(mut self, id: Entity) -> Self {
+        self.outgoing.push(id);
+        return self;
+    }
 }
 
 /// A collection of peers.
@@ -208,7 +220,37 @@ pub struct Join {
 impl Command for Join {
     #[inline]
     fn apply(self, world: &mut World) {
-        todo!()
+        let mut query = world.query::<&mut Memberships>();
+
+        if must_check_for_cycle(&world, query.as_readonly(), self.peer, self.room) {
+            let mut dfs = Dfs::new(self.peer);
+
+            if has_connecting_path(&world, query.as_readonly(), self.peer, self.room, &mut dfs) {
+                #[cfg(feature="log")]
+                bevy_log::warn!("Making {} a member of {} would cause a cycle", self.peer, self.room);
+
+                return;
+            }
+        }
+
+        match query.get_mut(world, self.peer) {
+            Ok(mut memberships) => memberships.outgoing.push(self.room),
+            Err(_) => {
+                world.entity_mut(self.peer)
+                    .insert(Memberships::default().with_outgoing(self.room));
+            },
+        }
+
+        match query.get_mut(world, self.room) {
+            Ok(mut memberships) => memberships.incoming.push(self.peer),
+            Err(_) => {
+                world.entity_mut(self.room)
+                    .insert(Memberships::default().with_incoming(self.peer));
+            },
+        }
+
+        #[cfg(feature="log")]
+        bevy_log::trace!("Made {} a member of {}", self.peer, self.room);
     }
 }
 
@@ -231,13 +273,14 @@ impl Command for Leave {
 }
 
 fn must_check_for_cycle(
-    query: Query<&Memberships>,
+    world: &World,
+    query: &QueryState<&Memberships>,
     parent: Entity,
     child: Entity,
 ) -> bool {
     debug_assert_ne!(parent, child);
 
-    let (has_parents, has_children) = match query.get(parent) {
+    let (has_parents, has_children) = match query.get_manual(world, parent) {
         Ok(val) => (
             val.incoming.len() == 0,
             val.outgoing.len() == 0,
@@ -252,19 +295,20 @@ fn must_check_for_cycle(
 }
 
 fn has_connecting_path(
-    query: Query<&Memberships>,
+    world: &World,
+    query: &QueryState<&Memberships>,
     parent: Entity,
     child: Entity,
     dfs: &mut Dfs,
 ) -> bool {
     dfs.reset(parent);
 
-    let func = |next| match query.get(next) {
+    let mut func = |next| match query.get_manual(world, next) {
         Ok(memberships) => Some(memberships.outgoing.iter().copied()),
         Err(_) => None,
     };
 
-    while let Some(node) = dfs.next(func) {
+    while let Some(node) = dfs.next(&mut func) {
         if child == node { return true }
     }
 
