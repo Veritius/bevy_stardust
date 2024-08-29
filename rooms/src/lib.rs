@@ -290,7 +290,7 @@ impl Command for Join {
         // Restart the DFS state to traverse from the peer
         dfs.reset(self.peer);
 
-        let mut func = |next| match memberships.get(world, self.peer) {
+        let mut func = |next| match memberships.get(world, next) {
             Ok(memberships) => Some(memberships.incoming.iter().copied()),
             Err(_) => None,
         };
