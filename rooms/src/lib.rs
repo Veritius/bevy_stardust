@@ -46,18 +46,6 @@ struct DirectMemberships {
     outgoing: SmallVec<[Entity; 3]>,
 }
 
-impl DirectMemberships {
-    fn with_incoming(mut self, id: Entity) -> Self {
-        self.incoming.push(id);
-        return self;
-    }
-
-    fn with_outgoing(mut self, id: Entity) -> Self {
-        self.outgoing.push(id);
-        return self;
-    }
-}
-
 /// A collection of peers.
 /// 
 /// Rooms are defined by their [members](crate::Member).
@@ -228,6 +216,22 @@ impl Command for Join {
             return;
         }
 
+        // Check that the peer entity exists
+        if world.entities().get(self.peer).is_none() {
+            #[cfg(feature="log")]
+            bevy_log::debug!("Peer {} does not exist and cannot be a member of a room", self.peer);
+
+            return;
+        }
+
+        // Check that the room entity exists
+        if world.entities().get(self.room).is_none() {
+            #[cfg(feature="log")]
+            bevy_log::debug!("Room {} does not exist and cannot be the target of a membership", self.peer);
+
+            return;
+        }
+
         // Membership query + test that the host is not already a direct of the target
         let mut memberships = world.query::<&mut DirectMemberships>();
         if let Ok(membership) = memberships.get_manual(world, self.peer) {
@@ -248,6 +252,8 @@ impl Command for Join {
             return;
         }
 
+        // Depth first search state, used to traverse the graph
+        // This allocates, so we create it early to reuse the allocation
         let mut dfs = DfsState::new(self.peer);
 
         // Preliminary check to see if adding a link between the host and target would cause a cycle
@@ -262,32 +268,26 @@ impl Command for Join {
             }
         }
 
-        match memberships.get_mut(world, self.peer) {
-            Ok(mut memberships) => memberships.outgoing.push(self.room),
-            Err(_) => match world.get_entity_mut(self.room) {
-                Some(mut entity) => { entity.insert(DirectMemberships::default().with_outgoing(self.room)); },
-                None => {
-                    #[cfg(feature="log")]
-                    bevy_log::debug!("{} was not spawned when join command ran. Was it despawned?", self.peer);
+        fn membership_mut(
+            world: &mut World,
+            entity: Entity,
+            func: impl Fn(&mut DirectMemberships),
+        ) {
+            let mut entity = world.entity_mut(entity);
 
-                    return;
-                },
-            },
+            if !entity.contains::<DirectMemberships>() {
+                entity.insert(DirectMemberships::default());
+            }
+
+            let mut comp = entity.get_mut::<DirectMemberships>().unwrap();
+            func(&mut comp);
         }
 
-        match memberships.get_mut(world, self.room) {
-            Ok(mut memberships) => memberships.incoming.push(self.peer),
-            Err(_) => match world.get_entity_mut(self.room) {
-                Some(mut entity) => { entity.insert(DirectMemberships::default().with_outgoing(self.peer)); },
-                None => {
-                    #[cfg(feature="log")]
-                    bevy_log::debug!("{} was not spawned when join command ran. Was it despawned?", self.room);
+        // Get or create a membership component on the entity, and apply some changes.
+        membership_mut(world, self.peer, |ms| ms.outgoing.push(self.room));
+        membership_mut(world, self.room, |ms| ms.incoming.push(self.peer));
 
-                    return;
-                },
-            },
-        }
-
+        // Restart the DFS state to traverse from the peer
         dfs.reset(self.peer);
 
         let func = |next| match memberships.get(world, self.peer) {
