@@ -327,9 +327,26 @@ impl Command for Join {
         let mut iter = collected.iter().copied();
         let _ = iter.next();
 
-        for node in iter {
-            let mut room = rooms.get_mut(world, node).unwrap();
-            room.cache.insert(self.peer);
+        if let Ok(mut room) = rooms.get_mut(world, self.peer) {
+            // Swap out the cache so we don't hold a mutable reference to the world
+            let mut local_cache = BTreeSet::new();
+            std::mem::swap(&mut room.cache, &mut local_cache);
+
+            // If the peer is a room, we copy its cache into the other room
+            for node in iter {
+                let mut room = rooms.get_mut(world, node).unwrap();
+                room.cache.extend(local_cache.iter());
+            }
+
+            // Swap the cache back, now that we're done using it
+            let mut room = rooms.get_mut(world, self.peer).unwrap();
+            std::mem::swap(&mut room.cache, &mut local_cache);
+        } else {
+            // If the peer is not a room, we just insert its id into the set
+            for node in iter {
+                let mut room = rooms.get_mut(world, node).unwrap();
+                room.cache.insert(self.peer);
+            }
         }
 
         #[cfg(feature="log")]
