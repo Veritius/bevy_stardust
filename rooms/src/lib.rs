@@ -42,8 +42,8 @@ fn room_comp_removed_observer(
 
 #[derive(Debug, Default, Component)]
 struct DirectMemberships {
-    incoming: SmallVec<[Entity; 3]>,
-    outgoing: SmallVec<[Entity; 3]>,
+    incoming: BTreeSet<Entity>,
+    outgoing: BTreeSet<Entity>,
 }
 
 /// A collection of peers.
@@ -235,7 +235,7 @@ impl Command for Join {
         // Membership query + test that the host is not already a direct of the target
         let mut memberships = world.query::<&mut DirectMemberships>();
         if let Ok(membership) = memberships.get_manual(world, self.peer) {
-            if membership.incoming.contains(&self.room) {
+            if membership.incoming.get(&self.room).is_some() {
                 #[cfg(feature="log")]
                 bevy_log::debug!("Peer {} was already a member of {}", self.peer, self.room);
 
@@ -284,8 +284,8 @@ impl Command for Join {
         }
 
         // Get or create a membership component on the entity, and apply some changes.
-        membership_mut(world, self.peer, |ms| ms.outgoing.push(self.room));
-        membership_mut(world, self.room, |ms| ms.incoming.push(self.peer));
+        membership_mut(world, self.peer, |ms| { ms.outgoing.insert(self.room); });
+        membership_mut(world, self.room, |ms| { ms.incoming.insert(self.peer); });
 
         // Update the queries to account for changes
         memberships.update_archetypes(world);
