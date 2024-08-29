@@ -208,8 +208,6 @@ pub struct Join {
 impl Command for Join {
     #[inline]
     fn apply(self, world: &mut World) {
-        println!("Adding a link between {} and {}", self.peer, self.room);
-
         // Check that the host and target are not the same entity
         if self.peer == self.room {
             #[cfg(feature="log")]
@@ -220,8 +218,6 @@ impl Command for Join {
 
         // Check that the peer entity exists
         if world.entities().get(self.peer).is_none() {
-            println!("Peer {} does not exist", self.room);
-
             #[cfg(feature="log")]
             bevy_log::debug!("Peer {} does not exist and cannot be a member of a room", self.peer);
 
@@ -230,8 +226,6 @@ impl Command for Join {
 
         // Check that the room entity exists
         if world.entities().get(self.room).is_none() {
-            println!("Room {} does not exist", self.room);
-
             #[cfg(feature="log")]
             bevy_log::debug!("Room {} does not exist and cannot be the target of a membership", self.room);
 
@@ -242,8 +236,6 @@ impl Command for Join {
         let mut memberships = world.query::<&mut DirectMemberships>();
         if let Ok(membership) = memberships.get_manual(world, self.peer) {
             if membership.incoming.binary_search(&self.room).is_ok() {
-                println!("{} was already a member of {}", self.peer, self.room);
-
                 #[cfg(feature="log")]
                 bevy_log::debug!("Peer {} was already a member of {}", self.peer, self.room);
 
@@ -254,8 +246,6 @@ impl Command for Join {
         // Rooms query + check that the target is a room
         let mut rooms = world.query::<&mut Room>();
         if rooms.get_manual(world, self.room).is_err() {
-            println!("{} is not a room entity", self.room);
-
             #[cfg(feature="log")]
             bevy_log::debug!("{} is not a room entity", self.room);
 
@@ -269,12 +259,8 @@ impl Command for Join {
         // Preliminary check to see if adding a link between the host and target would cause a cycle
         // This is significantly cheaper than the in-depth check that traverses the graph
         if must_check_for_cycle(&world, memberships.as_readonly(), self.peer, self.room) {
-            println!("Checking for a cycle");
-
             // In-depth check that traverses the graph to find a cycle
             if has_connecting_path(&world, memberships.as_readonly(), self.peer, self.room, &mut dfs) {
-                println!("Cycle detected, aborting");
-
                 #[cfg(feature="log")]
                 bevy_log::warn!("Making {} a member of {} would cause a cycle", self.peer, self.room);
 
@@ -299,9 +285,7 @@ impl Command for Join {
 
         // Get or create a membership component on the entity, and apply some changes.
         membership_mut(world, self.peer, |ms| ms.outgoing.push(self.room));
-        println!("Added outgoing membership from {} to {}", self.peer, self.room);
         membership_mut(world, self.room, |ms| ms.incoming.push(self.peer));
-        println!("Added incoming membership from {} to {}", self.peer, self.room);
 
         // Update the queries to account for changes
         memberships.update_archetypes(world);
@@ -445,8 +429,6 @@ impl DfsState {
         // Repeatedly pop from the stack
         // This loop ends only when we've run out of nodes
         while let Some(node) = self.stack.pop() {
-            println!("Traversing {node}");
-
             // Check that we haven't already discovered this node
             if self.discovered.contains(&node) { continue }
             self.discovered.push(node);
@@ -455,7 +437,6 @@ impl DfsState {
             if let Some(iter) = func(node) {
                 for next in iter {
                     if self.discovered.contains(&next) { continue }
-                    println!("Added {next} to stack");
                     self.stack.push(next);
                 }
             }
