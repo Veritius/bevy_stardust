@@ -42,7 +42,8 @@ fn room_comp_removed_observer(
 
 #[derive(Debug, Component)]
 struct Memberships {
-    set: SmallVec<[Entity; 7]>,
+    incoming: SmallVec<[Entity; 3]>,
+    outgoing: SmallVec<[Entity; 3]>,
 }
 
 /// A collection of peers.
