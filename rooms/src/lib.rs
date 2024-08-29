@@ -273,10 +273,9 @@ impl Dfs {
         self.stack.push(from);
     }
 
-    fn next<F, I>(&mut self, mut func: F)
+    fn next<F>(&mut self, mut func: F)
     where
-        F: FnMut(Entity) -> I,
-        I: Iterator<Item = Entity>,
+        F: FnMut(Entity) -> Option<Entity>,
     {
         // Repeatedly pop from the stack
         // This loop ends only when we've run out of nodes
@@ -286,7 +285,7 @@ impl Dfs {
             self.discovered.push(node);
 
             // Add newly discovered nodes to the stack
-            for next in func(node) {
+            while let Some(next) = func(node) {
                 if self.discovered.contains(&next) { continue }
                 self.stack.push(next);
             }
