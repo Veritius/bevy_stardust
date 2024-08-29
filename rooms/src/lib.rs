@@ -352,6 +352,48 @@ pub struct Leave {
 impl Command for Leave {
     #[inline]
     fn apply(self, world: &mut World) {
+        // Check that the host and target are not the same entity
+        if self.peer == self.room {
+            #[cfg(feature="log")]
+            bevy_log::debug!("Peer {} cannot be a member of itself", self.peer);
+
+            return;
+        }
+
+        // Check that the the host and target both exist
+        if world.entities().get(self.peer).is_none() { return }
+        if world.entities().get(self.room).is_none() { return }
+
+        // Membership query + check there's actually a direct connection
+        let mut memberships = world.query::<&mut DirectMemberships>();
+        if let Ok(mem) = memberships.get_manual(world, self.peer) {
+            if !mem.outgoing.contains(&self.room) { return }
+        } else { return }
+
+        // Rooms query
+        let mut rooms = world.query::<&mut Room>();
+
+        // New DFS state. We reuse this because it allocates, but you knew that already.
+        let mut dfs = DfsState::new(self.peer);
+
+        let func = |next| match memberships.get_manual(world, next) {
+            Ok(memberships) => Some(memberships.incoming.iter().copied()),
+            Err(_) => None,
+        };
+
+        // Collect all possible items that could be members of this node
+        let mut collected = BTreeSet::new();
+        while let Some(node) = dfs.next(func) {
+            // Include the entity we're looking at
+            collected.insert(node);
+
+            // Include the cache of parents that are rooms
+            match rooms.get_manual(world, node) {
+                Ok(e) => collected.extend(e.cache.iter().copied()),
+                Err(_) => { continue },
+            }
+        }
+
         todo!()
     }
 }
