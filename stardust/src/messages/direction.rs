@@ -32,7 +32,7 @@ pub enum NetDirection {
 /// [`PeerMessages<D>`]: crate::connections::PeerMessages
 pub trait MessageDirection
 where
-    Self: sealed::Sealed + Debug + Send + Sync,
+    Self: sealed::Sealed + Debug + Send + Sync + 'static,
 {
     /// Returns the corresponding [`NetDirection`].
     fn net_dir() -> NetDirection;
