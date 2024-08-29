@@ -251,6 +251,26 @@ fn must_check_for_cycle(
     return !has_parents || !has_children
 }
 
+fn has_connecting_path(
+    query: Query<&Memberships>,
+    parent: Entity,
+    child: Entity,
+    dfs: &mut Dfs,
+) -> bool {
+    dfs.reset(parent);
+
+    let func = |next| match query.get(next) {
+        Ok(memberships) => Some(memberships.outgoing.iter().copied()),
+        Err(_) => None,
+    };
+
+    while let Some(node) = dfs.next(func) {
+        if child == node { return true }
+    }
+
+    return false;
+}
+
 struct Dfs {
     stack: Vec<Entity>,
     discovered: Vec<Entity>,
@@ -273,9 +293,9 @@ impl Dfs {
         self.stack.push(from);
     }
 
-    fn next<F, I>(&mut self, mut func: F)
+    fn next<F, I>(&mut self, mut func: F) -> Option<Entity>
     where
-        F: FnMut(Entity) -> I,
+        F: FnMut(Entity) -> Option<I>,
         I: Iterator<Item = Entity>,
     {
         // Repeatedly pop from the stack
@@ -286,11 +306,19 @@ impl Dfs {
             self.discovered.push(node);
 
             // Add newly discovered nodes to the stack
-            for next in func(node) {
-                if self.discovered.contains(&next) { continue }
-                self.stack.push(next);
+            if let Some(iter) = func(node) {
+                for next in iter {
+                    if self.discovered.contains(&next) { continue }
+                    self.stack.push(next);
+                }
             }
+
+            // Return the nodes
+            return Some(node);
         }
+
+        // Out of nodes
+        return None;
     }
 }
 
