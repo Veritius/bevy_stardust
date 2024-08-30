@@ -217,7 +217,10 @@ pub(crate) fn udp_send_system(
                     transmit.destination,
                 ) {
                     // Success: do nothing
-                    Ok(_) => {},
+                    Ok(_) => {
+                        #[cfg(feature="log")]
+                        bevy_log::trace!(addr=?transmit.destination, len=transmit.size, "Sent a packet");
+                    },
 
                     Err(_) => todo!(),
                 }
