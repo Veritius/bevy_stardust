@@ -31,6 +31,10 @@ pub struct ConnectionMut<'w> {
 macro_rules! defer_impl {
     (ref $id:ident $tgt:ident) => {
         defer_impl!(raw { &'o $id } $tgt);
+
+        unsafe impl<'o> QueryData for &'o $id {
+            type ReadOnly = $tgt<'o>;
+        }
     };
 
     (mut $id:ident $tgt:ident) => {
@@ -153,7 +157,7 @@ macro_rules! defer_impl {
                     set_contains_id,
                 )
             }
-        }
+        }    
     };
 }
 
