@@ -58,6 +58,11 @@ impl<'w> EndpointMut<'w> {
     pub fn socket_mut(&'w mut self) -> &'w mut SocketConfig {
         &mut self.inner.socket_cfg
     }
+
+    #[inline]
+    pub fn local_addr(&'w self) -> SocketAddr {
+        self.inner.local_addr()
+    }
 }
 
 /// Type system ID of a QUIC connection.
