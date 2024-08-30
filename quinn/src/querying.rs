@@ -1,5 +1,7 @@
+use std::{net::SocketAddr, ops::Deref};
+
 use bevy_ecs::{prelude::*, query::{QueryData, WorldQuery}};
-use crate::endpoints::EndpointComp;
+use crate::{config::SocketConfig, endpoints::EndpointComp};
 use crate::connections::ConnectionComp;
 
 /// Type system ID of a QUIC endpoint.
@@ -29,10 +31,34 @@ pub struct EndpointRef<'w> {
     inner: Ref<'w, EndpointComp>,
 }
 
+impl<'w> EndpointRef<'w> {
+    #[inline]
+    pub fn socket(&'w self) -> &'w SocketConfig {
+        &self.inner.socket_cfg
+    }
+
+    #[inline]
+    pub fn local_addr(&'w self) -> SocketAddr {
+        self.inner.local_addr()
+    }
+}
+
 #[derive(QueryData)]
 #[query_data(mutable)]
 pub struct EndpointMut<'w> {
     inner: Mut<'w, EndpointComp>,
+}
+
+impl<'w> EndpointMut<'w> {
+    #[inline]
+    pub fn socket(&'w self) -> &'w SocketConfig {
+        &self.inner.socket_cfg
+    }
+
+    #[inline]
+    pub fn socket_mut(&'w mut self) -> &'w mut SocketConfig {
+        &mut self.inner.socket_cfg
+    }
 }
 
 /// Type system ID of a QUIC connection.

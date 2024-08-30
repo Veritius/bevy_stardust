@@ -3,29 +3,11 @@ use anyhow::{anyhow, Result};
 use bevy_ecs::{component::{ComponentHooks, StorageType}, prelude::*};
 use bytes::BytesMut;
 use quinn_proto::{ClientConfig, ConnectionHandle, EndpointEvent};
-use crate::connections::ConnectionComp;
+use crate::{config::SocketConfig, connections::ConnectionComp};
 
 /// A QUIC endpoint using `quinn_proto`.
 pub(crate) struct EndpointComp {
-    /// The size of the buffer allocated to receive datagrams.
-    /// Higher values allow remote peers to send data more efficiently.
-    /// 
-    /// The amount of space allocated, in bytes, is equal to the value of this field.
-    /// 
-    /// If this is set to below `1280`, QUIC packets may be cut off and become unreadable.
-    /// Most operating systems also do not buffer UDP datagrams bigger than `65535` bytes,
-    /// so setting this field that high may simply waste memory, depending on the operating system.
-    pub recv_buf_size: u16,
-
-    /// The size of the buffer allocated to transmit datagrams.
-    /// Higher values allow more efficient transmission of information.
-    /// 
-    /// The amount of space allocated, in bytes, is equal to the value of this field.
-    /// 
-    /// If this is set to below `1280`, QUIC packets may be cut off and become unreadable.
-    /// Most operating systems also do not buffer UDP datagrams bigger than `65535` bytes,
-    /// so setting this field that high may simply waste memory, depending on the operating system.
-    pub send_buf_size: u16,
+    pub socket_cfg: SocketConfig,
 
     connections: BTreeMap<ConnectionHandle, Entity>,
 
@@ -69,8 +51,7 @@ impl EndpointComp {
         quinn: quinn_proto::Endpoint,
     ) -> Self {
         Self {
-            recv_buf_size: 1478,
-            send_buf_size: 1478,
+            socket_cfg: SocketConfig::default(),
 
             connections: BTreeMap::new(),
 
@@ -134,8 +115,8 @@ pub(crate) fn udp_recv_system(
 ) {
     for mut endpoint in &mut endpoints {
         // Buffer for I/O operations
-        debug_assert!(endpoint.recv_buf_size > 1280, "Receive buffer was too small");
-        let mut buf = vec![0u8; endpoint.recv_buf_size as usize];
+        debug_assert!(endpoint.socket_cfg.recv_buf_size > 1280, "Receive buffer was too small");
+        let mut buf = vec![0u8; endpoint.socket_cfg.recv_buf_size as usize];
 
         // Store some things ahead of time
         let local_ip = endpoint.local_addr().ip();
@@ -203,8 +184,8 @@ pub(crate) fn udp_send_system(
 ) {
     for endpoint in &mut endpoints {
         // Buffer for I/O operations
-        debug_assert!(endpoint.send_buf_size > 1280, "Transmit buffer was too small");
-        let mut buf = vec![0u8; endpoint.send_buf_size as usize];
+        debug_assert!(endpoint.socket_cfg.send_buf_size > 1280, "Transmit buffer was too small");
+        let mut buf = vec![0u8; endpoint.socket_cfg.send_buf_size as usize];
 
         // Iterate over connections
         for entity in endpoint.connections.values() {
