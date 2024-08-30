@@ -43,6 +43,9 @@ optional = true
 [dev-dependencies.rustls-pemfile]
 version = "2"
 
+[dev-dependencies.bevy_log]
+version = "0.14"
+
 [[example]]
 name = "star_client"
 path = "examples/star/client.rs"

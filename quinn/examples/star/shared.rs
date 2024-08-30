@@ -1,5 +1,6 @@
 use bevy_ecs::prelude::*;
 use bevy_app::{prelude::*, ScheduleRunnerPlugin};
+use bevy_log::LogPlugin;
 use bevy_stardust::prelude::*;
 use bevy_stardust_quinn::{CertificateDer, QuinnPlugin};
 use rustls_pemfile::Item;
@@ -21,6 +22,10 @@ pub fn certificate() -> CertificateDer<'static> {
 
 pub fn setup(app: &mut App) {
     app.add_plugins((
+        LogPlugin {
+            level: bevy_log::Level::TRACE,
+            ..Default::default()
+        },
         ScheduleRunnerPlugin::default(),
         StardustPlugin,
         QuinnPlugin,
