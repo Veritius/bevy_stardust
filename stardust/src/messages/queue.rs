@@ -1,13 +1,14 @@
 use hashbrown::HashMap;
 use smallvec::SmallVec;
 use crate::prelude::*;
+use super::MessageChannelId;
 
 type IdxVec = SmallVec<[usize; 2]>; 
 
 /// An efficient queue of messages, organised by channel.
 pub struct MessageQueue {
     messages: Vec<Message>,
-    indexes: HashMap<ChannelId, IdxVec>,
+    indexes: HashMap<MessageChannelId, IdxVec>,
 }
 
 impl MessageQueue {
@@ -43,7 +44,7 @@ impl MessageQueue {
     }
 
     /// Reserves capacity for at least `additional` new messages associated with `channel` to be efficiently inserted.
-    pub fn reserve_channel(&mut self, channel: ChannelId, additional: usize) {
+    pub fn reserve_channel(&mut self, channel: MessageChannelId, additional: usize) {
         // Reserve space in the messages vector
         self.reserve(additional);
 
@@ -103,7 +104,7 @@ impl MessageQueue {
 
     /// Pushes many messages from `iter` to a single channel.
     /// This can be faster than calling [`push_one`](Self::push_one) or [`push_many`](Self::push_many) repeatedly.
-    pub fn push_channel<I>(&mut self, channel: ChannelId, iter: I)
+    pub fn push_channel<I>(&mut self, channel: MessageChannelId, iter: I)
     where
         I: IntoIterator<Item = Message>,
     {
@@ -140,7 +141,7 @@ impl MessageQueue {
     }
 
     /// Returns an iterator over all messages in a specific channel.
-    pub fn iter_channel(&self, channel: ChannelId) -> MessageIter {
+    pub fn iter_channel(&self, channel: MessageChannelId) -> MessageIter {
         match self.indexes.get(&channel) {
             // The index map exists, return a real MessageIter
             Some(indexes) => MessageIter {
@@ -191,11 +192,11 @@ impl<'a> IntoIterator for &'a MessageQueue {
 #[derive(Clone)]
 pub struct ChannelIter<'a> {
     messages: &'a [Message],
-    map_iter: hashbrown::hash_map::Iter<'a, ChannelId, IdxVec>,
+    map_iter: hashbrown::hash_map::Iter<'a, MessageChannelId, IdxVec>,
 }
 
 impl<'a> Iterator for ChannelIter<'a> {
-    type Item = (ChannelId, MessageIter<'a>);
+    type Item = (MessageChannelId, MessageIter<'a>);
 
     fn next(&mut self) -> Option<Self::Item> {
         let (c, i) = self.map_iter.next()?;
@@ -281,15 +282,15 @@ fn message_queue_ordering_test() {
     ];
 
     // Add all the messages to the channel
-    queue.push_channel(ChannelId::from(0), map_messages(MESSAGE_SET_A));
-    queue.push_channel(ChannelId::from(0), map_messages(MESSAGE_SET_B));
-    queue.push_channel(ChannelId::from(1), map_messages(MESSAGE_SET_C));
+    queue.push_channel(MessageChannelId::from(0), map_messages(MESSAGE_SET_A));
+    queue.push_channel(MessageChannelId::from(0), map_messages(MESSAGE_SET_B));
+    queue.push_channel(MessageChannelId::from(1), map_messages(MESSAGE_SET_C));
 
-    queue.iter_channel(ChannelId::from(0))
+    queue.iter_channel(MessageChannelId::from(0))
     .zip(MESSAGE_SET_A.iter().chain(MESSAGE_SET_B))
     .for_each(|(a, b)| assert_eq!(a.as_slice(), *b));
 
-    queue.iter_channel(ChannelId::from(1))
+    queue.iter_channel(MessageChannelId::from(1))
     .zip(MESSAGE_SET_C)
     .for_each(|(a, b)| assert_eq!(a.as_slice(), *b));
 }

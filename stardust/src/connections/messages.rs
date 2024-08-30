@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 use bevy_ecs::prelude::*;
-use crate::{channels::ChannelId, messages::*};
+use crate::messages::*;
 use super::Peer;
 
 /// A message queue for a [peer entity], exposing a subset of [`MessageQueue`]'s API.
@@ -59,7 +59,7 @@ impl<D: MessageDirection> PeerMessages<D> {
     /// Pushes many messages from `iter` to a single channel.
     /// This can be faster than calling [`push_one`](Self::push_one) or [`push_many`](Self::push_many) repeatedly.
     #[inline]
-    pub fn push_channel<I>(&mut self, channel: ChannelId, iter: I)
+    pub fn push_channel<I>(&mut self, channel: MessageChannelId, iter: I)
     where
         I: IntoIterator<Item = Message>,
     {
@@ -74,7 +74,7 @@ impl<D: MessageDirection> PeerMessages<D> {
 
     /// Returns an iterator over all messages in a specific channel.
     #[inline]
-    pub fn iter_channel(&self, channel: ChannelId) -> MessageIter {
+    pub fn iter_channel(&self, channel: MessageChannelId) -> MessageIter {
         self.queue.iter_channel(channel)
     }
 }

@@ -7,6 +7,12 @@ use bevy_reflect::Reflect;
 #[cfg_attr(feature="reflect", derive(Reflect))]
 pub struct MessageChannelId(pub u64);
 
+impl From<u64> for MessageChannelId {
+    fn from(value: u64) -> Self {
+        Self(value)
+    }
+}
+
 pub trait MessageChannel: 'static {
     const IDENTIFIER: MessageChannelId;
 

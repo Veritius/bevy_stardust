@@ -1,6 +1,7 @@
 use std::{ops::Deref, str::{from_utf8, Utf8Error}};
 use bytes::Bytes;
-use crate::channels::ChannelId;
+
+use super::MessageChannelId;
 
 /// An individual, whole message. The most basic communication primitive.
 /// 
@@ -105,14 +106,14 @@ impl std::fmt::Debug for Message {
 #[derive(Clone)]
 pub struct ChannelMessage {
     /// The channel's identifier.
-    pub channel: ChannelId,
+    pub channel: MessageChannelId,
 
     /// The contents of the message.
     pub message: Message,
 }
 
-impl From<(ChannelId, Message)> for ChannelMessage {
-    fn from(value: (ChannelId, Message)) -> Self {
+impl From<(MessageChannelId, Message)> for ChannelMessage {
+    fn from(value: (MessageChannelId, Message)) -> Self {
         Self {
             channel: value.0,
             message: value.1,
@@ -120,8 +121,8 @@ impl From<(ChannelId, Message)> for ChannelMessage {
     }
 }
 
-impl From<(ChannelId, Bytes)> for ChannelMessage {
-    fn from(value: (ChannelId, Bytes)) -> Self {
+impl From<(MessageChannelId, Bytes)> for ChannelMessage {
+    fn from(value: (MessageChannelId, Bytes)) -> Self {
         Self {
             channel: value.0,
             message: Message::from_bytes(value.1),
