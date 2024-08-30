@@ -1,3 +1,5 @@
+use std::collections::BTreeMap;
+
 use super::MessageConsistency;
 
 #[cfg(feature="reflect")]
@@ -9,9 +11,11 @@ pub struct MessageChannelId(usize);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[cfg_attr(feature="reflect", derive(Reflect))]
-pub struct MessageChannelPersistentId(u64);
+pub struct MessageChannelPersistentId(pub u64);
 
 pub trait MessageChannel: 'static {
+    const IDENTIFIER: MessageChannelPersistentId;
+
     const PRIORITY: i32;
 
     const CONSISTENCY: MessageConsistency;
@@ -25,4 +29,11 @@ pub trait MessageChannel: 'static {
     fn is_ordered() -> bool {
         Self::CONSISTENCY.is_ordered()
     }
+}
+
+pub struct MessageChannelIds {
+    index: usize,
+
+    transient: BTreeMap<MessageChannelPersistentId, MessageChannelId>,
+    persistent: BTreeMap<MessageChannelId, MessageChannelPersistentId>,
 }
