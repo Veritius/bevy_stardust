@@ -3,35 +3,35 @@ use bevy_ecs::{component::{ComponentHooks, StorageType}, prelude::*};
 use bevy_stardust::prelude::*;
 use bevy_stardust_quic::{RecvStreamId, SendContext, SendStreamId};
 use quinn_proto::{ConnectionEvent as QuinnConnectionEvent, ConnectionHandle, Dir, EndpointEvent, SendStream, StreamId as QuinnStreamId, Transmit, WriteError};
-use crate::Endpoint;
+use crate::endpoints::EndpointComp;
 
 /// A QUIC connection using `quinn_proto`.
-pub struct Connection {
+pub(crate) struct ConnectionComp {
     endpoint: Option<Entity>,
 
     inner: Box<ConnectionInner>,
 }
 
-impl Component for Connection {
+impl Component for ConnectionComp {
     const STORAGE_TYPE: StorageType = StorageType::Table;
 
     fn register_component_hooks(hooks: &mut ComponentHooks) {
         hooks.on_remove(|mut world, entity, _| {
             // Get the component from the world
-            let this = &mut *world.get_mut::<Connection>(entity).unwrap();
+            let this = &mut *world.get_mut::<ConnectionComp>(entity).unwrap();
             let (handle, endpoint) = (this.inner.handle, this.endpoint);
             this.detach(); // Detach from the endpoint
 
             // Inform the endpoint of the connection being dropped
             if let Some(endpoint) = endpoint {
-                let endpoint = &mut *world.get_mut::<Endpoint>(endpoint).unwrap();
+                let endpoint = &mut *world.get_mut::<EndpointComp>(endpoint).unwrap();
                 endpoint.detach(handle);
             }
         });
     }
 }
 
-impl Connection {
+impl ConnectionComp {
     pub(crate) fn new(
         handle: ConnectionHandle,
         quinn: quinn_proto::Connection,
@@ -213,7 +213,7 @@ impl ConnectionInner {
 }
 
 pub(crate) fn connection_events_system(
-    mut connections: Query<&mut Connection>,
+    mut connections: Query<&mut ConnectionComp>,
 ) {
     connections.par_iter_mut().for_each(|mut connection| {
         // Timeouts can produce additional events
@@ -284,7 +284,7 @@ pub(crate) fn connection_events_system(
 }
 
 pub(crate) fn qsm_events_system(
-    mut connections: Query<&mut Connection>,
+    mut connections: Query<&mut ConnectionComp>,
 ) {
     connections.par_iter_mut().for_each(|mut connection| {
         // Reborrow Connection because borrowck gets angy with Mut<T>
@@ -348,7 +348,7 @@ pub(crate) fn qsm_events_system(
 
 pub(crate) fn outgoing_messages_system(
     channels: Channels,
-    mut connections: Query<(&mut Connection, &PeerMessages<Outgoing>)>,
+    mut connections: Query<(&mut ConnectionComp, &PeerMessages<Outgoing>)>,
 ) {
     connections.par_iter_mut().for_each(|(mut connection, outgoing)| {
         let context = SendContext {

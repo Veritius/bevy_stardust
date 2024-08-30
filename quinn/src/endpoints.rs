@@ -3,10 +3,10 @@ use anyhow::{anyhow, Result};
 use bevy_ecs::{component::{ComponentHooks, StorageType}, prelude::*};
 use bytes::BytesMut;
 use quinn_proto::{ClientConfig, ConnectionHandle, EndpointEvent};
-use crate::Connection;
+use crate::connections::ConnectionComp;
 
 /// A QUIC endpoint using `quinn_proto`.
-pub struct Endpoint {
+pub(crate) struct EndpointComp {
     /// The size of the buffer allocated to receive datagrams.
     /// Higher values allow remote peers to send data more efficiently.
     /// 
@@ -32,13 +32,13 @@ pub struct Endpoint {
     inner: Box<EndpointInner>,
 }
 
-impl Component for Endpoint {
+impl Component for EndpointComp {
     const STORAGE_TYPE: StorageType = StorageType::Table;
 
     fn register_component_hooks(hooks: &mut ComponentHooks) {
         hooks.on_remove(|mut world, entity, _| {
             // Get the component from the world
-            let this = &mut *world.get_mut::<Endpoint>(entity).unwrap();
+            let this = &mut *world.get_mut::<EndpointComp>(entity).unwrap();
 
             // Discard each connection
             for handle in this.connections.keys() {
@@ -50,13 +50,13 @@ impl Component for Endpoint {
 
             // Remove the connection component from each connection
             for id in ids.iter() {
-                world.commands().entity(*id).remove::<Connection>();
+                world.commands().entity(*id).remove::<ConnectionComp>();
             }
         });
     }
 }
 
-impl Endpoint {
+impl EndpointComp {
     /// Returns the local address of the [`Endpoint`].
     /// 
     /// This is the address of the local socket, and not the address that people over WAN will use to reach this endpoint.
@@ -86,7 +86,7 @@ impl Endpoint {
         client_config: ClientConfig,
         remote_address: impl ToSocketAddrs,
         server_name: &str,
-    ) -> Result<Connection> {
+    ) -> Result<ConnectionComp> {
         let (handle, quinn) = self.inner.quinn.connect(
             Instant::now(),
             client_config,
@@ -94,7 +94,7 @@ impl Endpoint {
             server_name,
         )?;
 
-        let mut comp = Connection::new(handle, quinn);
+        let mut comp = ConnectionComp::new(handle, quinn);
         todo!();
 
         return Ok(comp);
@@ -129,8 +129,8 @@ impl EndpointInner {
 }
 
 pub(crate) fn udp_recv_system(
-    mut endpoints: Query<&mut Endpoint>,
-    mut connections: Query<&mut Connection>,
+    mut endpoints: Query<&mut EndpointComp>,
+    mut connections: Query<&mut ConnectionComp>,
 ) {
     for mut endpoint in &mut endpoints {
         // Buffer for I/O operations
@@ -198,8 +198,8 @@ pub(crate) fn udp_recv_system(
 }
 
 pub(crate) fn udp_send_system(
-    mut endpoints: Query<&mut Endpoint>,
-    mut connections: Query<&mut Connection>,
+    mut endpoints: Query<&mut EndpointComp>,
+    mut connections: Query<&mut ConnectionComp>,
 ) {
     for endpoint in &mut endpoints {
         // Buffer for I/O operations
@@ -230,8 +230,8 @@ pub(crate) fn udp_send_system(
 }
 
 pub(crate) fn event_exchange_system(
-    mut endpoints: Query<&mut Endpoint>,
-    mut connections: Query<&mut Connection>,
+    mut endpoints: Query<&mut EndpointComp>,
+    mut connections: Query<&mut ConnectionComp>,
 ) {
     for mut endpoint in &mut endpoints {
         // Reborrows because borrowck angy

@@ -1,10 +1,8 @@
 use std::{net::{ToSocketAddrs, UdpSocket}, sync::Arc};
 use anyhow::Result;
 use bevy_ecs::{entity::Entities, prelude::*, system::{EntityCommands, SystemParam}};
-use bevy_app::prelude::*;
 use quinn_proto::{ClientConfig, EndpointConfig, ServerConfig};
-
-use crate::Endpoint;
+use crate::endpoints::EndpointComp;
 
 /// Utility for opening endpoints.
 #[derive(SystemParam)]
@@ -37,7 +35,7 @@ impl Endpoints<'_, '_> {
         );
 
         // Create the endpoint component
-        let mut endpoint = Endpoint::new(
+        let mut endpoint = EndpointComp::new(
             socket,
             endpoint
         );
@@ -62,7 +60,7 @@ impl Endpoints<'_, '_> {
 }
 
 pub struct EndpointCommands<'a> {
-    endpoint: &'a mut Endpoint,
+    endpoint: &'a mut EndpointComp,
     commands: EntityCommands<'a>,
 }
 
