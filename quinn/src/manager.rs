@@ -1,4 +1,5 @@
 use bevy_ecs::{prelude::*, system::EntityCommands};
+use quinn_proto::ClientConfig;
 
 pub trait EndpointCommands {
     fn make_endpoint(
@@ -42,5 +43,19 @@ impl<'w> EndpointCommands for EntityCommands<'w> {
 }
 
 pub struct EndpointBuilder<'a> {
+    commands: &'a mut quinn_proto::Endpoint,
+}
+
+impl<'a> EndpointBuilder<'a> {
+    pub fn connect(
+        &mut self,
+        config: ClientConfig,
+        build: impl FnOnce(EndpointBuilder),
+    ) {
+        todo!()
+    }
+}
+
+pub struct ConnectionBuilder<'a> {
     commands: EntityCommands<'a>,
 }
