@@ -2,6 +2,26 @@ use bevy_ecs::{prelude::*, query::{QueryData, WorldQuery}};
 use crate::endpoints::EndpointComp;
 use crate::connections::ConnectionComp;
 
+/// Type system ID of a QUIC endpoint.
+/// 
+/// This is **not** the component this plugin uses.
+/// Instead, it's a [`WorldQuery`] that hides the inner workings while still allowing querying.
+/// It can be used almost identically to how you would use a component in a query.
+/// This is also why the type is unconstructable (has no variants) since it is not used by value.
+/// 
+/// ```no_run
+/// # use bevy_ecs::prelude::*;
+/// // For read-only access (works in parallel)
+/// type MyQuery<'a> = Query<&'a Endpoint>;
+/// 
+/// // For edit access (does not work in parallel)
+/// type MyMutQuery<'a> = Query<&'a mut Endpoint>;
+/// 
+/// // Usage example in a query
+/// fn my_system(
+///     query: Query<&mut Endpoint>,
+/// ) {}
+/// ```
 pub enum Endpoint {}
 
 #[derive(QueryData)]
@@ -15,6 +35,26 @@ pub struct EndpointMut<'w> {
     inner: Mut<'w, EndpointComp>,
 }
 
+/// Type system ID of a QUIC connection.
+/// 
+/// This is **not** the component this plugin uses.
+/// Instead, it's a [`WorldQuery`] that hides the inner workings while still allowing querying.
+/// It can be used almost identically to how you would use a component in a query.
+/// This is also why the type is unconstructable (has no variants) since it is not used by value.
+/// 
+/// ```no_run
+/// # use bevy_ecs::prelude::*;
+/// // For read-only access (works in parallel)
+/// type MyQuery<'a> = Query<&'a Connection>;
+/// 
+/// // For edit access (does not work in parallel)
+/// type MyMutQuery<'a> = Query<&'a mut Connection>;
+/// 
+/// // Usage example in a system
+/// fn my_system(
+///     query: Query<&mut Connection>,
+/// ) {}
+/// ```
 pub enum Connection {}
 
 #[derive(QueryData)]
