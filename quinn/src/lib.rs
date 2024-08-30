@@ -8,7 +8,7 @@ mod manager;
 mod plugin;
 mod querying;
 
-pub use manager::Endpoints;
+pub use manager::EndpointCommands;
 pub use plugin::QuinnPlugin;
 pub use querying::{Connection, Endpoint};
 

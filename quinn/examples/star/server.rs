@@ -2,7 +2,7 @@ mod shared;
 
 use std::sync::Arc;
 use bevy_app::prelude::*;
-use bevy_stardust_quinn::{Endpoints, PrivateKeyDer};
+use bevy_stardust_quinn::*;
 use quinn_proto::{EndpointConfig, ServerConfig};
 use rustls_pemfile::Item;
 

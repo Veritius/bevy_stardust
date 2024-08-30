@@ -2,7 +2,7 @@ mod shared;
 
 use std::sync::Arc;
 use bevy_app::prelude::*;
-use bevy_stardust_quinn::{Endpoints, RootCertStore};
+use bevy_stardust_quinn::*;
 use quinn_proto::{ClientConfig, EndpointConfig};
 
 fn root_certs() -> Arc<RootCertStore> {
