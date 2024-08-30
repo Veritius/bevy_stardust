@@ -29,7 +29,7 @@ mod queue;
 pub use bytes;
 
 // Public types
-pub use channels::{MessageChannel, MessageChannelId, MessageChannelPersistentId};
+pub use channels::{MessageChannel, MessageChannelId};
 pub use constraints::MessageConsistency;
 pub use direction::{NetDirection, MessageDirection, Incoming, Outgoing};
 pub use message::{Message, ChannelMessage};
