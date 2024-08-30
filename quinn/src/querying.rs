@@ -1,5 +1,4 @@
-use std::{net::SocketAddr, ops::Deref};
-
+use std::net::SocketAddr;
 use bevy_ecs::{prelude::*, query::{QueryData, WorldQuery}};
 use crate::{config::SocketConfig, endpoints::EndpointComp};
 use crate::connections::ConnectionComp;
