@@ -4,7 +4,7 @@ use quinn_proto::ClientConfig;
 pub trait EndpointCommands {
     fn make_endpoint(
         &mut self,
-        build: impl FnOnce(EndpointBuilder),
+        build: impl FnOnce(Result<EndpointBuilder, EndpointBuildError>),
     ) -> &mut Self;
 
     fn close_endpoint(
@@ -12,10 +12,15 @@ pub trait EndpointCommands {
     ) -> &mut Self;
 }
 
+#[derive(Debug, Clone)]
+pub enum EndpointBuildError {
+
+}
+
 impl<'w> EndpointCommands for EntityWorldMut<'w> {
     fn make_endpoint(
         &mut self,
-        build: impl FnOnce(EndpointBuilder),
+        build: impl FnOnce(Result<EndpointBuilder, EndpointBuildError>),
     ) -> &mut Self {
         todo!()
     }
@@ -30,7 +35,7 @@ impl<'w> EndpointCommands for EntityWorldMut<'w> {
 impl<'w> EndpointCommands for EntityCommands<'w> {
     fn make_endpoint(
         &mut self,
-        build: impl FnOnce(EndpointBuilder),
+        build: impl FnOnce(Result<EndpointBuilder, EndpointBuildError>),
     ) -> &mut Self {
         todo!()
     }
@@ -50,7 +55,7 @@ impl<'a> EndpointBuilder<'a> {
     pub fn connect(
         &mut self,
         config: ClientConfig,
-        build: impl FnOnce(EndpointBuilder),
+        build: impl FnOnce(Result<ConnectionBuilder, ConnectionBuildError>),
     ) {
         todo!()
     }
@@ -58,4 +63,9 @@ impl<'a> EndpointBuilder<'a> {
 
 pub struct ConnectionBuilder<'a> {
     commands: EntityCommands<'a>,
+}
+
+#[derive(Debug, Clone)]
+pub enum ConnectionBuildError {
+
 }
