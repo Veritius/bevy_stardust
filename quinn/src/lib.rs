@@ -4,11 +4,9 @@
 mod config;
 mod connections;
 mod endpoints;
-mod manager;
 mod plugin;
 mod querying;
 
-pub use manager::EndpointCommands;
 pub use plugin::QuinnPlugin;
 pub use querying::{Connection, Endpoint};
 
