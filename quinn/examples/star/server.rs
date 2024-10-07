@@ -25,17 +25,17 @@ fn main() {
 
     shared::setup(&mut app);
 
-    app.add_systems(Startup, |mut endpoints: Endpoints| {
-        endpoints.open(
-            Arc::new(EndpointConfig::default()),
-            Some(Arc::new(ServerConfig::with_single_cert(
-                vec![shared::certificate()],
-                private_key(),
-            ).unwrap())),
-            shared::SERVER_ADDRESS,
-            |_endpoint| {},
-        ).unwrap();
-    });
+    // app.add_systems(Startup, |mut endpoints: Endpoints| {
+    //     endpoints.open(
+    //         Arc::new(EndpointConfig::default()),
+    //         Some(Arc::new(ServerConfig::with_single_cert(
+    //             vec![shared::certificate()],
+    //             private_key(),
+    //         ).unwrap())),
+    //         shared::SERVER_ADDRESS,
+    //         |_endpoint| {},
+    //     ).unwrap();
+    // });
 
     app.run();
 }

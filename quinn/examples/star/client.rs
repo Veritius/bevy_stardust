@@ -16,21 +16,21 @@ fn main() {
 
     shared::setup(&mut app);
 
-    app.add_systems(Startup, |mut endpoints: Endpoints| {
-        endpoints.open(
-            Arc::new(EndpointConfig::default()),
-            None,
-            shared::WILDCARD_ADDRESS,
-            |endpoint| {
-                endpoint.connect(
-                    ClientConfig::with_root_certificates(root_certs()).unwrap(),
-                    shared::SERVER_ADDRESS,
-                    "example.com".into(),
-                    |_connection| {}
-                ).unwrap();
-            }
-        ).unwrap();
-    });
+    // app.add_systems(Startup, |mut endpoints: Endpoints| {
+    //     endpoints.open(
+    //         Arc::new(EndpointConfig::default()),
+    //         None,
+    //         shared::WILDCARD_ADDRESS,
+    //         |endpoint| {
+    //             endpoint.connect(
+    //                 ClientConfig::with_root_certificates(root_certs()).unwrap(),
+    //                 shared::SERVER_ADDRESS,
+    //                 "example.com".into(),
+    //                 |_connection| {}
+    //             ).unwrap();
+    //         }
+    //     ).unwrap();
+    // });
 
     app.run();
 }
