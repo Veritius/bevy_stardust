@@ -1,7 +1,7 @@
 use std::{collections::BTreeMap, net::SocketAddr, sync::Arc, time::Instant};
 use bevy_ecs::{component::{ComponentHooks, StorageType}, prelude::*};
 use bevy_log::tracing_subscriber::filter::targets::IntoIter;
-use quinn_proto::{ClientConfig, ConnectError, ConnectionHandle as QuinnHandle, EndpointConfig, EndpointEvent, ServerConfig};
+use quinn_proto::{ClientConfig, ConnectError, ConnectionEvent, ConnectionHandle as QuinnHandle, EndpointConfig, EndpointEvent, ServerConfig};
 use crate::socket::QuicSocket;
 
 /// A QUIC endpoint.
@@ -105,6 +105,18 @@ impl EndpointInner {
                 None,
             ),
         }
+    }
+
+    #[inline]
+    pub fn handle_event(
+        &mut self,
+        handle: QuinnHandle,
+        event: EndpointEvent
+    ) -> Option<ConnectionEvent> {
+        self.endpoint.handle_event(
+            handle,
+            event
+        )
     }
 }
 

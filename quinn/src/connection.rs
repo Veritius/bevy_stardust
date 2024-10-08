@@ -1,6 +1,6 @@
 use std::time::Instant;
 use bevy_ecs::{component::{ComponentHooks, StorageType}, prelude::*};
-use quinn_proto::ConnectionHandle as QuinnHandle;
+use quinn_proto::{ConnectionEvent, ConnectionHandle as QuinnHandle, EndpointEvent, Event as ApplicationEvent};
 use crate::Endpoint;
 
 /// A QUIC connection.
@@ -66,5 +66,44 @@ impl ConnectionInner {
             todo!(),
             todo!(),
         );
+    }
+
+    #[inline]
+    pub fn handle(&self) -> QuinnHandle {
+        self.handle
+    }
+
+    #[inline]
+    pub fn quinn_handle_timeout(&mut self) {
+        self.connection.handle_timeout(Instant::now());
+    }
+
+    #[inline]
+    pub fn quinn_handle_event(
+        &mut self,
+        event: ConnectionEvent
+    ) {
+        self.connection.handle_event(
+            event
+        );
+    }
+
+    #[inline]
+    pub fn quinn_poll_app(&mut self) -> Option<ApplicationEvent> {
+        self.connection.poll()
+    }
+
+    #[inline]
+    pub fn quinn_poll_end(&mut self) -> Option<EndpointEvent> {
+        self.connection.poll_endpoint_events()
+    }
+
+    #[inline]
+    pub fn handle_qio_timeout(&mut self) {
+        self.statemachine.handle_timeout(Instant::now());
+    }
+
+    pub fn qio_poll(&mut self) -> Option<bevy_stardust_quic::ConnectionEvent> {
+        self.statemachine.poll()
     }
 }
