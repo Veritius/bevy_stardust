@@ -25,16 +25,16 @@ where
     
 }
 
-struct ParEndpointAccess<'a, Ea: QueryData> {
+pub(crate) struct ParEndpointAccess<'a, Ea: QueryData> {
     pub endpoint: &'a mut Endpoint,
     pub additional: Ea::Item<'a>,
 }
 
-struct ParConnections<'a, Ca: QueryData> {
+pub(crate) struct ParConnections<'a, Ca: QueryData> {
     connections: BTreeMap<Entity, ParConnectionAccess<'a, Ca>>,
 }
 
-struct ParConnectionAccess<'a, Ca: QueryData> {
+pub(crate) struct ParConnectionAccess<'a, Ca: QueryData> {
     pub connection: &'a mut Connection,
     pub additional: Ca::Item<'a>,
 }
