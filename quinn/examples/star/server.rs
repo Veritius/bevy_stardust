@@ -2,9 +2,11 @@ mod shared;
 
 use std::sync::Arc;
 use bevy_app::prelude::*;
+use bevy_ecs::prelude::*;
 use bevy_stardust_quinn::*;
 use quinn_proto::{EndpointConfig, ServerConfig};
 use rustls_pemfile::Item;
+use shared::*;
 
 // NOTE: It is very, very, very bad practice to compile-in private keys.
 // This is only done for the sake of simplicity. In reality, you should
@@ -25,17 +27,16 @@ fn main() {
 
     shared::setup(&mut app);
 
-    // app.add_systems(Startup, |mut endpoints: Endpoints| {
-    //     endpoints.open(
-    //         Arc::new(EndpointConfig::default()),
-    //         Some(Arc::new(ServerConfig::with_single_cert(
-    //             vec![shared::certificate()],
-    //             private_key(),
-    //         ).unwrap())),
-    //         shared::SERVER_ADDRESS,
-    //         |_endpoint| {},
-    //     ).unwrap();
-    // });
+    app.add_systems(Startup, |mut commands: Commands| {
+        commands.spawn_empty().make_endpoint(MakeEndpoint {
+            socket: QuicSocket::new(SERVER_ADDRESS).unwrap(),
+            config: Arc::new(EndpointConfig::default()),
+            server: Some(Arc::new(ServerConfig::with_single_cert(
+                vec![shared::certificate()],
+                private_key(),
+            ).unwrap())),
+        });
+    });
 
     app.run();
 }

@@ -1,4 +1,4 @@
-use std::{io::{ErrorKind, Result as IoResult}, mem::MaybeUninit, net::SocketAddr};
+use std::{io::{ErrorKind, Result as IoResult}, mem::MaybeUninit, net::{SocketAddr, ToSocketAddrs}};
 
 /// An owned bound UDP socket.
 pub(crate) unsafe trait BoundUdpSocket {
@@ -55,8 +55,14 @@ pub struct QuicSocket {
 impl QuicSocket {
     /// Binds a new [`QuicSocket`].
     pub fn new(
-        address: SocketAddr,
+        address: impl ToSocketAddrs,
     ) -> IoResult<Self> {
+        // Get the address we'll be binding the socket to
+        let address = match address.to_socket_addrs()?.next() {
+            Some(val) => val,
+            None => return Err(std::io::Error::from(ErrorKind::InvalidInput)),
+        };
+
         // Construct socket
         let socket = socket2::Socket::new(
             socket2::Domain::for_address(address),
