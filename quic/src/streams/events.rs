@@ -2,12 +2,38 @@ use bevy_stardust::prelude::*;
 use super::{RecvStreamId, SendStreamId};
 
 /// An event used by the state machine to control QUIC streams.
-pub enum StreamEvent {
-    /// Open a new stream.
+pub enum TransportStreamEvent {
+    /// A new stream was opened.
+    Opened {
+        /// The ID of the opened stream.
+        id: RecvStreamId,
+    },
+
+    /// A stream was reset.
+    Reset {
+        /// The ID of the reset stream.
+        id: RecvStreamId,
+    },
+
+    /// A stream was finished.
+    Finished {
+        /// The ID of the finished stream.
+        id: RecvStreamId,
+    },
+
+    /// A stream was stopped.
+    Stopped {
+        /// The ID of the stopped stream.
+        id: SendStreamId,
+    },
+}
+
+pub enum ConnectionStreamEvent {
+    /// Opens a new stream.
     /// 
-    /// This is always sent before `Transmit`.
+    /// Always appears before `Transmit` for the given stream `id`.
     Open {
-        /// The stream that is opened.
+        /// The ID for the new stream.
         id: SendStreamId,
     },
 
@@ -31,7 +57,6 @@ pub enum StreamEvent {
         priority: u32,
     },
 
-    /// Reset a stream.
     Reset {
         /// The stream to reset.
         id: SendStreamId,

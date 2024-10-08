@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 use bevy_stardust::prelude::{ChannelId, Message};
 use bytes::Bytes;
 use crate::{Connection, ConnectionShared};
-use super::{header::StreamHeader, SendStreamId, StreamEvent};
+use super::{header::StreamHeader, SendStreamId, TransportStreamEvent};
 
 impl Connection {
     /// Call when a stream is stopped.
@@ -88,16 +88,16 @@ impl OutgoingStreamsHandle<'_> {
         assert!(index >= OutgoingStreams::SEND_STREAM_ID_LIMIT, "Exceeded send ID limit");
         self.data.unique_id_index += 1;
         let id = SendStreamId(index);
-        self.shared.stream_event(StreamEvent::Open { id });
+        self.shared.stream_event(TransportStreamEvent::Opened { id });
         return id;
     }
 
     fn send_over_stream(&mut self, id: SendStreamId, data: Bytes) {
-        self.shared.stream_event(StreamEvent::Transmit { id, chunk: data })
+        self.shared.stream_event(TransportStreamEvent::Transmit { id, chunk: data })
     }
 
     fn finish_stream_inner(&mut self, id: SendStreamId) {
-        self.shared.stream_event(StreamEvent::Finish { id });
+        self.shared.stream_event(TransportStreamEvent::Finish { id });
     }
 
     fn send_transient_single(&mut self, header: StreamHeader, payload: Bytes) {

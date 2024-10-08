@@ -9,10 +9,10 @@ use crate::{ConnectionEvent, ConnectionShared};
 pub(crate) use incoming::IncomingStreams;
 pub(crate) use outgoing::{OutgoingStreams, OutgoingStreamsHandle};
 
-pub use events::StreamEvent;
+pub use events::TransportStreamEvent;
 
 impl ConnectionShared {
-    fn stream_event(&mut self, event: StreamEvent) {
+    fn stream_event(&mut self, event: TransportStreamEvent) {
         self.events.push(ConnectionEvent::StreamEvent(event));
     }
 }
