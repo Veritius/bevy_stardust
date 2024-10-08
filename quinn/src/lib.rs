@@ -7,6 +7,7 @@ mod connection;
 mod endpoint;
 mod plugin;
 mod socket;
+mod systems;
 
 pub use commands::{EndpointCommands, MakeEndpoint, OpenConnection};
 pub use connection::Connection;

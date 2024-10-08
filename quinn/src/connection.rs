@@ -39,6 +39,8 @@ pub(crate) struct ConnectionInner {
     endpoint: Entity,
 
     connection: quinn_proto::Connection,
+
+    statemachine: bevy_stardust_quic::Connection,
 }
 
 impl ConnectionInner {
@@ -46,11 +48,13 @@ impl ConnectionInner {
         handle: QuinnHandle,
         endpoint: Entity,
         connection: quinn_proto::Connection,
+        statemachine: bevy_stardust_quic::Connection,
     ) -> Self {
         Self {
             handle,
             endpoint,
             connection,
+            statemachine,
         }
     }
 

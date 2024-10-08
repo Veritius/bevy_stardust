@@ -190,6 +190,9 @@ impl EntityCommand for OpenConnection {
             &self.server_name,
         ) } {
             Ok((handle, connection)) => {
+                // Connection state machine
+                let statemachine = bevy_stardust_quic::Connection::new();
+
                 // Spawn the new connection entity
                 world.get_or_spawn(connection_id)
                     .unwrap() // Shouldn't happen
@@ -197,6 +200,7 @@ impl EntityCommand for OpenConnection {
                         handle,
                         endpoint_id,
                         connection,
+                        statemachine,
                     )))});
                 
                 #[cfg(feature="log")]
