@@ -1,9 +1,8 @@
 use bevy_ecs::{component::{ComponentHooks, StorageType}, prelude::*};
+use quinn_proto::ConnectionHandle as QuinnHandle;
 
 /// A QUIC connection.
-pub struct Connection {
-
-}
+pub struct Connection(pub(crate) Box<ConnectionInner>);
 
 impl Component for Connection {
     const STORAGE_TYPE: StorageType = StorageType::Table;
@@ -13,4 +12,8 @@ impl Component for Connection {
             todo!()
         });
     }
+}
+
+pub(crate) struct ConnectionInner {
+    handle: QuinnHandle,
 }
