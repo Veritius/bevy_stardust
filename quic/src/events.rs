@@ -6,6 +6,12 @@ use crate::{RecvStreamId, SendStreamId};
 pub enum TransportEvent {
     /// A stream event occurred.
     Stream(TransportStreamEvent),
+
+    /// The connection is closing but not yet drained.
+    Closing,
+
+    /// The connection is fully drained and can be dropped.
+    Drained,
 }
 
 /// An event sent by the state machine to a QUIC implementation.
@@ -19,14 +25,14 @@ pub enum ConnectionEvent {
 
 /// An event sent by the state machine to the application.
 pub enum ApplicationEvent {
+    /// A Stardust network message was received.
+    Message(ChannelMessage),
+
     /// The connection is closing but not yet drained.
     Closing,
 
     /// The connection is drained and can be dropped.
     Drained,
-
-    /// A Stardust network message was received.
-    Message(ChannelMessage),
 }
 
 /// A stream event that occurred on the Transport event.
