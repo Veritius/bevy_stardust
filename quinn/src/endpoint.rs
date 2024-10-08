@@ -1,12 +1,14 @@
 use std::{collections::BTreeMap, net::SocketAddr, sync::Arc, time::Instant};
 use bevy_ecs::{component::{ComponentHooks, StorageType}, prelude::*};
+use bevy_log::tracing_subscriber::filter::targets::IntoIter;
 use quinn_proto::{ClientConfig, ConnectError, ConnectionHandle as QuinnHandle, EndpointConfig, EndpointEvent, ServerConfig};
 use crate::socket::QuicSocket;
 
 /// A QUIC endpoint.
 pub struct Endpoint {
-    connections: EndpointConnections,
     inner: Box<EndpointInner>,
+
+    connections: EndpointConnections,
 }
 
 impl Component for Endpoint {
@@ -26,14 +28,24 @@ impl Endpoint {
         server: Option<Arc<ServerConfig>>,
     ) -> Self {
         Self {
-            connections: EndpointConnections::new(),
-
             inner: Box::new(EndpointInner::new(
                 socket,
                 config,
                 server,
             )),
+
+            connections: EndpointConnections::new(),
         }
+    }
+
+    pub(crate) fn split_access(&mut self) -> (
+        &mut EndpointInner,
+        &EndpointConnections,
+    ) {
+        (
+            &mut *self.inner,
+            &self.connections,
+        )
     }
 
     pub(crate) unsafe fn inform_connection_close(
@@ -96,7 +108,7 @@ impl EndpointInner {
     }
 }
 
-struct EndpointConnections {
+pub(crate) struct EndpointConnections {
     e2h: BTreeMap<Entity, QuinnHandle>,
     h2e: BTreeMap<QuinnHandle, Entity>,
 }
@@ -124,5 +136,27 @@ impl EndpointConnections {
         let entity = self.h2e.remove(&handle)?;
         self.e2h.remove(&entity);
         return Some(entity);
+    }
+}
+
+impl<'a> IntoIterator for &'a EndpointConnections {
+    type Item = (Entity, QuinnHandle);
+    type IntoIter = EndpointConnectionsIter<'a>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        todo!()
+    }
+}
+
+pub(crate) struct EndpointConnectionsIter<'a> {
+    iter: std::collections::btree_map::Iter<'a, Entity, QuinnHandle>,
+}
+
+impl<'a> Iterator for EndpointConnectionsIter<'a> {
+    type Item = (Entity, QuinnHandle);
+
+    #[inline]
+    fn next(&mut self) -> Option<Self::Item> {
+        self.iter.next().map(|(a,b)| (*a, *b))
     }
 }
