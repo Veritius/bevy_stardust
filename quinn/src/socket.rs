@@ -11,14 +11,13 @@ pub(crate) trait SyncUdpSocket {
     /// The length of the scratch buffer is used 
     ///
     /// Has the following return cases:
-    /// - `Ok(true)` - Successfully received the entire datagram
-    /// - `Ok(false)` - No packets were available to read
+    /// - `Ok(Some(x))` - Successfully received the entire datagram
+    /// - `Ok(None)` - No packets were available to read
     /// - `Err(x)` - Receive failure, `x` is the stdlib error type
     fn recv(
         &mut self,
-        meta: DatagramRecvMeta,
-        scratch: &mut Vec<u8>,
-    ) -> IoResult<bool>;
+        scratch: &mut [u8],
+    ) -> IoResult<Option<DatagramRecvMeta>>;
 
     /// Sends a datagram.
     /// 
@@ -28,7 +27,7 @@ pub(crate) trait SyncUdpSocket {
     fn send(
         &mut self,
         meta: DatagramSendMeta,
-        scratch: &mut Vec<u8>,
+        scratch: &mut [u8],
         datagram: &[u8],
     ) -> IoResult<usize>;
 }
@@ -50,16 +49,15 @@ impl SyncUdpSocket for UdpSocket {
 
     fn recv(
         &mut self,
-        meta: DatagramRecvMeta,
-        scratch: &mut Vec<u8>,
-    ) -> IoResult<bool> {
+        scratch: &mut [u8],
+    ) -> IoResult<Option<DatagramRecvMeta>> {
         todo!()
     }
 
     fn send(
         &mut self,
         meta: DatagramSendMeta,
-        scratch: &mut Vec<u8>,
+        scratch: &mut [u8],
         datagram: &[u8],
     ) -> IoResult<usize> {
         todo!()
