@@ -1,7 +1,7 @@
 use std::{collections::BTreeMap, time::Instant};
 use bevy_ecs::{component::{ComponentHooks, StorageType}, prelude::*};
 use bevy_stardust_quic::{RecvStreamId, SendStreamId};
-use quinn_proto::{ConnectionEvent, ConnectionHandle as QuinnHandle, EndpointEvent, Event as ApplicationEvent, StreamId as QuinnStreamId};
+use quinn_proto::{ConnectionEvent, ConnectionHandle as QuinnHandle, EndpointEvent, Event as ApplicationEvent, StreamEvent as QuinnStreamEvent, StreamId as QuinnStreamId};
 use crate::Endpoint;
 
 /// A QUIC connection.
@@ -38,11 +38,11 @@ pub(crate) struct ConnectionInner {
     handle: QuinnHandle,
     endpoint: Entity,
 
-    connection: quinn_proto::Connection,
+    quinn: quinn_proto::Connection,
 
     statemachine: bevy_stardust_quic::Connection,
     map_qsid_ssid: BTreeMap<QuinnStreamId, SendStreamId>,
-    map_rsid_qsid: BTreeMap<RecvStreamId, QuinnStreamId>,
+    map_ssid_qsid: BTreeMap<SendStreamId, QuinnStreamId>,
 }
 
 impl ConnectionInner {
@@ -56,18 +56,18 @@ impl ConnectionInner {
             handle,
             endpoint,
 
-            connection,
+            quinn: connection,
 
             statemachine,
             map_qsid_ssid: BTreeMap::new(),
-            map_rsid_qsid: BTreeMap::new(),
+            map_ssid_qsid: BTreeMap::new(),
         }
     }
 
     pub fn close(
         &mut self
     ) {
-        self.connection.close(
+        self.quinn.close(
             Instant::now(),
             todo!(),
             todo!(),
@@ -83,7 +83,7 @@ impl ConnectionInner {
         &mut self,
         now: Instant,
     ) {
-        self.connection.handle_timeout(now);
+        self.quinn.handle_timeout(now);
         self.statemachine.handle_timeout(now);
     }
 
@@ -92,14 +92,68 @@ impl ConnectionInner {
         &mut self,
         event: ConnectionEvent,
     ) {
-        self.connection.handle_event(event);
+        self.quinn.handle_event(event);
+
+        while let Some(event) = self.quinn.poll() {
+            match event {
+                ApplicationEvent::Stream(stream_event) => match stream_event {
+                    QuinnStreamEvent::Opened { dir } => {
+                        let id = self.quinn.streams().accept(dir)
+                            .expect("A stream was reported to be open in an event, but accepting it failed");
+
+                        self.statemachine.stream_opened(qsid_to_rsid(id));
+
+                        todo!()
+                    },
+
+                    QuinnStreamEvent::Readable { id } => {
+                        todo!()
+                    },
+
+                    QuinnStreamEvent::Writable { id } => {
+                        todo!()
+                    },
+
+                    QuinnStreamEvent::Finished { id } => {
+                        self.statemachine.stream_finished(qsid_to_rsid(id));
+
+                        if let Some(ssid) = self.map_qsid_ssid.remove(&id) {
+                            self.map_ssid_qsid.remove(&ssid);
+                        }
+                    },
+
+                    QuinnStreamEvent::Stopped { id, error_code: _ } => {
+                        self.statemachine.stream_stopped(qsid_to_ssid(id));
+
+                        if let Some(ssid) = self.map_qsid_ssid.remove(&id) {
+                            self.map_ssid_qsid.remove(&ssid);
+                        }
+                    },
+
+                    QuinnStreamEvent::Available { dir } => {},
+                },
+
+                ApplicationEvent::DatagramReceived => {
+                    let payload = self.quinn.datagrams().recv().unwrap();
+                    self.statemachine.recv_dgram(payload);
+                },
+
+                ApplicationEvent::DatagramsUnblocked => todo!(),
+
+                ApplicationEvent::Connected => todo!(),
+                ApplicationEvent::ConnectionLost { reason } => todo!(),
+
+                // Do nothing here
+                ApplicationEvent::HandshakeDataReady => {},
+            }
+        }
     }
 
     #[inline]
     pub fn poll_endpoint_events(
         &mut self,
     ) -> Option<EndpointEvent> {
-        self.connection.poll_endpoint_events()
+        self.quinn.poll_endpoint_events()
     }
 }
 
