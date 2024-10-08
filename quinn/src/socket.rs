@@ -1,7 +1,7 @@
-use std::{io::Result as IoResult, mem::MaybeUninit, net::{SocketAddr, UdpSocket}};
+use std::{io::{IoSliceMut, Result as IoResult}, net::{SocketAddr, UdpSocket}};
 
 /// An abstraction over UDP sockets that can be used for I/O.
-pub(crate) unsafe trait SyncUdpSocket {
+pub(crate) trait SyncUdpSocket {
     /// Returns the address the socket is bound to.
     fn addr(&self) -> SocketAddr;
 
@@ -16,8 +16,8 @@ pub(crate) unsafe trait SyncUdpSocket {
     /// - `Err(x)` - Receive failure, `x` is the stdlib error type
     fn recv(
         &mut self,
-        scratch: &mut [MaybeUninit<u8>],
-    ) -> IoResult<Option<DatagramRecvMeta>>;
+        scratch: &mut [IoSliceMut],
+    ) -> IoResult<Option<Receive>>;
 
     /// Sends a datagram.
     /// 
@@ -26,40 +26,39 @@ pub(crate) unsafe trait SyncUdpSocket {
     /// - `Err(x)` - send failure, `x` is the stdlib io error type
     fn send(
         &mut self,
-        meta: DatagramSendMeta,
-        scratch: &mut [MaybeUninit<u8>],
-        datagram: &[u8],
+        meta: Transmit,
+        scratch: &mut [IoSliceMut],
     ) -> IoResult<usize>;
 }
 
 #[derive(Debug, Clone)]
-pub struct DatagramRecvMeta {
+pub struct Receive {
     pub length: usize,
     pub address: SocketAddr,
 }
 
 #[derive(Debug, Clone)]
-pub struct DatagramSendMeta {
+pub struct Transmit<'a> {
+    pub payload: &'a [u8],
     pub address: SocketAddr,
 }
 
-unsafe impl SyncUdpSocket for UdpSocket {
+impl SyncUdpSocket for UdpSocket {
     fn addr(&self) -> SocketAddr {
         self.local_addr().unwrap()
     }
 
     fn recv(
         &mut self,
-        scratch: &mut [MaybeUninit<u8>],
-    ) -> IoResult<Option<DatagramRecvMeta>> {
+        scratch: &mut [IoSliceMut],
+    ) -> IoResult<Option<Receive>> {
         todo!()
     }
 
     fn send(
         &mut self,
-        meta: DatagramSendMeta,
-        scratch: &mut [MaybeUninit<u8>],
-        datagram: &[u8],
+        transmit: Transmit,
+        scratch: &mut [IoSliceMut],
     ) -> IoResult<usize> {
         todo!()
     }
