@@ -42,6 +42,18 @@ pub(crate) struct ConnectionInner {
 }
 
 impl ConnectionInner {
+    pub unsafe fn new(
+        handle: QuinnHandle,
+        endpoint: Entity,
+        connection: quinn_proto::Connection,
+    ) -> Self {
+        Self {
+            handle,
+            endpoint,
+            connection,
+        }
+    }
+
     pub fn close(
         &mut self
     ) {

@@ -1,6 +1,6 @@
-use std::{collections::BTreeMap, sync::Arc};
+use std::{collections::BTreeMap, net::SocketAddr, sync::Arc, time::Instant};
 use bevy_ecs::{component::{ComponentHooks, StorageType}, prelude::*};
-use quinn_proto::{ConnectionHandle as QuinnHandle, EndpointConfig, EndpointEvent, ServerConfig};
+use quinn_proto::{ClientConfig, ConnectError, ConnectionHandle as QuinnHandle, EndpointConfig, EndpointEvent, ServerConfig};
 use crate::socket::QuicSocket;
 
 /// A QUIC endpoint.
@@ -57,6 +57,26 @@ impl EndpointInner {
         // Inform the Quinn state machine that the endpoint has been removed.
         self.endpoint.handle_event(handle, EndpointEvent::drained());
     }
+
+    pub unsafe fn init_remote_connection(
+        &mut self,
+        entity: Entity,
+        config: ClientConfig,
+        address: SocketAddr,
+        server_name: &str,
+    ) -> Result<(QuinnHandle, quinn_proto::Connection), ConnectError> {
+        let (handle, connection) = self.endpoint.connect(
+            Instant::now(),
+            config,
+            address,
+            server_name,
+        )?;
+
+        // Add to connection map
+        self.connections.insert(entity, handle);
+
+        return Ok((handle, connection));
+    }
 }
 
 struct EndpointConnections {
@@ -70,6 +90,11 @@ impl EndpointConnections {
             e2h: BTreeMap::new(),
             h2e: BTreeMap::new(),
         }
+    }
+
+    unsafe fn insert(&mut self, entity: Entity, handle: QuinnHandle) {
+        self.e2h.insert(entity, handle);
+        self.h2e.insert(handle, entity);
     }
 
     unsafe fn remove_by_entity(&mut self, entity: Entity) -> Option<QuinnHandle> {
