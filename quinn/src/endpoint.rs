@@ -4,7 +4,10 @@ use quinn_proto::{ClientConfig, ConnectError, ConnectionHandle as QuinnHandle, E
 use crate::socket::QuicSocket;
 
 /// A QUIC endpoint.
-pub struct Endpoint(pub(crate) Box<EndpointInner>);
+pub struct Endpoint {
+    connections: EndpointConnections,
+    inner: Box<EndpointInner>,
+}
 
 impl Component for Endpoint {
     const STORAGE_TYPE: StorageType = StorageType::Table;
@@ -16,12 +19,62 @@ impl Component for Endpoint {
     }
 }
 
+impl Endpoint {
+    pub(crate) fn new(
+        socket: QuicSocket,
+        config: Arc<EndpointConfig>,
+        server: Option<Arc<ServerConfig>>,
+    ) -> Self {
+        Self {
+            connections: EndpointConnections::new(),
+
+            inner: Box::new(EndpointInner::new(
+                socket,
+                config,
+                server,
+            )),
+        }
+    }
+
+    pub(crate) unsafe fn inform_connection_close(
+        &mut self,
+        entity: Entity,
+    ) {
+        // Remove the handle from the connection map.
+        let handle = match self.connections.remove_by_entity(entity) {
+            Some(handle) => handle,
+            None => return,
+        };
+
+        // Inform the Quinn state machine that the endpoint has been removed.
+        self.inner.endpoint.handle_event(handle, EndpointEvent::drained());
+    }
+
+    pub(crate) unsafe fn init_remote_connection(
+        &mut self,
+        entity: Entity,
+        config: ClientConfig,
+        address: SocketAddr,
+        server_name: &str,
+    ) -> Result<(QuinnHandle, quinn_proto::Connection), ConnectError> {
+        let (handle, connection) = self.inner.endpoint.connect(
+            Instant::now(),
+            config,
+            address,
+            server_name,
+        )?;
+
+        // Add to connection map
+        self.connections.insert(entity, handle);
+
+        return Ok((handle, connection));
+    }
+}
+
 pub(crate) struct EndpointInner {
     socket: QuicSocket,
 
     endpoint: quinn_proto::Endpoint,
-
-    connections: EndpointConnections,
 }
 
 impl EndpointInner {
@@ -39,43 +92,7 @@ impl EndpointInner {
                 true,
                 None,
             ),
-
-            connections: EndpointConnections::new(),
         }
-    }
-
-    pub unsafe fn inform_connection_close(
-        &mut self,
-        entity: Entity,
-    ) {
-        // Remove the handle from the connection map.
-        let handle = match self.connections.remove_by_entity(entity) {
-            Some(handle) => handle,
-            None => return,
-        };
-
-        // Inform the Quinn state machine that the endpoint has been removed.
-        self.endpoint.handle_event(handle, EndpointEvent::drained());
-    }
-
-    pub unsafe fn init_remote_connection(
-        &mut self,
-        entity: Entity,
-        config: ClientConfig,
-        address: SocketAddr,
-        server_name: &str,
-    ) -> Result<(QuinnHandle, quinn_proto::Connection), ConnectError> {
-        let (handle, connection) = self.endpoint.connect(
-            Instant::now(),
-            config,
-            address,
-            server_name,
-        )?;
-
-        // Add to connection map
-        self.connections.insert(entity, handle);
-
-        return Ok((handle, connection));
     }
 }
 

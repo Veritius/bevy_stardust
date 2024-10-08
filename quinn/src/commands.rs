@@ -116,11 +116,11 @@ impl EntityCommand for MakeEndpoint {
         }
 
         // Construct the endpoint component
-        let endpoint = Endpoint(Box::new(EndpointInner::new(
+        let endpoint = Endpoint::new(
             self.socket,
             self.config,
-            self.server
-        )));
+            self.server,
+        );
 
         // Add the endpoint component
         entity.insert(endpoint);
@@ -183,7 +183,7 @@ impl EntityCommand for OpenConnection {
         };
 
         // Try to create a connection with the endpoint
-        match unsafe { endpoint.0.init_remote_connection(
+        match unsafe { endpoint.init_remote_connection(
             endpoint_id,
             self.config,
             self.remote,

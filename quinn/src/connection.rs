@@ -27,7 +27,7 @@ impl Component for Connection {
             // Try to access the endpoint component.
             if let Some(mut endpoint) = endpoint.get_mut::<Endpoint>() {
                 // Inform the endpoint of the connection being closed
-                unsafe { endpoint.0.inform_connection_close(entity) };
+                unsafe { endpoint.inform_connection_close(entity) };
             }
         });
     }
