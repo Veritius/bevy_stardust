@@ -1,4 +1,4 @@
-use std::{io::{IoSliceMut, Result as IoResult}, net::{SocketAddr, UdpSocket}};
+use std::{io::Result as IoResult, mem::MaybeUninit, net::SocketAddr};
 
 /// An abstraction over UDP sockets that can be used for I/O.
 pub(crate) trait SyncUdpSocket {
@@ -16,7 +16,7 @@ pub(crate) trait SyncUdpSocket {
     /// - `Err(x)` - Receive failure, `x` is the stdlib error type
     fn recv(
         &mut self,
-        scratch: &mut [IoSliceMut],
+        scratch: &mut [MaybeUninit<u8>],
     ) -> IoResult<Option<Receive>>;
 
     /// Sends a datagram.
@@ -27,7 +27,7 @@ pub(crate) trait SyncUdpSocket {
     fn send(
         &mut self,
         transmit: Transmit,
-        scratch: &mut [IoSliceMut],
+        scratch: &mut [MaybeUninit<u8>],
     ) -> IoResult<usize>;
 }
 
@@ -43,14 +43,33 @@ pub struct Transmit<'a> {
     pub address: SocketAddr,
 }
 
-impl SyncUdpSocket for UdpSocket {
+pub struct QuicSocket {
+    socket: socket2::Socket,
+}
+
+impl QuicSocket {
+    pub fn new(
+        address: SocketAddr,
+    ) -> IoResult<Self> {
+        return Ok(Self {
+            socket: socket2::Socket::new(
+                socket2::Domain::for_address(address),
+                socket2::Type::DGRAM,
+                Some(socket2::Protocol::UDP),
+            )?,
+        });
+    }
+}
+
+impl SyncUdpSocket for QuicSocket {
     fn addr(&self) -> SocketAddr {
-        self.local_addr().unwrap()
+        let sockaddr = self.socket.local_addr().unwrap();
+        return sockaddr.as_socket().unwrap();
     }
 
     fn recv(
         &mut self,
-        scratch: &mut [IoSliceMut],
+        scratch: &mut [MaybeUninit<u8>],
     ) -> IoResult<Option<Receive>> {
         todo!()
     }
@@ -58,7 +77,7 @@ impl SyncUdpSocket for UdpSocket {
     fn send(
         &mut self,
         transmit: Transmit,
-        scratch: &mut [IoSliceMut],
+        scratch: &mut [MaybeUninit<u8>],
     ) -> IoResult<usize> {
         todo!()
     }
