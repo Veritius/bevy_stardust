@@ -40,7 +40,7 @@ where
         func: impl Fn(
             ParEndpointAccess<Ea>,
             ParConnectionIter<Ca, Cf>,
-        ),
+        ) + Send + Sync,
     ) {
         self.endpoints.par_iter_mut().for_each(|(mut endpoint, additional)| {
             let (endpoint, connections) = endpoint.into_inner().split_access();
@@ -54,6 +54,9 @@ where
                 connections: connections.into_iter(),
                 query: &self.connections,
             };
+
+            // Run the access function
+            func(endpoint_access, connection_iter);
         });
     }
 }
