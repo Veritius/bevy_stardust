@@ -3,13 +3,13 @@
 
 mod commands;
 mod config;
-mod connections;
-mod endpoints;
+mod connection;
+mod endpoint;
 mod plugin;
-mod querying;
 
 pub use plugin::QuinnPlugin;
-pub use querying::{Connection, Endpoint};
+pub use connection::Connection;
+pub use endpoint::Endpoint;
 pub use commands::{MakeEndpoint, OpenConnection};
 
 pub use quinn_proto::{self, ClientConfig, ServerConfig, EndpointConfig};
