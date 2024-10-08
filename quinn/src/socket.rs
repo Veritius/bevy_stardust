@@ -26,7 +26,7 @@ pub(crate) trait SyncUdpSocket {
     /// - `Err(x)` - send failure, `x` is the stdlib io error type
     fn send(
         &mut self,
-        meta: Transmit,
+        transmit: Transmit,
         scratch: &mut [IoSliceMut],
     ) -> IoResult<usize>;
 }
