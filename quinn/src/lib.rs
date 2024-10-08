@@ -6,6 +6,7 @@ mod config;
 mod connection;
 mod endpoint;
 mod plugin;
+mod socket;
 
 pub use plugin::QuinnPlugin;
 pub use connection::Connection;
