@@ -1,8 +1,9 @@
 use bevy_ecs::{component::{ComponentHooks, StorageType}, prelude::*};
+use crate::socket::QuicSocket;
 
 /// A QUIC endpoint.
 pub struct Endpoint {
-
+    socket: QuicSocket,
 }
 
 impl Component for Endpoint {

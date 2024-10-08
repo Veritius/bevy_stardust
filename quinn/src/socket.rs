@@ -47,11 +47,13 @@ pub struct Transmit<'a> {
     pub address: SocketAddr,
 }
 
+/// A UDP socket specialised for use in the crate.
 pub struct QuicSocket {
     socket: socket2::Socket,
 }
 
 impl QuicSocket {
+    /// Binds a new [`QuicSocket`].
     pub fn new(
         address: SocketAddr,
     ) -> IoResult<Self> {
