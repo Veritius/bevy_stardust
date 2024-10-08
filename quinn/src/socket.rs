@@ -1,6 +1,6 @@
 use std::{io::{ErrorKind, Result as IoResult}, mem::MaybeUninit, net::SocketAddr};
 
-/// An abstraction over a bound UDP socket.
+/// An owned bound UDP socket.
 pub(crate) unsafe trait BoundUdpSocket {
     /// Returns the address the socket is bound to.
     fn addr(&self) -> SocketAddr;
