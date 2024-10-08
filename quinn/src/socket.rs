@@ -1,7 +1,7 @@
 use std::{io::{ErrorKind, Result as IoResult}, mem::MaybeUninit, net::SocketAddr};
 
-/// An abstraction over UDP sockets that can be used for I/O.
-pub(crate) unsafe trait SyncUdpSocket {
+/// An abstraction over a bound UDP socket.
+pub(crate) unsafe trait BoundUdpSocket {
     /// Returns the address the socket is bound to.
     fn addr(&self) -> SocketAddr;
 
@@ -72,7 +72,7 @@ impl QuicSocket {
     }
 }
 
-unsafe impl SyncUdpSocket for QuicSocket {
+unsafe impl BoundUdpSocket for QuicSocket {
     fn addr(&self) -> SocketAddr {
         let sockaddr = self.socket.local_addr().unwrap();
         return sockaddr.as_socket().unwrap();
