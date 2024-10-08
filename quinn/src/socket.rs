@@ -1,7 +1,7 @@
-use std::{io::Result as IoResult, mem::MaybeUninit, net::SocketAddr};
+use std::{io::{ErrorKind, Result as IoResult}, mem::MaybeUninit, net::SocketAddr};
 
 /// An abstraction over UDP sockets that can be used for I/O.
-pub(crate) trait SyncUdpSocket {
+pub(crate) unsafe trait SyncUdpSocket {
     /// Returns the address the socket is bound to.
     fn addr(&self) -> SocketAddr;
 
@@ -14,6 +14,10 @@ pub(crate) trait SyncUdpSocket {
     /// - `Ok(Some(x))` - Successfully received the entire datagram
     /// - `Ok(None)` - No packets were available to read
     /// - `Err(x)` - Receive failure, `x` is the stdlib error type
+    /// 
+    /// # Safety
+    /// The `length` field in a returned `Receive` **must** be
+    /// equal to or lesser than the initialised data in `scratch`.
     fn recv(
         &mut self,
         scratch: &mut [MaybeUninit<u8>],
@@ -68,7 +72,7 @@ impl QuicSocket {
     }
 }
 
-impl SyncUdpSocket for QuicSocket {
+unsafe impl SyncUdpSocket for QuicSocket {
     fn addr(&self) -> SocketAddr {
         let sockaddr = self.socket.local_addr().unwrap();
         return sockaddr.as_socket().unwrap();
@@ -78,7 +82,23 @@ impl SyncUdpSocket for QuicSocket {
         &mut self,
         scratch: &mut [MaybeUninit<u8>],
     ) -> IoResult<Option<Receive>> {
-        todo!()
+        let (length, address) = match self.socket.recv_from(scratch) {
+            // Types returned by socket2 require some fiddling to be usable
+            Ok((len, addr)) => (len, addr.as_socket()
+                .ok_or_else(|| std::io::Error::from(ErrorKind::InvalidInput))?),
+
+            // The blocking error is turned into Ok(None)
+            Err(err) if err.kind() == ErrorKind::WouldBlock => return Ok(None),
+
+            // Any other error is... actually an error
+            Err(err) => return Err(err),
+        };
+
+        // Return recv metadata
+        return Ok(Some(Receive {
+            length,
+            address,
+        }));
     }
 
     fn send(
@@ -86,6 +106,9 @@ impl SyncUdpSocket for QuicSocket {
         transmit: Transmit,
         scratch: &mut [MaybeUninit<u8>],
     ) -> IoResult<usize> {
-        todo!()
+        self.socket.send_to(
+            transmit.payload,
+            &(transmit.address.into()),
+        )
     }
 }
