@@ -87,7 +87,6 @@ impl ConnectionInner {
         self.statemachine.handle_timeout(now);
     }
 
-    #[inline]
     pub fn handle_connection_event(
         &mut self,
         event: ConnectionEvent,
