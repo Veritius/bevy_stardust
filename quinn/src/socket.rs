@@ -51,12 +51,19 @@ impl QuicSocket {
     pub fn new(
         address: SocketAddr,
     ) -> IoResult<Self> {
+        // Construct socket
+        let socket = socket2::Socket::new(
+            socket2::Domain::for_address(address),
+            socket2::Type::DGRAM,
+            Some(socket2::Protocol::UDP),
+        )?;
+
+        // Configure socket
+        socket.set_nonblocking(true)?;
+        socket.bind(&address.into())?;
+
         return Ok(Self {
-            socket: socket2::Socket::new(
-                socket2::Domain::for_address(address),
-                socket2::Type::DGRAM,
-                Some(socket2::Protocol::UDP),
-            )?,
+            socket,
         });
     }
 }
