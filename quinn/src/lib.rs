@@ -8,7 +8,7 @@ mod endpoint;
 mod plugin;
 mod socket;
 
-pub use commands::{MakeEndpoint, OpenConnection};
+pub use commands::{EndpointCommands, MakeEndpoint, OpenConnection};
 pub use connection::Connection;
 pub use endpoint::Endpoint;
 pub use plugin::QuinnPlugin;
