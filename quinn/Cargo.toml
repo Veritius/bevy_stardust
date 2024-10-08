@@ -16,6 +16,10 @@ default-features = false
 version = "0.14"
 default-features = false
 
+[dependencies.bevy_log]
+version = "0.14"
+optional = true
+
 [dependencies.bevy_stardust]
 version = "0.6.0"
 path = "../stardust"
@@ -38,10 +42,6 @@ version = "0.5.7"
 
 [dependencies.anyhow]
 version = "1"
-
-[dependencies.bevy_log]
-version = "0.14"
-optional = true
 
 [dev-dependencies.rustls-pemfile]
 version = "2"

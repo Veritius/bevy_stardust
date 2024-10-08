@@ -1,6 +1,6 @@
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, sync::Arc};
 use bevy_ecs::{component::{ComponentHooks, StorageType}, prelude::*};
-use quinn_proto::{ConnectionHandle as QuinnHandle, EndpointEvent};
+use quinn_proto::{ConnectionHandle as QuinnHandle, EndpointConfig, EndpointEvent, ServerConfig};
 use crate::socket::QuicSocket;
 
 /// A QUIC endpoint.
@@ -25,6 +25,25 @@ pub(crate) struct EndpointInner {
 }
 
 impl EndpointInner {
+    pub fn new(
+        socket: QuicSocket,
+        config: Arc<EndpointConfig>,
+        server: Option<Arc<ServerConfig>>,
+    ) -> Self {
+        Self {
+            socket,
+
+            endpoint: quinn_proto::Endpoint::new(
+                config,
+                server,
+                true,
+                None,
+            ),
+
+            connections: EndpointConnections::new(),
+        }
+    }
+
     pub unsafe fn inform_connection_close(
         &mut self,
         entity: Entity,
@@ -46,6 +65,13 @@ struct EndpointConnections {
 }
 
 impl EndpointConnections {
+    fn new() -> Self {
+        Self {
+            e2h: BTreeMap::new(),
+            h2e: BTreeMap::new(),
+        }
+    }
+
     unsafe fn remove_by_entity(&mut self, entity: Entity) -> Option<QuinnHandle> {
         let handle = self.e2h.remove(&entity)?;
         self.h2e.remove(&handle);
