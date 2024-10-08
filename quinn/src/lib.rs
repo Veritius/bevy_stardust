@@ -1,6 +1,7 @@
 #![doc = include_str!("../README.md")]
 #![warn(missing_docs)]
 
+mod access;
 mod commands;
 mod config;
 mod connection;
