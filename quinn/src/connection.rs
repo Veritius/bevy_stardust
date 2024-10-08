@@ -1,6 +1,7 @@
-use std::time::Instant;
+use std::{collections::BTreeMap, time::Instant};
 use bevy_ecs::{component::{ComponentHooks, StorageType}, prelude::*};
-use quinn_proto::{ConnectionEvent, ConnectionHandle as QuinnHandle, EndpointEvent, Event as ApplicationEvent};
+use bevy_stardust_quic::{RecvStreamId, SendStreamId};
+use quinn_proto::{ConnectionEvent, ConnectionHandle as QuinnHandle, EndpointEvent, Event as ApplicationEvent, StreamId as QuinnStreamId};
 use crate::Endpoint;
 
 /// A QUIC connection.
@@ -35,12 +36,13 @@ impl Component for Connection {
 
 pub(crate) struct ConnectionInner {
     handle: QuinnHandle,
-
     endpoint: Entity,
 
     connection: quinn_proto::Connection,
 
     statemachine: bevy_stardust_quic::Connection,
+    map_qsid_ssid: BTreeMap<QuinnStreamId, SendStreamId>,
+    map_rsid_qsid: BTreeMap<RecvStreamId, QuinnStreamId>,
 }
 
 impl ConnectionInner {
@@ -53,8 +55,12 @@ impl ConnectionInner {
         Self {
             handle,
             endpoint,
+
             connection,
+
             statemachine,
+            map_qsid_ssid: BTreeMap::new(),
+            map_rsid_qsid: BTreeMap::new(),
         }
     }
 
@@ -73,37 +79,46 @@ impl ConnectionInner {
         self.handle
     }
 
-    #[inline]
-    pub fn quinn_handle_timeout(&mut self) {
-        self.connection.handle_timeout(Instant::now());
+    pub fn handle_timeouts(
+        &mut self,
+        now: Instant,
+    ) {
+        self.connection.handle_timeout(now);
+        self.statemachine.handle_timeout(now);
     }
 
     #[inline]
-    pub fn quinn_handle_event(
+    pub fn handle_connection_event(
         &mut self,
         event: ConnectionEvent
     ) {
-        self.connection.handle_event(
-            event
-        );
+        self.connection.handle_event(event);
     }
 
     #[inline]
-    pub fn quinn_poll_app(&mut self) -> Option<ApplicationEvent> {
-        self.connection.poll()
-    }
-
-    #[inline]
-    pub fn quinn_poll_end(&mut self) -> Option<EndpointEvent> {
+    pub fn poll_endpoint_events(
+        &mut self,
+    ) -> Option<EndpointEvent> {
         self.connection.poll_endpoint_events()
     }
+}
 
-    #[inline]
-    pub fn handle_qio_timeout(&mut self) {
-        self.statemachine.handle_timeout(Instant::now());
-    }
+#[inline]
+pub(crate) fn qsid_to_rsid(id: QuinnStreamId) -> RecvStreamId {
+    RecvStreamId(id.0)
+}
 
-    pub fn qio_poll(&mut self) -> Option<bevy_stardust_quic::ConnectionEvent> {
-        self.statemachine.poll()
-    }
+#[inline]
+pub(crate) fn qsid_to_ssid(id: QuinnStreamId) -> SendStreamId {
+    SendStreamId(id.0)
+}
+
+#[inline]
+pub(crate) fn rsid_to_qsid(id: RecvStreamId) -> QuinnStreamId {
+    QuinnStreamId(id.0)
+}
+
+#[inline]
+pub(crate) fn ssid_to_qsid(id: SendStreamId) -> QuinnStreamId {
+    QuinnStreamId(id.0)
 }
