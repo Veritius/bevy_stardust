@@ -1,5 +1,6 @@
-use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+#![allow(dead_code)]
 
+use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use bevy_ecs::prelude::*;
 use bevy_app::{prelude::*, ScheduleRunnerPlugin};
 use bevy_log::LogPlugin;
