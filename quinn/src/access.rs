@@ -4,7 +4,7 @@ use bevy_ecs::{prelude::*, query::{QueryData, QueryFilter}, system::SystemParam}
 use crate::{Connection, Endpoint};
 
 #[derive(SystemParam)]
-pub(crate) struct EndpointParAccess<
+pub(crate) struct ParEndpoints<
     'w, 's, // lifetimes for bevy
     Ea: 'static + QueryData = (), 
     Ca: 'static + QueryData = (),
@@ -15,7 +15,7 @@ pub(crate) struct EndpointParAccess<
     connections: Query<'w, 's, (&'static mut Connection, Ca), (Without<Endpoint>, Cf)>,
 }
 
-impl<'w, 's, Ea, Ca, Ef, Cf> EndpointParAccess<'w, 's, Ea, Ca, Ef, Cf>
+impl<'w, 's, Ea, Ca, Ef, Cf> ParEndpoints<'w, 's, Ea, Ca, Ef, Cf>
 where
     Ea: 'static + QueryData, 
     Ca: 'static + QueryData,
@@ -25,14 +25,16 @@ where
     
 }
 
-struct ParEndpoint<'a, Ea: QueryData> {
+struct ParEndpointAccess<'a, Ea: QueryData> {
     pub endpoint: &'a mut Endpoint,
     pub additional: Ea::Item<'a>,
 }
 
-struct ParEndpointConnections<'a, Ca: QueryData> {
-    connections: BTreeMap<Entity, (
-        &'a mut Connection,
-        Ca::Item<'a>,
-    )>,
+struct ParConnections<'a, Ca: QueryData> {
+    connections: BTreeMap<Entity, ParConnectionAccess<'a, Ca>>,
+}
+
+struct ParConnectionAccess<'a, Ca: QueryData> {
+    pub connection: &'a mut Connection,
+    pub additional: Ca::Item<'a>,
 }
