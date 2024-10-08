@@ -2,31 +2,13 @@ use bevy_stardust::prelude::ChannelMessage;
 use bytes::Bytes;
 use crate::{RecvStreamId, SendStreamId};
 
-/// An event sent by a QUIC implementation to the state machine.
-pub enum TransportEvent {
-    /// A stream event occurred.
-    Stream(TransportStreamEvent),
-
-    /// The connection is closing but not yet drained.
-    Closing,
-
-    /// The connection is fully drained and can be dropped.
-    Drained,
-}
-
-/// An event sent by the state machine to a QUIC implementation.
-pub enum ConnectionEvent {
-    /// Begins closing the connection.
-    BeginClose,
-
-    /// A stream event occured.
-    Stream(ConnectionStreamEvent)
-}
-
 /// An event sent by the state machine to the application.
-pub enum ApplicationEvent {
+pub enum ConnectionEvent {
     /// A Stardust network message was received.
     Message(ChannelMessage),
+
+    /// A stream event occurred.
+    Stream(StreamEvent),
 
     /// The connection is closing but not yet drained.
     Closing,
@@ -35,34 +17,7 @@ pub enum ApplicationEvent {
     Drained,
 }
 
-/// A stream event that occurred on the Transport event.
-pub enum TransportStreamEvent {
-    /// A new stream was opened.
-    Opened {
-        /// The ID of the opened stream.
-        id: RecvStreamId,
-    },
-
-    /// A stream was reset.
-    Reset {
-        /// The ID of the reset stream.
-        id: RecvStreamId,
-    },
-
-    /// A stream was finished.
-    Finished {
-        /// The ID of the finished stream.
-        id: RecvStreamId,
-    },
-
-    /// A stream was stopped.
-    Stopped {
-        /// The ID of the stopped stream.
-        id: SendStreamId,
-    },
-}
-
-pub enum ConnectionStreamEvent {
+pub enum StreamEvent {
     /// Opens a new stream.
     /// 
     /// Always appears before `Transmit` for the given stream `id`.
