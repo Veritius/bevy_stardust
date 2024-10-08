@@ -11,12 +11,12 @@ impl Plugin for QuinnPlugin {
         install_default_crypto_provider();
 
         // PreUpdate stage
-        // app.add_systems(PreUpdate, (
-        //     crate::endpoints::udp_recv_system,
-        //     crate::endpoints::event_exchange_system,
-        //     crate::connections::connection_events_system,
-        //     crate::connections::qsm_events_system,
-        // ).chain().in_set(NetworkRecv::Receive));
+        app.add_systems(PreUpdate, (
+            crate::systems::event_exchange_system,
+            // crate::endpoints::event_exchange_system,
+            // crate::connections::connection_events_system,
+            // crate::connections::qsm_events_system,
+        ).chain().in_set(NetworkRecv::Receive));
 
         // PostUpdate stage
         // app.add_systems(PostUpdate, (
