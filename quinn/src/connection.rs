@@ -90,7 +90,7 @@ impl ConnectionInner {
     #[inline]
     pub fn handle_connection_event(
         &mut self,
-        event: ConnectionEvent
+        event: ConnectionEvent,
     ) {
         self.connection.handle_event(event);
     }
