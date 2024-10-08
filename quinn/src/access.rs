@@ -22,7 +22,15 @@ where
     Ef: 'static + QueryFilter,
     Cf: 'static + QueryFilter,
 {
-    
+    pub fn par_iter_all(
+        &mut self,
+        func: impl Fn(
+            ParEndpointAccess<Ea>,
+            ParConnectionAccess<Ca>,
+        ),
+    ) {
+        todo!()
+    }
 }
 
 pub(crate) struct ParEndpointAccess<'a, Ea: QueryData> {
