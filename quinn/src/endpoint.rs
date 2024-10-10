@@ -164,7 +164,9 @@ impl<'a> IntoIterator for &'a EndpointConnections {
     type IntoIter = EndpointConnectionsIter<'a>;
 
     fn into_iter(self) -> Self::IntoIter {
-        todo!()
+        EndpointConnectionsIter {
+            iter: self.e2h.iter(),
+        }
     }
 }
 
