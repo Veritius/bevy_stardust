@@ -2,7 +2,7 @@ use std::{collections::BTreeMap, time::Instant};
 use bevy_ecs::{component::{ComponentHooks, StorageType}, prelude::*};
 use bevy_stardust_quic::{RecvStreamId, SendStreamId};
 use quinn_proto::{ConnectionEvent, ConnectionHandle as QuinnHandle, EndpointEvent, Event as ApplicationEvent, StreamEvent as QuinnStreamEvent, StreamId as QuinnStreamId};
-use crate::Endpoint;
+use crate::{write_queue::StreamWriteQueue, Endpoint};
 
 /// A QUIC connection.
 pub struct Connection(pub(crate) Box<ConnectionInner>);
@@ -39,6 +39,7 @@ pub(crate) struct ConnectionInner {
     endpoint: Entity,
 
     quinn: quinn_proto::Connection,
+    write_queues: BTreeMap<QuinnStreamId, StreamWriteQueue>,
 
     statemachine: bevy_stardust_quic::Connection,
     map_qsid_ssid: BTreeMap<QuinnStreamId, SendStreamId>,
@@ -57,6 +58,7 @@ impl ConnectionInner {
             endpoint,
 
             quinn: connection,
+            write_queues: BTreeMap::new(),
 
             statemachine,
             map_qsid_ssid: BTreeMap::new(),
