@@ -14,6 +14,7 @@ pub(crate) struct ParEndpoints<
 }
 
 pub(crate) struct ParEndpointAccess<'a, Ea: QueryData> {
+    pub connections: &'a EndpointConnections,
     pub endpoint: &'a mut EndpointInner,
     pub additional: Ea::Item<'a>,
 }
@@ -36,6 +37,7 @@ where
             let (endpoint, connections) = endpoint.into_inner().split_access();
 
             let endpoint_access = ParEndpointAccess::<Ea> {
+                connections,
                 endpoint,
                 additional,
             };

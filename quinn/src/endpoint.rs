@@ -184,7 +184,7 @@ impl<'a> Iterator for EndpointConnectionsIter<'a> {
 pub(crate) fn io_udp_recv_system(
     mut parallel_iterator: ParEndpoints,
 ) {
-    parallel_iterator.iter(|endpoint, connections| {
+    parallel_iterator.iter(|endpoint, mut connections| {
         let mut buffer = vec![MaybeUninit::uninit(); 1472]; // TODO make configurable
         let mut scratch = Vec::new();
 
@@ -194,14 +194,39 @@ pub(crate) fn io_udp_recv_system(
                     // SAFETY: The BoundUdpSocket trait guarantees that `length` is the length of valid, initialised memory
                     let buffer = unsafe { std::mem::transmute::<&[MaybeUninit<u8>], &[u8]>(&buffer[..recv.length]) };
 
-                    endpoint.endpoint.endpoint.handle(
+                    if let Some(event) = endpoint.endpoint.endpoint.handle(
                         Instant::now(),
                         recv.address,
                         Some(endpoint.endpoint.socket.addr().ip()),
                         None,
                         BytesMut::from(buffer),
                         &mut scratch,
-                    );
+                    ) {
+                        match event {
+                            quinn_proto::DatagramEvent::ConnectionEvent(handle, event) => {
+                                match connections.get(endpoint.connections.get_entity(handle).unwrap(), |access| {
+                                    access.connection.handle_connection_event(event);
+                                }) {
+                                    Ok(_) => {},
+                                    Err(_) => todo!(),
+                                }
+                            },
+
+                            quinn_proto::DatagramEvent::NewConnection(incoming) => {
+                                todo!()
+                            },
+
+                            quinn_proto::DatagramEvent::Response(transmit) => {
+                                match endpoint.endpoint.socket.send(Transmit {
+                                    payload: &scratch[..transmit.size],
+                                    address: transmit.destination,
+                                }) {
+                                    Ok(_) => {},
+                                    Err(_) => todo!(),
+                                };
+                            },
+                        }
+                    }
                 },
 
                 Ok(None) => {
