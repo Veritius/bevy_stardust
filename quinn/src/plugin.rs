@@ -22,6 +22,7 @@ impl Plugin for QuinnPlugin {
             crate::systems::put_outgoing_messages_system,
             crate::systems::event_exchange_system,
             crate::systems::event_polling_system,
+            crate::endpoint::io_udp_recv_system,
         ).chain().in_set(NetworkSend::Transmit));
     }
 }
