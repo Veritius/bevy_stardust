@@ -1,7 +1,8 @@
 use bevy_ecs::prelude::*;
 use bevy_stardust::prelude::*;
 use bevy_stardust_quic::SendContext;
-use crate::{access::*, connection::ConnectionEvent, Connection};
+use quinn_proto::EndpointEvent;
+use crate::{access::*, connection::ConnectionEvent, Connection, Endpoint};
 
 pub(crate) fn event_exchange_system(
     mut parallel_iterator: ParEndpoints,
@@ -23,22 +24,32 @@ pub(crate) fn event_exchange_system(
 }
 
 pub(crate) fn event_polling_system(
-    mut parallel_iterator: ParEndpoints
+    mut commands: Commands,
+    mut endpoints: Query<&mut Endpoint>,
+    mut connections: Query<&mut Connection>,
 ) {
-    parallel_iterator.iter(|
-        mut endpoint_access,
-        mut connections,
-    | {
-        for connection_access in connections.iter() {
-            while let Some(event) = connection_access.connection.poll_connection_events() {
+    for mut endpoint in endpoints.iter_mut() {
+        let mut disconnections = Vec::new();
+
+        let (endpoint_inner, conn_map) = endpoint.split_access();
+        for (entity, handle) in conn_map {
+            // If this panics it means the hierarchy is invalid, which is UB anyway
+            let connection = &mut *(connections.get_mut(entity).unwrap()).0;
+
+            while let Some(event) = connection.poll_connection_events() {
                 match event {
                     ConnectionEvent::Disconnected { reason } => {
-                        todo!()
+                        disconnections.push(entity);
                     },
                 }
             }
         }
-    });
+
+        for entity in disconnections.drain(..) {
+            unsafe { endpoint.inform_connection_close(entity) };
+            commands.entity(entity).remove::<Connection>();
+        }
+    }
 }
 
 pub(crate) fn poll_incoming_messages_system(
