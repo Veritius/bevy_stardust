@@ -263,6 +263,8 @@ pub(crate) fn io_udp_send_system(
 
                     Err(_) => todo!(),
                 }
+
+                buffer.clear();
             }
         }
     });
