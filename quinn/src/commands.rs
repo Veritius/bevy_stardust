@@ -184,7 +184,7 @@ impl EntityCommand for OpenConnection {
 
         // Try to create a connection with the endpoint
         match unsafe { endpoint.init_remote_connection(
-            endpoint_id,
+            connection_id,
             self.config,
             self.remote,
             &self.server_name,
