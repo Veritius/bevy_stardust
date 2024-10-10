@@ -59,7 +59,7 @@ impl Endpoint {
         };
 
         // Inform the Quinn state machine that the endpoint has been removed.
-        self.inner.endpoint.handle_event(handle, EndpointEvent::drained());
+        self.inner.quinn.handle_event(handle, EndpointEvent::drained());
     }
 
     pub(crate) unsafe fn init_remote_connection(
@@ -69,7 +69,7 @@ impl Endpoint {
         address: SocketAddr,
         server_name: &str,
     ) -> Result<(QuinnHandle, quinn_proto::Connection), ConnectError> {
-        let (handle, connection) = self.inner.endpoint.connect(
+        let (handle, connection) = self.inner.quinn.connect(
             Instant::now(),
             config,
             address,
@@ -86,7 +86,7 @@ impl Endpoint {
 pub(crate) struct EndpointInner {
     socket: QuicSocket,
 
-    endpoint: quinn_proto::Endpoint,
+    quinn: quinn_proto::Endpoint,
 }
 
 impl EndpointInner {
@@ -98,7 +98,7 @@ impl EndpointInner {
         Self {
             socket,
 
-            endpoint: quinn_proto::Endpoint::new(
+            quinn: quinn_proto::Endpoint::new(
                 config,
                 server,
                 true,
@@ -113,7 +113,7 @@ impl EndpointInner {
         handle: QuinnHandle,
         event: EndpointEvent
     ) -> Option<ConnectionEvent> {
-        self.endpoint.handle_event(
+        self.quinn.handle_event(
             handle,
             event
         )
@@ -189,15 +189,15 @@ pub(crate) fn io_udp_recv_system(
         let mut scratch = Vec::new();
 
         'outer: loop {
-            match endpoint.endpoint.socket.recv(&mut buffer[..]) {
+            match endpoint.inner.socket.recv(&mut buffer[..]) {
                 Ok(Some(recv)) => {
                     // SAFETY: The BoundUdpSocket trait guarantees that `length` is the length of valid, initialised memory
                     let buffer = unsafe { std::mem::transmute::<&[MaybeUninit<u8>], &[u8]>(&buffer[..recv.length]) };
 
-                    if let Some(event) = endpoint.endpoint.endpoint.handle(
+                    if let Some(event) = endpoint.inner.quinn.handle(
                         Instant::now(),
                         recv.address,
-                        Some(endpoint.endpoint.socket.addr().ip()),
+                        Some(endpoint.inner.socket.addr().ip()),
                         None,
                         BytesMut::from(buffer),
                         &mut scratch,
@@ -217,7 +217,7 @@ pub(crate) fn io_udp_recv_system(
                             },
 
                             quinn_proto::DatagramEvent::Response(transmit) => {
-                                match endpoint.endpoint.socket.send(Transmit {
+                                match endpoint.inner.socket.send(Transmit {
                                     payload: &scratch[..transmit.size],
                                     address: transmit.destination,
                                 }) {
@@ -247,7 +247,7 @@ pub(crate) fn io_udp_send_system(
 
         for connection_access in connections.iter() {
             while let Some(transmit) = connection_access.connection.poll_transmit(&mut buffer) {
-                match endpoint.endpoint.socket.send(Transmit {
+                match endpoint.inner.socket.send(Transmit {
                     payload: &buffer[..transmit.size],
                     address: transmit.destination,
                 }) {

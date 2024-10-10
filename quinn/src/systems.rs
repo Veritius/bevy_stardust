@@ -12,7 +12,7 @@ pub(crate) fn event_exchange_system(
     | {
         for connection_access in connections.iter() {
             while let Some(event) = connection_access.connection.poll_endpoint_events() {
-                let event = endpoint_access.endpoint.handle_event(connection_access.connection.handle(), event);
+                let event = endpoint_access.inner.handle_event(connection_access.connection.handle(), event);
 
                 if let Some(event) = event {
                     connection_access.connection.handle_connection_event(event);

@@ -9,13 +9,14 @@ pub(crate) struct ParEndpoints<
     Ef: 'static + QueryFilter = (),
     Cf: 'static + QueryFilter = (),
 > {
-    endpoints: Query<'w, 's, (&'static mut Endpoint, Ea), (Without<Connection>, Ef)>,
+    endpoints: Query<'w, 's, (Entity, &'static mut Endpoint, Ea), (Without<Connection>, Ef)>,
     connections: Query<'w, 's, (&'static mut Connection, Ca), (Without<Endpoint>, Cf)>,
 }
 
 pub(crate) struct ParEndpointAccess<'a, Ea: QueryData> {
+    pub entity: Entity,
+    pub inner: &'a mut EndpointInner,
     pub connections: &'a EndpointConnections,
-    pub endpoint: &'a mut EndpointInner,
     pub additional: Ea::Item<'a>,
 }
 
@@ -33,12 +34,13 @@ where
             ParConnections<Ca, Cf>,
         ) + Send + Sync,
     ) {
-        self.endpoints.par_iter_mut().for_each(|(mut endpoint, additional)| {
-            let (endpoint, connections) = endpoint.into_inner().split_access();
+        self.endpoints.par_iter_mut().for_each(|(entity, mut endpoint, additional)| {
+            let (inner, connections) = endpoint.into_inner().split_access();
 
             let endpoint_access = ParEndpointAccess::<Ea> {
+                entity,
+                inner,
                 connections,
-                endpoint,
                 additional,
             };
 
