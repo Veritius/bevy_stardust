@@ -1,8 +1,9 @@
-use std::{collections::BTreeMap, time::Instant};
+use std::{collections::{BTreeMap, VecDeque}, time::Instant};
 use bevy_ecs::{component::{ComponentHooks, StorageType}, prelude::*};
+use bevy_stardust::prelude::ChannelMessage;
 use bevy_stardust_quic::{RecvStreamId, SendStreamId};
 use bytes::Bytes;
-use quinn_proto::{ConnectionEvent as QuinnEvent, ConnectionHandle as QuinnHandle, Dir, EndpointEvent, Event as ApplicationEvent, StreamEvent as QuinnStreamEvent, StreamId as QuinnStreamId, WriteError};
+use quinn_proto::{ConnectionError, ConnectionEvent as QuinnEvent, ConnectionHandle as QuinnHandle, Dir, EndpointEvent, Event as ApplicationEvent, StreamEvent as QuinnStreamEvent, StreamId as QuinnStreamId, WriteError};
 use crate::{write_queue::StreamWriteQueue, Endpoint};
 
 /// A QUIC connection.
@@ -45,6 +46,8 @@ pub(crate) struct ConnectionInner {
     statemachine: bevy_stardust_quic::Connection,
     map_qsid_ssid: BTreeMap<QuinnStreamId, SendStreamId>,
     map_ssid_qsid: BTreeMap<SendStreamId, QuinnStreamId>,
+
+    events: VecDeque<ConnectionEvent>,
 }
 
 impl ConnectionInner {
@@ -64,6 +67,8 @@ impl ConnectionInner {
             statemachine,
             map_qsid_ssid: BTreeMap::new(),
             map_ssid_qsid: BTreeMap::new(),
+
+            events: VecDeque::new(),
         }
     }
 
@@ -145,12 +150,19 @@ impl ConnectionInner {
                 ApplicationEvent::DatagramsUnblocked => todo!(),
 
                 ApplicationEvent::Connected => todo!(),
-                ApplicationEvent::ConnectionLost { reason } => todo!(),
+
+                ApplicationEvent::ConnectionLost { reason } => {
+                    self.events.push_back(ConnectionEvent::Disconnected {
+                        reason,
+                    });
+                },
 
                 // Do nothing here
                 ApplicationEvent::HandshakeDataReady => {},
             }
         }
+
+        self.handle_interstage_events();
     }
 
     fn handle_interstage_events(&mut self) {
@@ -165,6 +177,7 @@ impl ConnectionInner {
 
                     bevy_stardust_quic::StreamEvent::Transmit { id, chunk } => {
                         let qsid = *(self.map_ssid_qsid.get(&id).unwrap());
+
                         if let Err(err) = self.try_write_to_stream(qsid, chunk) {
                             todo!()
                         }
@@ -199,7 +212,12 @@ impl ConnectionInner {
                     self.quinn.datagrams().send(bytes, true).unwrap();
                 },
 
-                bevy_stardust_quic::ConnectionEvent::ReceivedMessage(channel_message) => todo!(),
+                bevy_stardust_quic::ConnectionEvent::ReceivedMessage(channel_message) => {
+                    self.events.push_back(ConnectionEvent::Message {
+                        message: channel_message,
+                    });
+                },
+
                 bevy_stardust_quic::ConnectionEvent::Overheated => todo!(),
             }
         }
@@ -297,6 +315,16 @@ impl ConnectionInner {
 
     fn discard_stream_write_queue(&mut self, qsid: QuinnStreamId) {
         self.write_queues.remove(&qsid);
+    }
+}
+
+pub(crate) enum ConnectionEvent {
+    Message {
+        message: ChannelMessage,
+    },
+
+    Disconnected {
+        reason: ConnectionError,
     }
 }
 
