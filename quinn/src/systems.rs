@@ -38,6 +38,11 @@ pub(crate) fn event_polling_system(
 
             while let Some(event) = connection.poll_connection_events() {
                 match event {
+                    ConnectionEvent::Connected => {
+                        #[cfg(feature="log")]
+                        bevy_log::info!("Connection {entity} established");
+                    }
+
                     ConnectionEvent::Disconnected { reason } => {
                         disconnections.push(entity);
                     },

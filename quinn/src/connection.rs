@@ -151,7 +151,9 @@ impl ConnectionInner {
 
                 ApplicationEvent::DatagramsUnblocked => todo!(),
 
-                ApplicationEvent::Connected => todo!(),
+                ApplicationEvent::Connected => {
+                    self.events.push_back(ConnectionEvent::Connected);
+                },
 
                 ApplicationEvent::ConnectionLost { reason } => {
                     self.events.push_back(ConnectionEvent::Disconnected {
@@ -355,6 +357,8 @@ impl ConnectionInner {
 }
 
 pub(crate) enum ConnectionEvent {
+    Connected,
+
     Disconnected {
         reason: ConnectionError,
     }
