@@ -1,5 +1,6 @@
-use std::{collections::BTreeMap, net::SocketAddr, sync::Arc, time::Instant};
+use std::{collections::BTreeMap, mem::MaybeUninit, net::SocketAddr, sync::Arc, time::Instant};
 use bevy_ecs::{component::{ComponentHooks, StorageType}, prelude::*};
+use bytes::BytesMut;
 use quinn_proto::{ClientConfig, ConnectError, ConnectionEvent, ConnectionHandle as QuinnHandle, EndpointConfig, EndpointEvent, ServerConfig};
 use crate::{access::ParEndpoints, socket::{BoundUdpSocket, QuicSocket, Transmit}};
 
@@ -184,14 +185,25 @@ pub(crate) fn io_udp_recv_system(
     mut parallel_iterator: ParEndpoints,
 ) {
     parallel_iterator.iter(|endpoint, connections| {
-        let mut scratch = Vec::with_capacity(1472); // TODO make configurable
+        let mut buffer = vec![MaybeUninit::uninit(); 1472]; // TODO make configurable
+        let mut scratch = Vec::new();
 
         'outer: loop {
-            match endpoint.endpoint.socket.recv(&mut scratch[..]) {
+            match endpoint.endpoint.socket.recv(&mut buffer[..]) {
                 Ok(Some(recv)) => {
-                    todo!()
+                    // SAFETY: The BoundUdpSocket trait guarantees that `length` is the length of valid, initialised memory
+                    let buffer = unsafe { std::mem::transmute::<&[MaybeUninit<u8>], &[u8]>(&buffer[..recv.length]) };
+
+                    endpoint.endpoint.endpoint.handle(
+                        Instant::now(),
+                        recv.address,
+                        Some(endpoint.endpoint.socket.addr().ip()),
+                        None,
+                        BytesMut::from(buffer),
+                        &mut scratch,
+                    );
                 },
-    
+
                 Ok(None) => {
                     break 'outer; // no more to receive
                 },
@@ -206,12 +218,12 @@ pub(crate) fn io_udp_send_system(
     mut parallel_iterator: ParEndpoints,
 ) {
     parallel_iterator.iter(|endpoint, mut connections| {
-        let mut scratch = Vec::with_capacity(1472); // TODO make configurable
+        let mut buffer = Vec::with_capacity(1472); // TODO make configurable
 
         for connection_access in connections.iter() {
-            while let Some(transmit) = connection_access.connection.poll_transmit(&mut scratch) {
+            while let Some(transmit) = connection_access.connection.poll_transmit(&mut buffer) {
                 match endpoint.endpoint.socket.send(Transmit {
-                    payload: &scratch[..transmit.size],
+                    payload: &buffer[..transmit.size],
                     address: transmit.destination,
                 }) {
                     Ok(_) => {}, // TODO
