@@ -2,7 +2,7 @@ use std::{collections::BTreeMap, time::Instant};
 use bevy_ecs::{component::{ComponentHooks, StorageType}, prelude::*};
 use bevy_stardust_quic::{RecvStreamId, SendStreamId};
 use bytes::Bytes;
-use quinn_proto::{ConnectionEvent, ConnectionHandle as QuinnHandle, EndpointEvent, Event as ApplicationEvent, StreamEvent as QuinnStreamEvent, StreamId as QuinnStreamId, WriteError};
+use quinn_proto::{ConnectionEvent as QuinnEvent, ConnectionHandle as QuinnHandle, Dir, EndpointEvent, Event as ApplicationEvent, StreamEvent as QuinnStreamEvent, StreamId as QuinnStreamId, WriteError};
 use crate::{write_queue::StreamWriteQueue, Endpoint};
 
 /// A QUIC connection.
@@ -92,7 +92,7 @@ impl ConnectionInner {
 
     pub fn handle_connection_event(
         &mut self,
-        event: ConnectionEvent,
+        event: QuinnEvent,
     ) {
         self.quinn.handle_event(event);
 
@@ -149,6 +149,58 @@ impl ConnectionInner {
 
                 // Do nothing here
                 ApplicationEvent::HandshakeDataReady => {},
+            }
+        }
+    }
+
+    fn handle_interstage_events(&mut self) {
+        while let Some(event) = self.statemachine.poll() {
+            match event {
+                bevy_stardust_quic::ConnectionEvent::StreamEvent(stream_event) => match stream_event {
+                    bevy_stardust_quic::StreamEvent::Open { id } => {
+                        let sid = self.quinn.streams().open(Dir::Uni).unwrap();
+                        self.map_qsid_ssid.insert(sid, id);
+                        self.map_ssid_qsid.insert(id, sid);
+                    },
+
+                    bevy_stardust_quic::StreamEvent::Transmit { id, chunk } => {
+                        let qsid = *(self.map_ssid_qsid.get(&id).unwrap());
+                        if let Err(err) = self.try_write_to_stream(qsid, chunk) {
+                            todo!()
+                        }
+                    },
+
+                    bevy_stardust_quic::StreamEvent::SetPriority { id, priority } => {
+                        let sid = *(self.map_ssid_qsid.get(&id).unwrap());
+                        let mut stream = self.quinn.send_stream(sid);
+                        let priority = (priority as i64) << 2i64.pow(32);
+                        stream.set_priority(priority.try_into().unwrap()).unwrap();
+                    },
+
+                    bevy_stardust_quic::StreamEvent::Reset { id } => {
+                        let sid = *(self.map_ssid_qsid.get(&id).unwrap());
+                        let mut stream = self.quinn.send_stream(sid);
+                        stream.reset(todo!()).unwrap();
+                    },
+
+                    bevy_stardust_quic::StreamEvent::Finish { id } => {
+                        let sid = *(self.map_ssid_qsid.get(&id).unwrap());
+                        let mut stream = self.quinn.send_stream(sid);
+                        stream.finish().unwrap();
+                    },
+
+                    bevy_stardust_quic::StreamEvent::Stop { id } => {
+                        let mut stream = self.quinn.recv_stream(rsid_to_qsid(id));
+                        stream.stop(todo!()).unwrap();
+                    },
+                },
+
+                bevy_stardust_quic::ConnectionEvent::TransmitDatagram(bytes) => {
+                    self.quinn.datagrams().send(bytes, true).unwrap();
+                },
+
+                bevy_stardust_quic::ConnectionEvent::ReceivedMessage(channel_message) => todo!(),
+                bevy_stardust_quic::ConnectionEvent::Overheated => todo!(),
             }
         }
     }
