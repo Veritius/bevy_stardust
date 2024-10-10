@@ -9,6 +9,7 @@ mod endpoint;
 mod plugin;
 mod socket;
 mod systems;
+mod write_queue;
 
 pub use commands::{EndpointCommands, MakeEndpoint, OpenConnection};
 pub use connection::Connection;
