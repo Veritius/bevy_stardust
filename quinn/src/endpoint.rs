@@ -289,6 +289,7 @@ impl Command for AcceptConnection {
             None => todo!(),
         };
 
+        let address = self.incoming.remote_address();
         let (handle, connection) = match endpoint.inner.quinn.accept(
             *self.incoming,
             Instant::now(),
@@ -303,7 +304,11 @@ impl Command for AcceptConnection {
                 bevy_stardust_quic::Connection::new(),
             )}),
 
-            Err(_) => todo!(),
+            Err(_) => {
+                #[cfg(feature="log")]
+                bevy_log::info!("Connection from {address} rejected");
+                return;
+            },
         };
 
         // SAFETY: We make sure the hierarchy is correct right after
@@ -312,5 +317,8 @@ impl Command for AcceptConnection {
         world.get_or_spawn(entity)
             .unwrap() // Shouldn't happen
             .insert(ConnectionBundle::new(Connection(Box::new(connection))));
+
+        #[cfg(feature="log")]
+        bevy_log::info!("Accepted new connection from {address} as {entity}");
     }
 }

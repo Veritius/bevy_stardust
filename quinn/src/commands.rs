@@ -90,27 +90,18 @@ impl EntityCommand for MakeEndpoint {
         let mut entity = match world.get_entity_mut(id) {
             Some(entity) => entity,
 
-            #[cfg(feature="log")]
             None => {
-                use bevy_log::prelude::*;
-
-                warn!("Tried to make {id} an endpoint but it did not exist");
+                #[cfg(feature="log")]
+                bevy_log::warn!("Tried to make {id} an endpoint but it did not exist");
 
                 return;
             },
-
-            #[cfg(not(feature="log"))]
-            None => return, // Do nothing
         };
 
         // Check that the entity isn't already an endpoint
         if entity.contains::<Endpoint>() {
             #[cfg(feature="log")]
-            {
-                use bevy_log::prelude::*;
-
-                warn!("Tried to make {id} an endpoint it was already one");
-            }
+            bevy_log::warn!("Tried to make {id} an endpoint it was already one");
 
             return;
         }
@@ -124,6 +115,9 @@ impl EntityCommand for MakeEndpoint {
 
         // Add the endpoint component
         entity.insert(endpoint);
+
+        #[cfg(feature="log")]
+        bevy_log::info!("Opened endpoint {}", entity.id());
     }
 }
 
@@ -152,34 +146,24 @@ impl EntityCommand for OpenConnection {
         let mut endpoint: EntityWorldMut<'_> = match world.get_entity_mut(endpoint_id) {
             Some(endpoint) => endpoint,
 
-            #[cfg(feature="log")]
             None => {
-                use bevy_log::prelude::*;
-
-                warn!("Tried to access {endpoint_id} as an endpoint, but the entity did not exist");
+                #[cfg(feature="log")]
+                bevy_log::warn!("Tried to access {endpoint_id} as an endpoint, but the entity did not exist");
 
                 return;
             },
-
-            #[cfg(not(feature="log"))]
-            None => return, // Do nothing
         };
 
         // Try to access the component
         let mut endpoint = match endpoint.get_mut::<Endpoint>() {
             Some(endpoint) => endpoint,
 
-            #[cfg(feature="log")]
             None => {
-                use bevy_log::prelude::*;
-
-                warn!("Tried to access {endpoint_id} as an endpoint, but it was not an endpoint");
+                #[cfg(feature="log")]
+                bevy_log::warn!("Tried to access {endpoint_id} as an endpoint, but it was not an endpoint");
 
                 return;
             },
-
-            #[cfg(not(feature="log"))]
-            None => return, // Do nothing
         };
 
         // Try to create a connection with the endpoint
@@ -204,22 +188,12 @@ impl EntityCommand for OpenConnection {
                     )))}));
                 
                 #[cfg(feature="log")]
-                {
-                    use bevy_log::prelude::*;
-    
-                    error!("Created new outgoing connection to {} on {endpoint_id} with id {connection_id}",
-                        self.remote);
-                }
+                bevy_log::info!("Created new outgoing connection to {} on {endpoint_id} with id {connection_id}", self.remote);
             },
 
             Err(err) => {
                 #[cfg(feature="log")]
-                {
-                    use bevy_log::prelude::*;
-
-                    error!("Failed to create outgoing connection to {} on {endpoint_id}: {}",
-                        self.remote, err);
-                }
+                bevy_log::error!("Failed to create outgoing connection to {} on {endpoint_id}: {}", self.remote, err);
 
                 return;
             },

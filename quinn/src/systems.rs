@@ -48,6 +48,9 @@ pub(crate) fn event_polling_system(
         for entity in disconnections.drain(..) {
             unsafe { endpoint.inform_connection_close(entity) };
             commands.entity(entity).remove::<Connection>();
+
+            #[cfg(feature="log")]
+            bevy_log::info!("Connection {entity} closed");
         }
     }
 }
