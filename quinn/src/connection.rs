@@ -1,7 +1,7 @@
 use std::{collections::{BTreeMap, VecDeque}, time::Instant};
 use bevy_ecs::{component::{ComponentHooks, StorageType}, prelude::*};
-use bevy_stardust::prelude::ChannelMessage;
-use bevy_stardust_quic::{RecvStreamId, SendStreamId};
+use bevy_stardust::prelude::{ChannelMessage, Outgoing, PeerMessages};
+use bevy_stardust_quic::{RecvStreamId, SendContext, SendStreamId};
 use bytes::Bytes;
 use quinn_proto::{ConnectionError, ConnectionEvent as QuinnEvent, ConnectionHandle as QuinnHandle, Dir, EndpointEvent, Event as ApplicationEvent, StreamEvent as QuinnStreamEvent, StreamId as QuinnStreamId, WriteError};
 use crate::{write_queue::StreamWriteQueue, Endpoint};
@@ -48,6 +48,7 @@ pub(crate) struct ConnectionInner {
     map_ssid_qsid: BTreeMap<SendStreamId, QuinnStreamId>,
 
     events: VecDeque<ConnectionEvent>,
+    messages: VecDeque<ChannelMessage>,
 }
 
 impl ConnectionInner {
@@ -69,6 +70,7 @@ impl ConnectionInner {
             map_ssid_qsid: BTreeMap::new(),
 
             events: VecDeque::new(),
+            messages: VecDeque::new(),
         }
     }
 
@@ -213,9 +215,7 @@ impl ConnectionInner {
                 },
 
                 bevy_stardust_quic::ConnectionEvent::ReceivedMessage(channel_message) => {
-                    self.events.push_back(ConnectionEvent::Message {
-                        message: channel_message,
-                    });
+                    self.messages.push_back(channel_message);
                 },
 
                 bevy_stardust_quic::ConnectionEvent::Overheated => todo!(),
@@ -228,6 +228,31 @@ impl ConnectionInner {
         &mut self,
     ) -> Option<EndpointEvent> {
         self.quinn.poll_endpoint_events()
+    }
+
+    #[inline]
+    pub fn poll_connection_events(
+        &mut self,
+    ) -> Option<ConnectionEvent> {
+        self.events.pop_front()
+    }
+
+    #[inline]
+    pub fn poll_messages(
+        &mut self,
+    ) -> Option<ChannelMessage> {
+        self.messages.pop_front()
+    }
+
+    pub fn handle_outgoing(
+        &mut self,
+        context: SendContext,
+        outgoing: &PeerMessages<Outgoing>,
+    ) {
+        self.statemachine.handle_outgoing(
+            context,
+            &outgoing,
+        );
     }
 
     fn try_recv_from_stream(&mut self, qsid: QuinnStreamId) {
@@ -319,10 +344,6 @@ impl ConnectionInner {
 }
 
 pub(crate) enum ConnectionEvent {
-    Message {
-        message: ChannelMessage,
-    },
-
     Disconnected {
         reason: ConnectionError,
     }
