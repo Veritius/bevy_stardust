@@ -12,6 +12,7 @@ impl Plugin for QuinnPlugin {
 
         // PreUpdate stage
         app.add_systems(PreUpdate, (
+            crate::endpoint::io_udp_recv_system,
             crate::systems::event_exchange_system,
             crate::systems::event_polling_system,
             crate::systems::poll_incoming_messages_system,
@@ -22,7 +23,7 @@ impl Plugin for QuinnPlugin {
             crate::systems::put_outgoing_messages_system,
             crate::systems::event_exchange_system,
             crate::systems::event_polling_system,
-            crate::endpoint::io_udp_recv_system,
+            crate::endpoint::io_udp_send_system,
         ).chain().in_set(NetworkSend::Transmit));
     }
 }

@@ -1,7 +1,7 @@
 use std::{collections::BTreeMap, net::SocketAddr, sync::Arc, time::Instant};
 use bevy_ecs::{component::{ComponentHooks, StorageType}, prelude::*};
 use quinn_proto::{ClientConfig, ConnectError, ConnectionEvent, ConnectionHandle as QuinnHandle, EndpointConfig, EndpointEvent, ServerConfig};
-use crate::{access::ParEndpoints, socket::{BoundUdpSocket, QuicSocket}};
+use crate::{access::ParEndpoints, socket::{BoundUdpSocket, QuicSocket, Transmit}};
 
 /// A QUIC endpoint.
 pub struct Endpoint {
@@ -197,6 +197,27 @@ pub(crate) fn io_udp_recv_system(
                 },
     
                 Err(_) => todo!(),
+            }
+        }
+    });
+}
+
+pub(crate) fn io_udp_send_system(
+    mut parallel_iterator: ParEndpoints,
+) {
+    parallel_iterator.iter(|endpoint, mut connections| {
+        let mut scratch = Vec::with_capacity(1472); // TODO make configurable
+
+        for connection_access in connections.iter() {
+            while let Some(transmit) = connection_access.connection.poll_transmit(&mut scratch) {
+                match endpoint.endpoint.socket.send(Transmit {
+                    payload: &scratch[..transmit.size],
+                    address: transmit.destination,
+                }) {
+                    Ok(_) => {}, // TODO
+
+                    Err(_) => todo!(),
+                }
             }
         }
     });

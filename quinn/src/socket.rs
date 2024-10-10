@@ -31,7 +31,6 @@ pub(crate) unsafe trait BoundUdpSocket {
     fn send(
         &mut self,
         transmit: Transmit,
-        scratch: &mut [MaybeUninit<u8>],
     ) -> IoResult<usize>;
 }
 
@@ -112,7 +111,6 @@ unsafe impl BoundUdpSocket for QuicSocket {
     fn send(
         &mut self,
         transmit: Transmit,
-        scratch: &mut [MaybeUninit<u8>],
     ) -> IoResult<usize> {
         self.socket.send_to(
             transmit.payload,

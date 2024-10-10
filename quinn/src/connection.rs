@@ -3,7 +3,7 @@ use bevy_ecs::{component::{ComponentHooks, StorageType}, prelude::*};
 use bevy_stardust::prelude::{ChannelMessage, Outgoing, PeerMessages};
 use bevy_stardust_quic::{RecvStreamId, SendContext, SendStreamId};
 use bytes::Bytes;
-use quinn_proto::{ConnectionError, ConnectionEvent as QuinnEvent, ConnectionHandle as QuinnHandle, Dir, EndpointEvent, Event as ApplicationEvent, StreamEvent as QuinnStreamEvent, StreamId as QuinnStreamId, WriteError};
+use quinn_proto::{ConnectionError, ConnectionEvent as QuinnEvent, ConnectionHandle as QuinnHandle, Dir, EndpointEvent, Event as ApplicationEvent, StreamEvent as QuinnStreamEvent, StreamId as QuinnStreamId, Transmit, WriteError};
 use crate::{write_queue::StreamWriteQueue, Endpoint};
 
 /// A QUIC connection.
@@ -242,6 +242,17 @@ impl ConnectionInner {
         &mut self,
     ) -> Option<ChannelMessage> {
         self.messages.pop_front()
+    }
+
+    pub fn poll_transmit(
+        &mut self,
+        buf: &mut Vec<u8>,
+    ) -> Option<Transmit> {
+        self.quinn.poll_transmit(
+            Instant::now(),
+            1,
+            buf,
+        )
     }
 
     pub fn handle_outgoing(
