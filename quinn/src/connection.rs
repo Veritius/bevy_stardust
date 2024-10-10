@@ -1,6 +1,6 @@
 use std::{collections::{BTreeMap, VecDeque}, time::Instant};
 use bevy_ecs::{component::{ComponentHooks, StorageType}, prelude::*};
-use bevy_stardust::prelude::{ChannelMessage, Outgoing, PeerMessages};
+use bevy_stardust::prelude::*;
 use bevy_stardust_quic::{RecvStreamId, SendContext, SendStreamId};
 use bytes::Bytes;
 use quinn_proto::{ConnectionError, ConnectionEvent as QuinnEvent, ConnectionHandle as QuinnHandle, Dir, EndpointEvent, Event as ApplicationEvent, StreamEvent as QuinnStreamEvent, StreamId as QuinnStreamId, Transmit, WriteError};
@@ -378,4 +378,22 @@ pub(crate) fn rsid_to_qsid(id: RecvStreamId) -> QuinnStreamId {
 #[inline]
 pub(crate) fn ssid_to_qsid(id: SendStreamId) -> QuinnStreamId {
     QuinnStreamId(id.0)
+}
+
+#[derive(Bundle)]
+pub(crate) struct ConnectionBundle {
+    pub connection: Connection,
+    pub incoming: PeerMessages<Incoming>,
+    pub outgoing: PeerMessages<Outgoing>,
+}
+
+impl ConnectionBundle {
+    pub fn new(connection: Connection) -> Self {
+        Self {
+            connection,
+
+            incoming: PeerMessages::new(),
+            outgoing: PeerMessages::new(),
+        }
+    }
 }

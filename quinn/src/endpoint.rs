@@ -2,7 +2,7 @@ use std::{collections::BTreeMap, mem::MaybeUninit, net::SocketAddr, sync::Arc, t
 use bevy_ecs::{component::{ComponentHooks, StorageType}, prelude::*, world::Command};
 use bytes::BytesMut;
 use quinn_proto::{ClientConfig, ConnectError, ConnectionEvent, ConnectionHandle as QuinnHandle, EndpointConfig, EndpointEvent, Incoming, ServerConfig};
-use crate::{access::ParEndpoints, connection::ConnectionInner, socket::{BoundUdpSocket, QuicSocket, Transmit}, Connection};
+use crate::{access::ParEndpoints, connection::{ConnectionBundle, ConnectionInner}, socket::{BoundUdpSocket, QuicSocket, Transmit}, Connection};
 
 /// A QUIC endpoint.
 pub struct Endpoint {
@@ -309,6 +309,6 @@ impl Command for AcceptConnection {
 
         world.get_or_spawn(entity)
             .unwrap() // Shouldn't happen
-            .insert(Connection(Box::new(connection)));
+            .insert(ConnectionBundle::new(Connection(Box::new(connection))));
     }
 }

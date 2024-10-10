@@ -1,7 +1,7 @@
 use std::{borrow::Cow, net::SocketAddr, sync::Arc};
 use bevy_ecs::{prelude::*, system::{EntityCommand, EntityCommands}};
 use quinn_proto::{ClientConfig, ServerConfig, EndpointConfig};
-use crate::{connection::ConnectionInner, endpoint::EndpointInner, Connection, Endpoint, QuicSocket};
+use crate::{connection::{ConnectionBundle, ConnectionInner}, endpoint::EndpointInner, Connection, Endpoint, QuicSocket};
 
 /// Extension API to sugar using endpoint commands.
 pub trait EndpointCommands {
@@ -196,12 +196,12 @@ impl EntityCommand for OpenConnection {
                 // Spawn the new connection entity
                 world.get_or_spawn(connection_id)
                     .unwrap() // Shouldn't happen
-                    .insert(unsafe { Connection(Box::new(ConnectionInner::new(
+                    .insert(ConnectionBundle::new(unsafe { Connection(Box::new(ConnectionInner::new(
                         handle,
                         endpoint_id,
                         connection,
                         statemachine,
-                    )))});
+                    )))}));
                 
                 #[cfg(feature="log")]
                 {
