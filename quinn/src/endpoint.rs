@@ -1,8 +1,8 @@
 use std::{collections::BTreeMap, mem::MaybeUninit, net::SocketAddr, sync::Arc, time::Instant};
-use bevy_ecs::{component::{ComponentHooks, StorageType}, prelude::*};
+use bevy_ecs::{component::{ComponentHooks, StorageType}, prelude::*, world::Command};
 use bytes::BytesMut;
-use quinn_proto::{ClientConfig, ConnectError, ConnectionEvent, ConnectionHandle as QuinnHandle, EndpointConfig, EndpointEvent, ServerConfig};
-use crate::{access::ParEndpoints, socket::{BoundUdpSocket, QuicSocket, Transmit}};
+use quinn_proto::{ClientConfig, ConnectError, ConnectionEvent, ConnectionHandle as QuinnHandle, EndpointConfig, EndpointEvent, Incoming, ServerConfig};
+use crate::{access::ParEndpoints, connection::ConnectionInner, socket::{BoundUdpSocket, QuicSocket, Transmit}, Connection};
 
 /// A QUIC endpoint.
 pub struct Endpoint {
@@ -184,6 +184,7 @@ impl<'a> Iterator for EndpointConnectionsIter<'a> {
 }
 
 pub(crate) fn io_udp_recv_system(
+    mut parallel_commands: ParallelCommands,
     mut parallel_iterator: ParEndpoints,
 ) {
     parallel_iterator.iter(|endpoint, mut connections| {
@@ -215,7 +216,12 @@ pub(crate) fn io_udp_recv_system(
                             },
 
                             quinn_proto::DatagramEvent::NewConnection(incoming) => {
-                                todo!()
+                                parallel_commands.command_scope(|mut commands| {
+                                    commands.push(AcceptConnection {
+                                        endpoint: endpoint.entity,
+                                        incoming: Box::new(incoming),
+                                    });
+                                });
                             },
 
                             quinn_proto::DatagramEvent::Response(transmit) => {
@@ -260,4 +266,49 @@ pub(crate) fn io_udp_send_system(
             }
         }
     });
+}
+
+struct AcceptConnection {
+    endpoint: Entity,
+    incoming: Box<Incoming>,
+}
+
+impl Command for AcceptConnection {
+    fn apply(self, world: &mut World) {
+        let entity = world.entities().reserve_entity();
+
+        let mut endpoint = match world.get_entity_mut(self.endpoint) {
+            Some(v) => v,
+            None => todo!(),
+        };
+
+        let mut endpoint = match endpoint.get_mut::<Endpoint>() {
+            Some(v) => v,
+            None => todo!(),
+        };
+
+        let (handle, connection) = match endpoint.inner.quinn.accept(
+            *self.incoming,
+            Instant::now(),
+            &mut Vec::new(),
+            None
+        ) {
+            // SAFETY: We make sure the hierarchy is correct
+            Ok((handle, connection)) => (handle, unsafe { ConnectionInner::new(
+                handle,
+                self.endpoint,
+                connection,
+                bevy_stardust_quic::Connection::new(),
+            )}),
+
+            Err(_) => todo!(),
+        };
+
+        // SAFETY: We make sure the hierarchy is correct right after
+        unsafe { endpoint.connections.insert(entity, handle) };
+
+        world.get_or_spawn(entity)
+            .unwrap() // Shouldn't happen
+            .insert(Connection(Box::new(connection)));
+    }
 }
