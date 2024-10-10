@@ -1,7 +1,8 @@
 use std::{collections::BTreeMap, time::Instant};
 use bevy_ecs::{component::{ComponentHooks, StorageType}, prelude::*};
 use bevy_stardust_quic::{RecvStreamId, SendStreamId};
-use quinn_proto::{ConnectionEvent, ConnectionHandle as QuinnHandle, EndpointEvent, Event as ApplicationEvent, StreamEvent as QuinnStreamEvent, StreamId as QuinnStreamId};
+use bytes::Bytes;
+use quinn_proto::{ConnectionEvent, ConnectionHandle as QuinnHandle, EndpointEvent, Event as ApplicationEvent, StreamEvent as QuinnStreamEvent, StreamId as QuinnStreamId, WriteError};
 use crate::{write_queue::StreamWriteQueue, Endpoint};
 
 /// A QUIC connection.
@@ -104,15 +105,17 @@ impl ConnectionInner {
 
                         self.statemachine.stream_opened(qsid_to_rsid(id));
 
-                        todo!()
+                        self.try_recv_from_stream(id);
                     },
 
                     QuinnStreamEvent::Readable { id } => {
-                        todo!()
+                        self.try_recv_from_stream(id);
                     },
 
                     QuinnStreamEvent::Writable { id } => {
-                        todo!()
+                        if let Err(err) = self.try_drain_write_queue(id) {
+                            todo!()
+                        }
                     },
 
                     QuinnStreamEvent::Finished { id } => {
@@ -155,6 +158,93 @@ impl ConnectionInner {
         &mut self,
     ) -> Option<EndpointEvent> {
         self.quinn.poll_endpoint_events()
+    }
+
+    fn try_recv_from_stream(&mut self, qsid: QuinnStreamId) {
+        match self.quinn.recv_stream(qsid).read(true) {
+            Ok(mut chunks) => {
+                loop { match chunks.next(1024) {
+                    Ok(Some(chunk)) => {
+                        // Forward the received chunk to the stream state machine
+                        self.statemachine.stream_recv(qsid_to_rsid(qsid), chunk.bytes);
+                    },
+
+                    Ok(None) => break,
+
+                    Err(_) => todo!(),
+                } };
+
+                let _ = chunks.finalize();
+            },
+
+            Err(_) => todo!(),
+        };
+    }
+
+    fn try_write_to_stream(&mut self, qsid: QuinnStreamId, chunk: Bytes) -> Result<(), WriteError> {
+        let mut stream = self.quinn.send_stream(qsid);
+        // If there's a queue in the map, that means there's previous data that must be sent
+        // We just add our chunk to the queue, and then try to write that stream anyway.
+        if let Some(queue) = self.write_queues.get_mut(&qsid) {
+            queue.push(chunk);
+            match queue.write(&mut stream) {
+                // The queue is fully drained, remove it
+                Ok(true) => {
+                    self.discard_stream_write_queue(qsid);
+                    return Ok(());
+                },
+
+                // The queue is not finished, leave it
+                Ok(false) => return Ok(()),
+
+                // The stream returned an error while trying to write to it
+                Err(err) => return Err(err),
+            }
+        } else {
+            // In this case, there's no queue in the map.
+            // Rather than immediately allocating a queue, we try writing the chunk first,
+            // and only add it to the queue if the full chunk isn't written to the stream.
+            match stream.write(&chunk) {
+                // Do nothing, the full chunk was written
+                Ok(l) if l == chunk.len() => return Ok(()),
+
+                Ok(l) => {
+                    // Take a slice that excludes the written portion, and add it to the queue
+                    let mut queue = StreamWriteQueue::new();
+                    queue.push(chunk.slice(l..));
+                    self.write_queues.insert(qsid, queue);
+                    return Ok(())
+                }
+
+                // The stream returned an error while trying to write to it
+                Err(err) => return Err(err),
+            }
+        }
+    }
+
+    fn try_drain_write_queue(&mut self, qsid: QuinnStreamId) -> Result<(), WriteError> {
+        let mut stream = self.quinn.send_stream(qsid);
+        if let Some(queue) = self.write_queues.get_mut(&qsid) {
+            match queue.write(&mut stream) {
+                // The queue is fully drained, remove it
+                Ok(true) => {
+                    self.discard_stream_write_queue(qsid);
+                    return Ok(());
+                },
+
+                // The queue is not finished, leave it
+                Ok(false) => return Ok(()),
+
+                // The stream returned an error while trying to write to it
+                Err(err) => return Err(err),
+            }
+        }
+        // No queue
+        return Ok(());
+    }
+
+    fn discard_stream_write_queue(&mut self, qsid: QuinnStreamId) {
+        self.write_queues.remove(&qsid);
     }
 }
 

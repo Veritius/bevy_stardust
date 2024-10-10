@@ -13,11 +13,11 @@ impl StreamWriteQueue {
         }
     }
 
-    fn push(&mut self, chunk: Bytes) {
+    pub fn push(&mut self, chunk: Bytes) {
         self.queue.push_back(chunk);
     }
 
-    fn write(&mut self, stream: &mut SendStream) -> Result<bool, WriteError> {
+    pub fn write(&mut self, stream: &mut SendStream) -> Result<bool, WriteError> {
         // Pop from queue
         while let Some(chunk) = self.queue.pop_front() {
             // Try to write
