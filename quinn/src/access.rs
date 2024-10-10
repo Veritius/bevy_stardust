@@ -13,19 +13,9 @@ pub(crate) struct ParEndpoints<
     connections: Query<'w, 's, (&'static mut Connection, Ca), (Without<Endpoint>, Cf)>,
 }
 
-pub(crate) struct ParConnections<'a, Ca: QueryData> {
-    connections: &'a EndpointConnections,
-    query: &'a mut Query<'a, 'a, (&'static mut Connection, Ca)>,
-}
-
 pub(crate) struct ParEndpointAccess<'a, Ea: QueryData> {
     pub endpoint: &'a mut EndpointInner,
     pub additional: Ea::Item<'a>,
-}
-
-pub(crate) struct ParConnectionAccess<'a, Ca: QueryData> {
-    pub connection: &'a mut ConnectionInner,
-    pub additional: Ca::Item<'a>,
 }
 
 impl<'w, 's, Ea, Ca, Ef, Cf> ParEndpoints<'w, 's, Ea, Ca, Ef, Cf>
@@ -35,11 +25,11 @@ where
     Ef: 'static + QueryFilter,
     Cf: 'static + QueryFilter,
 {
-    pub fn par_iter_all(
+    pub fn iter(
         &mut self,
         func: impl Fn(
             ParEndpointAccess<Ea>,
-            ParConnectionIter<Ca, Cf>,
+            ParConnections<Ca, Cf>,
         ) + Send + Sync,
     ) {
         self.endpoints.par_iter_mut().for_each(|(mut endpoint, additional)| {
@@ -50,15 +40,65 @@ where
                 additional,
             };
 
-            let connection_iter = ParConnectionIter {
-                connections: connections.into_iter(),
+            let connection_access = ParConnections {
+                connections,
                 query: &self.connections,
             };
 
             // Run the access function
-            func(endpoint_access, connection_iter);
+            func(endpoint_access, connection_access);
         });
     }
+}
+
+pub(crate) struct ParConnections<'a, Ca: QueryData, Cf: QueryFilter> {
+    connections: &'a EndpointConnections,
+    query: &'a Query<'a, 'a, (&'static mut Connection, Ca), (Without<Endpoint>, Cf)>,
+}
+
+pub(crate) struct ParConnectionAccess<'a, Ca: QueryData> {
+    pub connection: &'a mut ConnectionInner,
+    pub additional: Ca::Item<'a>,
+}
+
+impl<'a, Ca: QueryData, Cf: QueryFilter> ParConnections<'a, Ca, Cf> {
+    pub fn iter(&mut self) -> ParConnectionIter<Ca, Cf> {
+        ParConnectionIter {
+            connections: self.connections.into_iter(),
+            query: self.query,
+        }
+    }
+
+    pub fn get(
+        &mut self,
+        id: Entity,
+        func: impl FnOnce(ParConnectionAccess<'_, Ca>),
+    ) -> Result<(), ConnectionAccessError> {
+        if self.connections.get_handle(id).is_none() {
+            return Err(ConnectionAccessError::NotOwned);
+        }
+
+        let (mut connection, additional) = match unsafe { self.query.get_unchecked(id) } {
+            Ok(res) => res,
+
+            Err(_) => return Err(ConnectionAccessError::NoSuchEntity),
+        };
+
+        let access = ParConnectionAccess {
+            connection: &mut (*connection).0,
+            additional,
+        };
+
+        func(access);
+
+        return Ok(())
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum ConnectionAccessError {
+    NoSuchEntity,
+    NotOwned,
 }
 
 pub(crate) struct ParConnectionIter<'a, Ca: QueryData, Cf: QueryFilter> {

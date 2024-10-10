@@ -6,11 +6,11 @@ use crate::{access::*, connection::ConnectionEvent, Connection};
 pub(crate) fn event_exchange_system(
     mut parallel_iterator: ParEndpoints,
 ) {
-    parallel_iterator.par_iter_all(|
+    parallel_iterator.iter(|
         mut endpoint_access,
-        mut connection_iterator,
+        mut connections,
     | {
-        for connection_access in connection_iterator {
+        for connection_access in connections.iter() {
             while let Some(event) = connection_access.connection.poll_endpoint_events() {
                 let event = endpoint_access.endpoint.handle_event(connection_access.connection.handle(), event);
 
@@ -25,11 +25,11 @@ pub(crate) fn event_exchange_system(
 pub(crate) fn event_polling_system(
     mut parallel_iterator: ParEndpoints
 ) {
-    parallel_iterator.par_iter_all(|
+    parallel_iterator.iter(|
         mut endpoint_access,
-        mut connection_iterator,
+        mut connections,
     | {
-        for connection_access in connection_iterator {
+        for connection_access in connections.iter() {
             while let Some(event) = connection_access.connection.poll_connection_events() {
                 match event {
                     ConnectionEvent::Disconnected { reason } => {

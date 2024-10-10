@@ -1,7 +1,7 @@
 use std::{collections::BTreeMap, net::SocketAddr, sync::Arc, time::Instant};
 use bevy_ecs::{component::{ComponentHooks, StorageType}, prelude::*};
 use quinn_proto::{ClientConfig, ConnectError, ConnectionEvent, ConnectionHandle as QuinnHandle, EndpointConfig, EndpointEvent, ServerConfig};
-use crate::socket::QuicSocket;
+use crate::{access::ParEndpoints, socket::QuicSocket};
 
 /// A QUIC endpoint.
 pub struct Endpoint {
@@ -148,6 +148,14 @@ impl EndpointConnections {
         self.e2h.remove(&entity);
         return Some(entity);
     }
+
+    pub fn get_entity(&self, handle: QuinnHandle) -> Option<Entity> {
+        self.h2e.get(&handle).cloned()
+    }
+
+    pub fn get_handle(&self, entity: Entity) -> Option<QuinnHandle> {
+        self.e2h.get(&entity).cloned()
+    }
 }
 
 impl<'a> IntoIterator for &'a EndpointConnections {
@@ -170,4 +178,10 @@ impl<'a> Iterator for EndpointConnectionsIter<'a> {
     fn next(&mut self) -> Option<Self::Item> {
         self.iter.next().map(|(a,b)| (*a, *b))
     }
+}
+
+pub(crate) fn io_udp_recv_system(
+    mut parallel_iterator: ParEndpoints,
+) {
+    todo!()
 }
