@@ -1,7 +1,7 @@
 use bevy_ecs::prelude::*;
 use bevy_stardust::prelude::*;
 use bevy_stardust_quic::SendContext;
-use crate::{access::*, Connection};
+use crate::{access::*, connection::ConnectionEvent, Connection};
 
 pub(crate) fn event_exchange_system(
     mut parallel_iterator: ParEndpoints,
@@ -16,6 +16,25 @@ pub(crate) fn event_exchange_system(
 
                 if let Some(event) = event {
                     connection_access.connection.handle_connection_event(event);
+                }
+            }
+        }
+    });
+}
+
+pub(crate) fn event_polling_system(
+    mut parallel_iterator: ParEndpoints
+) {
+    parallel_iterator.par_iter_all(|
+        mut endpoint_access,
+        mut connection_iterator,
+    | {
+        for connection_access in connection_iterator {
+            while let Some(event) = connection_access.connection.poll_connection_events() {
+                match event {
+                    ConnectionEvent::Disconnected { reason } => {
+                        todo!()
+                    },
                 }
             }
         }
