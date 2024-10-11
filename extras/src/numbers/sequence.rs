@@ -43,8 +43,7 @@ impl<T: Sequential> Sequence<T> {
 
     /// Returns the difference between two sequence values.
     pub fn diff(&self, other: &Self) -> T {
-        let a = self.0;
-        let b = other.0;
+        let (a, b) = (self.0, other.0);
 
         let diff = a.abs_diff(b);
         if diff < T::MID { return diff }
