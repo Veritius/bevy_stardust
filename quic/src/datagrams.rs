@@ -24,6 +24,8 @@ impl Connection {
                 let seq = self.incoming_datagrams.sequences.entry(channel)
                     .or_insert_with(|| IncomingDatagramSequence::new());
 
+                println!("Local: {seq:?}, Remote: {sequence:?}");
+
                 if seq.latest(sequence) {
                     self.shared.events.push(ConnectionEvent::ReceivedMessage(ChannelMessage {
                         channel,
@@ -211,7 +213,7 @@ impl IncomingDatagramSequence {
     }
 
     pub fn latest(&mut self, index: Sequence<u16>) -> bool {
-        if self.0 > index {
+        if index > self.0 {
             self.0 = index;
             return true;
         } else {
@@ -225,7 +227,7 @@ pub(crate) struct OutgoingDatagramSequence(Sequence<u16>);
 
 impl OutgoingDatagramSequence {
     pub fn new() -> Self {
-        Self(Sequence::from(u16::MAX))
+        Self(Sequence::from(0))
     }
 
     pub fn next(&mut self) -> Sequence<u16> {
