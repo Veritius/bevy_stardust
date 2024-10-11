@@ -36,6 +36,7 @@ impl<T: Sequential> Sequence<T> {
     }
 
     /// Increment the value by `1`. Wraps at numerical bounds.
+    #[inline]
     pub fn increment(&mut self) {
         self.0.increment();
     }
