@@ -3,7 +3,7 @@
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use bevy_ecs::prelude::*;
 use bevy_app::{prelude::*, ScheduleRunnerPlugin};
-use bevy_log::LogPlugin;
+use bevy_log::{info, LogPlugin};
 use bevy_stardust::prelude::*;
 use bevy_stardust_quinn::*;
 use rustls_pemfile::Item;
@@ -47,15 +47,41 @@ pub fn setup(app: &mut App) {
         QuinnPlugin,
     ));
 
-    app.add_channel::<MovementEvent>(ChannelConfiguration {
+    app.add_channel::<MyMessage>(ChannelConfiguration {
         consistency: MessageConsistency::UnreliableSequenced,
         priority: 32,
     });
 
-    app.add_event::<MovementEvent>();
+    app.add_systems(Update, send_and_receive_system);
 }
 
-#[derive(Debug, Event)]
-pub struct MovementEvent {
-    direction: [f32; 2],
+enum MyMessage {}
+
+fn send_and_receive_system(
+    channel: ChannelData<MyMessage>,
+    mut increment: Local<u32>,
+    mut connections: Query<(
+        Entity,
+        &PeerMessages<Incoming>,
+        &mut PeerMessages<Outgoing>,
+    ), With<Connection>>,
+) {
+    for (
+        entity,
+        incoming,
+        mut outgoing,
+    ) in connections.iter_mut() {
+        for (channel, messages) in incoming.iter() {
+            for message in messages {
+                let message = message.as_str().unwrap();
+                info!("Received message from {entity} on channel {channel:?}: {message}");
+            }
+        }
+        
+        let value = *increment; *increment += 1;
+        outgoing.push_one(ChannelMessage {
+            channel: channel.id(),
+            message: Message::from_bytes(format!("{value:X}").into()),
+        });
+    }
 }
