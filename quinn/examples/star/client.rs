@@ -9,7 +9,7 @@ use shared::*;
 
 fn root_certs() -> Arc<RootCertStore> {
     let mut certs = RootCertStore::empty();
-    certs.add(shared::certificate()).unwrap();
+    certs.add(shared::certificate(CA_CERTIFICATE)).unwrap();
     return Arc::new(certs);
 }
 

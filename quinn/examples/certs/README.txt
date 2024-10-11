@@ -1,1 +1,0 @@
-There are no tests in this directory. This is just a bunch of cryptographic material for tests to use, like certificates and keys. The certificates and keys in this folder are ostensibly public, and you really should not use them for anything beyond maybe local testing.
