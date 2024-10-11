@@ -1,2 +1,2 @@
 # Examples
-Since QUIC requires encryption and authentication by default, before running the examples, the certificates must be generated. Just run the `certs/regenerate.sh` script. Make sure the working directory is in `certs` or it won't work properly.
+Since QUIC requires encryption and authentication by default, before running the examples, the certificates must be generated. Go to the `certs` directory, and just run the `generate.sh` script. Make sure the working directory is in `certs` or it won't work properly. You can double check that the certificates are generated correctly with `verify.sh`.
