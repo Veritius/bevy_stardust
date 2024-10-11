@@ -134,10 +134,9 @@ impl ConnectionInner {
                     },
 
                     QuinnStreamEvent::Stopped { id, error_code: _ } => {
-                        self.statemachine.stream_stopped(qsid_to_ssid(id));
-
                         if let Some(ssid) = self.map_qsid_ssid.remove(&id) {
                             self.map_ssid_qsid.remove(&ssid);
+                            self.statemachine.stream_stopped(ssid);
                         }
                     },
 
@@ -370,17 +369,7 @@ pub(crate) fn qsid_to_rsid(id: QuinnStreamId) -> RecvStreamId {
 }
 
 #[inline]
-pub(crate) fn qsid_to_ssid(id: QuinnStreamId) -> SendStreamId {
-    SendStreamId(id.0)
-}
-
-#[inline]
 pub(crate) fn rsid_to_qsid(id: RecvStreamId) -> QuinnStreamId {
-    QuinnStreamId(id.0)
-}
-
-#[inline]
-pub(crate) fn ssid_to_qsid(id: SendStreamId) -> QuinnStreamId {
     QuinnStreamId(id.0)
 }
 
