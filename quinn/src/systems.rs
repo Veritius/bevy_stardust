@@ -39,6 +39,12 @@ pub(crate) fn event_polling_system(
             while let Some(event) = connection.poll_connection_events() {
                 match event {
                     ConnectionEvent::Connected => {
+                        // Add peer components
+                        commands.entity(entity).insert((
+                            Peer::new(),
+                            PeerLifestage::Established,
+                        ));
+
                         #[cfg(feature="log")]
                         bevy_log::info!("Connection {entity} established");
                     }

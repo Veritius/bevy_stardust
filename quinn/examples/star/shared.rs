@@ -64,7 +64,10 @@ fn send_and_receive_system(
         Entity,
         &PeerMessages<Incoming>,
         &mut PeerMessages<Outgoing>,
-    ), With<Connection>>,
+    ), (
+        With<Connection>,
+        With<Peer>,
+    )>,
 ) {
     for (
         entity,
