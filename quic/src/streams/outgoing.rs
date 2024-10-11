@@ -85,7 +85,7 @@ impl OutgoingStreamsHandle<'_> {
 
     fn open_stream_inner(&mut self) -> SendStreamId {
         let index = self.data. unique_id_index;
-        assert!(index >= OutgoingStreams::SEND_STREAM_ID_LIMIT, "Exceeded send ID limit");
+        assert!(index < OutgoingStreams::SEND_STREAM_ID_LIMIT, "Exceeded send ID limit");
         self.data.unique_id_index += 1;
         let id = SendStreamId(index);
         self.shared.stream_event(StreamEvent::Open { id });
