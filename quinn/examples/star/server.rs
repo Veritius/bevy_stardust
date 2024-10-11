@@ -24,7 +24,6 @@ fn main() {
             config: Arc::new(EndpointConfig::default()),
             server: Some(Arc::new(ServerConfig::with_single_cert(
                 vec![
-                    shared::certificate(CA_CERTIFICATE),
                     shared::certificate(SERVER_CERTIFICATE),
                 ],
                 private_key(SERVER_PRIVATE_KEY),
