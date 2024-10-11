@@ -7,6 +7,9 @@ use super::RecvStreamId;
 impl Connection {
     /// Call when a chunk of data is received on a stream.
     pub fn stream_recv(&mut self, id: RecvStreamId, chunk: Bytes) {
+        let stream = self.incoming_streams.get_or_open_stream(id);
+        stream.push(chunk);
+
         todo!()
     }
 
@@ -35,6 +38,10 @@ impl IncomingStreams {
         Self {
             streams: BTreeMap::new(),
         }
+    }
+
+    fn get_or_open_stream(&mut self, id: RecvStreamId) -> &mut IncomingStream {
+        self.streams.entry(id).or_insert_with(|| IncomingStream::new())
     }
 
     pub fn recv_stream_opened(&mut self, id: RecvStreamId) {
