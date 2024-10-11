@@ -3,7 +3,7 @@ Miscellaneous functionality that doesn't belong in `bevy_stardust`, but aren't s
 
 | Bevy version | Stardust version | Crate version |
 |--------------|------------------|---------------|
-| `0.14.0`     | `0.6.0`          | `0.1.0`       |
+| `0.14.0`     | `0.6.0`          | `0.1.1`       |
 
 ## Feature flags
 - `octs` - Adds implementations for traits from the `octs` crate.

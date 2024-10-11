@@ -59,7 +59,7 @@ impl<T: SeqValue> Sequence<T> {
 
 impl<T: SeqValue> PartialOrd for Sequence<T> {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        self.0.partial_cmp(&other.0)
+        Some(self.cmp(other))
     }
 }
 
@@ -203,6 +203,17 @@ fn sequence_id_ordering_test() {
     fn seq(v: u16) -> Sequence<u16> {
         Sequence::from(v)
     }
+
+    assert_eq!(seq(4).partial_cmp(&seq(4)), Some(Ordering::Equal));
+    assert_eq!(seq(15).partial_cmp(&seq(9)), Some(Ordering::Greater));
+    assert_eq!(seq(9).partial_cmp(&seq(15)), Some(Ordering::Less));
+    assert_eq!(seq(65534).partial_cmp(&seq(66)), Some(Ordering::Less));
+    assert_eq!(seq(u16::MAX).partial_cmp(&seq(u16::MIN)), Some(Ordering::Less));
+    assert_eq!(seq(66).partial_cmp(&seq(65534)), Some(Ordering::Greater));
+    assert_eq!(seq(u16::MIN).partial_cmp(&seq(u16::MAX)), Some(Ordering::Greater));
+    assert_eq!(MIDPOINT.partial_cmp(&MIDPOINT), Some(Ordering::Equal));
+    assert_eq!(MIDPOINT.sub(1).partial_cmp(&MIDPOINT), Some(Ordering::Less));
+    assert_eq!(MIDPOINT.add(1).partial_cmp(&MIDPOINT), Some(Ordering::Greater));
 
     assert_eq!(seq(4).cmp(&seq(4)), Ordering::Equal);
     assert_eq!(seq(15).cmp(&seq(9)), Ordering::Greater);
