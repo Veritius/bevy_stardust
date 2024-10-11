@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+use std::{net::{IpAddr, Ipv4Addr, SocketAddr}, time::Duration};
 use bevy_ecs::prelude::*;
 use bevy_app::{prelude::*, ScheduleRunnerPlugin};
 use bevy_log::{info, LogPlugin};
@@ -42,7 +42,9 @@ pub fn setup(app: &mut App) {
             level: bevy_log::Level::TRACE,
             ..Default::default()
         },
-        ScheduleRunnerPlugin::default(),
+        ScheduleRunnerPlugin::run_loop(
+            Duration::from_millis(100),
+        ),
         StardustPlugin,
         QuinnPlugin,
     ));
@@ -82,9 +84,14 @@ fn send_and_receive_system(
         }
         
         let value = *increment; *increment += 1;
+
+        let channel = channel.id();
+        let string = format!("{value:X}");
+        info!("Sending message to {entity} on channel {channel:?}: {string}");
+    
         outgoing.push_one(ChannelMessage {
-            channel: channel.id(),
-            message: Message::from_bytes(format!("{value:X}").into()),
+            channel,
+            message: Message::from_bytes(string.into()),
         });
     }
 }

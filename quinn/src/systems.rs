@@ -1,7 +1,6 @@
 use bevy_ecs::prelude::*;
 use bevy_stardust::prelude::*;
 use bevy_stardust_quic::SendContext;
-use quinn_proto::EndpointEvent;
 use crate::{access::*, connection::ConnectionEvent, Connection, Endpoint};
 
 pub(crate) fn event_exchange_system(
