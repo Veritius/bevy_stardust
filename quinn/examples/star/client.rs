@@ -26,7 +26,7 @@ fn main() {
         }).connect(OpenConnection {
             remote: SERVER_ADDRESS,
             config: ClientConfig::with_root_certificates(root_certs()).unwrap(),
-            server_name: "example.com".into(),
+            server_name: "server.example.com".into(),
         });
     });
 
