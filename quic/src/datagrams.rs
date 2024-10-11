@@ -24,8 +24,6 @@ impl Connection {
                 let seq = self.incoming_datagrams.sequences.entry(channel)
                     .or_insert_with(|| IncomingDatagramSequence::new());
 
-                println!("Local: {seq:?}, Remote: {sequence:?}");
-
                 if seq.latest(sequence) {
                     self.shared.events.push(ConnectionEvent::ReceivedMessage(ChannelMessage {
                         channel,
