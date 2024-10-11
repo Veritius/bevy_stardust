@@ -58,7 +58,7 @@ impl Connection {
         // This shouldn't panic, since BytesMut grows to fit
         let mut newbuf = BytesMut::with_capacity(size);
         header.write(&mut newbuf).unwrap();
-        newbuf.copy_from_slice(&payload);
+        newbuf.extend_from_slice(&payload);
 
         // Also check that the sizes are correct
         debug_assert_eq!(size, newbuf.len());
