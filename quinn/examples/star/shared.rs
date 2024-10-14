@@ -50,7 +50,7 @@ pub fn setup(app: &mut App) {
     ));
 
     app.add_channel::<MyMessage>(ChannelConfiguration {
-        consistency: MessageConsistency::UnreliableSequenced,
+        consistency: MessageConsistency::ReliableUnordered,
         priority: 32,
     });
 

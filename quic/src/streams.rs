@@ -1,7 +1,7 @@
 use std::{cmp::Ordering, collections::{BTreeMap, VecDeque}};
 use bevy_stardust::prelude::{ChannelId, ChannelMessage};
 use bevy_stardust_extras::numbers::VarInt;
-use bytes::{Buf, Bytes};
+use bytes::{Buf, Bytes, BytesMut};
 use crate::{segments::{Header, Segment}, Connection, ConnectionEvent};
 
 /// An event used by the state machine to control QUIC streams.
@@ -103,6 +103,16 @@ impl Connection {
         segment: Segment,
         id: SendStreamId,
     ) {
+        // Add the length prefix for the segment
+        let size = segment.size() as u32;
+        let mut buffer = BytesMut::with_capacity(8);
+        VarInt::from_u32(size).write(&mut buffer).unwrap();
+
+        self.stream_event(StreamEvent::Transmit {
+            id,
+            chunk: buffer.freeze(),
+        });
+
         self.stream_event(StreamEvent::Transmit {
             id,
             chunk: segment.header.alloc(),
