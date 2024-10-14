@@ -17,12 +17,12 @@ impl Connection {
     pub fn stream_opened(&mut self, id: RecvStreamId) {
         self.incoming_streams.recv_stream_opened(id)
     }
-    
+
     /// Call when an incoming stream is reset.
     pub fn stream_reset(&mut self, id: RecvStreamId) {
         self.incoming_streams.recv_stream_reset(id);
     }
-    
+
     /// Call when an incoming stream is finished.
     pub fn stream_finished(&mut self, id: RecvStreamId) {
         self.incoming_streams.recv_stream_finished(id);
