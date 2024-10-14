@@ -1,7 +1,8 @@
 use std::{cmp::Ordering, collections::{BTreeMap, VecDeque}};
-use bevy_stardust::prelude::ChannelId;
+use bevy_stardust::prelude::{ChannelId, ChannelMessage};
+use bevy_stardust_extras::numbers::VarInt;
 use bytes::{Buf, Bytes};
-use crate::{segments::Segment, Connection, ConnectionEvent};
+use crate::{segments::{Header, Segment}, Connection, ConnectionEvent};
 
 /// An event used by the state machine to control QUIC streams.
 pub enum StreamEvent {
@@ -178,7 +179,40 @@ impl Connection {
         // Push the chunk to the buffer
         buffer.push(chunk);
 
-        todo!()
+        // Read the length without committing ourselves
+        let mut view = buffer.view();
+        let len = match VarInt::read(&mut view) {
+            Ok(val) => Into::<u64>::into(val) as usize,
+            Err(_) => { return }, // not enough data, stop reading
+        };
+
+        // Check there's actually anything to read
+        let remaining = view.remaining();
+        if remaining < len { return }
+        view.commit(); // Commit to reading the rest
+        let original = buffer.remaining();
+
+        let segment = match Segment::parse(buffer) {
+            Ok(segment) => segment,
+            Err(_) => {
+                // Since it failed, we likely didn't read all of it
+                // We advance the buffer to get rid of the wrongly-parsed segment
+                let diff = original - remaining;
+                buffer.advance(diff);
+
+                // If these numbers differ, something has gone wrong
+                debug_assert_eq!(original - remaining, buffer.remaining());
+
+                // We're done
+                return;
+            },
+        };
+
+        // If these numbers differ, something has gone wrong
+        debug_assert_eq!(original - remaining, buffer.remaining());
+
+        // Handle the incoming segment
+        self.recv_segment(segment);
     }
 
     /// Call when an incoming stream is reset.
@@ -207,6 +241,14 @@ impl StreamChunkBuf {
     fn push(&mut self, chunk: Bytes) {
         self.queue.push_back(chunk);
     }
+
+    fn view(&mut self) -> StreamChunkView {
+        StreamChunkView {
+            buf: self,
+            index: 0,
+            cursor: 0,
+        }
+    }
 }
 
 impl Buf for StreamChunkBuf {
@@ -231,6 +273,78 @@ impl Buf for StreamChunkBuf {
                 Ordering::Greater => {
                     *front = front.slice(cnt..);
                     cnt = 0;
+                },
+            }
+        }
+    }
+}
+
+struct StreamChunkView<'a> {
+    buf: &'a mut StreamChunkBuf,
+    index: usize,
+    cursor: usize,
+}
+
+impl<'a> StreamChunkView<'a> {
+    fn commit(self) {
+        let sum: usize = (0..self.index)
+            .into_iter()
+            .map(|v| self.buf.queue[v].len())
+            .sum();
+
+        let sum = self.cursor + sum;
+        self.buf.advance(sum);
+    }
+}
+
+impl<'a> Buf for StreamChunkView<'a> {
+    fn remaining(&self) -> usize {
+        let mut chunks = self.buf.queue.iter()
+            .skip(2)
+            .map(|v| v.len());
+
+        let mut sum = 0;
+
+        if let Some(next) = chunks.next() {
+            sum += next - self.cursor;
+        }
+
+        chunks.for_each(|v| sum += v);
+
+        return sum;
+    }
+
+    fn chunk(&self) -> &[u8] {
+        &self.buf.queue[0]
+    }
+
+    fn advance(&mut self, mut cnt: usize) {
+        let rem = self.buf.queue[self.index].len() - self.cursor;
+
+        match rem.cmp(&cnt) {
+            Ordering::Less | Ordering::Equal => {
+                self.cursor = 0;
+                self.index += 1;
+                cnt -= rem;
+            },
+
+            Ordering::Greater => {
+                self.cursor += cnt;
+                return;
+            },
+        }
+
+        while cnt > 0 {
+            let len = self.buf.queue[self.index].len();
+            match len.cmp(&cnt) {
+                Ordering::Less | Ordering::Equal => {
+                    self.index += 1;
+                    cnt -= len;
+                },
+
+                Ordering::Greater => {
+                    self.cursor += cnt;
+                    return;
                 },
             }
         }

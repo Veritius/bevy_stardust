@@ -42,34 +42,37 @@ impl Connection {
     /// Call when a datagram is received.
     pub fn recv_dgram(&mut self, mut payload: Bytes) {
         match Segment::parse(&mut payload) {
-            Ok(dgram) => match dgram.header {
-                Header::UnorderedMessage { channel } => {
-                    // Store the event in the message queue
-                    self.shared.events.push(ConnectionEvent::ReceivedMessage(ChannelMessage {
-                        channel,
-                        message: dgram.payload.into(),
-                    }));
-                },
+            Ok(segment) => self.recv_segment(segment),
+            Err(_) => todo!(),
+        }
+    }
 
-                Header::SequencedMessage { channel, sequence: remote } => {
-                    // Fetch the current local sequence value
-                    let local = self.message_sequences.local.entry(channel)
-                        .or_insert_with(|| MessageSequence::new());
-
-                    // Check that the message isn't old
-                    if !local.latest(remote) {
-                        todo!()
-                    }
-
-                    // Store the event in the message queue
-                    self.shared.events.push(ConnectionEvent::ReceivedMessage(ChannelMessage {
-                        channel,
-                        message: dgram.payload.into(),
-                    }));
-                },
+    pub(crate) fn recv_segment(&mut self, segment: Segment) {
+        match segment.header {
+            Header::UnorderedMessage { channel } => {
+                // Store the event in the message queue
+                self.shared.events.push(ConnectionEvent::ReceivedMessage(ChannelMessage {
+                    channel,
+                    message: segment.payload.into(),
+                }));
             },
 
-            Err(_) => todo!(),
+            Header::SequencedMessage { channel, sequence: remote } => {
+                // Fetch the current local sequence value
+                let local = self.message_sequences.local.entry(channel)
+                    .or_insert_with(|| MessageSequence::new());
+
+                // Check that the message isn't old
+                if !local.latest(remote) {
+                    todo!()
+                }
+
+                // Store the event in the message queue
+                self.shared.events.push(ConnectionEvent::ReceivedMessage(ChannelMessage {
+                    channel,
+                    message: segment.payload.into(),
+                }));
+            },
         }
     }
 
