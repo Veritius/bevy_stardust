@@ -1,5 +1,5 @@
 use std::time::{Duration, Instant};
-use crate::{ConnectionEvent, ConnectionEventQueue, IncomingStreams, MessageSequenceMap, OutgoingStreams};
+use crate::{ConnectionEvent, ConnectionEventQueue, DisconnectCode, IncomingStreams, MessageSequenceMap, OutgoingStreams};
 
 /// The core state machine type, representing one QUIC connection.
 pub struct Connection {
@@ -37,7 +37,7 @@ impl Connection {
         self.last = now;
 
         if self.shared.heat.is_overheated() {
-            self.shared.events.push(crate::ConnectionEvent::Overheated);
+            self.shared.events.push(crate::ConnectionEvent::Disconnect(DisconnectCode::ProtocolError));
         }
     }
 

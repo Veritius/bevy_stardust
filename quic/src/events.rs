@@ -1,13 +1,13 @@
 use std::collections::VecDeque;
 use bevy_stardust::prelude::ChannelMessage;
 use bytes::Bytes;
-use crate::StreamEvent;
+use crate::{DisconnectCode, StreamEvent};
 
 /// An event sent by the connection state machine.
 pub enum ConnectionEvent {
     /// Returned when the remote connection behaved strangely,
     /// and that the connection must be closed.
-    Overheated,
+    Disconnect(DisconnectCode),
 
     /// A message was received.
     ReceivedMessage(ChannelMessage),

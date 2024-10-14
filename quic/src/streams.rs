@@ -1,8 +1,8 @@
 use std::{cmp::Ordering, collections::{BTreeMap, VecDeque}};
-use bevy_stardust::prelude::{ChannelId, ChannelMessage};
+use bevy_stardust::prelude::*;
 use bevy_stardust_extras::numbers::VarInt;
 use bytes::{Buf, Bytes, BytesMut};
-use crate::{segments::{Header, Segment}, Connection, ConnectionEvent};
+use crate::{segments::Segment, Connection, ConnectionEvent, ResetCode};
 
 /// An event used by the state machine to control QUIC streams.
 pub enum StreamEvent {
@@ -38,6 +38,9 @@ pub enum StreamEvent {
     Reset {
         /// The stream to reset.
         id: SendStreamId,
+
+        /// The reset code.
+        code: ResetCode,
     },
 
     /// Finish a stream.
@@ -50,6 +53,9 @@ pub enum StreamEvent {
     Stop {
         /// The stream to stop.
         id: RecvStreamId,
+
+        /// The reset code.
+        code: ResetCode,
     },
 }
 

@@ -57,13 +57,13 @@ impl Connection {
                 }));
             },
 
-            Header::SequencedMessage { channel, sequence: remote } => {
+            Header::SequencedMessage { channel, sequence } => {
                 // Fetch the current local sequence value
-                let local = self.message_sequences.local.entry(channel)
+                let remote = self.message_sequences.remote.entry(channel)
                     .or_insert_with(|| MessageSequence::new());
 
                 // Check that the message isn't old
-                if local.latest(remote) {
+                if remote.latest(sequence) {
                     return; // Discard it
                 }
 

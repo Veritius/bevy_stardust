@@ -3,7 +3,7 @@ use bevy_ecs::{component::{ComponentHooks, StorageType}, prelude::*};
 use bevy_stardust::prelude::*;
 use bevy_stardust_quic::{RecvStreamId, SendContext, SendStreamId};
 use bytes::Bytes;
-use quinn_proto::{ConnectionError, ConnectionEvent as QuinnEvent, ConnectionHandle as QuinnHandle, Dir, EndpointEvent, Event as ApplicationEvent, ReadError, StreamEvent as QuinnStreamEvent, StreamId as QuinnStreamId, Transmit, WriteError};
+use quinn_proto::{ConnectionError, ConnectionEvent as QuinnEvent, ConnectionHandle as QuinnHandle, Dir, EndpointEvent, Event as ApplicationEvent, ReadError, StreamEvent as QuinnStreamEvent, StreamId as QuinnStreamId, Transmit, VarInt as QuinnVarInt, WriteError};
 use crate::{write_queue::StreamWriteQueue, Endpoint};
 
 /// A QUIC connection.
@@ -190,10 +190,10 @@ impl ConnectionInner {
                         stream.set_priority(priority.try_into().unwrap()).unwrap();
                     },
 
-                    bevy_stardust_quic::StreamEvent::Reset { id } => {
+                    bevy_stardust_quic::StreamEvent::Reset { id, code } => {
                         let sid = *(self.map_ssid_qsid.get(&id).unwrap());
                         let mut stream = self.quinn.send_stream(sid);
-                        stream.reset(todo!()).unwrap();
+                        stream.reset(QuinnVarInt::from(Into::<u32>::into(code))).unwrap();
                     },
 
                     bevy_stardust_quic::StreamEvent::Finish { id } => {
@@ -202,9 +202,9 @@ impl ConnectionInner {
                         stream.finish().unwrap();
                     },
 
-                    bevy_stardust_quic::StreamEvent::Stop { id } => {
+                    bevy_stardust_quic::StreamEvent::Stop { id, code } => {
                         let mut stream = self.quinn.recv_stream(rsid_to_qsid(id));
-                        stream.stop(todo!()).unwrap();
+                        stream.stop(QuinnVarInt::from(Into::<u32>::into(code))).unwrap();
                     },
                 },
 
@@ -216,7 +216,13 @@ impl ConnectionInner {
                     self.messages.push_back(channel_message);
                 },
 
-                bevy_stardust_quic::ConnectionEvent::Overheated => todo!(),
+                bevy_stardust_quic::ConnectionEvent::Disconnect(code) => {
+                    self.quinn.close(
+                        Instant::now(),
+                        QuinnVarInt::from(Into::<u32>::into(code)),
+                        Bytes::new(),
+                    );
+                },
             }
         }
     }
