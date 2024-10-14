@@ -156,9 +156,28 @@ impl Connection {
     }
 }
 
+pub(crate) struct IncomingStreams {
+    buffers: BTreeMap<RecvStreamId, StreamChunkBuf>,
+}
+
+impl IncomingStreams {
+    pub fn new() -> Self {
+        Self {
+            buffers: BTreeMap::new(),
+        }
+    }
+}
+
 impl Connection {
     /// Call when a chunk of data is received on a stream.
     pub fn stream_recv(&mut self, id: RecvStreamId, chunk: Bytes) {
+        // Get or create a buffer for the new receive stream
+        let buffer = self.incoming_streams.buffers.entry(id)
+            .or_insert_with(|| StreamChunkBuf::new());
+
+        // Push the chunk to the buffer
+        buffer.push(chunk);
+
         todo!()
     }
 
