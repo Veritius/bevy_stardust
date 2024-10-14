@@ -72,7 +72,7 @@ impl OutgoingStreamsHandle<'_> {
 
     #[inline]
     pub(crate) fn send_wrapped_dgram_single(&mut self, payload: Bytes) {
-        self.send_transient_single(StreamHeader::WrappedDatagram, payload);
+        self.send_transient_single(StreamHeader::Datagram, payload);
     }
 
     #[inline]
@@ -80,7 +80,7 @@ impl OutgoingStreamsHandle<'_> {
     where
         I: Iterator<Item = Bytes>,
     {
-        self.send_transient_chunks(StreamHeader::WrappedDatagram, iter);
+        self.send_transient_chunks(StreamHeader::Datagram, iter);
     }
 
     fn open_stream_inner(&mut self) -> SendStreamId {

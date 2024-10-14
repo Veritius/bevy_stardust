@@ -4,6 +4,45 @@ use bevy_stardust_extras::numbers::{Sequence, VarInt};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use crate::{Connection, ConnectionEvent};
 
+pub(crate) struct DatagramBuilder<'a> {
+    pub header: DatagramHeader,
+    pub payload: &'a [u8],
+}
+
+impl<'a> DatagramBuilder<'a> {
+    pub fn build<B: BufMut>(self, buf: &mut B) -> Result<usize, ()> {
+        // Make sure that the buffer has enough space for writing
+        let size = self.header.size() + self.payload.len();
+        if size > buf.remaining_mut() { return Err(()); }
+
+        // Write to the buffer
+        self.header.write(buf).unwrap();
+        buf.put(self.payload);
+
+        // Success
+        return Ok(size);
+    }
+}
+
+pub(crate) struct DatagramReceive {
+    pub header: DatagramHeader,
+    pub payload: Bytes,
+}
+
+impl DatagramReceive {
+    pub fn parse<B: Buf>(buf: &mut B) -> Result<Self, ()> {
+        let header = match DatagramHeader::read(buf) {
+            Ok(v) => v,
+            Err(_) => return Err(()),
+        };
+
+        return Ok(DatagramReceive {
+            header,
+            payload: buf.copy_to_bytes(buf.remaining()),
+        });
+    }
+}
+
 impl Connection {
     /// Call when a datagram is received.
     pub fn recv_dgram(&mut self, mut payload: Bytes) {
@@ -108,7 +147,7 @@ impl OutgoingDatagrams {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub(super) enum DatagramHeader {
     Stardust {
         channel: ChannelId,
