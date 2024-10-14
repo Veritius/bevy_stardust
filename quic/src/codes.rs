@@ -2,6 +2,7 @@
 /// 
 /// Intended for translation into varints when consumed by other crates.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum DisconnectCode {
     ProtocolError,
 }
@@ -30,6 +31,7 @@ impl TryFrom<u32> for DisconnectCode {
 /// 
 /// Intended for translation into varints when consumed by other crates.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum ResetCode {
 
 }
