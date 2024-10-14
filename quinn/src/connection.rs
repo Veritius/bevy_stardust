@@ -3,7 +3,7 @@ use bevy_ecs::{component::{ComponentHooks, StorageType}, prelude::*};
 use bevy_stardust::prelude::*;
 use bevy_stardust_quic::{RecvStreamId, SendContext, SendStreamId};
 use bytes::Bytes;
-use quinn_proto::{ConnectionError, ConnectionEvent as QuinnEvent, ConnectionHandle as QuinnHandle, Dir, EndpointEvent, Event as ApplicationEvent, StreamEvent as QuinnStreamEvent, StreamId as QuinnStreamId, Transmit, WriteError};
+use quinn_proto::{ConnectionError, ConnectionEvent as QuinnEvent, ConnectionHandle as QuinnHandle, Dir, EndpointEvent, Event as ApplicationEvent, ReadError, StreamEvent as QuinnStreamEvent, StreamId as QuinnStreamId, Transmit, WriteError};
 use crate::{write_queue::StreamWriteQueue, Endpoint};
 
 /// A QUIC connection.
@@ -274,7 +274,8 @@ impl ConnectionInner {
                         self.statemachine.stream_recv(qsid_to_rsid(qsid), chunk.bytes);
                     },
 
-                    Ok(None) => break,
+                    // No more to read
+                    Ok(None) | Err(ReadError::Blocked) => break,
 
                     Err(_) => todo!(),
                 } };
