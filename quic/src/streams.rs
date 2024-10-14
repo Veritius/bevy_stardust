@@ -68,6 +68,7 @@ pub struct RecvStreamId(pub u64);
 pub(crate) struct OutgoingStreams {
     unique_id_index: u64,
     channel_ids: BTreeMap<ChannelId, SendStreamId>,
+    channel_ids_reverse: BTreeMap<SendStreamId, ChannelId>,
 }
 
 impl OutgoingStreams {
@@ -77,6 +78,7 @@ impl OutgoingStreams {
         Self {
             unique_id_index: 0,
             channel_ids: BTreeMap::new(),
+            channel_ids_reverse: BTreeMap::new(),
         }
     }
 }
@@ -84,7 +86,9 @@ impl OutgoingStreams {
 impl Connection {
     /// Call when a stream is stopped.
     pub fn stream_stopped(&mut self, stream: SendStreamId) {
-        todo!()
+        if let Some(id) = self.outgoing_streams.channel_ids_reverse.remove(&stream) {
+            self.outgoing_streams.channel_ids.remove(&id);
+        }
     }
 }
 
@@ -143,6 +147,7 @@ impl Connection {
             None => {
                 let id = self.open_stream_inner();
                 self.outgoing_streams.channel_ids.insert(channel, id);
+                self.outgoing_streams.channel_ids_reverse.insert(id, channel);
                 return id;
             },
         }
