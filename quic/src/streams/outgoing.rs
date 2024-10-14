@@ -1,13 +1,20 @@
 use std::collections::BTreeMap;
 use bevy_stardust::prelude::{ChannelId, Message};
 use bytes::Bytes;
-use crate::{Connection, ConnectionShared};
+use crate::{datagrams::DatagramBuilder, Connection, ConnectionShared};
 use super::{header::StreamHeader, SendStreamId, StreamEvent};
 
 impl Connection {
     /// Call when a stream is stopped.
     pub fn stream_stopped(&mut self, stream: SendStreamId) {
         todo!()
+    }
+
+    pub(crate) fn send_dgram_over_stream(
+        &mut self,
+        datagram: DatagramBuilder,
+    ) {
+        
     }
 
     pub(crate) fn outgoing_streams_handle(&mut self) -> OutgoingStreamsHandle {

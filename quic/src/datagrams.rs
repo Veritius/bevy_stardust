@@ -1,5 +1,5 @@
 use std::collections::BTreeMap;
-use bevy_stardust::prelude::{ChannelId, ChannelMessage, Message};
+use bevy_stardust::prelude::{ChannelId, ChannelMessage};
 use bevy_stardust_extras::numbers::{Sequence, VarInt};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use crate::{Connection, ConnectionEvent};
@@ -10,17 +10,20 @@ pub(crate) struct DatagramBuilder<'a> {
 }
 
 impl<'a> DatagramBuilder<'a> {
-    pub fn build<B: BufMut>(self, buf: &mut B) -> Result<usize, ()> {
+    pub fn size(&self) -> usize {
+        self.header.size() + self.payload.len()
+    }
+
+    pub fn write<B: BufMut>(self, buf: &mut B) -> Result<(), ()> {
         // Make sure that the buffer has enough space for writing
-        let size = self.header.size() + self.payload.len();
-        if size > buf.remaining_mut() { return Err(()); }
+        if self.size() > buf.remaining_mut() { return Err(()); }
 
         // Write to the buffer
         self.header.write(buf).unwrap();
         buf.put(self.payload);
 
         // Success
-        return Ok(size);
+        return Ok(());
     }
 }
 
@@ -46,80 +49,66 @@ impl DatagramReceive {
 impl Connection {
     /// Call when a datagram is received.
     pub fn recv_dgram(&mut self, mut payload: Bytes) {
-        let header = match DatagramHeader::read(&mut payload) {
-            Ok(v) => v,
-            Err(_) => return,
-        };
-
-        match header {
-            DatagramHeader::Stardust { channel } => {
-                self.shared.events.push(ConnectionEvent::ReceivedMessage(ChannelMessage {
-                    channel,
-                    message: Message::from_bytes(payload),
-                }));
-            },
-
-            DatagramHeader::StardustSequenced { channel, sequence } => {
-                let seq = self.incoming_datagrams.sequences.entry(channel)
-                    .or_insert_with(|| IncomingDatagramSequence::new());
-
-                if seq.latest(sequence) {
+        match DatagramReceive::parse(&mut payload) {
+            Ok(dgram) => match dgram.header {
+                DatagramHeader::Stardust { channel } => {
+                    // Store the event in the message queue
                     self.shared.events.push(ConnectionEvent::ReceivedMessage(ChannelMessage {
                         channel,
-                        message: Message::from_bytes(payload),
+                        message: dgram.payload.into(),
                     }));
-                }
+                },
+
+                DatagramHeader::StardustSequenced { channel, sequence: remote } => {
+                    // Fetch the current local sequence value
+                    let local = self.incoming_datagrams.sequences.entry(channel)
+                        .or_insert_with(|| IncomingDatagramSequence::new());
+
+                    // Check that the message isn't old
+                    if !local.latest(remote) {
+                        todo!()
+                    }
+
+                    // Store the event in the message queue
+                    self.shared.events.push(ConnectionEvent::ReceivedMessage(ChannelMessage {
+                        channel,
+                        message: dgram.payload.into(),
+                    }));
+                },
             },
+
+            Err(_) => todo!(),
         }
+    }
+
+    pub(crate) fn send_dgram(
+        &mut self,
+        datagram: DatagramBuilder,
+        size_limit: usize,
+    ) {
+        // Check the datagram is of an acceptable size
+        let size = datagram.size();
+        if size > size_limit {
+            // Send it over a stream so it gets fragmented
+            self.send_dgram_over_stream(datagram);
+            return;
+        }
+
+        // Allocate space for the datagram and write it
+        let mut buf = BytesMut::with_capacity(size);
+        datagram.write(&mut buf);
+        let buf = buf.freeze();
+
+        // If this isn't the case, we allocated incorrectly
+        debug_assert_eq!(size, buf.len());
+
+        // Save the datagram
+        self.shared.events.push(ConnectionEvent::TransmitDatagram(buf));
     }
 
     pub(crate) fn channel_dgram_out_seq(&mut self, channel: ChannelId) -> &mut OutgoingDatagramSequence {
         self.outgoing_datagrams.sequences.entry(channel)
             .or_insert_with(|| OutgoingDatagramSequence::new())
-    }
-
-    /// Try to send a datagram, returns `false` if the size exceeds `size_limit`.
-    pub(crate) fn try_send_dgram(
-        &mut self,
-        size_limit: usize,
-        header: DatagramHeader,
-        payload: Bytes,
-    ) -> bool {
-        // Create the datagram header
-        let size = header.size() + payload.len();
-
-        // Check if it can be sent as a datagram
-        // If it can't, we have to return an error
-        if size > size_limit { return false; }
-
-        // We have to put this in a new allocation as most QUIC implementations
-        // will only take a single slice/Bytes for a datagram payload
-        // This shouldn't panic, since BytesMut grows to fit
-        let mut newbuf = BytesMut::with_capacity(size);
-        header.write(&mut newbuf).unwrap();
-        newbuf.extend_from_slice(&payload);
-
-        // Also check that the sizes are correct
-        debug_assert_eq!(size, newbuf.len());
-
-        // Queue the datagram for transmission by the QUIC implementation
-        self.shared.events.push(crate::ConnectionEvent::TransmitDatagram(newbuf.freeze()));
-
-        // Success
-        return true;
-    }
-
-    pub(crate) fn send_dgram_wrap_on_fail(
-        &mut self,
-        size_limit: usize,
-        header: DatagramHeader,
-        payload: Bytes,
-    ) {
-        // Try to send a datagram normally
-        if self.try_send_dgram(size_limit, header.clone(), payload.clone()) { return };
-
-        // On failure, send it wrapped inside a stream
-        self.outgoing_streams_handle().send_wrapped_dgram_chunks([header.alloc(), payload].into_iter());
     }
 }
 
