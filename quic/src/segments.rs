@@ -82,7 +82,7 @@ impl Connection {
         let size = chunk.size();
         if size > size_limit {
             // Send it over a stream so it gets fragmented
-            self.stream_chunk_transient(chunk);
+            self.stream_segment_transient(chunk);
             return;
         }
 

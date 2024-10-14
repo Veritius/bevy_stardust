@@ -70,7 +70,7 @@ impl Connection {
 
             MessageConsistency::ReliableUnordered => {
                 for message in iter {
-                    self.stream_chunk_transient(Segment {
+                    self.stream_segment_transient(Segment {
                         header: Header::Stardust { channel },
                         payload: message.into(),
                     });
@@ -79,7 +79,7 @@ impl Connection {
 
             MessageConsistency::ReliableOrdered => {
                 let id = self.get_channel_stream(channel);
-                self.stream_chunk_existing_iter(id, iter.into_iter().map(|message| {
+                self.stream_segment_existing_iter(id, iter.into_iter().map(|message| {
                     Segment {
                         header: Header::Stardust { channel },
                         payload: message.into(),

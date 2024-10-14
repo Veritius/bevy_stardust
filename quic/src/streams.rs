@@ -88,16 +88,16 @@ impl Connection {
 }
 
 impl Connection {
-    pub(crate) fn stream_chunk_transient(
+    pub(crate) fn stream_segment_transient(
         &mut self,
-        chunk: Segment,
+        segment: Segment,
     ) {
-        let stream = self.open_stream_inner();
-
-        todo!()
+        let id = self.open_stream_inner();
+        self.stream_segment_existing(segment, id);
+        self.stream_event(StreamEvent::Finish { id });
     }
 
-    pub(crate) fn stream_chunk_existing(
+    pub(crate) fn stream_segment_existing(
         &mut self,
         segment: Segment,
         id: SendStreamId,
@@ -113,13 +113,13 @@ impl Connection {
         });
     }
 
-    pub(crate) fn stream_chunk_existing_iter(
+    pub(crate) fn stream_segment_existing_iter(
         &mut self,
         id: SendStreamId,
         iter: impl Iterator<Item = Segment>,
     ) {
         for segment in iter {
-            self.stream_chunk_existing(segment, id);
+            self.stream_segment_existing(segment, id);
         }
     }
 
