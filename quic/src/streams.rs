@@ -217,12 +217,12 @@ impl Connection {
 
     /// Call when an incoming stream is reset.
     pub fn stream_reset(&mut self, id: RecvStreamId) {
-        todo!()
+        self.incoming_streams.buffers.remove(&id);
     }
 
     /// Call when an incoming stream is finished.
     pub fn stream_finished(&mut self, id: RecvStreamId) {
-        todo!()
+        self.incoming_streams.buffers.remove(&id);
     }
 }
 
