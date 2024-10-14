@@ -88,7 +88,7 @@ impl Connection {
 
         // Allocate space for the chunk and write it
         let mut buf = BytesMut::with_capacity(size);
-        chunk.write(&mut buf);
+        chunk.write(&mut buf).unwrap();
         let buf = buf.freeze();
 
         // If this isn't the case, we allocated incorrectly
