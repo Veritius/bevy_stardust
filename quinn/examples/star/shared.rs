@@ -49,18 +49,39 @@ pub fn setup(app: &mut App) {
         QuinnPlugin,
     ));
 
-    app.add_channel::<MyMessage>(ChannelConfiguration {
+    app.add_channel::<UnreliableUnordered>(ChannelConfiguration {
+        consistency: MessageConsistency::UnreliableUnordered,
+        priority: 32,
+    });
+
+    app.add_channel::<UnreliableSequenced>(ChannelConfiguration {
+        consistency: MessageConsistency::UnreliableSequenced,
+        priority: 32,
+    });
+
+    app.add_channel::<ReliableUnordered>(ChannelConfiguration {
         consistency: MessageConsistency::ReliableUnordered,
         priority: 32,
     });
 
-    app.add_systems(Update, send_and_receive_system);
+    app.add_channel::<ReliableOrdered>(ChannelConfiguration {
+        consistency: MessageConsistency::ReliableOrdered,
+        priority: 32,
+    });
+
+    app.add_systems(Update, send_and_receive_system::<UnreliableUnordered>);
+    app.add_systems(Update, send_and_receive_system::<UnreliableSequenced>);
+    app.add_systems(Update, send_and_receive_system::<ReliableUnordered>);
+    app.add_systems(Update, send_and_receive_system::<ReliableOrdered>);
 }
 
-enum MyMessage {}
+enum UnreliableUnordered {}
+enum UnreliableSequenced {}
+enum ReliableUnordered {}
+enum ReliableOrdered {}
 
-fn send_and_receive_system(
-    channel: ChannelData<MyMessage>,
+fn send_and_receive_system<C: Channel>(
+    channel: ChannelData<C>,
     mut increment: Local<u32>,
     mut connections: Query<(
         Entity,
@@ -82,7 +103,7 @@ fn send_and_receive_system(
                 info!("Received message from {entity} on channel {channel:?}: {message}");
             }
         }
-        
+
         let value = *increment; *increment += 1;
 
         let channel = channel.id();
