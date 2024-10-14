@@ -310,7 +310,7 @@ impl<'a> StreamChunkView<'a> {
 impl<'a> Buf for StreamChunkView<'a> {
     fn remaining(&self) -> usize {
         let mut chunks = self.buf.queue.iter()
-            .skip(2)
+            .skip(self.index)
             .map(|v| v.len());
 
         let mut sum = 0;
