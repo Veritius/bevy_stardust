@@ -71,7 +71,7 @@ impl Connection {
             MessageConsistency::ReliableUnordered => {
                 for message in iter {
                     self.stream_segment_transient(Segment {
-                        header: Header::Stardust { channel },
+                        header: Header::UnorderedMessage { channel },
                         payload: message.into(),
                     });
                 }
@@ -81,7 +81,7 @@ impl Connection {
                 let id = self.get_channel_stream(channel);
                 self.stream_segment_existing_iter(id, iter.into_iter().map(|message| {
                     Segment {
-                        header: Header::Stardust { channel },
+                        header: Header::UnorderedMessage { channel },
                         payload: message.into(),
                     }
                 }));
@@ -98,7 +98,7 @@ impl Connection {
         message: Message,
     ) {
         // Create the datagram header
-        let header = Header::Stardust { channel };
+        let header = Header::UnorderedMessage { channel };
         self.send_segment(Segment { header, payload: message.into() }, context.dgram_max_size);
     }
 
@@ -113,7 +113,7 @@ impl Connection {
         let sq_mgr = self.local_message_sequence(channel);
 
         // Create the datagram header
-        let header = Header::StardustSequenced {
+        let header = Header::SequencedMessage {
             channel,
             sequence: sq_mgr.next(),
         };

@@ -43,7 +43,7 @@ impl Connection {
     pub fn recv_dgram(&mut self, mut payload: Bytes) {
         match Segment::parse(&mut payload) {
             Ok(dgram) => match dgram.header {
-                Header::Stardust { channel } => {
+                Header::UnorderedMessage { channel } => {
                     // Store the event in the message queue
                     self.shared.events.push(ConnectionEvent::ReceivedMessage(ChannelMessage {
                         channel,
@@ -51,7 +51,7 @@ impl Connection {
                     }));
                 },
 
-                Header::StardustSequenced { channel, sequence: remote } => {
+                Header::SequencedMessage { channel, sequence: remote } => {
                     // Fetch the current local sequence value
                     let local = self.message_sequences.local.entry(channel)
                         .or_insert_with(|| MessageSequence::new());
@@ -101,11 +101,11 @@ impl Connection {
 
 #[derive(Clone, Copy)]
 pub(super) enum Header {
-    Stardust {
+    UnorderedMessage {
         channel: ChannelId,
     },
 
-    StardustSequenced {
+    SequencedMessage {
         channel: ChannelId,
         sequence: Sequence<u16>,
     },
@@ -121,7 +121,7 @@ impl Header {
                     .and_then(|v| u32::try_from(v))
                     .map(|v| ChannelId::from(v))?;
 
-                return Ok(Header::Stardust {
+                return Ok(Header::UnorderedMessage {
                     channel,
                 });
             },
@@ -136,7 +136,7 @@ impl Header {
                     false => return Err(()),
                 };
 
-                return Ok(Header::StardustSequenced {
+                return Ok(Header::SequencedMessage {
                     channel,
                     sequence,
                 });
@@ -148,12 +148,12 @@ impl Header {
 
     pub fn write<B: BufMut>(&self, buf: &mut B) -> Result<(), ()> {
         match self {
-            Header::Stardust { channel } => {
+            Header::UnorderedMessage { channel } => {
                 VarInt::from_u32(0).write(buf)?;
                 VarInt::from_u32((*channel).into()).write(buf)?;
             },
 
-            Header::StardustSequenced { channel, sequence } => {
+            Header::SequencedMessage { channel, sequence } => {
                 VarInt::from_u32(1).write(buf)?;
                 VarInt::from_u32((*channel).into()).write(buf)?;
 
@@ -177,12 +177,12 @@ impl Header {
         let mut tally = 0;
 
         match self {
-            Header::Stardust { channel } => {
+            Header::UnorderedMessage { channel } => {
                 tally += VarInt::len_u32(0) as usize;
                 tally += VarInt::len_u32((*channel).into()) as usize;
             },
 
-            Header::StardustSequenced { channel, sequence: _ } => {
+            Header::SequencedMessage { channel, sequence: _ } => {
                 tally += VarInt::len_u32(1) as usize;
                 tally += VarInt::len_u32((*channel).into()) as usize;
                 tally += 2; // sequence value is always 2 bytes
