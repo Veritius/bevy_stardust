@@ -118,9 +118,8 @@ impl ConnectionInner {
                     },
 
                     QuinnStreamEvent::Writable { id } => {
-                        if let Err(err) = self.try_drain_write_queue(id) {
-                            todo!()
-                        }
+                        self.try_drain_write_queue(id)
+                            .expect("Tried to write but an error was encountered");
                     },
 
                     QuinnStreamEvent::Finished { id } => {
@@ -146,7 +145,7 @@ impl ConnectionInner {
                     self.statemachine.recv_dgram(payload);
                 },
 
-                ApplicationEvent::DatagramsUnblocked => todo!(),
+                ApplicationEvent::DatagramsUnblocked => {},
 
                 ApplicationEvent::Connected => {
                     self.events.push_back(ConnectionEvent::Connected);
