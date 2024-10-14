@@ -63,8 +63,8 @@ impl Connection {
                     .or_insert_with(|| MessageSequence::new());
 
                 // Check that the message isn't old
-                if !local.latest(remote) {
-                    todo!()
+                if local.latest(remote) {
+                    return; // Discard it
                 }
 
                 // Store the event in the message queue
