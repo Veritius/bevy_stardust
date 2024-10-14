@@ -43,7 +43,7 @@ impl Connection {
     pub fn recv_dgram(&mut self, mut payload: Bytes) {
         match Segment::parse(&mut payload) {
             Ok(segment) => self.recv_segment(segment),
-            Err(_) => todo!(),
+            Err(_) => { self.shared.heat.increase(16); },
         }
     }
 

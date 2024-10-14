@@ -52,7 +52,7 @@ impl Connection {
     {
         let config = match context.registry.config(channel) {
             Some(config) => config,
-            None => todo!(),
+            None => panic!("Channel {channel:?} did not exist in the registry"),
         };
 
         match config.consistency {
