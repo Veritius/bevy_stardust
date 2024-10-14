@@ -110,8 +110,6 @@ impl ConnectionInner {
                         let id = self.quinn.streams().accept(dir)
                             .expect("A stream was reported to be open in an event, but accepting it failed");
 
-                        self.statemachine.stream_opened(qsid_to_rsid(id));
-
                         self.try_recv_from_stream(id);
                     },
 

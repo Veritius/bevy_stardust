@@ -1,9 +1,9 @@
 #![doc = include_str!("../README.md")]
 #![warn(missing_docs)]
 
+mod segments;
 mod config;
 mod connection;
-mod datagrams;
 mod events;
 mod messages;
 mod streams;

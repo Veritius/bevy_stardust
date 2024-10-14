@@ -1,5 +1,8 @@
+use std::collections::BTreeMap;
+
 use bevy_stardust::{channels::ChannelRegistry, messages::MessageQueue, prelude::*};
-use crate::{datagrams::DatagramHeader, Connection};
+use bevy_stardust_extras::numbers::Sequence;
+use crate::{segments::{Header, Segment}, Connection};
 
 /// Context object required to handle outgoing messages.
 #[derive(Clone, Copy)]
@@ -67,19 +70,24 @@ impl Connection {
 
             MessageConsistency::ReliableUnordered => {
                 for message in iter {
-                    self.outgoing_streams_handle().send_message_on_stream_and_close(channel, message);
+                    self.stream_chunk_transient(Segment {
+                        header: Header::Stardust { channel },
+                        payload: message.into(),
+                    });
                 }
             },
 
             MessageConsistency::ReliableOrdered => {
-                self.outgoing_streams_handle().send_messages_on_stream(channel, iter.into_iter());
+                let id = self.get_channel_stream(channel);
+                self.stream_chunk_existing_iter(id, iter.into_iter().map(|message| {
+                    Segment {
+                        header: Header::Stardust { channel },
+                        payload: message.into(),
+                    }
+                }));
             },
 
-            // We don't actually know what constraints new consistencies have,
-            // but reliable ordered is probably a good guess
-            _ => {
-                self.outgoing_streams_handle().send_messages_on_stream(channel, iter.into_iter());
-            }
+            _ => unimplemented!(),
         }
     }
 
@@ -90,8 +98,8 @@ impl Connection {
         message: Message,
     ) {
         // Create the datagram header
-        let header = DatagramHeader::Stardust { channel };
-        self.send_dgram_wrap_on_fail(context.dgram_max_size, header, message.into());
+        let header = Header::Stardust { channel };
+        self.send_segment(Segment { header, payload: message.into() }, context.dgram_max_size);
     }
 
     fn handle_outgoing_unrel_seq<'a>(
@@ -102,15 +110,58 @@ impl Connection {
     ) {
         // Get the sequence values
         // TODO: Don't lookup every time we want to send a message
-        let sq_mgr = self.channel_dgram_out_seq(channel);
+        let sq_mgr = self.local_message_sequence(channel);
 
         // Create the datagram header
-        let header = DatagramHeader::StardustSequenced {
+        let header = Header::StardustSequenced {
             channel,
             sequence: sq_mgr.next(),
         };
 
         // Send the datagram
-        self.send_dgram_wrap_on_fail(context.dgram_max_size, header, message.into());
+        self.send_segment(Segment { header, payload: message.into() }, context.dgram_max_size);
+    }
+
+    pub(crate) fn local_message_sequence(&mut self, channel: ChannelId) -> &mut MessageSequence {
+        self.message_sequences.local.entry(channel)
+            .or_insert_with(|| MessageSequence::new())
+    }
+}
+
+pub(crate) struct MessageSequenceMap {
+    pub local: BTreeMap<ChannelId, MessageSequence>,
+    pub remote: BTreeMap<ChannelId, MessageSequence>,
+}
+
+impl MessageSequenceMap {
+    pub fn new() -> Self {
+        Self {
+            local: BTreeMap::new(),
+            remote: BTreeMap::new(),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub(crate) struct MessageSequence(Sequence<u16>);
+
+impl MessageSequence {
+    pub fn new() -> Self {
+        Self(Sequence::from(0))
+    }
+
+    pub fn next(&mut self) -> Sequence<u16> {
+        let v = self.0;
+        self.0.increment();
+        return v;
+    }
+
+    pub fn latest(&mut self, index: Sequence<u16>) -> bool {
+        if index > self.0 {
+            self.0 = index;
+            return true;
+        } else {
+            return false;
+        }
     }
 }

@@ -1,15 +1,14 @@
-use std::collections::BTreeMap;
 use bevy_stardust::prelude::{ChannelId, ChannelMessage};
 use bevy_stardust_extras::numbers::{Sequence, VarInt};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
-use crate::{Connection, ConnectionEvent};
+use crate::{Connection, ConnectionEvent, MessageSequence};
 
-pub(crate) struct DatagramBuilder<'a> {
-    pub header: DatagramHeader,
-    pub payload: &'a [u8],
+pub(crate) struct Segment {
+    pub header: Header,
+    pub payload: Bytes,
 }
 
-impl<'a> DatagramBuilder<'a> {
+impl Segment {
     pub fn size(&self) -> usize {
         self.header.size() + self.payload.len()
     }
@@ -25,21 +24,14 @@ impl<'a> DatagramBuilder<'a> {
         // Success
         return Ok(());
     }
-}
 
-pub(crate) struct DatagramReceive {
-    pub header: DatagramHeader,
-    pub payload: Bytes,
-}
-
-impl DatagramReceive {
     pub fn parse<B: Buf>(buf: &mut B) -> Result<Self, ()> {
-        let header = match DatagramHeader::read(buf) {
+        let header = match Header::read(buf) {
             Ok(v) => v,
             Err(_) => return Err(()),
         };
 
-        return Ok(DatagramReceive {
+        return Ok(Segment {
             header,
             payload: buf.copy_to_bytes(buf.remaining()),
         });
@@ -49,9 +41,9 @@ impl DatagramReceive {
 impl Connection {
     /// Call when a datagram is received.
     pub fn recv_dgram(&mut self, mut payload: Bytes) {
-        match DatagramReceive::parse(&mut payload) {
+        match Segment::parse(&mut payload) {
             Ok(dgram) => match dgram.header {
-                DatagramHeader::Stardust { channel } => {
+                Header::Stardust { channel } => {
                     // Store the event in the message queue
                     self.shared.events.push(ConnectionEvent::ReceivedMessage(ChannelMessage {
                         channel,
@@ -59,10 +51,10 @@ impl Connection {
                     }));
                 },
 
-                DatagramHeader::StardustSequenced { channel, sequence: remote } => {
+                Header::StardustSequenced { channel, sequence: remote } => {
                     // Fetch the current local sequence value
-                    let local = self.incoming_datagrams.sequences.entry(channel)
-                        .or_insert_with(|| IncomingDatagramSequence::new());
+                    let local = self.message_sequences.local.entry(channel)
+                        .or_insert_with(|| MessageSequence::new());
 
                     // Check that the message isn't old
                     if !local.latest(remote) {
@@ -81,22 +73,22 @@ impl Connection {
         }
     }
 
-    pub(crate) fn send_dgram(
+    pub(crate) fn send_segment(
         &mut self,
-        datagram: DatagramBuilder,
+        chunk: Segment,
         size_limit: usize,
     ) {
-        // Check the datagram is of an acceptable size
-        let size = datagram.size();
+        // Check the chunk isn't oversize
+        let size = chunk.size();
         if size > size_limit {
             // Send it over a stream so it gets fragmented
-            self.send_dgram_over_stream(datagram);
+            self.stream_chunk_transient(chunk);
             return;
         }
 
-        // Allocate space for the datagram and write it
+        // Allocate space for the chunk and write it
         let mut buf = BytesMut::with_capacity(size);
-        datagram.write(&mut buf);
+        chunk.write(&mut buf);
         let buf = buf.freeze();
 
         // If this isn't the case, we allocated incorrectly
@@ -105,39 +97,10 @@ impl Connection {
         // Save the datagram
         self.shared.events.push(ConnectionEvent::TransmitDatagram(buf));
     }
-
-    pub(crate) fn channel_dgram_out_seq(&mut self, channel: ChannelId) -> &mut OutgoingDatagramSequence {
-        self.outgoing_datagrams.sequences.entry(channel)
-            .or_insert_with(|| OutgoingDatagramSequence::new())
-    }
-}
-
-pub(crate) struct IncomingDatagrams {
-    sequences: BTreeMap<ChannelId, IncomingDatagramSequence>,
-}
-
-impl IncomingDatagrams {
-    pub fn new() -> Self {
-        Self {
-            sequences: BTreeMap::new(),
-        }
-    }
-}
-
-pub(crate) struct OutgoingDatagrams {
-    sequences: BTreeMap<ChannelId, OutgoingDatagramSequence>,
-}
-
-impl OutgoingDatagrams {
-    pub fn new() -> Self {
-        Self {
-            sequences: BTreeMap::new(),
-        }
-    }
 }
 
 #[derive(Clone, Copy)]
-pub(super) enum DatagramHeader {
+pub(super) enum Header {
     Stardust {
         channel: ChannelId,
     },
@@ -148,8 +111,8 @@ pub(super) enum DatagramHeader {
     },
 }
 
-impl DatagramHeader {
-    pub fn read<B: Buf>(buf: &mut B) -> Result<DatagramHeader, ()> {
+impl Header {
+    pub fn read<B: Buf>(buf: &mut B) -> Result<Header, ()> {
         let code: u64 = VarInt::read(buf)?.into();
 
         match code {
@@ -158,7 +121,7 @@ impl DatagramHeader {
                     .and_then(|v| u32::try_from(v))
                     .map(|v| ChannelId::from(v))?;
 
-                return Ok(DatagramHeader::Stardust {
+                return Ok(Header::Stardust {
                     channel,
                 });
             },
@@ -173,7 +136,7 @@ impl DatagramHeader {
                     false => return Err(()),
                 };
 
-                return Ok(DatagramHeader::StardustSequenced {
+                return Ok(Header::StardustSequenced {
                     channel,
                     sequence,
                 });
@@ -185,12 +148,12 @@ impl DatagramHeader {
 
     pub fn write<B: BufMut>(&self, buf: &mut B) -> Result<(), ()> {
         match self {
-            DatagramHeader::Stardust { channel } => {
+            Header::Stardust { channel } => {
                 VarInt::from_u32(0).write(buf)?;
                 VarInt::from_u32((*channel).into()).write(buf)?;
             },
 
-            DatagramHeader::StardustSequenced { channel, sequence } => {
+            Header::StardustSequenced { channel, sequence } => {
                 VarInt::from_u32(1).write(buf)?;
                 VarInt::from_u32((*channel).into()).write(buf)?;
 
@@ -214,12 +177,12 @@ impl DatagramHeader {
         let mut tally = 0;
 
         match self {
-            DatagramHeader::Stardust { channel } => {
+            Header::Stardust { channel } => {
                 tally += VarInt::len_u32(0) as usize;
                 tally += VarInt::len_u32((*channel).into()) as usize;
             },
 
-            DatagramHeader::StardustSequenced { channel, sequence: _ } => {
+            Header::StardustSequenced { channel, sequence: _ } => {
                 tally += VarInt::len_u32(1) as usize;
                 tally += VarInt::len_u32((*channel).into()) as usize;
                 tally += 2; // sequence value is always 2 bytes
@@ -227,38 +190,5 @@ impl DatagramHeader {
         }
 
         return tally;
-    }
-}
-
-#[derive(Debug)]
-pub(crate) struct IncomingDatagramSequence(Sequence<u16>);
-
-impl IncomingDatagramSequence {
-    pub fn new() -> Self {
-        Self(Sequence::from(u16::MAX))
-    }
-
-    pub fn latest(&mut self, index: Sequence<u16>) -> bool {
-        if index > self.0 {
-            self.0 = index;
-            return true;
-        } else {
-            return false;
-        }
-    }
-}
-
-#[derive(Debug)]
-pub(crate) struct OutgoingDatagramSequence(Sequence<u16>);
-
-impl OutgoingDatagramSequence {
-    pub fn new() -> Self {
-        Self(Sequence::from(0))
-    }
-
-    pub fn next(&mut self) -> Sequence<u16> {
-        let v = self.0;
-        self.0.increment();
-        return v;
     }
 }

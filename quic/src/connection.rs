@@ -1,5 +1,5 @@
 use std::time::{Duration, Instant};
-use crate::{datagrams::{IncomingDatagrams, OutgoingDatagrams}, ConnectionEvent, ConnectionEventQueue, IncomingStreams, OutgoingStreams};
+use crate::{ConnectionEvent, ConnectionEventQueue, MessageSequenceMap, OutgoingStreams};
 
 /// The core state machine type, representing one QUIC connection.
 pub struct Connection {
@@ -7,11 +7,9 @@ pub struct Connection {
 
     pub(crate) shared: ConnectionShared,
 
-    pub(crate) incoming_streams: IncomingStreams,
-    pub(crate) incoming_datagrams: IncomingDatagrams,
-
     pub(crate) outgoing_streams: OutgoingStreams,
-    pub(crate) outgoing_datagrams: OutgoingDatagrams,
+
+    pub(crate) message_sequences: MessageSequenceMap,
 }
 
 impl Connection {
@@ -25,11 +23,9 @@ impl Connection {
                 events: ConnectionEventQueue::new(),
             },
 
-            incoming_streams: IncomingStreams::new(),
-            incoming_datagrams: IncomingDatagrams::new(),
-
             outgoing_streams: OutgoingStreams::new(),
-            outgoing_datagrams: OutgoingDatagrams::new(),
+
+            message_sequences: MessageSequenceMap::new(),
         }
     }
 
