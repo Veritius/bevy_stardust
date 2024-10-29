@@ -57,7 +57,7 @@ pub(crate) fn event_polling_system(
                         });
 
                         #[cfg(feature="log")]
-                        bevy_log::info!("Connection {entity} established");
+                        bevy_log::debug!("Connection {entity} established");
                     }
 
                     ConnectionEvent::Disconnected { reason } => {
