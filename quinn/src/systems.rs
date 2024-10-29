@@ -1,9 +1,10 @@
-use std::sync::Arc;
+use std::{f32::consts::E, sync::Arc, time::Duration};
 
 use bevy_app::AppExit;
 use bevy_ecs::prelude::*;
 use bevy_stardust::prelude::*;
 use bevy_stardust_quic::{DisconnectCode, SendContext};
+use quinn_proto::ConnectionError;
 use crate::{access::*, connection::ConnectionEvent, Connection, Endpoint};
 
 pub(crate) fn event_exchange_system(
@@ -30,7 +31,8 @@ pub(crate) fn event_polling_system(
     mut endpoints: Query<&mut Endpoint>,
     mut connections: Query<&mut Connection>,
 
-    mut events: EventWriter<PeerConnectedEvent>,
+    mut connect_events: EventWriter<PeerConnectedEvent>,
+    mut disconnect_events: EventWriter<PeerDisconnectedEvent>,
 ) {
     for mut endpoint in endpoints.iter_mut() {
         let mut disconnections = Vec::new();
@@ -50,7 +52,7 @@ pub(crate) fn event_polling_system(
                         ));
 
                         // Send Stardust event to inform systems
-                        events.send(PeerConnectedEvent {
+                        connect_events.send(PeerConnectedEvent {
                             peer: entity
                         });
 
@@ -59,6 +61,57 @@ pub(crate) fn event_polling_system(
                     }
 
                     ConnectionEvent::Disconnected { reason } => {
+                        let (reason, comment) = match reason {
+                            ConnectionError::VersionMismatch => (
+                                DisconnectReason::Unspecified,
+                                Some(Arc::from("unimplemented QUIC version")),
+                            ),
+
+                            ConnectionError::TransportError(error) => (
+                                DisconnectReason::ProtocolViolation,
+                                Some(Arc::from(error.reason)),
+                            ),
+
+                            ConnectionError::ConnectionClosed(connection_close) => (
+                                DisconnectReason::Finished,
+                                Some(match std::str::from_utf8(&connection_close.reason) {
+                                    Ok(str) => Arc::from(str),
+                                    Err(_) => Arc::from(format!("code: {}", connection_close.error_code)),
+                                }),
+                            ),
+
+                            ConnectionError::ApplicationClosed(application_close) => (
+                                DisconnectReason::Finished,
+                                Some(match std::str::from_utf8(&application_close.reason) {
+                                    Ok(str) => Arc::from(str),
+                                    Err(_) => Arc::from(format!("code: {}", application_close.error_code)),
+                                }),
+                            ),
+
+                            ConnectionError::Reset => (
+                                DisconnectReason::Finished,
+                                Some(Arc::from("connection reset")),
+                            ),
+
+                            ConnectionError::TimedOut => (
+                                // TODO: figure out if after can be set to something meaningful
+                                DisconnectReason::TimedOut { after: Duration::ZERO },
+                                None,
+                            ),
+
+                            _ => (
+                                DisconnectReason::Unspecified,
+                                None,
+                            ),
+                        };
+
+                        // Send Stardust event to inform systems
+                        disconnect_events.send(PeerDisconnectedEvent {
+                            peer: entity,
+                            reason,
+                            comment,
+                        });
+
                         disconnections.push(entity);
                     },
                 }
@@ -70,7 +123,7 @@ pub(crate) fn event_polling_system(
             commands.entity(entity).remove::<Connection>();
 
             #[cfg(feature="log")]
-            bevy_log::info!("Connection {entity} closed");
+            bevy_log::debug!("Connection {entity} closed");
         }
     }
 }
@@ -104,11 +157,27 @@ pub(crate) fn put_outgoing_messages_system(
     });
 }
 
+pub(crate) fn disconnect_event_system(
+    mut events: EventReader<DisconnectPeerEvent>,
+    mut connections: Query<&mut Connection>,
+) {
+    for event in events.read() {
+        if let Ok(mut c) = connections.get_mut(event.peer) {
+            c.0.close(
+                quinn_proto::VarInt::from_u32(0), // TODO
+                match &event.comment {
+                    Some(comment) => todo!(),
+                    None => Bytes::new(),
+                },
+            );
+        }
+    }
+}
+
 pub(crate) fn application_exit_system(
     mut event: EventReader<AppExit>,
 
     mut connections: Query<(Entity, &mut Connection)>,
-    mut close_events: EventWriter<PeerDisconnectedEvent>,
 ) {
     if event.is_empty() { return }
     event.clear();
@@ -121,12 +190,5 @@ pub(crate) fn application_exit_system(
             quinn_proto::VarInt::default(),
             Bytes::new(),
         );
-
-        // Send a Stardust event
-        close_events.send(PeerDisconnectedEvent {
-            peer,
-            reason: DisconnectReason::Unspecified,
-            comment: Some(Arc::from("app exit")),
-        });
     });
 }
