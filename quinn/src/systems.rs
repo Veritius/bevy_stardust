@@ -2,7 +2,7 @@ use std::{f32::consts::E, sync::Arc, time::Duration};
 
 use bevy_app::AppExit;
 use bevy_ecs::prelude::*;
-use bevy_stardust::prelude::*;
+use bevy_stardust::{connections::PeerAddress, prelude::*};
 use bevy_stardust_quic::{DisconnectCode, SendContext};
 use quinn_proto::ConnectionError;
 use crate::{access::*, connection::ConnectionEvent, Connection, Endpoint};
@@ -38,7 +38,7 @@ pub(crate) fn event_polling_system(
         let mut disconnections = Vec::new();
 
         let (endpoint_inner, conn_map) = endpoint.split_access();
-        for (entity, handle) in conn_map {
+        for (entity, _handle) in conn_map {
             // If this panics it means the hierarchy is invalid, which is UB anyway
             let connection = &mut *(connections.get_mut(entity).unwrap()).0;
 
@@ -49,6 +49,7 @@ pub(crate) fn event_polling_system(
                         commands.entity(entity).insert((
                             Peer::new(),
                             PeerLifestage::Established,
+                            PeerAddress(endpoint_inner.local_addr().ip()),
                         ));
 
                         // Send Stardust event to inform systems

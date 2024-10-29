@@ -22,6 +22,13 @@ impl Component for Endpoint {
 }
 
 impl Endpoint {
+    /// Returns the local address that the socket is bound to.
+    pub fn local_addr(&self) -> SocketAddr {
+        self.inner.local_addr()
+    }
+}
+
+impl Endpoint {
     pub(crate) fn new(
         socket: QuicSocket,
         config: Arc<EndpointConfig>,
@@ -117,6 +124,10 @@ impl EndpointInner {
             handle,
             event
         )
+    }
+
+    pub fn local_addr(&self) -> SocketAddr {
+        self.socket.addr()
     }
 }
 
