@@ -29,6 +29,8 @@ pub(crate) fn event_polling_system(
     mut commands: Commands,
     mut endpoints: Query<&mut Endpoint>,
     mut connections: Query<&mut Connection>,
+
+    mut events: EventWriter<PeerConnectedEvent>,
 ) {
     for mut endpoint in endpoints.iter_mut() {
         let mut disconnections = Vec::new();
@@ -46,6 +48,11 @@ pub(crate) fn event_polling_system(
                             Peer::new(),
                             PeerLifestage::Established,
                         ));
+
+                        // Send Stardust event to inform systems
+                        events.send(PeerConnectedEvent {
+                            peer: entity
+                        });
 
                         #[cfg(feature="log")]
                         bevy_log::info!("Connection {entity} established");
