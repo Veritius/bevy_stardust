@@ -1,7 +1,9 @@
+use std::sync::Arc;
+
 use bevy_app::AppExit;
 use bevy_ecs::prelude::*;
 use bevy_stardust::prelude::*;
-use bevy_stardust_quic::SendContext;
+use bevy_stardust_quic::{DisconnectCode, SendContext};
 use crate::{access::*, connection::ConnectionEvent, Connection, Endpoint};
 
 pub(crate) fn event_exchange_system(
@@ -97,13 +99,27 @@ pub(crate) fn put_outgoing_messages_system(
 
 pub(crate) fn application_exit_system(
     mut event: EventReader<AppExit>,
-    mut connections: Query<&mut Connection>,
+
+    mut connections: Query<(Entity, &mut Connection)>,
+    mut close_events: EventWriter<PeerDisconnectedEvent>,
 ) {
     if event.is_empty() { return }
     event.clear();
 
     // Close all connections
-    connections.iter_mut().for_each(|mut c| {
-        c.0.close();
+    connections.iter_mut().for_each(|(peer, mut conn)| {
+        // Signal the connection state machine to close
+        // This makes it send a final packet informing the other side
+        conn.0.close(
+            quinn_proto::VarInt::default(),
+            Bytes::new(),
+        );
+
+        // Send a Stardust event
+        close_events.send(PeerDisconnectedEvent {
+            peer,
+            reason: DisconnectReason::Unspecified,
+            comment: Some(Arc::from("app exit")),
+        });
     });
 }

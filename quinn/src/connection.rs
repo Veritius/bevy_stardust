@@ -75,12 +75,14 @@ impl ConnectionInner {
     }
 
     pub fn close(
-        &mut self
+        &mut self,
+        error_code: QuinnVarInt,
+        reason: Bytes,
     ) {
         self.quinn.close(
             Instant::now(),
-            QuinnVarInt::from_u32(0),
-            Bytes::new(),
+            error_code,
+            reason,
         );
     }
 

@@ -5,12 +5,14 @@
 #[non_exhaustive]
 pub enum DisconnectCode {
     ProtocolError,
+    ApplicationExit,
 }
 
 impl From<DisconnectCode> for u32 {
     fn from(value: DisconnectCode) -> Self {
         match value {
             DisconnectCode::ProtocolError => 0,
+            DisconnectCode::ApplicationExit => 1,
         }
     }
 }
@@ -21,6 +23,7 @@ impl TryFrom<u32> for DisconnectCode {
     fn try_from(value: u32) -> Result<Self, Self::Error> {
         return Ok(match value {
             0 => DisconnectCode::ProtocolError,
+            1 => DisconnectCode::ApplicationExit,
 
             _ => return Err(UnknownCode),
         });
