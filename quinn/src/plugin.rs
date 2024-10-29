@@ -21,6 +21,7 @@ impl Plugin for QuinnPlugin {
         // PostUpdate stage
         app.add_systems(PostUpdate, (
             crate::systems::put_outgoing_messages_system,
+            crate::systems::disconnect_event_system,
             crate::systems::application_exit_system,
             crate::systems::event_exchange_system,
             crate::systems::event_polling_system,
