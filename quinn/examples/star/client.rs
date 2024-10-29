@@ -1,6 +1,6 @@
 mod shared;
 
-use std::sync::Arc;
+use std::{sync::Arc, time::{Duration, Instant}};
 use bevy_app::prelude::*;
 use bevy_ecs::prelude::*;
 use bevy_stardust_quinn::*;
@@ -28,6 +28,12 @@ fn main() {
             config: ClientConfig::with_root_certificates(root_certs()).unwrap(),
             server_name: "server.example.com".into(),
         });
+    });
+
+    let started = Instant::now();
+    app.add_systems(Update, move |mut events: EventWriter<AppExit>| {
+        if started.elapsed() <= Duration::from_secs(10) { return }
+        events.send(AppExit::Success);
     });
 
     app.run();
