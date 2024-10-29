@@ -1,3 +1,4 @@
+use bevy_app::AppExit;
 use bevy_ecs::prelude::*;
 use bevy_stardust::prelude::*;
 use bevy_stardust_quic::SendContext;
@@ -91,5 +92,18 @@ pub(crate) fn put_outgoing_messages_system(
 
     query.par_iter_mut().for_each(|(mut connection, outgoing)| {
         connection.0.handle_outgoing(send_context, &outgoing);
+    });
+}
+
+pub(crate) fn application_exit_system(
+    mut event: EventReader<AppExit>,
+    mut connections: Query<&mut Connection>,
+) {
+    if event.is_empty() { return }
+    event.clear();
+
+    // Close all connections
+    connections.iter_mut().for_each(|mut c| {
+        c.0.close();
     });
 }
