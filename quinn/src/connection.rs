@@ -79,8 +79,8 @@ impl ConnectionInner {
     ) {
         self.quinn.close(
             Instant::now(),
-            todo!(),
-            todo!(),
+            QuinnVarInt::from_u32(0),
+            Bytes::new(),
         );
     }
 
@@ -162,6 +162,7 @@ impl ConnectionInner {
             }
         }
 
+        if self.quinn.is_closed() { return }
         self.handle_interstage_events();
     }
 
@@ -179,7 +180,8 @@ impl ConnectionInner {
                         let qsid = *(self.map_ssid_qsid.get(&id).unwrap());
 
                         if let Err(err) = self.try_write_to_stream(qsid, chunk) {
-                            todo!()
+                            #[cfg(feature="log")]
+                            bevy_log::error!("Failed to write to stream {qsid}: {err}");
                         }
                     },
 
