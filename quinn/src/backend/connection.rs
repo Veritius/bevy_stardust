@@ -1,5 +1,7 @@
 use std::{future::Future, sync::{Arc, Mutex}};
 use async_executor::Executor;
+use bevy_stardust::prelude::ChannelMessage;
+use crossbeam_channel::{Receiver, Sender};
 use crate::config::*;
 use super::endpoint::EndpointRef;
 
@@ -33,10 +35,18 @@ struct Building {
 
 struct Established {
     quinn_state: quinn_proto::Connection,
+
+    incoming: Sender<ChannelMessage>,
+    outgoing: Receiver<ChannelMessage>,
 }
 
 struct Shutdown {
 
+}
+
+pub(crate) struct MessageHandle {
+    incoming: Receiver<ChannelMessage>,
+    outgoing: Sender<ChannelMessage>,
 }
 
 struct ConnectionDriver(ConnectionRef);
