@@ -9,10 +9,10 @@ pub(crate) fn create(
 ) -> EndpointRef {
     EndpointRef {
         inner: Arc::new(Mutex::new(EndpointInner {
-            state: EndpointState::Building(Building {
+            state: EndpointState::Building(Building::new(
                 auth,
                 verify,
-            }),
+            )),
         }))
     }
 }
@@ -33,8 +33,56 @@ enum EndpointState {
 }
 
 struct Building {
-    auth: ServerAuthentication,
-    verify: ClientVerification,
+    future: Box<dyn Future<Output = Result<Established, Shutdown>> + Send + Sync>,
+}
+
+impl Building {
+    fn new(
+        auth: ServerAuthentication,
+        verify: ClientVerification,
+    ) -> Self {
+        let future = async {
+            let server_config = match auth {
+                ServerAuthentication::Authenticated {
+                    certificates,
+                    private_key,
+                } => {
+                    let certificates = match certificates.resolve_async().await {
+                        Ok(v) => v,
+                        Err(_) => todo!(),
+                    };
+
+                    let private_key = match private_key.resolve_async().await {
+                        Ok(v) => v,
+                        Err(_) => todo!(),
+                    };
+
+                    Some(match quinn_proto::ServerConfig::with_single_cert(
+                        certificates,
+                        private_key,
+                    ) {
+                        Ok(v) => Arc::new(v),
+                        Err(_) => todo!(),
+                    })
+                },
+
+                ServerAuthentication::Disabled => None,
+            };
+
+            return Ok(Established {
+                quinn_state: quinn_proto::Endpoint::new(
+                    Arc::new(quinn_proto::EndpointConfig::default()),
+                    server_config,
+                    true,
+                    None,
+                ),
+            });
+        };
+
+        return Self {
+            future: Box::new(future),
+        };
+    }
 }
 
 impl Future for Building {

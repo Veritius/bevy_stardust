@@ -108,6 +108,8 @@ pub enum ServerAuthentication {
         certificates: CertificateChainOrigin,
         private_key: PrivateKeyOrigin,
     },
+
+    Disabled,
 }
 
 #[derive(Debug)]
