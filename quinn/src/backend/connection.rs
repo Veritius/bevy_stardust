@@ -32,7 +32,7 @@ pub(crate) enum LocalConChgEvent {
 
 }
 
-/// An endpoint that is being created.
+/// A connection that is being created.
 pub(crate) struct ConnectionCreation {
 
 }
@@ -48,7 +48,7 @@ impl Future for ConnectionCreation {
     }
 }
 
-/// Error returned when creating an endpoint.
+/// Error returned when creating a connection.
 pub(crate) enum ConnectionError {
 
 }
