@@ -9,7 +9,7 @@ pub(crate) fn create(
     auth: ClientAuthentication,
     verify: ServerVerification,
     server_name: Arc<str>,
-) -> (ConnectionKey, ConnectionRef) {
+) -> ConnectionRef {
     todo!()
 }
 
@@ -18,13 +18,8 @@ pub(crate) struct ConnectionRef {
     pub(super) inner: Arc<Mutex<ConnectionInner>>,
 }
 
-pub(crate) struct ConnectionKey {
-    dropped: Arc<()>,
-}
-
 pub(super) struct ConnectionInner {
     state: ConnectionState,
-    dropped: Arc<()>,
 }
 
 enum ConnectionState {

@@ -1,13 +1,11 @@
 use std::sync::Arc;
 use bevy_ecs::prelude::*;
-use crate::{backend::connection::{ConnectionKey, ConnectionRef}, config::*, Endpoint, QuicManager};
+use crate::{backend::connection::ConnectionRef, config::*, Endpoint, QuicManager};
 
 /// A QUIC connection.
 #[derive(Component)]
 pub struct Connection {
     pub(crate) inner: ConnectionRef,
-
-    key: ConnectionKey,
 }
 
 impl Connection {
@@ -19,7 +17,7 @@ impl Connection {
         verify: ServerVerification,
         server_name: Arc<str>,
     ) -> Connection {
-        let (key, inner) = crate::backend::connection::create(
+        let inner = crate::backend::connection::create(
             manager.executor.executor_arc(),
             endpoint.inner.clone(),
             auth,
@@ -29,7 +27,6 @@ impl Connection {
 
         return Connection {
             inner,
-            key,
         };
     }
 }
