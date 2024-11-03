@@ -1,7 +1,9 @@
 use std::{sync::Arc, thread::{self, JoinHandle}};
 use async_executor::Executor;
+use bevy_ecs::prelude::*;
 use crate::config::BackendConfig;
 
+#[derive(Resource)]
 pub(crate) struct BackendExecutor {
     executor: Arc<Executor<'static>>,
     threads: Box<[JoinHandle<()>]>,
@@ -9,7 +11,7 @@ pub(crate) struct BackendExecutor {
 
 impl BackendExecutor {
     pub fn init(
-        config: BackendConfig,
+        config: &BackendConfig,
     ) -> Self {
         // Create a new executor instance
         let executor = Arc::new(Executor::new());

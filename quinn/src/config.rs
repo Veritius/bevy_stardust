@@ -56,7 +56,7 @@ pub enum ClientAuthentication {
 }
 
 /// Configuration for the network thread used to handle communication traffic.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct BackendConfig {
     /// The number of threads dedicated to network traffic.
     /// Must not be zero, or the application will panic.

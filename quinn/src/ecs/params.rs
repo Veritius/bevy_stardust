@@ -1,6 +1,5 @@
 use bevy_ecs::{entity::Entities, prelude::*, system::SystemParam};
-use crate::config::*;
-use super::polling::BackendExecutor;
+use crate::{backend::executor::BackendExecutor, config::*};
 
 /// [`SystemParam`] for working with QUIC endpoints and connections.
 #[derive(SystemParam)]
