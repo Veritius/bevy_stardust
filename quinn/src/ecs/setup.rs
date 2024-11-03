@@ -20,6 +20,7 @@ impl Connection {
     pub fn new(
         root_certs: TrustAnchorStoreOrigin,
         server_name: Arc<str>,
+        endpoint: &Endpoint,
         manager: &QuicManager,
     ) -> Self {
         todo!()
