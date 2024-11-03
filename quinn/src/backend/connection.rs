@@ -1,4 +1,4 @@
-use std::{future::Future, sync::{Arc, Mutex}};
+use std::{future::Future, pin::{Pin, pin}, sync::{Arc, Mutex}, task::Poll};
 use async_executor::Executor;
 use crate::config::*;
 use super::endpoint::EndpointRef;
@@ -32,8 +32,30 @@ struct Building {
 
 }
 
+impl Future for Building {
+    type Output = Result<Established, Shutdown>;
+
+    fn poll(
+        self: std::pin::Pin<&mut Self>,
+        ctx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Self::Output> {
+        todo!()
+    }
+}
+
 struct Established {
     quinn_state: quinn_proto::Connection,
+}
+
+impl Future for Established {
+    type Output = Shutdown;
+
+    fn poll(
+        self: std::pin::Pin<&mut Self>,
+        ctx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Self::Output> {
+        todo!()
+    }
 }
 
 struct Shutdown {
@@ -43,12 +65,28 @@ struct Shutdown {
 struct ConnectionDriver(ConnectionRef);
 
 impl Future for ConnectionDriver {
-    type Output = Result<(), ()>;
+    type Output = ();
 
     fn poll(
-        self: std::pin::Pin<&mut Self>,
+        self: Pin<&mut Self>,
         ctx: &mut std::task::Context<'_>,
     ) -> std::task::Poll<Self::Output> {
-        todo!()
+        let mut inner = self.0.inner.lock().unwrap();
+
+        match &mut inner.state {
+            ConnectionState::Building(building) => if let Poll::Ready(_) = pin!(building).poll(ctx) {
+                todo!()
+            },
+
+            ConnectionState::Established(established) => if let Poll::Ready(_) = pin!(established).poll(ctx) {
+                todo!()
+            },
+
+            ConnectionState::Shutdown(_shutdown) => {
+                return Poll::Ready(());
+            },
+        }
+
+        return Poll::Pending;
     }
 }
