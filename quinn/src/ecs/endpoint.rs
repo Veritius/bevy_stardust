@@ -1,5 +1,5 @@
 use bevy_ecs::prelude::*;
-use crate::{backend::endpoint::EndpointRef, config::*, QuicManager};
+use crate::{backend::endpoint::EndpointRef, config::*, Connection, QuicManager};
 
 /// A QUIC endpoint.
 #[derive(Component)]
@@ -14,6 +14,16 @@ impl Endpoint {
         auth: ServerAuthentication,
         verify: ClientVerification,
     ) -> Endpoint {
+        todo!()
+    }
+
+    /// Creates a new [`Connection`] component.
+    pub fn connect(
+        &self,
+        manager: &QuicManager,
+        auth: ClientAuthentication,
+        verify: ServerVerification,
+    ) -> Connection {
         todo!()
     }
 }
