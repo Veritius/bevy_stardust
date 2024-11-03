@@ -16,6 +16,17 @@ pub(super) struct Connection {
     out_messages: Sender<ChannelMessage>,
 }
 
+impl Future for Connection {
+    type Output = Result<(), ConnectionError>;
+
+    fn poll(
+        self: std::pin::Pin<&mut Self>,
+        ctx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Self::Output> {
+        todo!()
+    }
+}
+
 pub(crate) struct ConnectionHandle {
     ctrl_events: Sender<LocalConAppEvent>,
     state_events: Receiver<LocalConChgEvent>,

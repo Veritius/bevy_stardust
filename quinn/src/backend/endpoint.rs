@@ -12,6 +12,17 @@ pub(super) struct Endpoint {
     state_events: Sender<LocalEndChgEvent>,
 }
 
+impl Future for Endpoint {
+    type Output = Result<(), EndpointError>;
+
+    fn poll(
+        self: std::pin::Pin<&mut Self>,
+        ctx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Self::Output> {
+        todo!()
+    }
+}
+
 struct OwnedConnection {
     conn_events: Sender<ConnectionEvent>,
     endp_events: Receiver<EndpointEvent>,
