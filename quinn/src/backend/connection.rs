@@ -36,9 +36,9 @@ impl Future for Building {
     type Output = Result<Established, Shutdown>;
 
     fn poll(
-        self: std::pin::Pin<&mut Self>,
+        self: Pin<&mut Self>,
         ctx: &mut std::task::Context<'_>,
-    ) -> std::task::Poll<Self::Output> {
+    ) -> Poll<Self::Output> {
         todo!()
     }
 }
@@ -51,9 +51,9 @@ impl Future for Established {
     type Output = Shutdown;
 
     fn poll(
-        self: std::pin::Pin<&mut Self>,
+        self: Pin<&mut Self>,
         ctx: &mut std::task::Context<'_>,
-    ) -> std::task::Poll<Self::Output> {
+    ) -> Poll<Self::Output> {
         todo!()
     }
 }
@@ -70,7 +70,7 @@ impl Future for ConnectionDriver {
     fn poll(
         self: Pin<&mut Self>,
         ctx: &mut std::task::Context<'_>,
-    ) -> std::task::Poll<Self::Output> {
+    ) -> Poll<Self::Output> {
         let mut inner = self.0.inner.lock().unwrap();
 
         match &mut inner.state {
