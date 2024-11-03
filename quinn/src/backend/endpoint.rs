@@ -12,7 +12,7 @@ pub(crate) fn create(
 
 #[derive(Clone)]
 pub(crate) struct EndpointRef {
-    inner: Arc<Mutex<EndpointInner>>,
+    pub(super) inner: Arc<Mutex<EndpointInner>>,
 }
 
 pub(super) struct EndpointInner {

@@ -17,7 +17,7 @@ pub(crate) fn create(
 
 #[derive(Clone)]
 pub(crate) struct ConnectionRef {
-    inner: Arc<Mutex<ConnectionInner>>,
+    pub(super) inner: Arc<Mutex<ConnectionInner>>,
 }
 
 pub(super) struct ConnectionInner {
