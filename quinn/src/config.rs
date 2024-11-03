@@ -55,6 +55,14 @@ pub enum ClientAuthentication {
     Disabled,
 }
 
+/// Configuration for the network thread used to handle communication traffic.
+#[derive(Debug)]
+pub struct ThreadConfig {
+    /// The number of threads dedicated to network traffic.
+    /// Must not be zero, or the application will panic.
+    pub threads: u32,
+}
+
 #[derive(Debug)]
 pub struct SocketConfig {
     /// The size of the buffer allocated to receive datagrams.
