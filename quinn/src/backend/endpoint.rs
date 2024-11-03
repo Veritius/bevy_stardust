@@ -6,7 +6,7 @@ pub(crate) fn create(
     executor: Arc<Executor<'static>>,
     auth: ServerAuthentication,
     verify: ClientVerification,
-) -> EndpointRef {
+) -> (EndpointKey, EndpointRef) {
     todo!()
 }
 
@@ -15,8 +15,13 @@ pub(crate) struct EndpointRef {
     pub(super) inner: Arc<Mutex<EndpointInner>>,
 }
 
+pub(crate) struct EndpointKey {
+    dropped: Arc<()>,
+}
+
 pub(super) struct EndpointInner {
     state: EndpointState,
+    dropped: Arc<()>,
 }
 
 enum EndpointState {
