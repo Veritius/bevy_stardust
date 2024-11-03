@@ -1,2 +1,2 @@
-mod connection;
-mod endpoint;
+pub(crate) mod connection;
+pub(crate) mod endpoint;
