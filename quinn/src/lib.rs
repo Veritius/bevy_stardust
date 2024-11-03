@@ -6,6 +6,7 @@ mod backend;
 mod commands;
 mod config;
 mod connection;
+mod ecs;
 mod endpoint;
 mod plugin;
 mod socket;
