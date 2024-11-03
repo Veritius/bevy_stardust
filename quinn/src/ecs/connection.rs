@@ -1,5 +1,5 @@
 use bevy_ecs::prelude::*;
-use crate::backend::{connection::ConnectionHandle, endpoint::EndpointCreation};
+use crate::backend::connection::{ConnectionCreation, ConnectionHandle};
 
 #[derive(Component)]
 pub struct Connection {
@@ -7,6 +7,6 @@ pub struct Connection {
 }
 
 enum ConnectionInner {
-    Trying(Box<EndpointCreation>),
+    Trying(Box<ConnectionCreation>),
     Established(Box<ConnectionHandle>),
 }
