@@ -1,9 +1,7 @@
 use std::{sync::Arc, thread::{self, JoinHandle}};
 use async_executor::Executor;
-use bevy_ecs::prelude::*;
 use crate::config::BackendConfig;
 
-#[derive(Resource)]
 pub(crate) struct BackendExecutor {
     executor: Arc<Executor<'static>>,
     threads: Box<[JoinHandle<()>]>,
