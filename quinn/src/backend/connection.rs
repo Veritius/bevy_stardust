@@ -1,4 +1,4 @@
-use std::sync::{Arc, Mutex};
+use std::{future::Future, sync::{Arc, Mutex}};
 
 #[derive(Clone)]
 pub(crate) struct ConnectionRef {
@@ -25,4 +25,17 @@ struct Established {
 
 struct Shutdown {
 
+}
+
+struct ConnectionDriver(ConnectionRef);
+
+impl Future for ConnectionDriver {
+    type Output = Result<(), ()>;
+
+    fn poll(
+        self: std::pin::Pin<&mut Self>,
+        ctx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Self::Output> {
+        todo!()
+    }
 }
