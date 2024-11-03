@@ -1,3 +1,60 @@
+use std::path::PathBuf;
+use rustls::pki_types::{CertificateDer, CertificateRevocationListDer, PrivateKeyDer, TrustAnchor};
+
+#[derive(Debug)]
+#[non_exhaustive]
+pub enum CertificateOrigin {
+    Owned(CertificateDer<'static>),
+    File(PathBuf),
+}
+
+#[derive(Debug)]
+#[non_exhaustive]
+pub enum PrivateKeyOrigin {
+    Owned(PrivateKeyDer<'static>),
+    File(PathBuf),
+}
+
+#[derive(Debug)]
+#[non_exhaustive]
+pub enum CertificateChainOrigin {
+    Owned(Vec<CertificateOrigin>),
+}
+
+#[derive(Debug)]
+#[non_exhaustive]
+pub enum CertificateRevocationListOrigin {
+    Owned(CertificateRevocationListDer<'static>),
+    File(PathBuf),
+}
+
+#[derive(Debug)]
+#[non_exhaustive]
+pub enum TrustAnchorOrigin {
+    Owned(TrustAnchor<'static>),
+    File(PathBuf),
+}
+
+#[derive(Debug)]
+#[non_exhaustive]
+pub enum TrustAnchorStoreOrigin {
+    Owned(Vec<TrustAnchorOrigin>),
+    File(PathBuf),
+}
+
+#[derive(Debug)]
+pub enum ServerAuthentication {
+    Authenticated {
+        certificates: CertificateChainOrigin,
+        private_key: PrivateKeyOrigin,
+    },
+}
+
+#[derive(Debug)]
+pub enum ClientAuthentication {
+    Disabled,
+}
+
 #[derive(Debug)]
 pub struct SocketConfig {
     /// The size of the buffer allocated to receive datagrams.
