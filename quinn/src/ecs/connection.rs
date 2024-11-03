@@ -5,7 +5,7 @@ use crate::{backend::connection::ConnectionRef, config::*, Endpoint, QuicManager
 /// A QUIC connection.
 #[derive(Component)]
 pub struct Connection {
-    inner: ConnectionRef,
+    pub(crate) inner: ConnectionRef,
 }
 
 impl Connection {
@@ -16,7 +16,15 @@ impl Connection {
         auth: ClientAuthentication,
         verify: ServerVerification,
         server_name: Arc<str>,
-    ) -> Self {
-        todo!()
+    ) -> Connection {
+        Connection {
+            inner: crate::backend::connection::create(
+                manager.executor.executor_arc(),
+                endpoint.inner.clone(),
+                auth,
+                verify,
+                server_name,
+            )
+        }
     }
 }

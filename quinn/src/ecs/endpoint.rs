@@ -5,7 +5,7 @@ use crate::{backend::endpoint::EndpointRef, config::*, Connection, QuicManager};
 /// A QUIC endpoint.
 #[derive(Component)]
 pub struct Endpoint {
-    inner: EndpointRef,
+    pub(crate) inner: EndpointRef,
 }
 
 impl Endpoint {
