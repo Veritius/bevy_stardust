@@ -1,11 +1,21 @@
 use std::path::PathBuf;
-use rustls::pki_types::{CertificateDer, CertificateRevocationListDer, PrivateKeyDer, TrustAnchor};
+use rustls::{pki_types::{CertificateDer, CertificateRevocationListDer, PrivateKeyDer, TrustAnchor}, RootCertStore};
 
 #[derive(Debug)]
 #[non_exhaustive]
 pub enum CertificateOrigin {
     Owned(CertificateDer<'static>),
     File(PathBuf),
+}
+
+impl CertificateOrigin {
+    pub fn resolve(self) -> Result<CertificateDer<'static>, ()> {
+        todo!()
+    }
+
+    pub async fn resolve_async(self) -> Result<CertificateDer<'static>, ()> {
+        todo!()
+    }
 }
 
 #[derive(Debug)]
@@ -15,10 +25,30 @@ pub enum PrivateKeyOrigin {
     File(PathBuf),
 }
 
+impl PrivateKeyOrigin {
+    pub fn resolve(self) -> Result<PrivateKeyDer<'static>, ()> {
+        todo!()
+    }
+
+    pub async fn resolve_async(self) -> Result<PrivateKeyDer<'static>, ()> {
+        todo!()
+    }
+}
+
 #[derive(Debug)]
 #[non_exhaustive]
 pub enum CertificateChainOrigin {
     Owned(Vec<CertificateOrigin>),
+}
+
+impl CertificateChainOrigin {
+    pub fn resolve(self) -> Result<Vec<CertificateDer<'static>>, ()> {
+        todo!()
+    }
+
+    pub async fn resolve_async(self) -> Result<Vec<CertificateDer<'static>>, ()> {
+        todo!()
+    }
 }
 
 #[derive(Debug)]
@@ -28,6 +58,16 @@ pub enum CertificateRevocationListOrigin {
     File(PathBuf),
 }
 
+impl CertificateRevocationListOrigin {
+    pub fn resolve(self) -> Result<CertificateRevocationListDer<'static>, ()> {
+        todo!()
+    }
+
+    pub async fn resolve_async(self) -> Result<CertificateRevocationListDer<'static>, ()> {
+        todo!()
+    }
+}
+
 #[derive(Debug)]
 #[non_exhaustive]
 pub enum TrustAnchorOrigin {
@@ -35,11 +75,31 @@ pub enum TrustAnchorOrigin {
     File(PathBuf),
 }
 
+impl TrustAnchorOrigin {
+    pub fn resolve(self) -> Result<TrustAnchor<'static>, ()> {
+        todo!()
+    }
+
+    pub async fn resolve_async(self) -> Result<TrustAnchor<'static>, ()> {
+        todo!()
+    }
+}
+
 #[derive(Debug)]
 #[non_exhaustive]
 pub enum TrustAnchorStoreOrigin {
     Owned(Vec<TrustAnchorOrigin>),
     File(PathBuf),
+}
+
+impl TrustAnchorStoreOrigin {
+    pub fn resolve(self) -> Result<RootCertStore, ()> {
+        todo!()
+    }
+
+    pub async fn resolve_async(self) -> Result<RootCertStore, ()> {
+        todo!()
+    }
 }
 
 #[derive(Debug)]
