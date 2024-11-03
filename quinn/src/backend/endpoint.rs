@@ -4,8 +4,8 @@ use crate::config::*;
 
 pub(crate) fn create(
     executor: Arc<Executor<'static>>,
-    certificate: CertificateChainOrigin,
-    private_key: PrivateKeyOrigin,
+    auth: ServerAuthentication,
+    verify: ClientVerification,
 ) -> EndpointRef {
     todo!()
 }

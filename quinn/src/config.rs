@@ -51,7 +51,19 @@ pub enum ServerAuthentication {
 }
 
 #[derive(Debug)]
+pub enum ServerVerification {
+    Authenticated {
+        root_certs: TrustAnchorStoreOrigin,
+    }
+}
+
+#[derive(Debug)]
 pub enum ClientAuthentication {
+    Disabled,
+}
+
+#[derive(Debug)]
+pub enum ClientVerification {
     Disabled,
 }
 

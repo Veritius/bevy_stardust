@@ -8,8 +8,9 @@ use super::endpoint::EndpointRef;
 pub(crate) fn create(
     executor: Arc<Executor<'static>>,
     endpoint: EndpointRef,
-    root_certs: TrustAnchorStoreOrigin,
-    server_name: Arc<str>,
+    auth: ClientAuthentication,
+    verify: ServerVerification,
+    server_name: Option<Arc<str>>,
 ) -> ConnectionRef {
     todo!()
 }
