@@ -1,7 +1,7 @@
-use std::{borrow::Cow, net::SocketAddr, sync::Arc};
+use std::{net::SocketAddr, sync::Arc};
 use bevy_ecs::{prelude::*, system::{EntityCommand, EntityCommands}};
 use quinn_proto::{ClientConfig, ServerConfig, EndpointConfig};
-use crate::{connection::{ConnectionBundle, ConnectionInner}, endpoint::EndpointInner, Connection, Endpoint, QuicSocket};
+use crate::{connection::{ConnectionBundle, ConnectionInner}, Connection, Endpoint, QuicSocket};
 
 /// Extension API to sugar using endpoint commands.
 pub trait EndpointCommands {
@@ -130,7 +130,7 @@ pub struct OpenConnection {
     pub config: ClientConfig,
 
     /// The name of the server.
-    pub server_name: Cow<'static, str>,
+    pub server_name: Arc<str>,
 }
 
 impl EntityCommand for OpenConnection {
