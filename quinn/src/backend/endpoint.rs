@@ -1,4 +1,14 @@
 use std::{future::Future, sync::{Arc, Mutex}};
+use async_executor::Executor;
+use crate::config::*;
+
+pub(crate) fn create(
+    executor: Arc<Executor<'static>>,
+    certificate: CertificateChainOrigin,
+    private_key: PrivateKeyOrigin,
+) -> EndpointRef {
+    todo!()
+}
 
 #[derive(Clone)]
 pub(crate) struct EndpointRef {

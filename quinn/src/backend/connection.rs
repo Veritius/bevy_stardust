@@ -1,4 +1,16 @@
 use std::{future::Future, sync::{Arc, Mutex}};
+use async_executor::Executor;
+use crate::config::*;
+use super::endpoint::EndpointRef;
+
+pub(crate) fn create(
+    executor: Arc<Executor<'static>>,
+    endpoint: EndpointRef,
+    root_certs: TrustAnchorStoreOrigin,
+    server_name: Arc<str>,
+) -> ConnectionRef {
+    todo!()
+}
 
 #[derive(Clone)]
 pub(crate) struct ConnectionRef {
