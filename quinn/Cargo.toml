@@ -43,6 +43,9 @@ version = "0.5.7"
 [dependencies.anyhow]
 version = "1"
 
+[dependencies.async-executor]
+version = "1.13"
+
 [dev-dependencies.rustls-pemfile]
 version = "2"
 

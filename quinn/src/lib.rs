@@ -2,6 +2,7 @@
 #![warn(missing_docs)]
 
 mod access;
+mod backend;
 mod commands;
 mod config;
 mod connection;

@@ -57,7 +57,7 @@ pub enum ClientAuthentication {
 
 /// Configuration for the network thread used to handle communication traffic.
 #[derive(Debug)]
-pub struct ThreadConfig {
+pub struct BackendConfig {
     /// The number of threads dedicated to network traffic.
     /// Must not be zero, or the application will panic.
     pub threads: u32,
