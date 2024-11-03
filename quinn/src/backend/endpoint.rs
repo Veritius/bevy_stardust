@@ -1,13 +1,18 @@
 use std::future::Future;
+use bevy_ecs::entity::EntityHashMap;
 use crossbeam_channel::{Receiver, Sender};
 use quinn_proto::{ConnectionEvent, EndpointEvent};
 
 pub(super) struct Endpoint {
     quinn_state: quinn_proto::Endpoint,
 
+    connections: EntityHashMap<OwnedConnection>,
+
     ctrl_events: Receiver<LocalEndAppEvent>,
     state_events: Sender<LocalEndChgEvent>,
+}
 
+struct OwnedConnection {
     conn_events: Sender<ConnectionEvent>,
     endp_events: Receiver<EndpointEvent>,
 }
