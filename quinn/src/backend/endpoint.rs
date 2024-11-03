@@ -78,6 +78,8 @@ impl Future for EndpointDriver {
     ) -> Poll<Self::Output> {
         let mut inner = self.0.inner.lock().unwrap();
 
+        let keep_going = false;
+
         match &mut inner.state {
             EndpointState::Building(building) => if let Poll::Ready(_) = pin!(building).poll(ctx) {
                 todo!()
@@ -90,6 +92,13 @@ impl Future for EndpointDriver {
             EndpointState::Shutdown(_shutdown) => {
                 return Poll::Ready(());
             },
+        }
+
+        // Release lock
+        drop(inner);
+
+        if keep_going {
+            ctx.waker().wake_by_ref();
         }
 
         return Poll::Pending;
