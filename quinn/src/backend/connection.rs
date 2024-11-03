@@ -8,7 +8,7 @@ pub(crate) fn create(
     endpoint: EndpointRef,
     auth: ClientAuthentication,
     verify: ServerVerification,
-    server_name: Option<Arc<str>>,
+    server_name: Arc<str>,
 ) -> ConnectionRef {
     todo!()
 }
