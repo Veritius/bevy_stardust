@@ -1,3 +1,4 @@
+use std::future::Future;
 use bevy_stardust::prelude::*;
 use crossbeam_channel::{Receiver, Sender};
 use quinn_proto::{ConnectionEvent, EndpointEvent};
@@ -28,5 +29,26 @@ pub(crate) enum LocalConAppEvent {
 }
 
 pub(crate) enum LocalConChgEvent {
+
+}
+
+/// An endpoint that is being created.
+pub(crate) struct ConnectionCreation {
+
+}
+
+impl Future for ConnectionCreation {
+    type Output = Result<ConnectionHandle, ConnectionError>;
+
+    fn poll(
+        self: std::pin::Pin<&mut Self>,
+        ctx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Self::Output> {
+        todo!()
+    }
+}
+
+/// Error returned when creating an endpoint.
+pub(crate) enum ConnectionError {
 
 }
