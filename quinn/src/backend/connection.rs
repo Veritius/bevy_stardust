@@ -76,12 +76,15 @@ impl Future for ConnectionDriver {
         let keep_going = false;
 
         match &mut inner.state {
-            ConnectionState::Building(building) => if let Poll::Ready(_) = pin!(building).poll(ctx) {
-                todo!()
+            ConnectionState::Building(building) => if let Poll::Ready(output) = pin!(building).poll(ctx) {
+                inner.state = match output {
+                    Ok(established) => ConnectionState::Established(established),
+                    Err(shutdown) => ConnectionState::Shutdown(shutdown),
+                };
             },
 
-            ConnectionState::Established(established) => if let Poll::Ready(_) = pin!(established).poll(ctx) {
-                todo!()
+            ConnectionState::Established(established) => if let Poll::Ready(output) = pin!(established).poll(ctx) {
+                inner.state = ConnectionState::Shutdown(output);
             },
 
             ConnectionState::Shutdown(_shutdown) => {

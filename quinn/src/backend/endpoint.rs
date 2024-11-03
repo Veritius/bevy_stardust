@@ -81,12 +81,15 @@ impl Future for EndpointDriver {
         let keep_going = false;
 
         match &mut inner.state {
-            EndpointState::Building(building) => if let Poll::Ready(_) = pin!(building).poll(ctx) {
-                todo!()
+            EndpointState::Building(building) => if let Poll::Ready(output) = pin!(building).poll(ctx) {
+                inner.state = match output {
+                    Ok(established) => EndpointState::Established(established),
+                    Err(shutdown) => EndpointState::Shutdown(shutdown),
+                };
             },
 
-            EndpointState::Established(established) => if let Poll::Ready(_) = pin!(established).poll(ctx) {
-                todo!()
+            EndpointState::Established(established) => if let Poll::Ready(output) = pin!(established).poll(ctx) {
+                inner.state = EndpointState::Shutdown(output);
             },
 
             EndpointState::Shutdown(_shutdown) => {
