@@ -1,4 +1,4 @@
-use std::sync::{Arc, Mutex};
+use std::{future::Future, pin::Pin, sync::{Arc, Mutex}, task::{Context, Poll, Waker}};
 use super::endpoint::EndpointInner;
 
 #[derive(Clone)]
@@ -8,6 +8,8 @@ pub(crate) struct ConnectionRef {
 
 pub(super) struct ConnectionInner {
     state: ConnectionState,
+
+    waker: Option<Waker>,
 }
 
 impl ConnectionInner {
@@ -39,4 +41,23 @@ struct Established {
 
 struct Shutdown {
 
+}
+
+struct ConnectionDriver(ConnectionRef);
+
+impl Future for ConnectionDriver {
+    type Output = ();
+
+    fn poll(
+        self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+    ) -> Poll<Self::Output> {
+        let mut connection = self.0.ptr.lock().unwrap();
+
+        if connection.waker.is_none() {
+            connection.waker = Some(cx.waker().clone());
+        }
+
+        todo!()
+    }
 }

@@ -1,4 +1,4 @@
-use std::sync::{Arc, Mutex};
+use std::{future::Future, pin::Pin, sync::{Arc, Mutex}, task::{Context, Poll, Waker}};
 use crossbeam_channel::Receiver;
 use super::socket::Receive;
 
@@ -11,6 +11,8 @@ pub(super) struct EndpointInner {
     state: EndpointState,
 
     dgrams: Receiver<Receive>,
+
+    waker: Option<Waker>,
 }
 
 impl EndpointInner {
@@ -36,4 +38,23 @@ struct Established {
 
 struct Shutdown {
 
+}
+
+struct EndpointDriver(EndpointRef);
+
+impl Future for EndpointDriver {
+    type Output = ();
+
+    fn poll(
+        self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+    ) -> Poll<Self::Output> {
+        let mut endpoint = self.0.ptr.lock().unwrap();
+
+        if endpoint.waker.is_none() {
+            endpoint.waker = Some(cx.waker().clone());
+        }
+
+        todo!()
+    }
 }
