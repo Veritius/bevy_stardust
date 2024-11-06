@@ -1,7 +1,7 @@
 use super::endpoint::EndpointInner;
 
 pub(crate) struct ConnectionInner {
-
+    state: ConnectionState,
 }
 
 impl ConnectionInner {
@@ -14,5 +14,23 @@ impl ConnectionInner {
 }
 
 pub(crate) struct ConnectionConfig {
+
+}
+
+enum ConnectionState {
+    Connecting(Connecting),
+    Established(Established),
+    Shutdown(Shutdown),
+}
+
+struct Connecting {
+
+}
+
+struct Established {
+
+}
+
+struct Shutdown {
 
 }

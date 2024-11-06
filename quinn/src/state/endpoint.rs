@@ -1,5 +1,5 @@
 pub(crate) struct EndpointInner {
-
+    state: EndpointState,
 }
 
 impl EndpointInner {
@@ -11,5 +11,18 @@ impl EndpointInner {
 }
 
 pub(crate) struct EndpointConfig {
+
+}
+
+enum EndpointState {
+    Established(Established),
+    Shutdown(Shutdown),
+}
+
+struct Established {
+
+}
+
+struct Shutdown {
 
 }
