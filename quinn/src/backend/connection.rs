@@ -51,26 +51,8 @@ struct Shared {
 }
 
 struct EndpointHandle {
-    endpoint_ref: EndpointRef,
+    waker: Waker,
+
     recv_events: Receiver<quinn_proto::ConnectionEvent>,
     send_events: Sender<quinn_proto::EndpointEvent>,
-}
-
-struct ConnectionDriver(ConnectionRef);
-
-impl Future for ConnectionDriver {
-    type Output = ();
-
-    fn poll(
-        self: Pin<&mut Self>,
-        cx: &mut Context<'_>,
-    ) -> Poll<Self::Output> {
-        let mut connection = self.0.ptr.lock().unwrap();
-
-        if connection.shared.waker.is_none() {
-            connection.shared.waker = Some(cx.waker().clone());
-        }
-
-        todo!()
-    }
 }

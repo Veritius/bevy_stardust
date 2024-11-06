@@ -85,7 +85,8 @@ struct ConnectionMap {
 }
 
 struct ConnectionHandle {
-    connection_ref: ConnectionRef,
+    waker: Waker,
+
     recv_events: Receiver<quinn_proto::EndpointEvent>,
     send_events: Sender<quinn_proto::ConnectionEvent>,
 }
@@ -95,33 +96,4 @@ struct Shared {
     dgrams: Receiver<Receive>,
 
     waker: Option<Waker>,
-}
-
-struct EndpointDriver(EndpointRef);
-
-impl Future for EndpointDriver {
-    type Output = ();
-
-    fn poll(
-        self: Pin<&mut Self>,
-        cx: &mut Context<'_>,
-    ) -> Poll<Self::Output> {
-        let mut endpoint = self.0.ptr.lock().unwrap();
-
-        let EndpointInner { state, shared } = &mut *endpoint;
-
-        if shared.waker.is_none() {
-            shared.waker = Some(cx.waker().clone());
-        }
-
-        match state {
-            EndpointState::Established(established) => {
-                established.handle_dgrams(shared);
-            },
-
-            EndpointState::Shutdown(shutdown) => todo!(),
-        }
-
-        todo!()
-    }
 }
