@@ -16,10 +16,6 @@ default-features = false
 version = "0.14"
 default-features = false
 
-[dependencies.bevy_tasks]
-version = "0.14"
-features = ["multi_threaded"]
-
 [dependencies.bevy_log]
 version = "0.14"
 optional = true
@@ -37,6 +33,9 @@ version = "0.11.8"
 
 [dependencies.rustls]
 version = "0.23.14"
+
+[dependencies.async-task]
+version = "4.7"
 
 [dependencies.mio]
 version = "1"

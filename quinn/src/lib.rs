@@ -5,5 +5,6 @@ mod config;
 mod connection;
 mod endpoint;
 mod plugin;
+mod runtime;
 
 pub use plugin::QuicPlugin;

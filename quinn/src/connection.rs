@@ -1,7 +1,7 @@
 use std::sync::{Arc, Mutex};
+use async_task::Task;
 use bevy_ecs::prelude::*;
-use bevy_tasks::{IoTaskPool, Task};
-use crate::config::{ClientAuthentication, ServerVerification};
+use crate::{config::{ClientAuthentication, ServerVerification}, runtime::Runtime};
 use super::endpoint::Endpoint;
 
 #[derive(Component)]
@@ -11,6 +11,7 @@ pub struct Connection {
 
 impl Connection {
     pub fn new(
+        runtime: impl Runtime,
         endpoint: &mut Endpoint,
         auth: ClientAuthentication,
         verify: ServerVerification,
@@ -41,8 +42,7 @@ struct ConnectionState {
 struct ConnectionRef(Arc<ConnectionInner>);
 
 /// Config used to build an [`ConnectionTaask`].
-struct ConnectionTaskConfig<'a> {
-    task_pool: &'a IoTaskPool,
+struct ConnectionTaskConfig {
     ptr: ConnectionRef
 }
 
@@ -50,11 +50,14 @@ struct ConnectionTaskConfig<'a> {
 struct ConnectionTask(Task<()>);
 
 impl ConnectionTask {
-    fn new(config: ConnectionTaskConfig) -> Self {
+    fn new(
+        runtime: impl Runtime,
+        config: ConnectionTaskConfig,
+    ) -> Self {
         let task = async move {
 
         };
 
-        return Self(config.task_pool.spawn(task));
+        return Self(runtime.spawn(task));
     }
 }

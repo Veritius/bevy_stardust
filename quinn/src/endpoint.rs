@@ -1,10 +1,10 @@
 use std::{future::Future, io, net::SocketAddr, sync::{Arc, Mutex, Weak}, time::Duration};
+use async_task::Task;
 use bevy_ecs::prelude::*;
-use bevy_tasks::{IoTaskPool, Task};
 use bytes::{Bytes, BytesMut};
 use crossbeam_channel::{Receiver, Sender};
 use mio::net::UdpSocket;
-use crate::config::{ClientVerification, ServerAuthentication};
+use crate::{config::{ClientVerification, ServerAuthentication}, runtime::Runtime};
 
 #[derive(Component)]
 pub struct Endpoint {
@@ -13,6 +13,7 @@ pub struct Endpoint {
 
 impl Endpoint {
     pub fn new(
+        runtime: impl Runtime,
         socket: SocketAddr,
         auth: ServerAuthentication,
         verify: ClientVerification,
@@ -26,10 +27,8 @@ impl Endpoint {
             }),
         }));
 
-        let task_pool = IoTaskPool::get();
-
-        let task = EndpointTask::new(
-            task_pool,
+        let task: EndpointTask = EndpointTask::new(
+            runtime,
             EndpointTaskConfig {
                 ptr: ptr.clone(),
             },
@@ -87,14 +86,14 @@ struct EndpointTask(Task<()>);
 
 impl EndpointTask {
     fn new(
-        task_pool: &IoTaskPool,
+        runtime: impl Runtime,
         config: EndpointTaskConfig,
     ) -> Self {
         let task = async move {
 
         };
 
-        return Self(task_pool.spawn(task));
+        return Self(runtime.spawn(task));
     }
 }
 
@@ -103,7 +102,7 @@ struct IoRecvTask(Task<Option<io::Error>>);
 
 impl IoRecvTask {
     fn new(
-        task_pool: &IoTaskPool,
+        runtime: impl Runtime,
         mut socket: UdpSocket,
     ) -> (
         IoRecvTask,
@@ -150,7 +149,7 @@ impl IoRecvTask {
         };
 
         return (
-            Self(task_pool.spawn(task)),
+            Self(runtime.spawn(task)),
             socket_clone,
             rx,
         );
@@ -162,7 +161,7 @@ struct IoSendTask(Task<Option<io::Error>>);
 
 impl IoSendTask {
     fn new(
-        task_pool: &IoTaskPool,
+        runtime: impl Runtime,
         socket: Arc<UdpSocket>,
     ) -> (
         IoSendTask,
@@ -192,7 +191,7 @@ impl IoSendTask {
         };
 
         return (
-            Self(task_pool.spawn(task)),
+            Self(runtime.spawn(task)),
             tx,
         )
     }
