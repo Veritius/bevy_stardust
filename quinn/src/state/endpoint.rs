@@ -20,7 +20,7 @@ enum EndpointState {
 }
 
 struct Established {
-
+    quinn_proto: quinn_proto::Endpoint,
 }
 
 struct Shutdown {

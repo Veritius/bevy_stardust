@@ -24,11 +24,11 @@ enum ConnectionState {
 }
 
 struct Connecting {
-
+    quinn_state: quinn_proto::Connection,
 }
 
 struct Established {
-
+    quinn_state: quinn_proto::Connection,
 }
 
 struct Shutdown {
