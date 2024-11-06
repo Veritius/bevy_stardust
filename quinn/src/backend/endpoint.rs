@@ -56,14 +56,15 @@ impl Established {
                 },
 
                 quinn_proto::DatagramEvent::NewConnection(incoming) => {
-                    // self.quinn_proto.accept(
-                    //     incoming,
-                    //     Instant::now(),
-                    //     &mut scratch,
-                    //     None,
-                    // );
-
-                    todo!()
+                    match self.quinn_proto.accept(
+                        incoming,
+                        Instant::now(),
+                        &mut scratch,
+                        None,
+                    ) {
+                        Ok(_) => todo!(),
+                        Err(_) => todo!(),
+                    }
                 },
 
                 quinn_proto::DatagramEvent::Response(transmit) => {
