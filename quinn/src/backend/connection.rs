@@ -1,5 +1,7 @@
-use std::{future::Future, pin::Pin, sync::{Arc, Mutex}, task::{Context, Poll, Waker}};
-use super::endpoint::EndpointInner;
+use std::{future::Future, pin::Pin, sync::{mpsc::Sender, Arc, Mutex}, task::{Context, Poll, Waker}};
+use crossbeam_channel::Receiver;
+
+use super::endpoint::{EndpointInner, EndpointRef};
 
 #[derive(Clone)]
 pub(crate) struct ConnectionRef {
@@ -44,6 +46,12 @@ struct Shutdown {
 
 struct Shared {
     waker: Option<Waker>,
+}
+
+struct EndpointHandle {
+    endpoint_ref: EndpointRef,
+    recv_events: Receiver<quinn_proto::ConnectionEvent>,
+    send_events: Sender<quinn_proto::EndpointEvent>,
 }
 
 struct ConnectionDriver(ConnectionRef);

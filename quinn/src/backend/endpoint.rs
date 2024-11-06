@@ -1,6 +1,7 @@
-use std::{future::Future, pin::Pin, sync::{Arc, Mutex}, task::{Context, Poll, Waker}, time::Instant};
-use crossbeam_channel::Receiver;
-use super::socket::{AsyncUdpSocket, Receive, Transmit};
+use std::{collections::HashMap, future::Future, pin::Pin, sync::{Arc, Mutex}, task::{Context, Poll, Waker}, time::Instant};
+use crossbeam_channel::{Receiver, Sender};
+use quinn_proto::ConnectionHandle as ConnectionUid;
+use super::{connection::ConnectionRef, socket::{AsyncUdpSocket, Receive, Transmit}};
 
 #[derive(Clone)]
 pub(crate) struct EndpointRef {
@@ -77,6 +78,16 @@ impl Established {
 
 struct Shutdown {
 
+}
+
+struct ConnectionMap {
+    map: HashMap<ConnectionUid, ConnectionHandle>,
+}
+
+struct ConnectionHandle {
+    connection_ref: ConnectionRef,
+    recv_events: Receiver<quinn_proto::EndpointEvent>,
+    send_events: Sender<quinn_proto::ConnectionEvent>,
 }
 
 struct Shared {
