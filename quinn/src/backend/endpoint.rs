@@ -1,7 +1,8 @@
 use std::{collections::HashMap, future::Future, pin::Pin, sync::{Arc, Mutex}, task::{Context, Poll, Waker}, time::Instant};
 use crossbeam_channel::{Receiver, Sender};
+use mio::net::UdpSocket;
 use quinn_proto::ConnectionHandle as ConnectionUid;
-use super::{connection::ConnectionRef, socket::{UdpListener, Receive, Transmit}};
+use super::{connection::{ConnectionInner, ConnectionRef}, socket::{Receive, Transmit, UdpListener}};
 
 #[derive(Clone)]
 pub(crate) struct EndpointRef {
@@ -66,7 +67,13 @@ impl Established {
                 },
 
                 quinn_proto::DatagramEvent::Response(transmit) => {
-                    todo!()
+                    match shared.socket.send_to(
+                        &scratch,
+                        transmit.destination,
+                    ) {
+                        Ok(_) => todo!(),
+                        Err(_) => todo!(),
+                    }
                 },
             } };
         }
@@ -74,7 +81,7 @@ impl Established {
 }
 
 struct Shutdown {
-
+    is_drained: bool,
 }
 
 struct ConnectionMap {
@@ -82,6 +89,7 @@ struct ConnectionMap {
 }
 
 struct ConnectionHandle {
+    ptr: Arc<Mutex<ConnectionInner>>,
     waker: Waker,
 
     recv_events: Receiver<quinn_proto::EndpointEvent>,
@@ -89,17 +97,46 @@ struct ConnectionHandle {
 }
 
 struct Shared {
-    socket: UdpListener,
+    listener: UdpListener,
+    socket: Arc<UdpSocket>,
     dgrams: Receiver<Receive>,
 
     waker: Option<Waker>,
 }
 
-impl EndpointInner {
-    pub(super) fn handle_dgram(
-        &mut self,
-        dgram: Receive,
-    ) {
+struct EndpointDriver(EndpointRef);
 
+impl Future for EndpointDriver {
+    type Output = ();
+
+    fn poll(
+        self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+    ) -> Poll<Self::Output> {
+        let mut endpoint = self.0.ptr.lock().unwrap();
+
+        let EndpointInner { state, shared } = &mut *endpoint;
+
+        if shared.waker.is_none() {
+            shared.waker = Some(cx.waker().clone());
+        }
+
+        // Send any datagrams that need sending
+        if !shared.dgrams.is_empty() {
+            match state {
+                EndpointState::Established(established) => {
+                    established.handle_dgrams(shared);
+                },
+
+                EndpointState::Shutdown(shutdown) => todo!(),
+            }
+        }
+
+        // Check if the endpoint is drained (nothing more to do)
+        if let EndpointState::Shutdown(shutdown) = state {
+            if shutdown.is_drained { return Poll::Ready(()); }
+        }
+
+        return Poll::Pending;
     }
 }

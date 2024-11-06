@@ -1,6 +1,5 @@
-use std::{future::Future, pin::Pin, sync::{mpsc::Sender, Arc, Mutex}, task::{Context, Poll, Waker}};
+use std::{future::Future, pin::Pin, sync::{mpsc::Sender, Arc, Mutex, Weak}, task::{Context, Poll, Waker}};
 use crossbeam_channel::Receiver;
-
 use super::endpoint::{EndpointInner, EndpointRef};
 
 #[derive(Clone)]
@@ -45,7 +44,7 @@ struct Shutdown {
 }
 
 struct Shared {
-    endpoint: EndpointRef,
+    endpoint: Weak<Mutex<EndpointInner>>,
 
     waker: Option<Waker>,
 }
