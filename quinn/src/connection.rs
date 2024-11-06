@@ -1,5 +1,4 @@
 use std::sync::{Arc, Mutex};
-
 use bevy_ecs::prelude::*;
 use bevy_tasks::{IoTaskPool, Task};
 use crate::config::{ClientAuthentication, ServerVerification};
@@ -34,7 +33,7 @@ struct ConnectionInner {
 
 /// Mutable connection state.
 struct ConnectionState {
-    quinn: quinn_proto::Endpoint,
+    quinn: quinn_proto::Connection,
 }
 
 /// A clonable, shared reference to an [`ConnectionInner`].
