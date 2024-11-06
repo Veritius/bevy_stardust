@@ -16,6 +16,9 @@ default-features = false
 version = "0.14"
 default-features = false
 
+[dependencies.bevy_tasks]
+version = "0.14"
+
 [dependencies.bevy_log]
 version = "0.14"
 optional = true
@@ -45,7 +48,6 @@ version = "1"
 
 [dependencies.futures-lite]
 version = "2.4"
-optional = true
 
 [dev-dependencies.rustls-pemfile]
 version = "2"
@@ -69,8 +71,4 @@ crate-type = ["lib"]
 [features]
 log = [
     "dep:bevy_log",
-]
-
-async = [
-    "dep:futures-lite",
 ]
