@@ -8,8 +8,7 @@ pub(crate) struct ConnectionRef {
 
 pub(super) struct ConnectionInner {
     state: ConnectionState,
-
-    waker: Option<Waker>,
+    shared: Shared,
 }
 
 impl ConnectionInner {
@@ -43,6 +42,10 @@ struct Shutdown {
 
 }
 
+struct Shared {
+    waker: Option<Waker>,
+}
+
 struct ConnectionDriver(ConnectionRef);
 
 impl Future for ConnectionDriver {
@@ -54,8 +57,8 @@ impl Future for ConnectionDriver {
     ) -> Poll<Self::Output> {
         let mut connection = self.0.ptr.lock().unwrap();
 
-        if connection.waker.is_none() {
-            connection.waker = Some(cx.waker().clone());
+        if connection.shared.waker.is_none() {
+            connection.shared.waker = Some(cx.waker().clone());
         }
 
         todo!()

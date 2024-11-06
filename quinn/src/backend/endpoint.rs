@@ -9,10 +9,7 @@ pub(crate) struct EndpointRef {
 
 pub(super) struct EndpointInner {
     state: EndpointState,
-
-    dgrams: Receiver<Receive>,
-
-    waker: Option<Waker>,
+    shared: Shared,
 }
 
 impl EndpointInner {
@@ -40,6 +37,12 @@ struct Shutdown {
 
 }
 
+struct Shared {
+    dgrams: Receiver<Receive>,
+
+    waker: Option<Waker>,
+}
+
 struct EndpointDriver(EndpointRef);
 
 impl Future for EndpointDriver {
@@ -51,8 +54,8 @@ impl Future for EndpointDriver {
     ) -> Poll<Self::Output> {
         let mut endpoint = self.0.ptr.lock().unwrap();
 
-        if endpoint.waker.is_none() {
-            endpoint.waker = Some(cx.waker().clone());
+        if endpoint.shared.waker.is_none() {
+            endpoint.shared.waker = Some(cx.waker().clone());
         }
 
         todo!()
