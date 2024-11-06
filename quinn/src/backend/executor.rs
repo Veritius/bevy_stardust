@@ -26,6 +26,10 @@ impl BackendExecutor {
             })
             .collect();
 
+        // Log executor
+        #[cfg(feature="log")]
+        bevy_log::info!("Created executor using {} network threads", config.threads);
+
         // We're done
         return Self {
             executor,
