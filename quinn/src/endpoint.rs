@@ -1,8 +1,8 @@
 use std::{future::Future, io, net::SocketAddr, sync::{Arc, Mutex, Weak}, time::Duration};
 use bevy_ecs::prelude::*;
 use bevy_tasks::{IoTaskPool, Task};
-use bytes::BytesMut;
-use crossbeam_channel::Receiver;
+use bytes::{Bytes, BytesMut};
+use crossbeam_channel::{Receiver, Sender};
 use mio::net::UdpSocket;
 use crate::config::{ClientVerification, ServerAuthentication};
 
@@ -122,7 +122,7 @@ impl IoRecvTask {
         let socket = Arc::new(socket);
         let socket_clone = socket.clone();
 
-        let (tx,rx) = crossbeam_channel::unbounded();
+        let (tx, rx) = crossbeam_channel::unbounded();
 
         let task = async move {
             let mut scratch = vec![0u8; 1472]; // TODO: Make configurable
@@ -157,14 +157,50 @@ impl IoRecvTask {
     }
 }
 
+/// Handle to an asynchronous task handling packet transmission.
+struct IoSendTask(Task<Option<io::Error>>);
+
+impl IoSendTask {
+    fn new(
+        task_pool: &IoTaskPool,
+        socket: Arc<UdpSocket>,
+    ) -> (
+        IoSendTask,
+        Sender<DgramSend>
+    ) {
+        let (tx, rx) = crossbeam_channel::unbounded::<DgramSend>();
+
+        let task = async move {
+            for dgram in rx.iter() {
+                match socket.send_to(
+                    &dgram.payload,
+                    dgram.address
+                ) {
+                    Ok(_) => continue,
+
+                    Err(ref err) if would_block(err) => break,
+                    Err(err) => return Some(err),
+                }
+            }
+
+            return None;
+        };
+
+        return (
+            Self(task_pool.spawn(task)),
+            tx,
+        )
+    }
+}
+
 pub(super) struct DgramRecv {
     pub address: SocketAddr,
     pub payload: BytesMut,
 }
 
-pub(super) struct DgramSend<'a> {
+pub(super) struct DgramSend {
     pub address: SocketAddr,
-    pub payload: &'a [u8],
+    pub payload: Bytes,
 }
 
 fn would_block(err: &std::io::Error) -> bool {
