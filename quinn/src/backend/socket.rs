@@ -20,7 +20,7 @@ impl AsyncUdpSocket {
         poll.registry().register(
             &mut socket,
             Token(0),
-            Interest::READABLE | Interest::WRITABLE
+            Interest::READABLE | Interest::WRITABLE,
         ).unwrap();
 
         let socket = Arc::new(socket);
