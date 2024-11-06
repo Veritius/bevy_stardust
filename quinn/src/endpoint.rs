@@ -171,19 +171,24 @@ impl IoSendTask {
         let (tx, rx) = crossbeam_channel::unbounded::<DgramSend>();
 
         let task = async move {
-            for dgram in rx.iter() {
+            let mut iter = rx.iter();
+
+            loop {
+                let dgram = match iter.next() {
+                    Some(dgram) => dgram,
+                    None => return None,
+                };
+
                 match socket.send_to(
                     &dgram.payload,
                     dgram.address
                 ) {
                     Ok(_) => continue,
 
-                    Err(ref err) if would_block(err) => break,
+                    Err(ref err) if would_block(err) => return None,
                     Err(err) => return Some(err),
                 }
             }
-
-            return None;
         };
 
         return (
