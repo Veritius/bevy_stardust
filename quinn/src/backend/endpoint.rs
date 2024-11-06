@@ -1,4 +1,6 @@
 use std::sync::{Arc, Mutex};
+use crossbeam_channel::Receiver;
+use super::socket::Receive;
 
 #[derive(Clone)]
 pub(crate) struct EndpointRef {
@@ -7,6 +9,8 @@ pub(crate) struct EndpointRef {
 
 pub(super) struct EndpointInner {
     state: EndpointState,
+
+    dgrams: Receiver<Receive>,
 }
 
 impl EndpointInner {

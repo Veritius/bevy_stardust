@@ -12,7 +12,7 @@ pub(super) struct AsyncUdpSocket {
 impl AsyncUdpSocket {
     pub fn new(
         mut socket: UdpSocket,
-        sender: Sender<Receive>,
+        datagrams: Sender<Receive>,
     ) -> Self {
         let mut poll = Poll::new().unwrap();
         let mut events = Events::with_capacity(128);
@@ -37,7 +37,7 @@ impl AsyncUdpSocket {
                         loop {
                             match socket.recv_from(&mut scratch) {
                                 Ok((length, address)) => {
-                                    sender.send(Receive {
+                                    datagrams.send(Receive {
                                         address,
                                         payload: Bytes::copy_from_slice(&scratch[..length]),
                                     }).unwrap(); // TODO: Handle errors
