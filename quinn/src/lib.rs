@@ -2,6 +2,7 @@
 #![warn(missing_docs)]
 
 mod config;
+mod frontend;
 mod plugin;
 mod state;
 
