@@ -56,7 +56,7 @@ struct EndpointState {
     quinn: quinn_proto::Endpoint,
 }
 
-/// A clonable reference to an [`EndpointInner`].
+/// A clonable, shared reference to an [`EndpointInner`].
 #[derive(Clone)]
 struct EndpointRef(Arc<EndpointInner>);
 
@@ -66,7 +66,7 @@ struct EndpointTaskConfig<'a> {
     ptr: EndpointRef
 }
 
-/// A running endpoint task.
+/// Handle to endpoint logic running asynchronously.
 struct EndpointTask(Task<()>);
 
 impl EndpointTask {
