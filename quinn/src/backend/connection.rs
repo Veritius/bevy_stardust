@@ -45,6 +45,8 @@ struct Shutdown {
 }
 
 struct Shared {
+    endpoint: EndpointRef,
+
     waker: Option<Waker>,
 }
 
