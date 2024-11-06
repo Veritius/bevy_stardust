@@ -1,6 +1,6 @@
 use std::{net::SocketAddr, sync::Arc, time::Duration};
 use bevy_tasks::{IoTaskPool, Task};
-use bytes::{Bytes, BytesMut};
+use bytes::BytesMut;
 use crossbeam_channel::Sender;
 use mio::{net::UdpSocket, Events, Interest, Poll, Token};
 
@@ -23,34 +23,35 @@ impl AsyncUdpSocket {
             Interest::READABLE | Interest::WRITABLE,
         ).unwrap();
 
-        let socket = Arc::new(socket);
+        let ret_socket = Arc::new(socket);
+        let task_socket = ret_socket.clone();
 
-        return Self {
-            socket: socket.clone(),
-            task: IoTaskPool::get().spawn(async move {
-                let mut scratch = vec![0u8; 1472]; // TODO: Make configurable
+        let task = IoTaskPool::get().spawn(async move {
+            let mut scratch = vec![0u8; 1472]; // TODO: Make configurable
 
-                loop {
-                    poll.poll(&mut events, Some(Duration::ZERO)).unwrap();
+            loop {
+                poll.poll(&mut events, Some(Duration::ZERO)).unwrap();
 
-                    for _event in events.iter() {
-                        loop {
-                            match socket.recv_from(&mut scratch) {
-                                Ok((length, address)) => {
-                                    let mut payload = BytesMut::with_capacity(length);
-                                    payload.extend_from_slice(&scratch[..length]);
-
-                                    // TODO: Handle errors
-                                    datagrams.send(Receive { address, payload }).unwrap();
-                                },
-
-                                Err(ref err) if would_block(err) => break,
-                                Err(_err) => return (), // TODO: Handle errors properly
-                            }
+                for _event in events.iter() {
+                    loop {
+                        match task_socket.recv_from(&mut scratch) {
+                            Ok((length, address)) => {
+                                let mut payload = BytesMut::with_capacity(length);
+                                payload.extend_from_slice(&scratch[..length]);
+                                // TODO: Handle errors
+                                datagrams.send(Receive { address, payload }).unwrap();
+                            },
+                            Err(ref err) if would_block(err) => break,
+                            Err(_err) => return (), // TODO: Handle errors properly
                         }
                     }
                 }
-            })
+            }
+        });
+
+        return Self {
+            socket: ret_socket,
+            task,
         };
     }
 
