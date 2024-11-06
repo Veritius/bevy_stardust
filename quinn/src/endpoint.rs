@@ -184,8 +184,8 @@ impl IoSendTask {
                     dgram.address
                 ) {
                     Ok(_) => continue,
+                    Err(ref err) if would_block(err) => continue,
 
-                    Err(ref err) if would_block(err) => return None,
                     Err(err) => return Some(err),
                 }
             }
