@@ -1,6 +1,6 @@
-use std::{future::Future, pin::Pin, sync::{Arc, Mutex}, task::{Context, Poll, Waker}};
+use std::{future::Future, pin::Pin, sync::{Arc, Mutex}, task::{Context, Poll, Waker}, time::Instant};
 use crossbeam_channel::Receiver;
-use super::socket::Receive;
+use super::socket::{AsyncUdpSocket, Receive, Transmit};
 
 #[derive(Clone)]
 pub(crate) struct EndpointRef {
@@ -33,11 +33,54 @@ struct Established {
     quinn_proto: quinn_proto::Endpoint,
 }
 
+impl Established {
+    fn handle_dgrams(
+        &mut self,
+        shared: &mut Shared,
+    ) {
+        let mut scratch = Vec::new();
+
+        for dgram in shared.dgrams.try_iter() {
+            if let Some(event) = self.quinn_proto.handle(
+                Instant::now(),
+                dgram.address,
+                None,
+                None,
+                dgram.payload,
+                &mut scratch,
+            ) { match event {
+                quinn_proto::DatagramEvent::ConnectionEvent(connection_handle, connection_event) => {
+                    todo!()
+                },
+
+                quinn_proto::DatagramEvent::NewConnection(incoming) => {
+                    // self.quinn_proto.accept(
+                    //     incoming,
+                    //     Instant::now(),
+                    //     &mut scratch,
+                    //     None,
+                    // );
+
+                    todo!()
+                },
+
+                quinn_proto::DatagramEvent::Response(transmit) => {
+                    shared.socket.send(Transmit {
+                        address: transmit.destination,
+                        payload: &scratch[..],
+                    });
+                },
+            } };
+        }
+    }
+}
+
 struct Shutdown {
 
 }
 
 struct Shared {
+    socket: AsyncUdpSocket,
     dgrams: Receiver<Receive>,
 
     waker: Option<Waker>,
@@ -54,8 +97,18 @@ impl Future for EndpointDriver {
     ) -> Poll<Self::Output> {
         let mut endpoint = self.0.ptr.lock().unwrap();
 
-        if endpoint.shared.waker.is_none() {
-            endpoint.shared.waker = Some(cx.waker().clone());
+        let EndpointInner { state, shared } = &mut *endpoint;
+
+        if shared.waker.is_none() {
+            shared.waker = Some(cx.waker().clone());
+        }
+
+        match state {
+            EndpointState::Established(established) => {
+                established.handle_dgrams(shared);
+            },
+
+            EndpointState::Shutdown(shutdown) => todo!(),
         }
 
         todo!()

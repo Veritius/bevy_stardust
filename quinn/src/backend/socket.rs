@@ -1,6 +1,6 @@
 use std::{net::SocketAddr, sync::Arc, time::Duration};
 use bevy_tasks::{IoTaskPool, Task};
-use bytes::Bytes;
+use bytes::{Bytes, BytesMut};
 use crossbeam_channel::Sender;
 use mio::{net::UdpSocket, Events, Interest, Poll, Token};
 
@@ -37,10 +37,11 @@ impl AsyncUdpSocket {
                         loop {
                             match socket.recv_from(&mut scratch) {
                                 Ok((length, address)) => {
-                                    datagrams.send(Receive {
-                                        address,
-                                        payload: Bytes::copy_from_slice(&scratch[..length]),
-                                    }).unwrap(); // TODO: Handle errors
+                                    let mut payload = BytesMut::with_capacity(length);
+                                    payload.extend_from_slice(&scratch[..length]);
+
+                                    // TODO: Handle errors
+                                    datagrams.send(Receive { address, payload }).unwrap();
                                 },
 
                                 Err(ref err) if would_block(err) => break,
@@ -70,7 +71,7 @@ fn would_block(err: &std::io::Error) -> bool {
 
 pub(super) struct Receive {
     pub address: SocketAddr,
-    pub payload: Bytes,
+    pub payload: BytesMut,
 }
 
 pub(super) struct Transmit<'a> {
