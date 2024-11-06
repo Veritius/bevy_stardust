@@ -1,5 +1,6 @@
 use std::{future::Future, pin::{Pin, pin}, sync::{Arc, Mutex}, task::Poll};
 use async_executor::Executor;
+use futures_lite::FutureExt;
 use crate::config::*;
 
 pub(crate) fn create(
@@ -33,7 +34,7 @@ enum EndpointState {
 }
 
 struct Building {
-    future: Box<dyn Future<Output = Result<Established, Shutdown>> + Send + Sync>,
+    future: Pin<Box<dyn Future<Output = Result<Established, Shutdown>> + Send + Sync>>,
 }
 
 impl Building {
@@ -80,7 +81,7 @@ impl Building {
         };
 
         return Self {
-            future: Box::new(future),
+            future: Box::pin(future),
         };
     }
 }
@@ -89,10 +90,10 @@ impl Future for Building {
     type Output = Result<Established, Shutdown>;
 
     fn poll(
-        self: Pin<&mut Self>,
+        mut self: Pin<&mut Self>,
         ctx: &mut std::task::Context<'_>,
     ) -> Poll<Self::Output> {
-        todo!()
+        self.future.poll(ctx)
     }
 }
 
