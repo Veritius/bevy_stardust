@@ -3,7 +3,6 @@
 
 mod backend;
 mod config;
-mod frontend;
 mod plugin;
 
 pub use plugin::QuicPlugin;
