@@ -18,6 +18,7 @@ default-features = false
 
 [dependencies.bevy_tasks]
 version = "0.14"
+features = ["multi_threaded"]
 
 [dependencies.bevy_log]
 version = "0.14"
@@ -36,6 +37,13 @@ version = "0.11.8"
 
 [dependencies.rustls]
 version = "0.23.14"
+
+[dependencies.mio]
+version = "1"
+features = ["net", "os-poll"]
+
+[dependencies.crossbeam-channel]
+version = "0.5"
 
 [dependencies.bytes]
 version = "1.5.0"
