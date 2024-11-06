@@ -1,7 +1,7 @@
 use std::{collections::HashMap, future::Future, pin::Pin, sync::{Arc, Mutex}, task::{Context, Poll, Waker}, time::Instant};
 use crossbeam_channel::{Receiver, Sender};
 use quinn_proto::ConnectionHandle as ConnectionUid;
-use super::{connection::ConnectionRef, socket::{AsyncUdpSocket, Receive, Transmit}};
+use super::{connection::ConnectionRef, socket::{UdpListener, Receive, Transmit}};
 
 #[derive(Clone)]
 pub(crate) struct EndpointRef {
@@ -66,10 +66,7 @@ impl Established {
                 },
 
                 quinn_proto::DatagramEvent::Response(transmit) => {
-                    shared.socket.send(Transmit {
-                        address: transmit.destination,
-                        payload: &scratch[..],
-                    });
+                    todo!()
                 },
             } };
         }
@@ -92,8 +89,17 @@ struct ConnectionHandle {
 }
 
 struct Shared {
-    socket: AsyncUdpSocket,
+    socket: UdpListener,
     dgrams: Receiver<Receive>,
 
     waker: Option<Waker>,
+}
+
+impl EndpointInner {
+    pub(super) fn handle_dgram(
+        &mut self,
+        dgram: Receive,
+    ) {
+
+    }
 }

@@ -4,16 +4,16 @@ use bytes::BytesMut;
 use crossbeam_channel::Sender;
 use mio::{net::UdpSocket, Events, Interest, Poll, Token};
 
-pub(super) struct AsyncUdpSocket {
-    socket: Arc<UdpSocket>,
+/// Asynchronous task to listen for incoming UDP packets.
+pub(super) struct UdpListener {
     task: Task<()>,
 }
 
-impl AsyncUdpSocket {
+impl UdpListener {
     pub fn new(
         mut socket: UdpSocket,
         datagrams: Sender<Receive>,
-    ) -> Self {
+    ) -> (Self, Arc<UdpSocket>) {
         let mut poll = Poll::new().unwrap();
         let mut events = Events::with_capacity(128);
         
@@ -38,9 +38,11 @@ impl AsyncUdpSocket {
                             Ok((length, address)) => {
                                 let mut payload = BytesMut::with_capacity(length);
                                 payload.extend_from_slice(&scratch[..length]);
+
                                 // TODO: Handle errors
                                 datagrams.send(Receive { address, payload }).unwrap();
                             },
+
                             Err(ref err) if would_block(err) => break,
                             Err(_err) => return (), // TODO: Handle errors properly
                         }
@@ -49,20 +51,7 @@ impl AsyncUdpSocket {
             }
         });
 
-        return Self {
-            socket: ret_socket,
-            task,
-        };
-    }
-
-    pub fn send(
-        &self,
-        transmit: Transmit,
-    ) {
-        self.socket.send_to(
-            transmit.payload,
-            transmit.address,
-        ).unwrap(); // TODO: Handle errors
+        return (Self { task }, ret_socket);
     }
 }
 
