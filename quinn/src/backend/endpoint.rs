@@ -115,10 +115,21 @@ struct Shutdown {
 
 }
 
+impl Future for Shutdown {
+    type Output = EndpointShutdownReason;
+
+    fn poll(
+        self: Pin<&mut Self>,
+        ctx: &mut std::task::Context<'_>,
+    ) -> Poll<Self::Output> {
+        todo!()
+    }
+}
+
 struct EndpointDriver(EndpointRef);
 
 impl Future for EndpointDriver {
-    type Output = ();
+    type Output = EndpointShutdownReason;
 
     fn poll(
         self: Pin<&mut Self>,
@@ -140,8 +151,8 @@ impl Future for EndpointDriver {
                 inner.state = EndpointState::Shutdown(output);
             },
 
-            EndpointState::Shutdown(_shutdown) => {
-                return Poll::Ready(());
+            EndpointState::Shutdown(shutdown) => if let Poll::Ready(output) = pin!(shutdown).poll(ctx) {
+                return Poll::Ready(output);
             },
         }
 
@@ -154,4 +165,8 @@ impl Future for EndpointDriver {
 
         return Poll::Pending;
     }
+}
+
+pub(crate) struct EndpointShutdownReason {
+
 }

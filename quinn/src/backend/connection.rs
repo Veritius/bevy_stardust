@@ -62,10 +62,21 @@ struct Shutdown {
 
 }
 
+impl Future for Shutdown {
+    type Output = ConnectionShutdownReason;
+
+    fn poll(
+        self: Pin<&mut Self>,
+        ctx: &mut std::task::Context<'_>,
+    ) -> Poll<Self::Output> {
+        todo!()
+    }
+}
+
 struct ConnectionDriver(ConnectionRef);
 
 impl Future for ConnectionDriver {
-    type Output = ();
+    type Output = ConnectionShutdownReason;
 
     fn poll(
         self: Pin<&mut Self>,
@@ -87,8 +98,8 @@ impl Future for ConnectionDriver {
                 inner.state = ConnectionState::Shutdown(output);
             },
 
-            ConnectionState::Shutdown(_shutdown) => {
-                return Poll::Ready(());
+            ConnectionState::Shutdown(shutdown) => if let Poll::Ready(output) = pin!(shutdown).poll(ctx) {
+                return Poll::Ready(output);
             },
         }
 
@@ -101,4 +112,8 @@ impl Future for ConnectionDriver {
 
         return Poll::Pending;
     }
+}
+
+pub(crate) struct ConnectionShutdownReason {
+
 }
