@@ -1,6 +1,12 @@
+use std::sync::{Arc, Mutex};
 use super::endpoint::EndpointInner;
 
-pub(crate) struct ConnectionInner {
+#[derive(Clone)]
+pub(crate) struct ConnectionRef {
+    ptr: Arc<Mutex<ConnectionInner>>,
+}
+
+pub(super) struct ConnectionInner {
     state: ConnectionState,
 }
 

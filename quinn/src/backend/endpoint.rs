@@ -1,4 +1,11 @@
-pub(crate) struct EndpointInner {
+use std::sync::{Arc, Mutex};
+
+#[derive(Clone)]
+pub(crate) struct EndpointRef {
+    ptr: Arc<Mutex<EndpointInner>>,
+}
+
+pub(super) struct EndpointInner {
     state: EndpointState,
 }
 
