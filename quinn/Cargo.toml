@@ -43,6 +43,10 @@ version = "0.5.7"
 [dependencies.anyhow]
 version = "1"
 
+[dependencies.futures-lite]
+version = "2.4"
+optional = true
+
 [dev-dependencies.rustls-pemfile]
 version = "2"
 
@@ -63,4 +67,10 @@ path = "examples/star/shared.rs"
 crate-type = ["lib"]
 
 [features]
-log = ["bevy_log"]
+log = [
+    "dep:bevy_log",
+]
+
+async = [
+    "dep:futures-lite",
+]

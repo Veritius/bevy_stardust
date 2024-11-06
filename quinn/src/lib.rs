@@ -6,4 +6,7 @@ mod frontend;
 mod plugin;
 mod state;
 
+#[cfg(feature="async")]
+mod backend_async;
+
 pub use plugin::QuicPlugin;
