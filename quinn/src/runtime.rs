@@ -1,4 +1,4 @@
-use std::{future::Future, sync::Arc, thread::JoinHandle};
+use std::{future::Future, thread::JoinHandle};
 use async_executor::Executor;
 use async_task::Task;
 
@@ -16,7 +16,7 @@ impl<T: Runtime> Runtime for &T {
 
 /// A very minimal runtime.
 pub struct MinimalRuntime {
-    executors: Arc<Executor<'static>>,
+    executors: Executor<'static>,
     threads: Vec<JoinHandle<()>>,
 }
 
