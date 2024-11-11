@@ -40,6 +40,9 @@ version = "4.7"
 [dependencies.async-executor]
 version = "1.13"
 
+[dependencies.async-channel]
+version = "2.3"
+
 [dependencies.mio]
 version = "1"
 features = ["net", "os-poll"]
