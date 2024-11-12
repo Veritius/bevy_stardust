@@ -26,7 +26,7 @@ impl Runtime {
 
             threads.push(std::thread::spawn(move || {
                 let ticker = async {
-                    loop { executor.clone().tick().await }
+                    loop { executor.tick().await }
                 };
 
                 let shutdown = async {
