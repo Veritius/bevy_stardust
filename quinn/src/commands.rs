@@ -10,10 +10,10 @@ pub trait EndpointCommands {
         config: MakeEndpoint,
     ) -> &mut Self;
 
-    /// Opens a connection on an endpoint, sugaring [`OpenConnection`].
+    /// Makes the target entity a connection, sugaring [`OpenConnection`].
     /// 
-    /// Fails if the entity does not exist, is not an endpoint, or is closing.
-    fn connect(
+    /// Fails if the entity does not exist, or is already a connection.
+    fn open_connection(
         &mut self,
         config: OpenConnection,
     ) -> &mut Self;
@@ -32,7 +32,7 @@ impl EndpointCommands for EntityWorldMut<'_> {
         return self;
     }
 
-    fn connect(
+    fn open_connection(
         &mut self,
         config: OpenConnection,
     ) -> &mut Self {
@@ -56,7 +56,7 @@ impl EndpointCommands for EntityCommands<'_> {
     }
 
     #[inline]
-    fn connect(
+    fn open_connection(
         &mut self,
         config: OpenConnection,
     ) -> &mut Self {
@@ -65,7 +65,7 @@ impl EndpointCommands for EntityCommands<'_> {
     }
 }
 
-/// Creates a new QUIC endpoint with this entity.
+/// Opens a new endpoint with the target entity.
 pub struct MakeEndpoint {
 
 }
@@ -80,9 +80,10 @@ impl EntityCommand for MakeEndpoint {
     }
 }
 
-/// Creates a new QUIC connection based on an endpoint.
+/// Opens a new connection with the target entity.
 pub struct OpenConnection {
-
+    /// The entity ID of the endpoint to use for I/O.
+    pub endpoint: Entity,
 }
 
 impl EntityCommand for OpenConnection {
