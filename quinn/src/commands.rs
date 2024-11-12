@@ -1,3 +1,4 @@
+use std::{net::UdpSocket, sync::Arc};
 use bevy_ecs::{prelude::*, system::{EntityCommand, EntityCommands}};
 
 /// Extension API to sugar using endpoint commands.
@@ -66,32 +67,35 @@ impl EndpointCommands for EntityCommands<'_> {
 }
 
 /// Opens a new endpoint with the target entity.
-pub struct MakeEndpoint {
+pub struct MakeEndpoint(MakeEndpointInner);
 
+enum MakeEndpointInner {
+    Preconfigured {
+        socket: UdpSocket,
+        config: Arc<quinn_proto::EndpointConfig>,
+        server: Option<Arc<quinn_proto::ServerConfig>>,
+    }
 }
 
 impl EntityCommand for MakeEndpoint {
-    fn apply(
-        self,
-        id: Entity,
-        world: &mut World,
-    ) {
+    fn apply(self, id: Entity, world: &mut World) {
         todo!()
     }
 }
 
 /// Opens a new connection with the target entity.
-pub struct OpenConnection {
-    /// The entity ID of the endpoint to use for I/O.
-    pub endpoint: Entity,
+pub struct OpenConnection(OpenConnectionInner);
+
+enum OpenConnectionInner {
+    Preconfigured {
+        socket: UdpSocket,
+        config: quinn_proto::ClientConfig,
+        hostname: Arc<str>,
+    }
 }
 
 impl EntityCommand for OpenConnection {
-    fn apply(
-        self,
-        id: Entity,
-        world: &mut World,
-    ) {
+    fn apply(self, id: Entity, world: &mut World) {
         todo!()
     }
 }
