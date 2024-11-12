@@ -40,15 +40,12 @@ version = "4.7"
 [dependencies.async-executor]
 version = "1.13"
 
-[dependencies.async-channel]
-version = "2.3"
+[dependencies.crossbeam-channel]
+version = "0.5"
 
 [dependencies.mio]
 version = "1"
 features = ["net", "os-poll"]
-
-[dependencies.crossbeam-channel]
-version = "0.5"
 
 [dependencies.bytes]
 version = "1.5.0"

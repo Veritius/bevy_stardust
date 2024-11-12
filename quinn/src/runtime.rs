@@ -19,7 +19,7 @@ impl<T: Runtime> Runtime for &T {
 pub struct MinimalRuntime {
     executor: Arc<Executor<'static>>,
     threads: Box<[JoinHandle<()>]>,
-    shutdown: async_channel::Sender<()>,
+    shutdown: crossbeam_channel::Sender<()>,
 }
 
 impl Runtime for MinimalRuntime {
@@ -36,18 +36,22 @@ impl MinimalRuntime {
 
         let executor = Arc::new(Executor::new());
         let mut threads = Vec::with_capacity(threads);
-        let (sh_tx, sh_rx) = async_channel::unbounded::<()>();
+        let (sh_tx, sh_rx) = crossbeam_channel::unbounded();
 
         for _ in 0..thread_count {
             let executor = executor.clone();
-            let shutdown = sh_rx.clone();
+            let shutdown: crossbeam_channel::Receiver<()> = sh_rx.clone();
 
             threads.push(std::thread::spawn(move || {
                 let ticker = async {
                     loop { executor.clone().tick().await }
                 };
 
-                block_on(executor.clone().run(ticker.or(shutdown.recv()))).unwrap();
+                let shutdown = async {
+                    shutdown.recv()
+                };
+
+                block_on(executor.clone().run(ticker.or(shutdown))).unwrap();
             }));
         }
 
