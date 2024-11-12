@@ -12,35 +12,10 @@ pub trait EndpointCommands {
     ) -> &mut Self;
 }
 
-/// Extension API to sugar using connection commands.
-pub trait ConnectionCommands {
-    /// Makes the target entity a connection, sugaring [`OpenConnection`].
-    /// 
-    /// Fails if the entity does not exist, or is already a connection.
-    fn open_connection(
-        &mut self,
-        config: OpenConnection,
-    ) -> &mut Self;
-}
-
 impl EndpointCommands for EntityWorldMut<'_> {
     fn make_endpoint(
         &mut self,
         config: MakeEndpoint,
-    ) -> &mut Self {
-        let id = self.id();
-        self.world_scope(|world| {
-            config.apply(id, world);
-        });
-
-        return self;
-    }
-}
-
-impl ConnectionCommands for EntityWorldMut<'_> {
-    fn open_connection(
-        &mut self,
-        config: OpenConnection,
     ) -> &mut Self {
         let id = self.id();
         self.world_scope(|world| {
@@ -58,6 +33,31 @@ impl EndpointCommands for EntityCommands<'_> {
         config: MakeEndpoint,
     ) -> &mut Self {
         self.add(config);
+        return self;
+    }
+}
+
+/// Extension API to sugar using connection commands.
+pub trait ConnectionCommands {
+    /// Makes the target entity a connection, sugaring [`OpenConnection`].
+    /// 
+    /// Fails if the entity does not exist, or is already a connection.
+    fn open_connection(
+        &mut self,
+        config: OpenConnection,
+    ) -> &mut Self;
+}
+
+impl ConnectionCommands for EntityWorldMut<'_> {
+    fn open_connection(
+        &mut self,
+        config: OpenConnection,
+    ) -> &mut Self {
+        let id = self.id();
+        self.world_scope(|world| {
+            config.apply(id, world);
+        });
+
         return self;
     }
 }
