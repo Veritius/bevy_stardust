@@ -1,4 +1,4 @@
-use std::{net::UdpSocket, sync::Arc};
+use std::{net::{SocketAddr, UdpSocket}, sync::Arc};
 use bevy_ecs::{prelude::*, system::{EntityCommand, EntityCommands}};
 
 /// Extension API to sugar using endpoint commands.
@@ -112,11 +112,13 @@ pub struct OpenConnection(OpenConnectionInner);
 impl OpenConnection {
     pub fn advanced(
         endpoint: Entity,
+        address: SocketAddr,
         config: quinn_proto::ClientConfig,
         hostname: impl Into<Arc<str>>,
     ) -> OpenConnection {
         let inner = OpenConnectionInner::Preconfigured {
             endpoint,
+            address,
             config,
             hostname: hostname.into(),
         };
@@ -128,6 +130,7 @@ impl OpenConnection {
 enum OpenConnectionInner {
     Preconfigured {
         endpoint: Entity,
+        address: SocketAddr,
         config: quinn_proto::ClientConfig,
         hostname: Arc<str>,
     }
