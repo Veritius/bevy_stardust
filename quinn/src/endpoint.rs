@@ -13,7 +13,7 @@ pub struct Endpoint {
 
 impl Endpoint {
     pub fn new(
-        runtime: impl Runtime,
+        runtime: &Runtime,
         socket: SocketAddr,
         auth: ServerAuthentication,
         verify: ClientVerification,
@@ -86,7 +86,7 @@ struct EndpointTask(Task<()>);
 
 impl EndpointTask {
     fn new(
-        runtime: impl Runtime,
+        runtime: &Runtime,
         config: EndpointTaskConfig,
     ) -> Self {
         let task = async move {
@@ -102,7 +102,7 @@ struct IoRecvTask(Task<Option<io::Error>>);
 
 impl IoRecvTask {
     fn new(
-        runtime: impl Runtime,
+        runtime: &mut Runtime,
         mut socket: UdpSocket,
     ) -> (
         IoRecvTask,
@@ -161,7 +161,7 @@ struct IoSendTask(Task<Option<io::Error>>);
 
 impl IoSendTask {
     fn new(
-        runtime: impl Runtime,
+        runtime: &Runtime,
         socket: Arc<UdpSocket>,
     ) -> (
         IoSendTask,

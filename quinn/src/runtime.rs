@@ -3,35 +3,17 @@ use async_executor::Executor;
 use async_task::Task;
 use futures_lite::{future::block_on, FutureExt};
 
-/// A runtime for asynchronous tasks.
-pub trait Runtime {
-    fn spawn<O: Send + 'static>(&self, task: impl Future<Output = O> + Send + 'static) -> Task<O>;
-}
-
-impl<T: Runtime> Runtime for &T {
-    #[inline]
-    fn spawn<O: Send + 'static>(&self, task: impl Future<Output = O> + Send + 'static) -> Task<O> {
-        (*self).spawn(task)
-    }
-}
-
-/// A very minimal runtime.
-pub struct MinimalRuntime {
+/// The runtime for async events.
+pub struct Runtime {
     executor: Arc<Executor<'static>>,
     threads: Box<[JoinHandle<()>]>,
     shutdown: crossbeam_channel::Sender<()>,
 }
 
-impl Runtime for MinimalRuntime {
-    fn spawn<O: Send + 'static>(&self, task: impl Future<Output = O> + Send + 'static) -> Task<O> {
-        self.executor.spawn(task)
-    }
-}
-
-impl MinimalRuntime {
+impl Runtime {
     pub fn new(
         threads: usize,
-    ) -> MinimalRuntime {
+    ) -> Runtime {
         let thread_count = threads;
 
         let executor = Arc::new(Executor::new());
@@ -55,10 +37,17 @@ impl MinimalRuntime {
             }));
         }
 
-        return MinimalRuntime {
+        return Runtime {
             executor,
             threads: threads.into(),
             shutdown: sh_tx,
         };
+    }
+
+    pub(crate) fn spawn<O: Send + 'static>(
+        &self,
+        task: impl Future<Output = O>,
+    ) -> Task<O> {
+        todo!()
     }
 }

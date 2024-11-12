@@ -11,7 +11,7 @@ pub struct Connection {
 
 impl Connection {
     pub fn new(
-        runtime: impl Runtime,
+        runtime: &Runtime,
         endpoint: &mut Endpoint,
         auth: ClientAuthentication,
         verify: ServerVerification,
@@ -51,7 +51,7 @@ struct ConnectionTask(Task<()>);
 
 impl ConnectionTask {
     fn new(
-        runtime: impl Runtime,
+        runtime: &Runtime,
         config: ConnectionTaskConfig,
     ) -> Self {
         let task = async move {
