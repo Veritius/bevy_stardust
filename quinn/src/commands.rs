@@ -112,13 +112,11 @@ pub struct OpenConnection(OpenConnectionInner);
 impl OpenConnection {
     pub fn advanced(
         endpoint: Entity,
-        socket: UdpSocket,
         config: quinn_proto::ClientConfig,
         hostname: impl Into<Arc<str>>,
     ) -> OpenConnection {
         let inner = OpenConnectionInner::Preconfigured {
             endpoint,
-            socket,
             config,
             hostname: hostname.into(),
         };
@@ -130,7 +128,6 @@ impl OpenConnection {
 enum OpenConnectionInner {
     Preconfigured {
         endpoint: Entity,
-        socket: UdpSocket,
         config: quinn_proto::ClientConfig,
         hostname: Arc<str>,
     }
