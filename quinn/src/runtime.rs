@@ -54,6 +54,7 @@ impl Runtime {
 
 impl Drop for Runtime {
     fn drop(&mut self) {
-        let _ = self.shutdown.send(());
+        // Wake up threads to terminate them
+        self.shutdown.send(()).unwrap();
     }
 }
