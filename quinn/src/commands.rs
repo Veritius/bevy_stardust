@@ -69,6 +69,22 @@ impl EndpointCommands for EntityCommands<'_> {
 /// Opens a new endpoint with the target entity.
 pub struct MakeEndpoint(MakeEndpointInner);
 
+impl MakeEndpoint {
+    pub fn advanced(
+        socket: UdpSocket,
+        config: Arc<quinn_proto::EndpointConfig>,
+        server: Option<Arc<quinn_proto::ServerConfig>>,
+    ) -> MakeEndpoint {
+        let inner = MakeEndpointInner::Preconfigured {
+            socket,
+            config,
+            server,
+        };
+
+        return MakeEndpoint(inner);
+    }
+}
+
 enum MakeEndpointInner {
     Preconfigured {
         socket: UdpSocket,
@@ -85,6 +101,22 @@ impl EntityCommand for MakeEndpoint {
 
 /// Opens a new connection with the target entity.
 pub struct OpenConnection(OpenConnectionInner);
+
+impl OpenConnection {
+    pub fn advanced(
+        socket: UdpSocket,
+        config: quinn_proto::ClientConfig,
+        hostname: impl Into<Arc<str>>,
+    ) -> OpenConnection {
+        let inner = OpenConnectionInner::Preconfigured {
+            socket,
+            config,
+            hostname: hostname.into(),
+        };
+
+        return OpenConnection(inner);
+    }
+}
 
 enum OpenConnectionInner {
     Preconfigured {
