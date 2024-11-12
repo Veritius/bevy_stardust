@@ -5,7 +5,7 @@ use futures_lite::{future::block_on, FutureExt};
 
 /// The runtime for async events.
 pub struct Runtime {
-    executor: RuntimeExecutor,
+    executor: Arc<Executor<'static>>,
     threads: Box<[JoinHandle<()>]>,
     shutdown: crossbeam_channel::Sender<()>,
 }
@@ -38,10 +38,7 @@ impl Runtime {
         }
 
         return Runtime {
-            executor: RuntimeExecutor {
-                inner: executor,
-            },
-
+            executor,
             threads: threads.into(),
             shutdown: sh_tx,
         };
@@ -54,21 +51,4 @@ impl Runtime {
         todo!()
     }
 
-    pub(crate) fn executor(&self) -> RuntimeExecutor {
-        self.executor.clone()
-    }
-}
-
-#[derive(Clone)]
-pub(crate) struct RuntimeExecutor {
-    inner: Arc<Executor<'static>>,
-}
-
-impl RuntimeExecutor {
-    pub(crate) fn spawn<O: Send + 'static>(
-        &self,
-        task: impl Future<Output = O>,
-    ) -> Task<O> {
-        todo!()
-    }
 }
