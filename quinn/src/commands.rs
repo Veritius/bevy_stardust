@@ -10,7 +10,10 @@ pub trait EndpointCommands {
         &mut self,
         config: MakeEndpoint,
     ) -> &mut Self;
+}
 
+/// Extension API to sugar using connection commands.
+pub trait ConnectionCommands {
     /// Makes the target entity a connection, sugaring [`OpenConnection`].
     /// 
     /// Fails if the entity does not exist, or is already a connection.
@@ -32,7 +35,9 @@ impl EndpointCommands for EntityWorldMut<'_> {
 
         return self;
     }
+}
 
+impl ConnectionCommands for EntityWorldMut<'_> {
     fn open_connection(
         &mut self,
         config: OpenConnection,
@@ -55,7 +60,9 @@ impl EndpointCommands for EntityCommands<'_> {
         self.add(config);
         return self;
     }
+}
 
+impl ConnectionCommands for EntityCommands<'_> {
     #[inline]
     fn open_connection(
         &mut self,
