@@ -1,4 +1,4 @@
-use std::future::Future;
+use std::{future::Future, path::PathBuf, pin::Pin};
 use rustls::{pki_types::{CertificateDer, PrivateKeyDer}, RootCertStore};
 
 /// An operation to asynchronously retrieve a value from disk or wherever else it may be stored.
@@ -15,10 +15,12 @@ where
     T: Future<Output = std::io::Result<V>>,
 {}
 
+type FetchTask<V> = Pin<Box<dyn Fetch<V>>>;
+
 pub enum ServerAuthentication {
     Authenticated {
-        cert_chain: Box<dyn Fetch<Vec<CertificateDer<'static>>>>,
-        private_key: Box<dyn Fetch<PrivateKeyDer<'static>>>,
+        cert_chain: FetchTask<Vec<CertificateDer<'static>>>,
+        private_key: FetchTask<PrivateKeyDer<'static>>,
     },
 
     Disabled,
@@ -26,8 +28,8 @@ pub enum ServerAuthentication {
 
 pub enum ServerVerification {
     Authenticated {
-        root_certs: Box<dyn Fetch<RootCertStore>>,
-    }
+        root_certs: FetchTask<RootCertStore>,
+    },
 }
 
 pub enum ClientAuthentication {
@@ -36,4 +38,18 @@ pub enum ClientAuthentication {
 
 pub enum ClientVerification {
     Disabled,
+}
+
+pub struct LoadCertsFromFile(pub PathBuf);
+
+impl Into<FetchTask<Vec<CertificateDer<'static>>>> for LoadCertsFromFile {
+    fn into(self) -> FetchTask<Vec<CertificateDer<'static>>> {
+        Box::pin(async move {
+            // Read the entire path to a string
+            // TODO: Async version of this ?
+            let str = std::fs::read_to_string(self.0)?;
+
+            todo!()
+        })
+    }
 }
