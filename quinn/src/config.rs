@@ -15,7 +15,27 @@ where
     T: Future<Output = std::io::Result<V>>,
 {}
 
-type FetchTask<V> = Pin<Box<dyn Fetch<V>>>;
+/// An owned [`Future`] to fetch a value.
+pub struct FetchTask<V> {
+    task: Pin<Box<dyn Fetch<V>>>,
+}
+
+impl<V> FetchTask<V> {
+    /// Pins a future and creates a [`FetchTask`].
+    pub fn pin<T>(task: T) -> FetchTask<V>
+    where
+        T: Fetch<V>,
+    {
+        FetchTask {
+            task: Box::pin(task)
+        }
+    }
+
+    /// Wraps a `Pin<Box<dyn Fetch<V>>>` into a [`FetchTask`].
+    pub fn from_box(task: Pin<Box<dyn Fetch<V>>>) -> FetchTask<V> {
+        FetchTask { task }
+    }
+}
 
 pub enum ServerAuthentication {
     Authenticated {
@@ -44,7 +64,7 @@ pub struct LoadCertsFromFile(pub PathBuf);
 
 impl Into<FetchTask<Vec<CertificateDer<'static>>>> for LoadCertsFromFile {
     fn into(self) -> FetchTask<Vec<CertificateDer<'static>>> {
-        Box::pin(async move {
+        FetchTask::pin(async move {
             // Read the entire path to a string
             // TODO: Async version of this ?
             let str = std::fs::read_to_string(self.0)?;
