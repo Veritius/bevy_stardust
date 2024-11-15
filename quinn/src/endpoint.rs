@@ -1,10 +1,11 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 use bevy_ecs::component::{Component, ComponentHooks, StorageType};
 
 pub struct Endpoint {
     handle: tokio::task::JoinHandle<()>,
     state: tokio::sync::watch::Receiver<EndpointState>,
     close: Option<tokio::sync::oneshot::Sender<()>>,
+    wakeup: Arc<tokio::sync::Notify>,
 }
 
 pub enum EndpointState {
@@ -43,6 +44,7 @@ struct State {
     runtime: tokio::runtime::Handle,
     closer: tokio::sync::oneshot::Receiver<()>,
     state: tokio::sync::watch::Sender<EndpointState>,
+    wakeup: Arc<tokio::sync::Notify>,
 
     quinn: quinn_proto::Endpoint,
 

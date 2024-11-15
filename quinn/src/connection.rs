@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use bevy_ecs::component::{Component, ComponentHooks, StorageType};
 use bevy_stardust::prelude::ChannelMessage;
 
@@ -5,6 +7,7 @@ pub struct Connection {
     handle: tokio::task::JoinHandle<()>,
     state: tokio::sync::watch::Receiver<ConnectionState>,
     close: Option<tokio::sync::oneshot::Sender<()>>,
+    wakeup: Arc<tokio::sync::Notify>,
 
     messages_rx: crossbeam_channel::Receiver<ChannelMessage>,
     messages_tx: tokio::sync::mpsc::UnboundedSender<ChannelMessage>,
@@ -47,6 +50,7 @@ struct State {
     runtime: tokio::runtime::Handle,
     closer: tokio::sync::oneshot::Receiver<()>,
     state: tokio::sync::watch::Sender<ConnectionState>,
+    wakeup: Arc<tokio::sync::Notify>,
 
     quinn: quinn_proto::Connection,
 
