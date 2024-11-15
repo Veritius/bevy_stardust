@@ -108,8 +108,8 @@ impl Building {
                 Ok(Established {
                     quinn: endpoint,
 
-                    dgram_recv_task: recv_task,
-                    dgram_send_task: send_task,
+                    io_task_recv: recv_task,
+                    io_task_send: send_task,
                     
                     dgram_rx,
                     dgram_tx,
@@ -122,8 +122,8 @@ impl Building {
 struct Established {
     quinn: quinn_proto::Endpoint,
 
-    dgram_recv_task: IoRecvTask,
-    dgram_send_task: IoSendTask,
+    io_task_recv: IoRecvTask,
+    io_task_send: IoSendTask,
 
     dgram_rx: Receiver<DgramRecv>,
     dgram_tx: Sender<DgramSend>,
