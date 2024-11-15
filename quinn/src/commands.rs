@@ -92,7 +92,7 @@ impl MakeEndpoint {
     }
 }
 
-enum MakeEndpointInner {
+pub(crate) enum MakeEndpointInner {
     Preconfigured {
         socket: UdpSocket,
         config: Arc<quinn_proto::EndpointConfig>,
@@ -127,7 +127,7 @@ impl OpenConnection {
     }
 }
 
-enum OpenConnectionInner {
+pub(crate) enum OpenConnectionInner {
     Preconfigured {
         endpoint: Entity,
         address: SocketAddr,

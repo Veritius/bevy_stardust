@@ -4,7 +4,7 @@ use bevy_ecs::prelude::*;
 use bytes::{Bytes, BytesMut};
 use crossbeam_channel::{Receiver, Sender};
 use mio::net::UdpSocket;
-use crate::{config::{ClientVerification, ServerAuthentication}, runtime::Runtime};
+use crate::{commands::MakeEndpointInner, runtime::Runtime};
 
 #[derive(Component)]
 pub struct Endpoint {
@@ -12,19 +12,18 @@ pub struct Endpoint {
 }
 
 impl Endpoint {
-    pub fn new(
+    fn new(
         runtime: &Runtime,
-        socket: SocketAddr,
-        auth: ServerAuthentication,
-        verify: ClientVerification,
+        build: MakeEndpointInner,
     ) -> Endpoint {
         let handle = Arc::new(());
 
         let ptr = EndpointRef(Arc::new(EndpointInner {
             handle: handle.clone(),
-            state: Mutex::new(EndpointState {
-                quinn: todo!(),
-            }),
+            state: Mutex::new(EndpointState::Building(Building::new(
+                runtime,
+                build,
+            ))),
         }));
 
         let task: EndpointTask = EndpointTask::new(
@@ -58,8 +57,76 @@ struct EndpointInner {
 }
 
 /// Mutable endpoint state.
-struct EndpointState {
+enum EndpointState {
+    Building(Building),
+    Established(Established),
+}
+
+struct Building {
+    task: Task<Result<Established, anyhow::Error>>,
+}
+
+impl Building {
+    fn new(
+        runtime: &Runtime,
+        build: MakeEndpointInner,
+    ) -> Self {
+        match build {
+            MakeEndpointInner::Preconfigured {
+                socket,
+                config,
+                server,
+            } => Building { task: runtime.spawn(async move {
+                let endpoint = quinn_proto::Endpoint::new(
+                    config,
+                    server,
+                    true,
+                    None,
+                );
+
+                let mio_skt = mio::net::UdpSocket::from_std(
+                    socket,
+                );
+
+                let (
+                    recv_task,
+                    socket_arc,
+                    dgram_rx,
+                ) = IoRecvTask::new(
+                    runtime,
+                    mio_skt,
+                );
+
+                let (
+                    send_task,
+                    dgram_tx,
+                ) = IoSendTask::new(
+                    runtime,
+                    socket_arc,
+                );
+
+                Ok(Established {
+                    quinn: endpoint,
+
+                    dgram_recv_task: recv_task,
+                    dgram_send_task: send_task,
+                    
+                    dgram_rx,
+                    dgram_tx,
+                })
+            }) },
+        }
+    }
+}
+
+struct Established {
     quinn: quinn_proto::Endpoint,
+
+    dgram_recv_task: IoRecvTask,
+    dgram_send_task: IoSendTask,
+
+    dgram_rx: Receiver<DgramRecv>,
+    dgram_tx: Sender<DgramSend>,
 }
 
 /// A clonable, shared strong reference to an [`EndpointInner`].
@@ -102,7 +169,7 @@ struct IoRecvTask(Task<Option<io::Error>>);
 
 impl IoRecvTask {
     fn new(
-        runtime: &mut Runtime,
+        runtime: &Runtime,
         mut socket: UdpSocket,
     ) -> (
         IoRecvTask,
