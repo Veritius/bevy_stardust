@@ -1,9 +1,13 @@
 use bevy_ecs::component::{Component, ComponentHooks, StorageType};
+use bevy_stardust::prelude::ChannelMessage;
 
 pub struct Connection {
     handle: tokio::task::JoinHandle<()>,
     state: tokio::sync::watch::Receiver<ConnectionState>,
     close: Option<tokio::sync::oneshot::Sender<()>>,
+
+    messages_rx: crossbeam_channel::Receiver<ChannelMessage>,
+    messages_tx: tokio::sync::mpsc::UnboundedSender<ChannelMessage>,
 }
 
 pub enum ConnectionState {
@@ -53,4 +57,7 @@ struct State {
     quinn_events_tx: tokio::sync::mpsc::UnboundedSender<
         quinn_proto::EndpointEvent,
     >,
+
+    messages_tx: crossbeam_channel::Sender<ChannelMessage>,
+    messages_rx: tokio::sync::mpsc::UnboundedSender<ChannelMessage>,
 }
