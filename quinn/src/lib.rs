@@ -7,6 +7,8 @@
 compile_error!("One of the following features must be enabled: async");
 
 mod config;
+mod connection;
+mod endpoint;
 mod plugin;
 mod runtime;
 
