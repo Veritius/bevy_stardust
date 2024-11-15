@@ -79,6 +79,10 @@ path = "examples/star/shared.rs"
 crate-type = ["lib"]
 
 [features]
+default = ["async"]
+
 log = [
     "dep:bevy_log",
 ]
+
+async = []

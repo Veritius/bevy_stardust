@@ -1,12 +1,14 @@
 #![doc = include_str!("../README.md")]
 #![warn(missing_docs)]
 
-mod commands;
+#[cfg(not(any(
+    feature="async"
+)))]
+compile_error!("One of the following features must be enabled: async");
+
 mod config;
-mod connection;
-mod drop;
-mod endpoint;
 mod plugin;
 mod runtime;
 
 pub use plugin::QuicPlugin;
+pub use config::*;
