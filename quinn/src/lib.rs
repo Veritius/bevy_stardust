@@ -9,7 +9,6 @@ compile_error!("One of the following features must be enabled: async");
 mod config;
 mod plugin;
 mod runtime;
-mod single;
 
 pub use plugin::QuicPlugin;
 pub use config::*;
