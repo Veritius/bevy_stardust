@@ -2,7 +2,7 @@
 #![warn(missing_docs)]
 
 #[cfg(not(any(
-    feature="async"
+    feature="async",
 )))]
 compile_error!("One of the following features must be enabled: async");
 
