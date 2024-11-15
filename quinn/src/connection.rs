@@ -13,6 +13,7 @@ pub struct Connection {
     messages_tx: tokio::sync::mpsc::UnboundedSender<ChannelMessage>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ConnectionState {
     Connecting,
     Established,
@@ -32,6 +33,10 @@ impl Component for Connection {
 }
 
 impl Connection {
+    pub fn state(&self) -> ConnectionState {
+        self.state.borrow().clone()
+    }
+
     pub fn close(
         &mut self,
     ) {

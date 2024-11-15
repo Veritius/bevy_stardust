@@ -8,6 +8,7 @@ pub struct Endpoint {
     wakeup: Arc<tokio::sync::Notify>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum EndpointState {
     Established,
     Closed,
@@ -26,6 +27,10 @@ impl Component for Endpoint {
 }
 
 impl Endpoint {
+    pub fn state(&self) -> EndpointState {
+        self.state.borrow().clone()
+    }
+
     pub fn close(
         &mut self,
     ) {
