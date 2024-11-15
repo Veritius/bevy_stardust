@@ -4,6 +4,7 @@
 mod commands;
 mod config;
 mod connection;
+mod drop;
 mod endpoint;
 mod plugin;
 mod runtime;
