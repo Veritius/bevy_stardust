@@ -36,7 +36,7 @@ impl Future for RecvSingle {
     }
 }
 
-/// Alerts all paired [`DropListeners`] when dropped.
+/// Alerts all paired [`DropListener`] objects when dropped.
 pub(crate) struct DropAlerter(SendSingle);
 
 impl Drop for DropAlerter {
