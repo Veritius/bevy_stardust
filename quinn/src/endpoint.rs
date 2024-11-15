@@ -1,10 +1,10 @@
-use std::{future::Future, io, net::SocketAddr, sync::{Arc, Mutex, Weak}, time::Duration};
+use std::{collections::HashMap, future::Future, io, net::SocketAddr, sync::{Arc, Mutex, Weak}, time::Duration};
 use async_task::Task;
 use bevy_ecs::prelude::*;
 use bytes::{Bytes, BytesMut};
 use crossbeam_channel::{Receiver, Sender};
 use mio::net::UdpSocket;
-use crate::{commands::MakeEndpointInner, runtime::Runtime};
+use crate::{commands::MakeEndpointInner, connection::{ConnectionEvents, ConnectionId, ConnectionIdSource, ConnectionRef}, runtime::Runtime};
 
 #[derive(Component)]
 pub struct Endpoint {
@@ -113,6 +113,9 @@ impl Building {
                     
                     dgram_rx,
                     dgram_tx,
+
+                    con_id_index: ConnectionIdSource::default(),
+                    connections: HashMap::default(),
                 })
             }) },
         }
@@ -127,6 +130,9 @@ struct Established {
 
     dgram_rx: Receiver<DgramRecv>,
     dgram_tx: Sender<DgramSend>,
+
+    con_id_index: ConnectionIdSource,
+    connections: HashMap<ConnectionId, HeldConnection>,
 }
 
 /// A clonable, shared strong reference to an [`EndpointInner`].
@@ -141,6 +147,16 @@ impl<'a> From<&'a EndpointRef> for EndpointRefWeak {
     fn from(value: &'a EndpointRef) -> Self {
         EndpointRefWeak(Arc::<EndpointInner>::downgrade(&value.0))
     }
+}
+
+struct HeldConnection {
+    ptr: ConnectionRef,
+    events: ConnectionEvents,
+}
+
+pub(crate) struct EndpointEvents {
+    pub quinn_rx: Receiver<quinn_proto::EndpointEvent>,
+    pub quinn_tx: Sender<quinn_proto::ConnectionEvent>,
 }
 
 /// Config used to build an [`EndpointTask`].
