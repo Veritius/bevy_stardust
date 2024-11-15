@@ -4,7 +4,7 @@ use bevy_ecs::prelude::*;
 use bytes::{Bytes, BytesMut};
 use crossbeam_channel::{Receiver, Sender};
 use mio::net::UdpSocket;
-use crate::{commands::MakeEndpointInner, connection::{ConnectionEvents, ConnectionId, ConnectionIdSource, ConnectionRef}, runtime::Runtime};
+use crate::{commands::MakeEndpointInner, connection::{ConnectionEvents, ConnectionId, ConnectionIdSource, ConnectionRef}, drop::{DropAlerter, DropListener}, runtime::Runtime};
 
 #[derive(Component)]
 pub struct Endpoint {
@@ -16,10 +16,10 @@ impl Endpoint {
         runtime: &Runtime,
         build: MakeEndpointInner,
     ) -> Endpoint {
-        let handle = Arc::new(());
+        let (drop_tx, drop_rx) = crate::drop::drop();
 
         let ptr = EndpointRef(Arc::new(EndpointInner {
-            handle: handle.clone(),
+            drop_tx,
             state: Mutex::new(EndpointState::Building(Building::new(
                 runtime,
                 build,
@@ -35,7 +35,7 @@ impl Endpoint {
 
         return Endpoint {
             handle: EndpointHandle {
-                handle,
+                drop_rx,
                 task,
                 ptr,
             }
@@ -44,14 +44,14 @@ impl Endpoint {
 }
 
 struct EndpointHandle {
-    handle: Arc<()>,
+    drop_rx: DropListener,
     task: EndpointTask,
     ptr: EndpointRef,
 }
 
 /// Endpoint data.
 struct EndpointInner {
-    handle: Arc<()>,
+    drop_tx: DropAlerter,
 
     state: Mutex<EndpointState>,
 }
