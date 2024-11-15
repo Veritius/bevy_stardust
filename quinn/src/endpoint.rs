@@ -1,9 +1,15 @@
+use std::collections::HashMap;
 use bevy_ecs::component::{Component, ComponentHooks, StorageType};
 
 pub struct Endpoint {
     handle: tokio::task::JoinHandle<()>,
     state: tokio::sync::watch::Receiver<EndpointState>,
     close: Option<tokio::sync::oneshot::Sender<()>>,
+}
+
+pub enum EndpointState {
+    Established,
+    Closed,
 }
 
 impl Component for Endpoint {
@@ -33,18 +39,22 @@ impl Endpoint {
     }
 }
 
-pub enum EndpointState {
-    Established,
-    Closed,
-}
-
-async fn endpoint_task(
-    handle: tokio::runtime::Handle,
-    quinn: quinn_proto::Endpoint,
-    socket: tokio::net::UdpSocket,
-
-    state: tokio::sync::watch::Sender<EndpointState>,
+struct State {
+    runtime: tokio::runtime::Handle,
     closer: tokio::sync::oneshot::Receiver<()>,
-) {
+    state: tokio::sync::watch::Sender<EndpointState>,
 
+    quinn: quinn_proto::Endpoint,
+
+    quinn_events_rx: tokio::sync::mpsc::UnboundedReceiver<(
+        quinn_proto::ConnectionHandle,
+        quinn_proto::EndpointEvent,
+    )>,
+
+    quinn_events_tx: HashMap<
+        quinn_proto::ConnectionHandle,
+        tokio::sync::mpsc::UnboundedSender<
+            quinn_proto::ConnectionEvent,
+        >,
+    >,
 }
