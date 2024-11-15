@@ -6,6 +6,7 @@
 )))]
 compile_error!("One of the following features must be enabled: async");
 
+mod commands;
 mod config;
 mod connection;
 mod endpoint;
