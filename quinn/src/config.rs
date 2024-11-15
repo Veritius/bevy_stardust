@@ -1,4 +1,4 @@
-use std::{future::Future, path::PathBuf, pin::Pin};
+use std::{future::Future, marker::PhantomData, path::PathBuf, pin::Pin};
 use rustls::{pki_types::{CertificateDer, PrivateKeyDer}, RootCertStore};
 
 /// An operation to asynchronously retrieve a value from disk or wherever else it may be stored.
@@ -46,10 +46,32 @@ pub enum ServerAuthentication {
     Disabled,
 }
 
+impl ServerAuthentication {
+    pub fn from_files(
+        cert_files: impl Into<PathBuf>,
+        key_file: impl Into<PathBuf>,
+    ) -> Self {
+        return Self::Authenticated {
+            cert_chain: LoadFromFile::new(cert_files).into(),
+            private_key: LoadFromFile::new(key_file).into(),
+        };
+    }
+}
+
 pub enum ServerVerification {
     Authenticated {
         root_certs: FetchTask<RootCertStore>,
     },
+}
+
+impl ServerVerification {
+    pub fn from_files(
+        root_certs: impl Into<PathBuf>,
+    ) -> Self {
+        return Self::Authenticated {
+            root_certs: LoadFromFile::new(root_certs).into(),
+        }
+    }
 }
 
 pub enum ClientAuthentication {
@@ -60,14 +82,51 @@ pub enum ClientVerification {
     Disabled,
 }
 
-pub struct LoadCertsFromFile(pub PathBuf);
+pub struct LoadFromFile<T> {
+    pub path: PathBuf,
 
-impl Into<FetchTask<Vec<CertificateDer<'static>>>> for LoadCertsFromFile {
+    _p: PhantomData<T>,
+}
+
+impl<T> LoadFromFile<T> {
+    pub fn new(path: impl Into<PathBuf>) -> Self {
+        Self {
+            path: path.into(),
+            _p: PhantomData,
+        }
+    }
+}
+
+impl Into<FetchTask<Vec<CertificateDer<'static>>>> for LoadFromFile<Vec<CertificateDer<'static>>> {
     fn into(self) -> FetchTask<Vec<CertificateDer<'static>>> {
         FetchTask::pin(async move {
             // Read the entire path to a string
             // TODO: Async version of this ?
-            let str = std::fs::read_to_string(self.0)?;
+            let str = std::fs::read_to_string(self.path)?;
+
+            todo!()
+        })
+    }
+}
+
+impl Into<FetchTask<PrivateKeyDer<'static>>> for LoadFromFile<PrivateKeyDer<'static>> {
+    fn into(self) -> FetchTask<PrivateKeyDer<'static>> {
+        FetchTask::pin(async move {
+            // Read the entire path to a string
+            // TODO: Async version of this ?
+            let str = std::fs::read_to_string(self.path)?;
+
+            todo!()
+        })
+    }
+}
+
+impl Into<FetchTask<RootCertStore>> for LoadFromFile<RootCertStore> {
+    fn into(self) -> FetchTask<RootCertStore> {
+        FetchTask::pin(async move {
+            // Read the entire path to a string
+            // TODO: Async version of this ?
+            let str = std::fs::read_to_string(self.path)?;
 
             todo!()
         })
