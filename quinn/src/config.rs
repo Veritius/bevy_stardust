@@ -37,16 +37,22 @@ impl<V> FetchTask<V> {
     }
 }
 
+/// Configuration for authenticating an endpoint as a server.
 pub enum ServerAuthentication {
+    /// Full TLS authentication.
     Authenticated {
+        /// The certificate chain to use for authentication.
         cert_chain: FetchTask<Vec<CertificateDer<'static>>>,
+        /// The private key to use for authentication.
         private_key: FetchTask<PrivateKeyDer<'static>>,
     },
 
+    /// Disable all authentication.
     Disabled,
 }
 
 impl ServerAuthentication {
+    /// Convenience method for loading from common cryptographic files.
     pub fn from_files(
         cert_files: impl Into<PathBuf>,
         key_file: impl Into<PathBuf>,
@@ -58,13 +64,17 @@ impl ServerAuthentication {
     }
 }
 
+/// Configuration for cryptographically verifying servers.
 pub enum ServerVerification {
+    /// Require server authentication.
     Authenticated {
+        /// Root certificates to verify certificates against.
         root_certs: FetchTask<RootCertStore>,
     },
 }
 
 impl ServerVerification {
+    /// Convenience method from loading from common cryptographic files.
     pub fn from_files(
         root_certs: impl Into<PathBuf>,
     ) -> Self {
@@ -74,17 +84,21 @@ impl ServerVerification {
     }
 }
 
+/// Configuration for authenticated outgoing connections.
 pub enum ClientAuthentication {
+    /// Don't authenticate outgoing connections.
     Disabled,
 }
 
+/// Configuration for cryptographically verifying incoming connections.
 pub enum ClientVerification {
+    /// Don't authenticate incoming connections.
     Disabled,
 }
 
+/// Convenience type for loading certain types from disk.
 pub struct LoadFromFile<T> {
-    pub path: PathBuf,
-
+    path: PathBuf,
     _p: PhantomData<T>,
 }
 
