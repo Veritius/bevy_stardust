@@ -1,5 +1,6 @@
 use std::{collections::HashMap, sync::Arc};
 use bevy_ecs::component::{Component, ComponentHooks, StorageType};
+use tokio::sync::oneshot::error::TryRecvError;
 
 pub struct Endpoint {
     handle: tokio::task::JoinHandle<()>,
@@ -51,17 +52,51 @@ struct State {
     state: tokio::sync::watch::Sender<EndpointState>,
     wakeup: Arc<tokio::sync::Notify>,
 
+    connections: HashMap<
+        quinn_proto::ConnectionHandle,
+        Connection,
+    >,
+
     quinn: quinn_proto::Endpoint,
 
     quinn_events_rx: tokio::sync::mpsc::UnboundedReceiver<(
         quinn_proto::ConnectionHandle,
         quinn_proto::EndpointEvent,
     )>,
+}
 
-    quinn_events_tx: HashMap<
-        quinn_proto::ConnectionHandle,
-        tokio::sync::mpsc::UnboundedSender<
-            quinn_proto::ConnectionEvent,
-        >,
+struct Connection {
+    wakeup: Arc<tokio::sync::Notify>,
+
+    quinn_events_tx: tokio::sync::mpsc::UnboundedSender<
+        quinn_proto::ConnectionEvent,
     >,
+}
+
+async fn run(
+    mut state: State,
+) {
+    loop {
+        tick(&mut state).await;
+        state.wakeup.notified().await;
+    }
+}
+
+async fn tick(
+    state: &mut State,
+) {
+    // Iterate over incoming connection events
+    while let Ok((handle, event)) = state.quinn_events_rx.try_recv() {
+        if let Some(event) = state.quinn.handle_event(handle, event) {
+            let connection = state.connections.get(&handle).unwrap(); // TODO: Handle error
+            connection.quinn_events_tx.send(event).unwrap(); // TODO: Handle error
+        }
+    }
+
+    // See if the closer has been fired
+    match state.closer.try_recv() {
+        Ok(()) => todo!(),
+        Err(TryRecvError::Empty) => { /* Do nothing */ },
+        Err(TryRecvError::Closed) => todo!(),
+    }
 }
