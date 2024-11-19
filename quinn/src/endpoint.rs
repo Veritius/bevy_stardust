@@ -3,6 +3,7 @@ use bevy_ecs::component::{Component, ComponentHooks, StorageType};
 use bytes::BytesMut;
 use quinn_proto::DatagramEvent;
 use tokio::sync::oneshot::error::TryRecvError;
+use crate::commands::MakeEndpointInner;
 
 pub struct Endpoint {
     handle: tokio::task::JoinHandle<()>,
@@ -13,6 +14,7 @@ pub struct Endpoint {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum EndpointState {
+    Building,
     Established,
     Closed,
 }
@@ -78,6 +80,43 @@ struct Connection {
     quinn_events_tx: tokio::sync::mpsc::UnboundedSender<
         quinn_proto::ConnectionEvent,
     >,
+}
+
+pub(crate) fn open(
+    runtime: tokio::runtime::Handle,
+    make_endpoint: MakeEndpointInner,
+) -> Endpoint {
+    let (state_tx, state_rx) = tokio::sync::watch::channel(EndpointState::Building);
+    let (closer_tx, closer_rx) = tokio::sync::oneshot::channel();
+    let wakeup = Arc::new(tokio::sync::Notify::new());
+
+    return Endpoint {
+        handle: runtime.spawn(build(
+            runtime.clone(),
+            BuildMeta {
+                state: state_tx,
+                closer: closer_rx,
+            },
+            make_endpoint,
+        )),
+
+        state: state_rx,
+        close: Some(closer_tx),
+        wakeup,
+    }
+}
+
+struct BuildMeta {
+    state: tokio::sync::watch::Sender<EndpointState>,
+    closer: tokio::sync::oneshot::Receiver<()>,
+}
+
+async fn build(
+    runtime: tokio::runtime::Handle,
+    meta: BuildMeta,
+    make_endpoint: MakeEndpointInner,
+) {
+
 }
 
 struct RunMeta {
