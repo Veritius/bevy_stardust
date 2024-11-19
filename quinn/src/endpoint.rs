@@ -1,5 +1,7 @@
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::HashMap, io::ErrorKind, net::SocketAddr, sync::Arc, time::Instant};
 use bevy_ecs::component::{Component, ComponentHooks, StorageType};
+use bytes::BytesMut;
+use quinn_proto::DatagramEvent;
 use tokio::sync::oneshot::error::TryRecvError;
 
 pub struct Endpoint {
@@ -57,6 +59,11 @@ struct State {
         Connection,
     >,
 
+    socket: Arc<tokio::net::UdpSocket>,
+
+    socket_dgrams_recv_rx: tokio::sync::mpsc::UnboundedReceiver<DatagramRecv>,
+    socket_dgrams_send_tx: tokio::sync::mpsc::UnboundedSender<DatagramSend>,
+
     quinn: quinn_proto::Endpoint,
 
     quinn_events_rx: tokio::sync::mpsc::UnboundedReceiver<(
@@ -73,9 +80,28 @@ struct Connection {
     >,
 }
 
+struct RunMeta {
+    socket_dgrams_recv_tx: tokio::sync::mpsc::UnboundedSender<DatagramRecv>,
+    socket_dgrams_send_rx: tokio::sync::mpsc::UnboundedReceiver<DatagramSend>,
+}
+
 async fn run(
     mut state: State,
+    meta: RunMeta,
 ) {
+    // Spawn I/O receiving task
+    state.runtime.spawn(io_recv(
+        state.socket.clone(),
+        meta.socket_dgrams_recv_tx,
+        state.wakeup.clone()
+    ));
+
+    // Spawn I/O sending task
+    state.runtime.spawn(io_send(
+        state.socket.clone(),
+        meta.socket_dgrams_send_rx,
+    ));
+
     loop {
         tick(&mut state).await;
         state.wakeup.notified().await;
@@ -90,6 +116,50 @@ async fn tick(
         if let Some(event) = state.quinn.handle_event(handle, event) {
             let connection = state.connections.get(&handle).unwrap(); // TODO: Handle error
             connection.quinn_events_tx.send(event).unwrap(); // TODO: Handle error
+            connection.wakeup.notify_waiters();
+        }
+    }
+
+    // Iterate over received datagrams
+    let mut scratch = Vec::new();
+    while let Ok(recv) = state.socket_dgrams_recv_rx.try_recv() {
+        match state.quinn.handle(
+            Instant::now(),
+            recv.origin,
+            None,
+            None,
+            recv.data,
+            &mut scratch,
+        ) {
+            Some(DatagramEvent::ConnectionEvent(handle, event)) => {
+                let connection = state.connections.get(&handle).unwrap(); // TODO: Handle error
+                connection.quinn_events_tx.send(event).unwrap(); // TODO: Handle error
+                connection.wakeup.notify_waiters();
+            },
+
+            Some(DatagramEvent::NewConnection(incoming)) => {
+                match state.quinn.accept(
+                    incoming,
+                    Instant::now(),
+                    &mut scratch,
+                    None,
+                ) {
+                    Ok(_) => todo!(),
+                    Err(_) => todo!(),
+                }
+            }
+
+            Some(DatagramEvent::Response(transmit)) => {
+                let mut buf = BytesMut::with_capacity(scratch.len());
+                buf.extend_from_slice(&scratch);
+
+                state.socket_dgrams_send_tx.send(DatagramSend {
+                    data: buf,
+                    target: transmit.destination,
+                }).unwrap(); // TODO: Handle error
+            }
+
+            None => todo!(),
         }
     }
 
@@ -98,5 +168,65 @@ async fn tick(
         Ok(()) => todo!(),
         Err(TryRecvError::Empty) => { /* Do nothing */ },
         Err(TryRecvError::Closed) => todo!(),
+    }
+}
+
+struct DatagramRecv {
+    data: BytesMut,
+    origin: SocketAddr,
+}
+
+async fn io_recv(
+    socket: Arc<tokio::net::UdpSocket>,
+    socket_dgrams_recv_tx: tokio::sync::mpsc::UnboundedSender<DatagramRecv>,
+    wakeup: Arc<tokio::sync::Notify>,
+) {
+    loop {
+        // Wait for the socket to become readable
+        socket.readable().await.unwrap(); // TODO: Handle error
+
+        let mut buf = BytesMut::with_capacity(1024);
+        match socket.try_recv_buf_from(&mut buf) {
+            Ok((_len, origin)) => {
+                // Push datagram to queue for endpoint
+                socket_dgrams_recv_tx.send(DatagramRecv {
+                    data: buf,
+                    origin,
+                }).unwrap(); // TODO: Handle error
+
+                // Wake up notifier task
+                wakeup.notify_waiters();
+            },
+
+            // Shouldn't happen
+            Err(e) if e.kind() == ErrorKind::WouldBlock => unimplemented!(),
+
+            Err(e) => todo!(),
+        }
+    }
+}
+
+struct DatagramSend {
+    data: BytesMut,
+    target: SocketAddr,
+}
+
+async fn io_send(
+    socket: Arc<tokio::net::UdpSocket>,
+    mut socket_dgrams_send_rx: tokio::sync::mpsc::UnboundedReceiver<DatagramSend>,
+) {
+    loop {
+        // Wait for a datagram
+        let dgram = socket_dgrams_send_rx.recv().await.unwrap(); // TODO: Handle error
+
+        // Send datagram
+        match socket.send_to(&dgram.data, dgram.target).await {
+            Ok(_) => todo!(),
+
+            // Shouldn't happen
+            Err(e) if e.kind() == ErrorKind::WouldBlock => unimplemented!(),
+
+            Err(e) => todo!(),
+        }
     }
 }
