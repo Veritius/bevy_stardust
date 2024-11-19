@@ -159,7 +159,7 @@ async fn tick(
                 }).unwrap(); // TODO: Handle error
             }
 
-            None => todo!(),
+            None => { /* Do nothing */ },
         }
     }
 
