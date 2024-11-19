@@ -103,14 +103,17 @@ async fn run(
     ));
 
     loop {
-        tick(&mut state).await;
+        if let Some(end) = tick(&mut state).await {
+            break; // Break out
+        }
+
         state.wakeup.notified().await;
     }
 }
 
 async fn tick(
     state: &mut State,
-) {
+) -> Option<()> {
     // Iterate over incoming connection events
     while let Ok((handle, event)) = state.quinn_events_rx.try_recv() {
         if let Some(event) = state.quinn.handle_event(handle, event) {
@@ -165,9 +168,9 @@ async fn tick(
 
     // See if the closer has been fired
     match state.closer.try_recv() {
-        Ok(()) => todo!(),
-        Err(TryRecvError::Empty) => { /* Do nothing */ },
-        Err(TryRecvError::Closed) => todo!(),
+        Ok(()) => return Some(()),
+        Err(TryRecvError::Empty) => return None,
+        Err(TryRecvError::Closed) => return Some(()),
     }
 }
 
