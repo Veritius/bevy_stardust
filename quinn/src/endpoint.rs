@@ -68,6 +68,11 @@ struct State {
 
     quinn: quinn_proto::Endpoint,
 
+    quinn_events_tx: tokio::sync::mpsc::UnboundedSender<(
+        quinn_proto::ConnectionHandle,
+        quinn_proto::EndpointEvent,
+    )>,
+
     quinn_events_rx: tokio::sync::mpsc::UnboundedReceiver<(
         quinn_proto::ConnectionHandle,
         quinn_proto::EndpointEvent,
@@ -91,11 +96,12 @@ pub(crate) fn open(
     let wakeup = Arc::new(tokio::sync::Notify::new());
 
     return Endpoint {
-        handle: runtime.spawn(build(
+        handle: runtime.spawn(build_and_run(
             runtime.clone(),
             BuildMeta {
                 state: state_tx,
                 closer: closer_rx,
+                wakeup: wakeup.clone(),
             },
             make_endpoint,
         )),
@@ -109,14 +115,76 @@ pub(crate) fn open(
 struct BuildMeta {
     state: tokio::sync::watch::Sender<EndpointState>,
     closer: tokio::sync::oneshot::Receiver<()>,
+    wakeup: Arc<tokio::sync::Notify>,
 }
 
 async fn build(
     runtime: tokio::runtime::Handle,
     meta: BuildMeta,
     make_endpoint: MakeEndpointInner,
-) {
+) -> (State, RunMeta) {
+    match make_endpoint {
+        MakeEndpointInner::Preconfigured {
+            socket,
+            config,
+            server,
+        } => {
+            // Set the socket to be nonblocking
+            if let Err(_) = socket.set_nonblocking(true) { todo!() }
 
+            // Create a tokio socket from the stdlib socket
+            let socket = match tokio::net::UdpSocket::from_std(socket) {
+                Ok(v) => v,
+                Err(_) => todo!(),
+            };
+
+            // Create the Quinn endpoint state machine
+            let quinn = quinn_proto::Endpoint::new(
+                config,
+                server,
+                true,
+                None,
+            );
+
+            // Create channels for communications and stuff
+            let (socket_dgrams_recv_tx, socket_dgrams_recv_rx) = tokio::sync::mpsc::unbounded_channel();
+            let (socket_dgrams_send_tx, socket_dgrams_send_rx) = tokio::sync::mpsc::unbounded_channel();
+            let (quinn_events_tx, quinn_events_rx) = tokio::sync::mpsc::unbounded_channel();
+
+            // Create the state object
+            let state = State {
+                runtime,
+                closer: meta.closer,
+                state: meta.state,
+                wakeup: meta.wakeup,
+                connections: HashMap::new(),
+                socket: Arc::new(socket),
+                socket_dgrams_recv_rx,
+                socket_dgrams_send_tx,
+                quinn,
+                quinn_events_tx,
+                quinn_events_rx,
+            };
+
+            // Create the run context
+            let meta = RunMeta {
+                socket_dgrams_recv_tx,
+                socket_dgrams_send_rx,
+            };
+
+            // all done
+            return (state, meta);
+        },
+    };
+}
+
+async fn build_and_run(
+    runtime: tokio::runtime::Handle,
+    meta: BuildMeta,
+    make_endpoint: MakeEndpointInner,
+) {
+    let (state, meta) = build(runtime, meta, make_endpoint).await;
+    run(state, meta).await;
 }
 
 struct RunMeta {
