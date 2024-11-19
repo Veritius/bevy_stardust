@@ -102,7 +102,16 @@ pub(crate) enum MakeEndpointInner {
 
 impl EntityCommand for MakeEndpoint {
     fn apply(self, id: Entity, world: &mut World) {
-        todo!()
+        if !world.entities().contains(id) {
+            #[cfg(feature="log")]
+            bevy_log::warn!(entity=?id, "Tried to make entity an endpoint but it didn't exist");
+
+            return; // Do nothing.
+        }
+
+        let runtime = world.resource::<crate::runtime::Runtime>();
+        let comp = crate::endpoint::open(runtime.handle(), self.0);
+        world.entity_mut(id).insert(comp);
     }
 }
 
