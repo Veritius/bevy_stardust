@@ -98,12 +98,12 @@ pub(crate) fn open(
     return Endpoint {
         handle: runtime.spawn(build_and_run(
             runtime.clone(),
+            make_endpoint,
             BuildMeta {
                 state: state_tx,
                 closer: closer_rx,
                 wakeup: wakeup.clone(),
             },
-            make_endpoint,
         )),
 
         state: state_rx,
@@ -120,8 +120,8 @@ struct BuildMeta {
 
 async fn build(
     runtime: tokio::runtime::Handle,
-    meta: BuildMeta,
     make_endpoint: MakeEndpointInner,
+    meta: BuildMeta,
 ) -> (State, RunMeta) {
     match make_endpoint {
         MakeEndpointInner::Preconfigured {
@@ -180,10 +180,10 @@ async fn build(
 
 async fn build_and_run(
     runtime: tokio::runtime::Handle,
-    meta: BuildMeta,
     make_endpoint: MakeEndpointInner,
+    meta: BuildMeta,
 ) {
-    let (state, meta) = build(runtime, meta, make_endpoint).await;
+    let (state, meta) = build(runtime, make_endpoint, meta).await;
     run(state, meta).await;
 }
 
