@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use bevy_ecs::component::{Component, ComponentHooks, StorageType};
 use bevy_stardust::prelude::ChannelMessage;
+use tokio::sync::oneshot::error::TryRecvError;
 
 pub struct Connection {
     handle: tokio::task::JoinHandle<()>,
@@ -69,4 +70,42 @@ struct State {
 
     messages_tx: crossbeam_channel::Sender<ChannelMessage>,
     messages_rx: tokio::sync::mpsc::UnboundedSender<ChannelMessage>,
+}
+
+async fn run(
+    mut state: State,
+) {
+    loop {
+        tick(&mut state).await;
+        state.wakeup.notified().await;
+    }
+}
+
+async fn tick(
+    state: &mut State,
+) {
+    // See if the closer has been fired
+    match state.closer.try_recv() {
+        Ok(()) => todo!(),
+        Err(TryRecvError::Empty) => { /* Do nothing */ },
+        Err(TryRecvError::Closed) => todo!(),
+    }
+
+    // Handle incoming connection events
+    while let Ok(event) = state.quinn_events_rx.try_recv() {
+        state.quinn.handle_event(event);
+    }
+
+    // Poll for the next timeout TODO
+    // let timeout = state.quinn.poll_timeout();
+
+    // Poll for endpoint events
+    while let Some(event) = state.quinn.poll_endpoint_events() {
+        state.quinn_events_tx.send(event).unwrap(); // TODO: Handle error
+    }
+
+    // Poll for application facing events
+    while let Some(event) = state.quinn.poll() {
+
+    }
 }
