@@ -1,8 +1,6 @@
-use std::{collections::HashMap, io::ErrorKind, net::SocketAddr, os::linux::raw::stat, sync::{Arc, Mutex}, time::Instant};
+use std::{collections::HashMap, net::SocketAddr, sync::{Arc, Mutex}};
 use bevy_ecs::component::{Component, ComponentHooks, StorageType};
 use bytes::BytesMut;
-use quinn_proto::DatagramEvent;
-use tokio::sync::oneshot::error::TryRecvError;
 use crate::commands::MakeEndpointInner;
 
 pub struct Endpoint {
@@ -54,19 +52,11 @@ struct EndpointInner {
     )>,
 
     socket: tokio::net::UdpSocket,
-
-    socket_dgrams_recv_rx: tokio::sync::mpsc::UnboundedReceiver<DatagramRecv>,
-    socket_dgrams_send_tx: tokio::sync::mpsc::UnboundedSender<DatagramSend>,
 }
 
 impl EndpointInner {
     fn state(&self) -> EndpointState {
         self.state_rx.borrow().clone()
-    }
-
-    fn send_dgram(&self, dgram: DatagramSend) {
-        self.socket_dgrams_send_tx.send(dgram).unwrap();
-        self.notify.notify_one();
     }
 }
 
@@ -110,8 +100,6 @@ pub(crate) fn open(
     make_endpoint: MakeEndpointInner,
 ) -> Endpoint {
     let (state_tx, state_rx) = tokio::sync::watch::channel(EndpointState::Building);
-    let (socket_dgrams_recv_tx, socket_dgrams_recv_rx) = tokio::sync::mpsc::unbounded_channel();
-    let (socket_dgrams_send_tx, socket_dgrams_send_rx) = tokio::sync::mpsc::unbounded_channel();
     let (quinn_events_tx, quinn_events_rx) = tokio::sync::mpsc::unbounded_channel();
 
     let inner = Arc::new(EndpointInner {
@@ -125,8 +113,6 @@ pub(crate) fn open(
         quinn_events_rx,
 
         socket: todo!(),
-        socket_dgrams_recv_rx,
-        socket_dgrams_send_tx,
     });
 
     return Endpoint {
