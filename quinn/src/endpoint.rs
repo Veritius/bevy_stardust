@@ -1,6 +1,7 @@
 use std::{collections::HashMap, net::SocketAddr, sync::{Arc, Mutex}};
 use bevy_ecs::component::{Component, ComponentHooks, StorageType};
 use bytes::BytesMut;
+use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 use crate::commands::MakeEndpointInner;
 
 pub struct Endpoint {
@@ -65,6 +66,9 @@ enum State {
 
 struct Established {
     socket: tokio::net::UdpSocket,
+
+    socket_dgram_recv_rx: UnboundedReceiver<DatagramRecv>,
+    socket_dgram_send_tx: UnboundedSender<DatagramSend>,
 
     connections: HashMap<
         quinn_proto::ConnectionHandle,
@@ -159,6 +163,8 @@ async fn run(
     // Construct the established state object
     let est = Established {
         socket: todo!(),
+        socket_dgram_recv_rx: todo!(),
+        socket_dgram_send_tx: todo!(),
 
         connections: HashMap::new(),
 
