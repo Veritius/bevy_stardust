@@ -68,7 +68,7 @@ struct Established {
 
     connections: HashMap<
         quinn_proto::ConnectionHandle,
-        Connection,
+        ConnectionHandle,
     >,
 
     quinn: quinn_proto::Endpoint,
@@ -79,9 +79,7 @@ struct Established {
     )>,
 }
 
-struct Connection {
-    wakeup: Arc<tokio::sync::Notify>,
-
+struct ConnectionHandle {
     quinn_events_tx: tokio::sync::mpsc::UnboundedSender<
         quinn_proto::ConnectionEvent,
     >,
