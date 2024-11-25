@@ -50,8 +50,6 @@ struct EndpointInner {
         quinn_proto::ConnectionHandle,
         quinn_proto::EndpointEvent,
     )>,
-
-    socket: tokio::net::UdpSocket,
 }
 
 impl EndpointInner {
@@ -66,6 +64,8 @@ enum State {
 }
 
 struct Established {
+    socket: tokio::net::UdpSocket,
+
     connections: HashMap<
         quinn_proto::ConnectionHandle,
         ConnectionHandle,
@@ -103,7 +103,7 @@ pub(crate) fn open(
     let (quinn_events_tx, quinn_events_rx) = tokio::sync::mpsc::unbounded_channel();
 
     let inner = Arc::new(EndpointInner {
-        runtime,
+        runtime: runtime.clone(),
         notify: tokio::sync::Notify::new(),
 
         inner: Mutex::new(State::Building),
@@ -111,14 +111,12 @@ pub(crate) fn open(
         state_rx,
 
         quinn_events_rx,
-
-        socket: todo!(),
     });
 
     return Endpoint {
-        task: runtime.spawn(run(
+        task: runtime.clone().spawn(run(
             runtime,
-            inner,
+            inner.clone(),
             make_endpoint,
 
             RunMeta {
@@ -160,6 +158,8 @@ async fn run(
 
     // Construct the established state object
     let est = Established {
+        socket: todo!(),
+
         connections: HashMap::new(),
 
         quinn,
