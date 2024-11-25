@@ -10,6 +10,8 @@ pub struct Endpoint {
     state: tokio::sync::watch::Receiver<EndpointState>,
     close: Option<tokio::sync::oneshot::Sender<()>>,
     wakeup: Arc<tokio::sync::Notify>,
+
+    connection_spawn_rx: tokio::sync::mpsc::UnboundedReceiver<NewConnection>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -61,6 +63,8 @@ struct State {
         Connection,
     >,
 
+    connection_spawn_tx: tokio::sync::mpsc::UnboundedSender<NewConnection>,
+
     socket: Arc<tokio::net::UdpSocket>,
 
     socket_dgrams_recv_rx: tokio::sync::mpsc::UnboundedReceiver<DatagramRecv>,
@@ -87,6 +91,10 @@ struct Connection {
     >,
 }
 
+pub(crate) struct NewConnection {
+    inner: crate::connection::Connection,
+}
+
 pub(crate) fn open(
     runtime: tokio::runtime::Handle,
     make_endpoint: MakeEndpointInner,
@@ -94,6 +102,7 @@ pub(crate) fn open(
     let (state_tx, state_rx) = tokio::sync::watch::channel(EndpointState::Building);
     let (closer_tx, closer_rx) = tokio::sync::oneshot::channel();
     let wakeup = Arc::new(tokio::sync::Notify::new());
+    let (connection_spawn_tx, connection_spawn_rx) = tokio::sync::mpsc::unbounded_channel();
 
     return Endpoint {
         handle: runtime.spawn(build_and_run(
@@ -103,12 +112,16 @@ pub(crate) fn open(
                 state: state_tx,
                 closer: closer_rx,
                 wakeup: wakeup.clone(),
+
+                connection_spawn_tx,
             },
         )),
 
         state: state_rx,
         close: Some(closer_tx),
         wakeup,
+
+        connection_spawn_rx,
     }
 }
 
@@ -116,6 +129,8 @@ struct BuildMeta {
     state: tokio::sync::watch::Sender<EndpointState>,
     closer: tokio::sync::oneshot::Receiver<()>,
     wakeup: Arc<tokio::sync::Notify>,
+
+    connection_spawn_tx: tokio::sync::mpsc::UnboundedSender<NewConnection>,
 }
 
 async fn build(
@@ -158,6 +173,7 @@ async fn build(
                 state: meta.state,
                 wakeup: meta.wakeup,
                 connections: HashMap::new(),
+                connection_spawn_tx: meta.connection_spawn_tx,
                 socket: Arc::new(socket),
                 socket_dgrams_recv_rx,
                 socket_dgrams_send_tx,
@@ -254,7 +270,12 @@ async fn tick(
                     &mut scratch,
                     None,
                 ) {
-                    Ok(_) => todo!(),
+                    Ok((handle, quinn)) => {
+                        state.connection_spawn_tx.send(NewConnection {
+                            inner: todo!(),
+                        }).unwrap(); // TODO: Handle error
+                    },
+
                     Err(_) => todo!(),
                 }
             }
