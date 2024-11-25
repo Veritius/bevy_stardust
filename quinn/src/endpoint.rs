@@ -1,4 +1,4 @@
-use std::{collections::HashMap, io::ErrorKind, net::SocketAddr, sync::{Arc, Mutex}, time::Instant};
+use std::{collections::HashMap, io::ErrorKind, net::SocketAddr, os::linux::raw::stat, sync::{Arc, Mutex}, time::Instant};
 use bevy_ecs::component::{Component, ComponentHooks, StorageType};
 use bytes::BytesMut;
 use quinn_proto::DatagramEvent;
@@ -64,8 +64,6 @@ enum State {
 }
 
 struct Established {
-    state: tokio::sync::watch::Sender<EndpointState>,
-
     connections: HashMap<
         quinn_proto::ConnectionHandle,
         ConnectionHandle,
@@ -125,7 +123,8 @@ pub(crate) fn open(
             make_endpoint,
 
             RunMeta {
-
+                state_tx,
+                quinn_events_tx,
             },
         )),
 
@@ -134,7 +133,11 @@ pub(crate) fn open(
 }
 
 struct RunMeta {
-
+    state_tx: tokio::sync::watch::Sender<EndpointState>,
+    quinn_events_tx: tokio::sync::mpsc::UnboundedSender<(
+        quinn_proto::ConnectionHandle,
+        quinn_proto::EndpointEvent,
+    )>,
 }
 
 async fn run(
@@ -143,5 +146,32 @@ async fn run(
     make_endpoint: MakeEndpointInner,
     meta: RunMeta,
 ) {
-    todo!()
+    let RunMeta {
+        state_tx,
+        quinn_events_tx,
+    } = meta;
+
+    // Construct the Quinn endpoint state object
+    let quinn = quinn_proto::Endpoint::new(
+        todo!(),
+        todo!(),
+        true,
+        None,
+    );
+
+    // Construct the established state object
+    let est = Established {
+        connections: HashMap::new(),
+
+        quinn,
+        quinn_events_tx,
+    };
+
+    // Set the endpoint to Established as it is successful
+    let mut lock = inner.inner.lock().unwrap();
+    *lock = State::Established(est);
+    drop(lock);
+
+    // Notify other tasks that the endpoint is now established
+    state_tx.send(EndpointState::Established).unwrap();
 }
