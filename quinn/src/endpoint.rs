@@ -69,6 +69,8 @@ struct Established {
 
     socket_dgram_recv_rx: UnboundedReceiver<DatagramRecv>,
     socket_dgram_send_tx: UnboundedSender<DatagramSend>,
+    socket_recv_task: tokio::task::JoinHandle<()>,
+    socket_send_task: tokio::task::JoinHandle<()>,
 
     connections: HashMap<
         quinn_proto::ConnectionHandle,
@@ -160,11 +162,18 @@ async fn run(
         None,
     );
 
+    // Construct additional channels
+    let (socket_dgram_send_tx, socket_dgram_send_rx) = tokio::sync::mpsc::unbounded_channel();
+    let (socket_dgram_recv_tx, socket_dgram_recv_rx) = tokio::sync::mpsc::unbounded_channel();
+
     // Construct the established state object
     let est = Established {
         socket: todo!(),
-        socket_dgram_recv_rx: todo!(),
-        socket_dgram_send_tx: todo!(),
+
+        socket_dgram_recv_rx,
+        socket_dgram_send_tx,
+        socket_recv_task: runtime.spawn(recv(socket_dgram_recv_tx)),
+        socket_send_task: runtime.spawn(send(socket_dgram_send_rx)),
 
         connections: HashMap::new(),
 
@@ -194,4 +203,16 @@ async fn tick(
     inner: &EndpointInner,
 ) {
     todo!()
+}
+
+async fn recv(
+    socket_dgram_recv_tx: UnboundedSender<DatagramRecv>,
+) {
+
+}
+
+async fn send(
+    socket_dgram_send_rx: UnboundedReceiver<DatagramSend>,
+) {
+
 }
