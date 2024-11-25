@@ -43,6 +43,7 @@ impl Endpoint {
 
 struct EndpointInner {
     runtime: tokio::runtime::Handle,
+    notify: tokio::sync::Notify,
 
     inner: Mutex<State>,
     state_rx: tokio::sync::watch::Receiver<EndpointState>,
@@ -56,6 +57,17 @@ struct EndpointInner {
 
     socket_dgrams_recv_rx: tokio::sync::mpsc::UnboundedReceiver<DatagramRecv>,
     socket_dgrams_send_tx: tokio::sync::mpsc::UnboundedSender<DatagramSend>,
+}
+
+impl EndpointInner {
+    fn state(&self) -> EndpointState {
+        self.state_rx.borrow().clone()
+    }
+
+    fn send_dgram(&self, dgram: DatagramSend) {
+        self.socket_dgrams_send_tx.send(dgram).unwrap();
+        self.notify.notify_one();
+    }
 }
 
 enum State {
@@ -104,6 +116,7 @@ pub(crate) fn open(
 
     let inner = Arc::new(EndpointInner {
         runtime,
+        notify: tokio::sync::Notify::new(),
 
         inner: Mutex::new(State::Building),
 
@@ -174,4 +187,19 @@ async fn run(
 
     // Notify other tasks that the endpoint is now established
     state_tx.send(EndpointState::Established).unwrap();
+
+    loop {
+        // Tick, handling updates
+        tick(runtime, &inner).await;
+
+        // Wait for a new notification
+        inner.notify.notified().await;
+    }
+}
+
+async fn tick(
+    runtime: tokio::runtime::Handle,
+    inner: &EndpointInner,
+) {
+    todo!()
 }
