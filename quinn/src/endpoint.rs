@@ -102,7 +102,7 @@ pub(crate) fn open(
     let (state_tx, state_rx) = tokio::sync::watch::channel(EndpointState::Building);
     let (socket_dgrams_recv_tx, socket_dgrams_recv_rx) = tokio::sync::mpsc::unbounded_channel();
     let (socket_dgrams_send_tx, socket_dgrams_send_rx) = tokio::sync::mpsc::unbounded_channel();
-    // let (quinn_events_tx, quinn_events_rx) = tokio::sync::mpsc::unbounded_channel();
+    let (quinn_events_tx, quinn_events_rx) = tokio::sync::mpsc::unbounded_channel();
 
     let inner = Arc::new(EndpointInner {
         runtime,
@@ -111,10 +111,37 @@ pub(crate) fn open(
 
         state_rx,
 
-        quinn_events_rx: todo!(),
+        quinn_events_rx,
 
         socket: todo!(),
         socket_dgrams_recv_rx,
         socket_dgrams_send_tx,
     });
+
+    return Endpoint {
+        task: runtime.spawn(run(
+            runtime,
+            inner,
+            make_endpoint,
+
+            RunMeta {
+
+            },
+        )),
+
+        inner,
+    };
+}
+
+struct RunMeta {
+
+}
+
+async fn run(
+    runtime: tokio::runtime::Handle,
+    inner: Arc<EndpointInner>,
+    make_endpoint: MakeEndpointInner,
+    meta: RunMeta,
+) {
+    todo!()
 }
