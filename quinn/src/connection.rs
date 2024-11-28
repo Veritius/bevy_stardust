@@ -1,10 +1,8 @@
 use std::{future::Future, net::SocketAddr, sync::Arc, task::Poll};
 use bevy_ecs::component::{Component, ComponentHooks, StorageType};
 use futures_lite::FutureExt;
-use quinn_proto::ConnectionEvent;
-use tokio::sync::{mpsc, Mutex, Notify};
-
-use crate::endpoint::EndpointEvent;
+use tokio::sync::{Mutex, Notify};
+use crate::endpoint::EndpointHandle;
 
 pub struct Connection {
     inner: ConnectionRef,
@@ -33,12 +31,6 @@ struct Shared {
     wakeup: Notify,
 
     endpoint: EndpointHandle,
-}
-
-pub(crate) struct EndpointHandle {
-    pub wakeup: Arc<Notify>,
-    pub quinn_event_tx: mpsc::UnboundedSender<EndpointEvent>,
-    pub quinn_event_rx: mpsc::UnboundedReceiver<ConnectionEvent>,
 }
 
 pub(crate) struct ConnectionRequest {

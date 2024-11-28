@@ -3,7 +3,7 @@ use bevy_ecs::component::{Component, ComponentHooks, StorageType};
 use bytes::BytesMut;
 use quinn_proto::{ConnectionEvent, ConnectionHandle as QuinnConnectionId};
 use tokio::{net::UdpSocket, runtime::Handle as RuntimeHandle, sync::{mpsc, watch, Notify}, task::JoinHandle};
-use crate::{commands::MakeEndpointInner, connection::{ConnectionError, ConnectionRef, ConnectionRequest, EndpointHandle, NewConnection}};
+use crate::{commands::MakeEndpointInner, connection::{ConnectionError, ConnectionRef, ConnectionRequest, NewConnection}};
 
 pub struct Endpoint {
     pub(crate) handle: Handle,
@@ -66,6 +66,12 @@ pub(crate) struct EndpointEvent {
 
 struct ConnectionHandle {
     quinn_event_tx: mpsc::UnboundedSender<ConnectionEvent>,
+}
+
+pub(crate) struct EndpointHandle {
+    wakeup: Arc<Notify>,
+    quinn_event_tx: mpsc::UnboundedSender<EndpointEvent>,
+    quinn_event_rx: mpsc::UnboundedReceiver<ConnectionEvent>,
 }
 
 struct DatagramRecv {
