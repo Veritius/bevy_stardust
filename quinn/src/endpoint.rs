@@ -1,5 +1,6 @@
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::HashMap, net::SocketAddr, sync::Arc, time::Instant};
 use bevy_ecs::component::{Component, ComponentHooks, StorageType};
+use bytes::BytesMut;
 use quinn_proto::{ConnectionEvent, ConnectionHandle as QuinnConnectionId};
 use tokio::{net::UdpSocket, runtime::Handle as RuntimeHandle, sync::{mpsc, watch, Notify}, task::JoinHandle};
 use crate::{commands::MakeEndpointInner, connection::{ConnectionError, ConnectionRef, ConnectionRequest}};
@@ -68,11 +69,13 @@ struct ConnectionHandle {
 }
 
 struct DatagramRecv {
-
+    origin: SocketAddr,
+    payload: BytesMut,
 }
 
 struct DatagramSend {
-
+    target: SocketAddr,
+    payload: BytesMut,
 }
 
 enum BuildError {
@@ -201,7 +204,46 @@ async fn build(
 async fn tick(
     state: &mut State,
 ) {
-    // Receive any and all quinn events en masse and do responses
+    // scratch space for various operations
+    let mut scratch = Vec::new();
+
+    // Handle all datagrams received over the socket
+    while let Ok(dgram) = state.socket_dgram_recv_rx.try_recv() {
+        if let Some(response) = state.quinn.handle(
+            Instant::now(),
+            dgram.origin,
+            None,
+            None,
+            dgram.payload,
+            &mut scratch,
+        ) {
+            match response {
+                quinn_proto::DatagramEvent::ConnectionEvent(
+                    id,
+                    event,
+                ) => {
+                    let handle = state.connections.get(&id).unwrap();
+                    handle.quinn_event_tx.send(event).unwrap(); // TODO: Handle error
+                },
+
+                quinn_proto::DatagramEvent::NewConnection(incoming) => {
+                    todo!()
+                },
+
+                quinn_proto::DatagramEvent::Response(transmit) => {
+                    let mut payload = BytesMut::with_capacity(transmit.size);
+                    payload.copy_from_slice(&scratch[..transmit.size]);
+
+                    state.socket_dgram_send_tx.send(DatagramSend {
+                        target: transmit.destination,
+                        payload,
+                    }).unwrap(); // TODO: Handle error
+                },
+            }
+        }
+    }
+
+    // Handle any and all quinn events en masse and do responses
     while let Ok(event) = state.quinn_event_rx.try_recv() {
         if let Some(response) = state.quinn.handle_event(event.id, event.data) {
             let handle = state.connections.get(&event.id).unwrap();
