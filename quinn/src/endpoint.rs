@@ -1,7 +1,7 @@
 use std::{collections::HashMap, net::SocketAddr, sync::{Arc, Mutex}};
 use bevy_ecs::component::{Component, ComponentHooks, StorageType};
 use bytes::BytesMut;
-use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
+use tokio::{net::UdpSocket, sync::mpsc::{UnboundedReceiver, UnboundedSender}};
 use crate::commands::MakeEndpointInner;
 
 pub struct Endpoint {
@@ -44,7 +44,7 @@ struct EndpointInner {
     runtime: tokio::runtime::Handle,
     notify: tokio::sync::Notify,
 
-    inner: Mutex<State>,
+    inner: tokio::sync::Mutex<State>,
     state_rx: tokio::sync::watch::Receiver<EndpointState>,
 
     quinn_events_rx: tokio::sync::mpsc::UnboundedReceiver<(
@@ -65,7 +65,7 @@ enum State {
 }
 
 struct Established {
-    socket: tokio::net::UdpSocket,
+    socket: Arc<UdpSocket>,
 
     socket_dgram_recv_rx: UnboundedReceiver<DatagramRecv>,
     socket_dgram_send_tx: UnboundedSender<DatagramSend>,
@@ -112,7 +112,7 @@ pub(crate) fn open(
         runtime: runtime.clone(),
         notify: tokio::sync::Notify::new(),
 
-        inner: Mutex::new(State::Building),
+        inner: tokio::sync::Mutex::new(State::Building),
 
         state_rx,
 
@@ -154,26 +154,47 @@ async fn run(
         quinn_events_tx,
     } = meta;
 
-    // Construct the Quinn endpoint state object
-    let quinn = quinn_proto::Endpoint::new(
-        todo!(),
-        todo!(),
-        true,
-        None,
-    );
+    let (socket, quinn) = match make_endpoint {
+        MakeEndpointInner::Preconfigured {
+            socket,
+            config,
+            server,
+        } => {
+            // TODO: Handle error
+            let socket = Arc::new(
+                UdpSocket::from_std(socket).unwrap()
+            );
 
+            let quinn = quinn_proto::Endpoint::new(
+                config,
+                server,
+                true,
+                None,
+            );
+
+            (socket, quinn)
+        },
+    };
     // Construct additional channels
     let (socket_dgram_send_tx, socket_dgram_send_rx) = tokio::sync::mpsc::unbounded_channel();
     let (socket_dgram_recv_tx, socket_dgram_recv_rx) = tokio::sync::mpsc::unbounded_channel();
 
     // Construct the established state object
     let est = Established {
-        socket: todo!(),
+        socket: socket.clone(),
 
         socket_dgram_recv_rx,
         socket_dgram_send_tx,
-        socket_recv_task: runtime.spawn(recv(socket_dgram_recv_tx)),
-        socket_send_task: runtime.spawn(send(socket_dgram_send_rx)),
+
+        socket_recv_task: runtime.spawn(recv(
+            socket.clone(),
+            socket_dgram_recv_tx,
+        )),
+
+        socket_send_task: runtime.spawn(send(
+            socket.clone(),
+            socket_dgram_send_rx,
+        )),
 
         connections: HashMap::new(),
 
@@ -182,7 +203,7 @@ async fn run(
     };
 
     // Set the endpoint to Established as it is successful
-    let mut lock = inner.inner.lock().unwrap();
+    let mut lock = inner.inner.lock().await;
     *lock = State::Established(est);
     drop(lock);
 
@@ -191,7 +212,7 @@ async fn run(
 
     loop {
         // Tick, handling updates
-        tick(runtime, &inner).await;
+        tick(runtime.clone(), &inner).await;
 
         // Wait for a new notification
         inner.notify.notified().await;
@@ -206,12 +227,14 @@ async fn tick(
 }
 
 async fn recv(
+    socket: Arc<UdpSocket>,
     socket_dgram_recv_tx: UnboundedSender<DatagramRecv>,
 ) {
 
 }
 
 async fn send(
+    socket: Arc<UdpSocket>,
     socket_dgram_send_rx: UnboundedReceiver<DatagramSend>,
 ) {
 
