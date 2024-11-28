@@ -2,7 +2,7 @@ use std::{future::Future, net::SocketAddr, sync::Arc, task::Poll};
 use bevy_ecs::component::{Component, ComponentHooks, StorageType};
 use bevy_stardust::prelude::ChannelMessage;
 use futures_lite::FutureExt;
-use tokio::{sync::{mpsc, watch}, task::JoinHandle};
+use tokio::{select, sync::{mpsc, watch}, task::JoinHandle};
 use crate::endpoint::EndpointHandle;
 
 pub struct Connection {
@@ -95,4 +95,22 @@ pub(crate) struct NewConnection {
 pub(crate) enum ConnectionError {
     EndpointClosed,
     QuicError(quinn_proto::ConnectError),
+}
+
+async fn tick(
+    state: &mut State,
+) {
+    select! {
+        message = state.outgoing_messages_rx.recv() => match message {
+            Some(message) => handle_outgoing_message(state, message).await,
+            None => todo!(),
+        },
+    }
+}
+
+async fn handle_outgoing_message(
+    state: &mut State,
+    message: ChannelMessage,
+) {
+
 }
