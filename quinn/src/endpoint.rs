@@ -22,6 +22,9 @@ struct State {
 
     socket: Arc<UdpSocket>,
 
+    socket_dgram_recv_rx: mpsc::UnboundedReceiver<DatagramRecv>,
+    socket_dgram_send_tx: mpsc::UnboundedSender<DatagramSend>,
+
     quinn: quinn_proto::Endpoint,
 
     quinn_event_rx: mpsc::UnboundedReceiver<EndpointEvent>,
@@ -64,6 +67,14 @@ struct ConnectionHandle {
     quinn_event_tx: mpsc::UnboundedSender<ConnectionEvent>,
 }
 
+struct DatagramRecv {
+
+}
+
+struct DatagramSend {
+
+}
+
 enum BuildError {
     IoError(std::io::Error),
     TlsError(rustls::Error),
@@ -94,15 +105,17 @@ fn open(
 
     Endpoint {
         handle: Handle {
-            waker,
+            waker: waker.clone(),
             state: state_rx,
 
             connection_request_tx,
         },
 
         driver: runtime.spawn(endpoint(BuildTaskData {
+            runtime: runtime.clone(),
             config,
 
+            waker,
             state_tx,
             connection_request_rx,
         })),
@@ -129,8 +142,10 @@ async fn endpoint(
 }
 
 struct BuildTaskData {
+    runtime: RuntimeHandle,
     config: MakeEndpointInner,
 
+    waker: Arc<Notify>,
     state_tx: watch::Sender<EndpointState>,
     connection_request_rx: mpsc::UnboundedReceiver<ConnectionRequest>,
 }
@@ -138,7 +153,49 @@ struct BuildTaskData {
 async fn build(
     config: BuildTaskData,
 ) -> Result<State, BuildError> {
-    todo!()
+    // Create communications channels
+    let (quinn_event_tx, quinn_event_rx) = mpsc::unbounded_channel();
+    let (socket_dgram_recv_tx, socket_dgram_recv_rx) = mpsc::unbounded_channel();
+    let (socket_dgram_send_tx, socket_dgram_send_rx) = mpsc::unbounded_channel();
+
+    // Resolve user configuration
+    let (socket, quinn) = match config.config {
+        MakeEndpointInner::Preconfigured {
+            socket,
+            config,
+            server,
+        } => {
+            socket.set_nonblocking(true)?;
+            let socket = UdpSocket::from_std(socket).map_err(|e| BuildError::IoError(e))?;
+
+            let quinn = quinn_proto::Endpoint::new(
+                config,
+                server,
+                true,
+                None,
+            );
+
+            (Arc::new(socket), quinn)
+        },
+    };
+
+    // Spawn tasks for I/O
+    config.runtime.spawn(io_recv_task(socket.clone(), socket_dgram_recv_tx));
+    config.runtime.spawn(io_send_task(socket.clone(), socket_dgram_send_rx));
+
+    // Return state object
+    return Ok(State {
+        waker: config.waker,
+        state: config.state_tx,
+        socket,
+        socket_dgram_recv_rx,
+        socket_dgram_send_tx,
+        quinn,
+        quinn_event_rx,
+        quinn_event_tx,
+        connections: HashMap::new(),
+        connection_request_rx: config.connection_request_rx,
+    });
 }
 
 async fn tick(
@@ -151,4 +208,18 @@ async fn tick(
             handle.quinn_event_tx.send(response).unwrap(); // TODO: Handle error
         }
     }
+}
+
+async fn io_recv_task(
+    socket: Arc<UdpSocket>,
+    socket_dgram_recv_tx: mpsc::UnboundedSender<DatagramRecv>,
+) {
+
+}
+
+async fn io_send_task(
+    socket: Arc<UdpSocket>,
+    socket_dgram_send_rx: mpsc::UnboundedReceiver<DatagramSend>,
+) {
+
 }
