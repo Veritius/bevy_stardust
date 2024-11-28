@@ -1,11 +1,11 @@
-use std::{collections::HashMap, sync::Arc, time::Duration};
+use std::{collections::HashMap, sync::Arc};
 use bevy_ecs::component::{Component, ComponentHooks, StorageType};
 use quinn_proto::{ConnectionEvent, ConnectionHandle as QuinnConnectionId};
-use tokio::{net::UdpSocket, runtime::Handle as RuntimeHandle, sync::{mpsc, Mutex, Notify}, task::JoinHandle};
-use crate::{commands::MakeEndpointInner, connection::{ConnectionError, ConnectionRef, ConnectionRequest, NewConnection}};
+use tokio::{net::UdpSocket, runtime::Handle as RuntimeHandle, sync::{mpsc, watch, Notify}, task::JoinHandle};
+use crate::{commands::MakeEndpointInner, connection::{ConnectionError, ConnectionRef, ConnectionRequest}};
 
 pub struct Endpoint {
-    pub(crate) shared: EndpointShared,
+    pub(crate) handle: Handle,
 
     driver: JoinHandle<()>,
 }
@@ -16,8 +16,9 @@ impl Component for Endpoint {
     fn register_component_hooks(_hooks: &mut ComponentHooks) {}
 }
 
-struct EndpointState {
+struct State {
     waker: Arc<Notify>,
+    state: watch::Sender<EndpointState>,
 
     socket: Arc<UdpSocket>,
 
@@ -31,18 +32,25 @@ struct EndpointState {
     connection_request_rx: mpsc::UnboundedReceiver<ConnectionRequest>,
 }
 
-pub(crate) struct EndpointShared {
+pub(crate) struct Handle {
     waker: Arc<Notify>,
+    state: watch::Receiver<EndpointState>,
 
     connection_request_tx: mpsc::UnboundedSender<ConnectionRequest>,
 }
 
-impl EndpointShared {
+impl Handle {
     pub fn connect(&self, request: ConnectionRequest) -> Result<(), ConnectionError> {
         self.connection_request_tx.send(request).map_err(|_| ConnectionError::EndpointClosed)?;
         self.waker.notify_one();
         return Ok(());
     }
+}
+
+pub enum EndpointState {
+    Building,
+    Established,
+    Shutdown,
 }
 
 pub(crate) struct EndpointEvent {
@@ -77,18 +85,46 @@ fn open(
     runtime: RuntimeHandle,
     config: MakeEndpointInner,
 ) -> Endpoint {
-    todo!()
+    // Endpoint waker and state storage
+    let waker = Arc::new(Notify::new());
+
+    // Create various communication channels
+    let (state_tx, state_rx) = tokio::sync::watch::channel(EndpointState::Building);
+    let (connection_request_tx, connection_request_rx) = mpsc::unbounded_channel();
+
+    Endpoint {
+        handle: Handle {
+            waker,
+            state: state_rx,
+
+            connection_request_tx,
+        },
+
+        driver: runtime.spawn(endpoint(BuildTaskData {
+            config,
+
+            state_tx,
+            connection_request_rx,
+        })),
+    }
 }
 
 async fn endpoint(
-
+    config: BuildTaskData,
 ) {
 
 }
 
-async fn build(
+struct BuildTaskData {
+    config: MakeEndpointInner,
 
-) -> Result<EndpointState, BuildError> {
+    state_tx: watch::Sender<EndpointState>,
+    connection_request_rx: mpsc::UnboundedReceiver<ConnectionRequest>,
+}
+
+async fn build(
+    config: BuildTaskData,
+) -> Result<State, BuildError> {
     todo!()
 }
 
