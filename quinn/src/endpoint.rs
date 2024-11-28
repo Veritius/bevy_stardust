@@ -2,11 +2,12 @@ use std::{collections::HashMap, sync::Arc, time::Duration};
 use bevy_ecs::component::{Component, ComponentHooks, StorageType};
 use quinn_proto::{ConnectionEvent, ConnectionHandle as QuinnConnectionId};
 use tokio::{net::UdpSocket, runtime::Handle as RuntimeHandle, sync::{mpsc, Mutex, Notify}, task::JoinHandle};
-use crate::{commands::MakeEndpointInner, connection::ConnectionRef};
+use crate::{commands::MakeEndpointInner, connection::{ConnectionError, ConnectionRef, ConnectionRequest, NewConnection}};
 
 pub struct Endpoint {
+    pub(crate) shared: EndpointShared,
+
     driver: JoinHandle<()>,
-    shared: EndpointShared,
 }
 
 impl Component for Endpoint {
@@ -15,7 +16,9 @@ impl Component for Endpoint {
     fn register_component_hooks(_hooks: &mut ComponentHooks) {}
 }
 
-struct EndpointInner {
+struct EndpointState {
+    waker: Arc<Notify>,
+
     socket: Arc<UdpSocket>,
 
     quinn: quinn_proto::Endpoint,
@@ -24,10 +27,22 @@ struct EndpointInner {
     quinn_event_tx: mpsc::UnboundedSender<EndpointEvent>,
 
     connections: HashMap<QuinnConnectionId, ConnectionHandle>,
+
+    connection_request_rx: mpsc::UnboundedReceiver<ConnectionRequest>,
 }
 
 pub(crate) struct EndpointShared {
     waker: Arc<Notify>,
+
+    connection_request_tx: mpsc::UnboundedSender<ConnectionRequest>,
+}
+
+impl EndpointShared {
+    pub fn connect(&self, request: ConnectionRequest) -> Result<(), ConnectionError> {
+        self.connection_request_tx.send(request).map_err(|_| ConnectionError::EndpointClosed)?;
+        self.waker.notify_one();
+        return Ok(());
+    }
 }
 
 pub(crate) struct EndpointEvent {
@@ -73,7 +88,7 @@ async fn endpoint(
 
 async fn build(
 
-) -> Result<EndpointInner, BuildError> {
+) -> Result<EndpointState, BuildError> {
     todo!()
 }
 

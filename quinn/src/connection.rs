@@ -1,5 +1,6 @@
-use std::sync::Arc;
+use std::{future::Future, sync::Arc, task::Poll};
 use bevy_ecs::component::{Component, ComponentHooks, StorageType};
+use futures_lite::FutureExt;
 use quinn_proto::{ConnectionEvent, EndpointEvent};
 use tokio::sync::{mpsc, Mutex, Notify};
 
@@ -35,4 +36,63 @@ struct Shared {
 struct EndpointHandle {
     quinn_event_tx: mpsc::UnboundedSender<EndpointEvent>,
     quinn_event_rx: mpsc::UnboundedReceiver<ConnectionEvent>,
+}
+
+pub(crate) struct ConnectionRequest {
+    request_tx: tokio::sync::oneshot::Sender<
+        Result<NewConnection, ConnectionError>,
+    >,
+}
+
+impl ConnectionRequest {
+    fn new() -> (
+        ConnectionRequest,
+        PendingConnectionRequest,
+    ) {
+        let (request_tx, request_rx) = tokio::sync::oneshot::channel();
+
+        let tx = ConnectionRequest { request_tx };
+        let rx = PendingConnectionRequest { request_rx };
+
+        return (tx, rx);
+    }
+}
+
+impl ConnectionRequest {
+    pub fn accept(self, connection: NewConnection) {
+        let _ = self.request_tx.send(Ok(connection));
+    }
+
+    pub fn reject(self, error: ConnectionError) {
+        let _ = self.request_tx.send(Err(error));
+    }
+}
+
+struct PendingConnectionRequest {
+    request_rx: tokio::sync::oneshot::Receiver<
+        Result<NewConnection, ConnectionError>
+    >,
+}
+
+impl Future for PendingConnectionRequest {
+    type Output = Result<NewConnection, ConnectionError>;
+
+    fn poll(
+        mut self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> Poll<Self::Output> {
+        match self.request_rx.poll(cx) {
+            Poll::Pending => Poll::Pending,
+            Poll::Ready(Ok(v)) => Poll::Ready(v),
+            Poll::Ready(Err(_)) => Poll::Ready(Err(ConnectionError::EndpointClosed)),
+        }
+    }
+}
+
+pub(crate) struct NewConnection {
+    pub quinn: quinn_proto::Connection
+}
+
+pub(crate) enum ConnectionError {
+    EndpointClosed,
 }
