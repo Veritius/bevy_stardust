@@ -97,4 +97,5 @@ pub(crate) struct NewConnection {
 
 pub(crate) enum ConnectionError {
     EndpointClosed,
+    QuicError(quinn_proto::ConnectError),
 }

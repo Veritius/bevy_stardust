@@ -291,7 +291,7 @@ async fn tick(
             },
 
             Err(err) => {
-                request.inner.reject(todo!());
+                request.inner.reject(ConnectionError::QuicError(err));
             },
         }
     }
