@@ -70,6 +70,12 @@ pub(crate) struct EndpointHandle {
     quinn_event_rx: mpsc::UnboundedReceiver<ConnectionEvent>,
 }
 
+impl EndpointHandle {
+    pub async fn recv_connection_event(&mut self) -> Option<ConnectionEvent> {
+        self.quinn_event_rx.recv().await
+    }
+}
+
 struct DatagramRecv {
     origin: SocketAddr,
     payload: BytesMut,

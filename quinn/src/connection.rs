@@ -2,6 +2,7 @@ use std::{future::Future, net::SocketAddr, sync::Arc, task::Poll};
 use bevy_ecs::component::{Component, ComponentHooks, StorageType};
 use bevy_stardust::prelude::ChannelMessage;
 use futures_lite::FutureExt;
+use quinn_proto::ConnectionEvent;
 use tokio::{select, sync::{mpsc, watch}, task::JoinHandle};
 use crate::endpoint::EndpointHandle;
 
@@ -19,6 +20,8 @@ impl Component for Connection {
 
 struct State {
     state: watch::Sender<ConnectionState>,
+
+    endpoint: EndpointHandle,
 
     quinn: quinn_proto::Connection,
 
@@ -101,11 +104,23 @@ async fn tick(
     state: &mut State,
 ) {
     select! {
+        event = state.endpoint.recv_connection_event() => match event {
+            Some(event) => handle_connection_event(state, event).await,
+            None => todo!(),
+        },
+
         message = state.outgoing_messages_rx.recv() => match message {
             Some(message) => handle_outgoing_message(state, message).await,
             None => todo!(),
         },
     }
+}
+
+async fn handle_connection_event(
+    state: &mut State,
+    event: ConnectionEvent,
+) {
+
 }
 
 async fn handle_outgoing_message(
