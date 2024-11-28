@@ -120,7 +120,7 @@ async fn handle_connection_event(
     state: &mut State,
     event: ConnectionEvent,
 ) {
-
+    state.quinn.handle_event(event);
 }
 
 async fn handle_outgoing_message(
