@@ -1,11 +1,14 @@
 use std::{future::Future, net::SocketAddr, sync::Arc, task::Poll};
 use bevy_ecs::component::{Component, ComponentHooks, StorageType};
+use bevy_stardust::prelude::ChannelMessage;
 use futures_lite::FutureExt;
-use tokio::sync::{Mutex, Notify};
+use tokio::{sync::{mpsc, watch}, task::JoinHandle};
 use crate::endpoint::EndpointHandle;
 
 pub struct Connection {
-    inner: ConnectionRef,
+    pub(crate) handle: Handle,
+
+    driver: JoinHandle<()>,
 }
 
 impl Component for Connection {
@@ -14,23 +17,26 @@ impl Component for Connection {
     fn register_component_hooks(_hooks: &mut ComponentHooks) {}
 }
 
-#[derive(Clone)]
-pub(crate) struct ConnectionRef(Arc<EndpointInner>);
-
-struct EndpointInner {
-    state: Mutex<State>,
-    shared: Shared,
-}
-
 struct State {
+    state: watch::Sender<ConnectionState>,
+
     quinn: quinn_proto::Connection,
+
+    outgoing_messages_rx: mpsc::Receiver<ChannelMessage>,
+    incoming_messages_tx: mpsc::Sender<ChannelMessage>,
 }
 
-struct Shared {
-    runtime: tokio::runtime::Handle,
-    wakeup: Notify,
+pub(crate) struct Handle {
+    state: watch::Receiver<ConnectionState>,
 
-    endpoint: EndpointHandle,
+    outgoing_messages_tx: mpsc::Sender<ChannelMessage>,
+    incoming_messages_rx: mpsc::Receiver<ChannelMessage>,
+}
+
+pub enum ConnectionState {
+    Connecting,
+    Connected,
+    Shutdown
 }
 
 pub(crate) struct ConnectionRequest {
