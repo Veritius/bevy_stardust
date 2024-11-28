@@ -14,4 +14,13 @@ mod plugin;
 mod runtime;
 
 pub use plugin::QuicPlugin;
+pub use endpoint::Endpoint;
+pub use connection::Connection;
+pub use commands::*;
 pub use config::*;
+pub use runtime::Runtime;
+
+pub use rustls::pki_types::{
+    CertificateDer,
+    PrivateKeyDer,
+};
