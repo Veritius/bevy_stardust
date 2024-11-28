@@ -34,6 +34,7 @@ struct State {
     connections: HashMap<QuinnConnectionId, ConnectionHandle>,
 
     connection_request_rx: mpsc::UnboundedReceiver<ConnectionRequest>,
+    connection_accepted_tx: mpsc::UnboundedSender<NewConnection>,
 }
 
 pub(crate) struct Handle {
@@ -41,6 +42,7 @@ pub(crate) struct Handle {
     state: watch::Receiver<EndpointState>,
 
     connection_request_tx: mpsc::UnboundedSender<ConnectionRequest>,
+    connection_accepted_rx: mpsc::UnboundedReceiver<NewConnection>,
 }
 
 impl Handle {
@@ -103,6 +105,8 @@ fn open(
     // Create various communication channels
     let (state_tx, state_rx) = tokio::sync::watch::channel(EndpointState::Building);
     let (connection_request_tx, connection_request_rx) = mpsc::unbounded_channel();
+    let (connection_accepted_tx, connection_accepted_rx) = mpsc::unbounded_channel();
+
 
     Endpoint {
         handle: Handle {
@@ -110,6 +114,7 @@ fn open(
             state: state_rx,
 
             connection_request_tx,
+            connection_accepted_rx,
         },
 
         driver: runtime.spawn(endpoint(BuildTaskData {
@@ -119,6 +124,7 @@ fn open(
             waker,
             state_tx,
             connection_request_rx,
+            connection_accepted_tx,
         })),
     }
 }
@@ -149,6 +155,7 @@ struct BuildTaskData {
     waker: Arc<Notify>,
     state_tx: watch::Sender<EndpointState>,
     connection_request_rx: mpsc::UnboundedReceiver<ConnectionRequest>,
+    connection_accepted_tx: mpsc::UnboundedSender<NewConnection>,
 }
 
 async fn build(
@@ -196,6 +203,7 @@ async fn build(
         quinn_event_tx,
         connections: HashMap::new(),
         connection_request_rx: config.connection_request_rx,
+        connection_accepted_tx: config.connection_accepted_tx,
     });
 }
 
@@ -225,7 +233,24 @@ async fn tick(
                 },
 
                 quinn_proto::DatagramEvent::NewConnection(incoming) => {
-                    todo!()
+                    match state.quinn.accept(
+                        incoming,
+                        Instant::now(),
+                        &mut scratch,
+                        None,
+                    ) {
+                        Ok((id, quinn)) => {
+                            let connection = add_connection(
+                                state,
+                                id,
+                                quinn,
+                            ).await;
+
+                            state.connection_accepted_tx.send(connection).unwrap(); // TODO: Handle error
+                        },
+
+                        Err(_) => todo!(),
+                    }
                 },
 
                 quinn_proto::DatagramEvent::Response(transmit) => {
@@ -258,19 +283,11 @@ async fn tick(
             todo!(),
         ) {
             Ok((id, quinn)) => {
-                // Create channels
-                let (quinn_event_tx, quinn_event_rx) = mpsc::unbounded_channel();
-
-                request.accept(NewConnection {
+                request.accept(add_connection(
+                    state,
+                    id,
                     quinn,
-
-                    quinn_event_rx,
-                    quinn_event_tx: state.quinn_event_tx.clone()
-                });
-
-                state.connections.insert(id, ConnectionHandle {
-                    quinn_event_tx,
-                });
+                ).await);
             },
 
             Err(err) => {
@@ -278,6 +295,25 @@ async fn tick(
             },
         }
     }
+}
+
+async fn add_connection(
+    state: &mut State,
+    id: QuinnConnectionId,
+    quinn: quinn_proto::Connection,
+) -> NewConnection {
+    let (quinn_event_tx, quinn_event_rx) = mpsc::unbounded_channel();
+
+    state.connections.insert(id, ConnectionHandle {
+        quinn_event_tx,
+    });
+
+    return NewConnection {
+        quinn,
+
+        quinn_event_rx,
+        quinn_event_tx: state.quinn_event_tx.clone()
+    };
 }
 
 async fn io_recv_task(
