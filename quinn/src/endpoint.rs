@@ -2,7 +2,7 @@ use std::{collections::HashMap, io::ErrorKind, net::SocketAddr, sync::Arc, time:
 use bevy_ecs::component::{Component, ComponentHooks, StorageType};
 use bytes::BytesMut;
 use quinn_proto::{ConnectionEvent, ConnectionHandle as QuinnConnectionId};
-use tokio::{net::UdpSocket, runtime::Handle as RuntimeHandle, sync::{mpsc, watch, Notify}, task::JoinHandle};
+use tokio::{net::UdpSocket, runtime::Handle as RuntimeHandle, select, sync::{mpsc, watch, Notify}, task::JoinHandle};
 use crate::{commands::MakeEndpointInner, connection::{ConnectionError, ConnectionRequest, NewConnection}};
 
 pub struct Endpoint {
@@ -18,7 +18,6 @@ impl Component for Endpoint {
 }
 
 struct State {
-    waker: Arc<Notify>,
     state: watch::Sender<EndpointState>,
 
     socket: Arc<UdpSocket>,
@@ -38,7 +37,6 @@ struct State {
 }
 
 pub(crate) struct Handle {
-    waker: Arc<Notify>,
     state: watch::Receiver<EndpointState>,
 
     connection_request_tx: mpsc::UnboundedSender<ConnectionRequest>,
@@ -47,9 +45,8 @@ pub(crate) struct Handle {
 
 impl Handle {
     pub fn connect(&self, request: ConnectionRequest) -> Result<(), ConnectionError> {
-        self.connection_request_tx.send(request).map_err(|_| ConnectionError::EndpointClosed)?;
-        self.waker.notify_one();
-        return Ok(());
+        self.connection_request_tx.send(request)
+            .map_err(|_| ConnectionError::EndpointClosed)
     }
 }
 
@@ -69,7 +66,6 @@ struct ConnectionHandle {
 }
 
 pub(crate) struct EndpointHandle {
-    wakeup: Arc<Notify>,
     quinn_event_tx: mpsc::UnboundedSender<EndpointEvent>,
     quinn_event_rx: mpsc::UnboundedReceiver<ConnectionEvent>,
 }
@@ -105,9 +101,6 @@ fn open(
     runtime: RuntimeHandle,
     config: MakeEndpointInner,
 ) -> Endpoint {
-    // Endpoint waker and state storage
-    let waker = Arc::new(Notify::new());
-
     // Create various communication channels
     let (state_tx, state_rx) = tokio::sync::watch::channel(EndpointState::Building);
     let (connection_request_tx, connection_request_rx) = mpsc::unbounded_channel();
@@ -115,7 +108,6 @@ fn open(
 
     Endpoint {
         handle: Handle {
-            waker: waker.clone(),
             state: state_rx,
 
             connection_request_tx,
@@ -126,7 +118,6 @@ fn open(
             runtime: runtime.clone(),
             config,
 
-            waker,
             state_tx,
             connection_request_rx,
             connection_accepted_tx,
@@ -143,13 +134,26 @@ async fn endpoint(
         Err(err) => todo!(),
     };
 
-    // Drive endpoint logic
     loop {
-        // Tick endpoint logic
-        tick(&mut state).await;
+        select! {
+            // Receive datagrams
+            dgram = state.socket_dgram_recv_rx.recv() => match dgram {
+                Some(dgram) => handle_datagram(&mut state, dgram).await,
+                None => todo!(),
+            },
 
-        // Wait for a notification
-        state.waker.notified().await;
+            // Handle events
+            event = state.quinn_event_rx.recv() => match event {
+                Some(event) => handle_event(&mut state, event).await,
+                None => todo!(),
+            },
+
+            // Handle connection requests
+            request = state.connection_request_rx.recv() => match request {
+                Some(request) => handle_connection_request(&mut state, request).await,
+                None => todo!(),
+            }
+        }
     }
 }
 
@@ -157,7 +161,6 @@ struct BuildTaskData {
     runtime: RuntimeHandle,
     config: MakeEndpointInner,
 
-    waker: Arc<Notify>,
     state_tx: watch::Sender<EndpointState>,
     connection_request_rx: mpsc::UnboundedReceiver<ConnectionRequest>,
     connection_accepted_tx: mpsc::UnboundedSender<NewConnection>,
@@ -198,7 +201,6 @@ async fn build(
 
     // Return state object
     return Ok(State {
-        waker: config.waker,
         state: config.state_tx,
         socket,
         socket_dgram_recv_rx,
@@ -210,25 +212,6 @@ async fn build(
         connection_request_rx: config.connection_request_rx,
         connection_accepted_tx: config.connection_accepted_tx,
     });
-}
-
-async fn tick(
-    state: &mut State,
-) {
-    // Handle all datagrams received over the socket
-    while let Ok(dgram) = state.socket_dgram_recv_rx.try_recv() {
-        handle_datagram(state, dgram).await;
-    }
-
-    // Handle any and all quinn events en masse and do responses
-    while let Ok(event) = state.quinn_event_rx.try_recv() {
-        handle_event(state, event).await;
-    }
-
-    // Handle incoming connection requests
-    while let Ok(request) = state.connection_request_rx.try_recv() {
-        handle_connection_request(state, request).await;
-    }
 }
 
 async fn handle_datagram(
@@ -337,7 +320,6 @@ async fn add_connection(
         quinn,
 
         endpoint: EndpointHandle {
-            wakeup: state.waker.clone(),
             quinn_event_rx,
             quinn_event_tx: state.quinn_event_tx.clone(),
         },
