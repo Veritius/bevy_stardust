@@ -110,9 +110,8 @@ impl EntityCommand for MakeEndpoint {
         }
 
         let runtime = world.resource::<crate::runtime::Runtime>();
-        // let comp = crate::endpoint::open(runtime.handle(), self.0);
-        // world.entity_mut(id).insert(comp);
-        todo!()
+        let comp = crate::endpoint::open(runtime.handle(), self.0);
+        world.entity_mut(id).insert(comp);
     }
 }
 

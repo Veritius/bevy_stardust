@@ -97,7 +97,7 @@ impl From<rustls::Error> for BuildError {
     }
 }
 
-fn open(
+pub(crate) fn open(
     runtime: RuntimeHandle,
     config: MakeEndpointInner,
 ) -> Endpoint {
