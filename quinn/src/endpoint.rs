@@ -1,10 +1,11 @@
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::HashMap, sync::Arc, time::Duration};
 use bevy_ecs::component::{Component, ComponentHooks, StorageType};
 use quinn_proto::{ConnectionEvent, ConnectionHandle as QuinnConnectionId};
 use tokio::{net::UdpSocket, sync::{mpsc, Mutex, Notify}, task::JoinHandle};
 use crate::{commands::MakeEndpointInner, connection::ConnectionRef};
 
 pub struct Endpoint {
+    driver: JoinHandle<()>,
     inner: EndpointRef,
 }
 
@@ -135,4 +136,36 @@ async fn build_task(
         quinn,
         connections: HashMap::new(),
     });
+}
+
+async fn driver(
+    runtime: tokio::runtime::Handle,
+    endpoint: EndpointRef,
+) {
+    loop {
+        // Tick the endpoint once
+        let tick = tick(
+            &runtime,
+            &endpoint.0,
+        ).await;
+
+        // Wait for the next notification from another part of the code
+        // Can also return early after a time without notifications
+        // This is controlled by [`tick`] and handles internal timers
+        let _ = tokio::time::timeout(
+            tick.timeout,
+            endpoint.0.shared.wakeup.notified(),
+        ).await;
+    }
+}
+
+async fn tick(
+    runtime: &tokio::runtime::Handle,
+    endpoint: &EndpointInner,
+) -> TickOutput {
+    todo!()
+}
+
+struct TickOutput {
+    timeout: Duration,
 }
