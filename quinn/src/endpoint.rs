@@ -22,7 +22,11 @@ struct EndpointInner {
     shared: Shared,
 }
 
-struct State {
+enum State {
+    Established(Established),
+}
+
+struct Established {
     quinn: quinn_proto::Endpoint,
 
     connections: HashMap<QuinnConnectionId, ConnectionHandle>,
