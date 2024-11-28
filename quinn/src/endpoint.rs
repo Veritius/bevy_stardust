@@ -3,7 +3,7 @@ use bevy_ecs::component::{Component, ComponentHooks, StorageType};
 use bytes::BytesMut;
 use quinn_proto::{ConnectionEvent, ConnectionHandle as QuinnConnectionId};
 use tokio::{net::UdpSocket, runtime::Handle as RuntimeHandle, sync::{mpsc, watch, Notify}, task::JoinHandle};
-use crate::{commands::MakeEndpointInner, connection::{ConnectionError, ConnectionRef, ConnectionRequest, NewConnection}};
+use crate::{commands::MakeEndpointInner, connection::{ConnectionError, ConnectionRef, ConnectionRequest, EndpointHandle, NewConnection}};
 
 pub struct Endpoint {
     pub(crate) handle: Handle,
@@ -311,8 +311,11 @@ async fn add_connection(
     return NewConnection {
         quinn,
 
-        quinn_event_rx,
-        quinn_event_tx: state.quinn_event_tx.clone()
+        endpoint: EndpointHandle {
+            wakeup: state.waker.clone(),
+            quinn_event_rx,
+            quinn_event_tx: state.quinn_event_tx.clone(),
+        },
     };
 }
 

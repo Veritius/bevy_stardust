@@ -35,9 +35,10 @@ struct Shared {
     endpoint: EndpointHandle,
 }
 
-struct EndpointHandle {
-    quinn_event_tx: mpsc::UnboundedSender<EndpointEvent>,
-    quinn_event_rx: mpsc::UnboundedReceiver<ConnectionEvent>,
+pub(crate) struct EndpointHandle {
+    pub wakeup: Arc<Notify>,
+    pub quinn_event_tx: mpsc::UnboundedSender<EndpointEvent>,
+    pub quinn_event_rx: mpsc::UnboundedReceiver<ConnectionEvent>,
 }
 
 pub(crate) struct ConnectionRequest {
@@ -90,9 +91,7 @@ impl Future for ConnectionRequestResponseListener {
 
 pub(crate) struct NewConnection {
     pub quinn: quinn_proto::Connection,
-
-    pub quinn_event_tx: mpsc::UnboundedSender<EndpointEvent>,
-    pub quinn_event_rx: mpsc::UnboundedReceiver<ConnectionEvent>,
+    pub endpoint: EndpointHandle,
 }
 
 pub(crate) enum ConnectionError {
