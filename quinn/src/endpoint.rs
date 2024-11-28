@@ -1,4 +1,4 @@
-use std::{collections::HashMap, net::SocketAddr, sync::Arc, time::Instant};
+use std::{collections::HashMap, io::ErrorKind, net::SocketAddr, sync::Arc, time::Instant};
 use bevy_ecs::component::{Component, ComponentHooks, StorageType};
 use bytes::BytesMut;
 use quinn_proto::{ConnectionEvent, ConnectionHandle as QuinnConnectionId};
@@ -284,12 +284,39 @@ async fn io_recv_task(
     socket: Arc<UdpSocket>,
     socket_dgram_recv_tx: mpsc::UnboundedSender<DatagramRecv>,
 ) {
+    loop {
+        let mut payload = BytesMut::with_capacity(2048); // TODO: Increase this size
 
+        match socket.recv_buf_from(&mut payload).await {
+            Ok((_, origin)) => {
+                let message = DatagramRecv {
+                    origin,
+                    payload,
+                };
+
+                if let Err(_) = socket_dgram_recv_tx.send(message) {
+                    return; // Channel is closed
+                }
+            },
+
+            Err(e) if e.kind() == ErrorKind::WouldBlock => {},
+
+            Err(_) => todo!(),
+        }
+    }
 }
 
 async fn io_send_task(
     socket: Arc<UdpSocket>,
-    socket_dgram_send_rx: mpsc::UnboundedReceiver<DatagramSend>,
+    mut socket_dgram_send_rx: mpsc::UnboundedReceiver<DatagramSend>,
 ) {
+    while let Some(dgram) = socket_dgram_send_rx.recv().await {
+        match socket.send_to(&dgram.payload, dgram.target).await {
+            Ok(_) => continue, // Success
 
+            Err(e) if e.kind() == ErrorKind::WouldBlock => todo!(),
+
+            Err(_) => todo!(),
+        }
+    }
 }
