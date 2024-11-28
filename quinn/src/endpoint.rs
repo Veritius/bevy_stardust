@@ -9,35 +9,23 @@ pub struct Endpoint {
     inner: Arc<EndpointInner>,
 }
 
+impl Component for Endpoint {
+    const STORAGE_TYPE: StorageType = StorageType::Table;
+
+    fn register_component_hooks(hooks: &mut ComponentHooks) {
+        // hooks.on_remove(|mut world, entity, _| {
+        //     let mut entity = world.entity_mut(entity);
+        //     let mut component = entity.get_mut::<Endpoint>().unwrap();
+        //     component.close();
+        // });
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum EndpointState {
     Building,
     Established,
     Closed,
-}
-
-impl Component for Endpoint {
-    const STORAGE_TYPE: StorageType = StorageType::Table;
-
-    fn register_component_hooks(hooks: &mut ComponentHooks) {
-        hooks.on_remove(|mut world, entity, _| {
-            let mut entity = world.entity_mut(entity);
-            let mut component = entity.get_mut::<Endpoint>().unwrap();
-            component.close();
-        });
-    }
-}
-
-impl Endpoint {
-    pub fn state(&self) -> EndpointState {
-        self.inner.state_rx.borrow().clone()
-    }
-
-    pub fn close(
-        &mut self,
-    ) {
-        todo!()
-    }
 }
 
 struct EndpointInner {
