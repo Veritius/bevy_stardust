@@ -55,7 +55,7 @@ pub enum EndpointState {
 
 pub(crate) struct EndpointEvent {
     pub id: quinn_proto::ConnectionHandle,
-    pub evt: quinn_proto::EndpointEvent,
+    pub data: quinn_proto::EndpointEvent,
 }
 
 struct ConnectionHandle {
@@ -112,7 +112,20 @@ fn open(
 async fn endpoint(
     config: BuildTaskData,
 ) {
+    // Try to build endpoint
+    let mut state = match build(config).await {
+        Ok(state) => state,
+        Err(err) => todo!(),
+    };
 
+    // Drive endpoint logic
+    loop {
+        // Tick endpoint logic
+        tick(&mut state).await;
+
+        // Wait for a notification
+        state.waker.notified().await;
+    }
 }
 
 struct BuildTaskData {
@@ -128,8 +141,14 @@ async fn build(
     todo!()
 }
 
-async fn driver(
-
+async fn tick(
+    state: &mut State,
 ) {
-
+    // Receive any and all quinn events en masse and do responses
+    while let Ok(event) = state.quinn_event_rx.try_recv() {
+        if let Some(response) = state.quinn.handle_event(event.id, event.data) {
+            let handle = state.connections.get(&event.id).unwrap();
+            handle.quinn_event_tx.send(response).unwrap(); // TODO: Handle error
+        }
+    }
 }
