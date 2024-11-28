@@ -3,7 +3,7 @@ use bevy_ecs::component::{Component, ComponentHooks, StorageType};
 use bytes::BytesMut;
 use quinn_proto::{ConnectionEvent, ConnectionHandle as QuinnConnectionId};
 use tokio::{net::UdpSocket, runtime::Handle as RuntimeHandle, sync::{mpsc, watch, Notify}, task::JoinHandle};
-use crate::{commands::MakeEndpointInner, connection::{ConnectionError, ConnectionRef, ConnectionRequest}};
+use crate::{commands::MakeEndpointInner, connection::{ConnectionError, ConnectionRef, ConnectionRequest, NewConnection}};
 
 pub struct Endpoint {
     pub(crate) handle: Handle,
@@ -63,8 +63,6 @@ pub(crate) struct EndpointEvent {
 }
 
 struct ConnectionHandle {
-    inner_ref: ConnectionRef,
-
     quinn_event_tx: mpsc::UnboundedSender<ConnectionEvent>,
 }
 
@@ -248,6 +246,36 @@ async fn tick(
         if let Some(response) = state.quinn.handle_event(event.id, event.data) {
             let handle = state.connections.get(&event.id).unwrap();
             handle.quinn_event_tx.send(response).unwrap(); // TODO: Handle error
+        }
+    }
+
+    // Handle incoming connection requests
+    while let Ok(request) = state.connection_request_rx.try_recv() {
+        match state.quinn.connect(
+            Instant::now(),
+            todo!(),
+            todo!(),
+            todo!(),
+        ) {
+            Ok((id, quinn)) => {
+                // Create channels
+                let (quinn_event_tx, quinn_event_rx) = mpsc::unbounded_channel();
+
+                request.accept(NewConnection {
+                    quinn,
+
+                    quinn_event_rx,
+                    quinn_event_tx: state.quinn_event_tx.clone()
+                });
+
+                state.connections.insert(id, ConnectionHandle {
+                    quinn_event_tx,
+                });
+            },
+
+            Err(err) => {
+                request.reject(todo!());
+            },
         }
     }
 }
