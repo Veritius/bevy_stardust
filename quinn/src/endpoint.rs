@@ -278,12 +278,12 @@ async fn tick(
     while let Ok(request) = state.connection_request_rx.try_recv() {
         match state.quinn.connect(
             Instant::now(),
-            todo!(),
-            todo!(),
-            todo!(),
+            request.data.client_config,
+            request.data.address,
+            &request.data.server_name,
         ) {
             Ok((id, quinn)) => {
-                request.accept(add_connection(
+                request.inner.accept(add_connection(
                     state,
                     id,
                     quinn,
@@ -291,7 +291,7 @@ async fn tick(
             },
 
             Err(err) => {
-                request.reject(todo!());
+                request.inner.reject(todo!());
             },
         }
     }

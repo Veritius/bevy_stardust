@@ -1,4 +1,4 @@
-use std::{future::Future, sync::Arc, task::Poll};
+use std::{future::Future, net::SocketAddr, sync::Arc, task::Poll};
 use bevy_ecs::component::{Component, ComponentHooks, StorageType};
 use futures_lite::FutureExt;
 use quinn_proto::ConnectionEvent;
@@ -41,26 +41,23 @@ struct EndpointHandle {
 }
 
 pub(crate) struct ConnectionRequest {
+    pub data: ConnectionRequestData,
+    pub inner: ConnectionRequestInner,
+}
+
+pub(crate) struct ConnectionRequestData {
+    pub client_config: quinn_proto::ClientConfig,
+    pub address: SocketAddr,
+    pub server_name: Arc<str>,
+}
+
+pub(crate) struct ConnectionRequestInner {
     request_tx: tokio::sync::oneshot::Sender<
         Result<NewConnection, ConnectionError>,
     >,
 }
 
-impl ConnectionRequest {
-    fn new() -> (
-        ConnectionRequest,
-        ConnectionRequestResponseListener,
-    ) {
-        let (request_tx, request_rx) = tokio::sync::oneshot::channel();
-
-        let tx = ConnectionRequest { request_tx };
-        let rx = ConnectionRequestResponseListener { request_rx };
-
-        return (tx, rx);
-    }
-}
-
-impl ConnectionRequest {
+impl ConnectionRequestInner {
     pub fn accept(self, connection: NewConnection) {
         let _ = self.request_tx.send(Ok(connection));
     }
