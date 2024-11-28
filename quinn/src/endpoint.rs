@@ -3,7 +3,7 @@ use bevy_ecs::component::{Component, ComponentHooks, StorageType};
 use bytes::BytesMut;
 use quinn_proto::{ConnectionEvent, ConnectionHandle as QuinnConnectionId};
 use tokio::{net::UdpSocket, runtime::Handle as RuntimeHandle, sync::{mpsc, watch, Notify}, task::JoinHandle};
-use crate::{commands::MakeEndpointInner, connection::{ConnectionError, ConnectionRef, ConnectionRequest, NewConnection}};
+use crate::{commands::MakeEndpointInner, connection::{ConnectionError, ConnectionRequest, NewConnection}};
 
 pub struct Endpoint {
     pub(crate) handle: Handle,
@@ -112,7 +112,6 @@ fn open(
     let (state_tx, state_rx) = tokio::sync::watch::channel(EndpointState::Building);
     let (connection_request_tx, connection_request_rx) = mpsc::unbounded_channel();
     let (connection_accepted_tx, connection_accepted_rx) = mpsc::unbounded_channel();
-
 
     Endpoint {
         handle: Handle {
