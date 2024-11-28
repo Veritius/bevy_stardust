@@ -215,90 +215,110 @@ async fn build(
 async fn tick(
     state: &mut State,
 ) {
-    // scratch space for various operations
-    let mut scratch = Vec::new();
-
     // Handle all datagrams received over the socket
     while let Ok(dgram) = state.socket_dgram_recv_rx.try_recv() {
-        if let Some(response) = state.quinn.handle(
-            Instant::now(),
-            dgram.origin,
-            None,
-            None,
-            dgram.payload,
-            &mut scratch,
-        ) {
-            match response {
-                quinn_proto::DatagramEvent::ConnectionEvent(
-                    id,
-                    event,
-                ) => {
-                    let handle = state.connections.get(&id).unwrap();
-                    handle.quinn_event_tx.send(event).unwrap(); // TODO: Handle error
-                },
-
-                quinn_proto::DatagramEvent::NewConnection(incoming) => {
-                    match state.quinn.accept(
-                        incoming,
-                        Instant::now(),
-                        &mut scratch,
-                        None,
-                    ) {
-                        Ok((id, quinn)) => {
-                            let connection = add_connection(
-                                state,
-                                id,
-                                quinn,
-                            ).await;
-
-                            state.connection_accepted_tx.send(connection).unwrap(); // TODO: Handle error
-                        },
-
-                        Err(_) => todo!(),
-                    }
-                },
-
-                quinn_proto::DatagramEvent::Response(transmit) => {
-                    let mut payload = BytesMut::with_capacity(transmit.size);
-                    payload.copy_from_slice(&scratch[..transmit.size]);
-
-                    state.socket_dgram_send_tx.send(DatagramSend {
-                        target: transmit.destination,
-                        payload,
-                    }).unwrap(); // TODO: Handle error
-                },
-            }
-        }
+        handle_datagram(state, dgram).await;
     }
 
     // Handle any and all quinn events en masse and do responses
     while let Ok(event) = state.quinn_event_rx.try_recv() {
-        if let Some(response) = state.quinn.handle_event(event.id, event.data) {
-            let handle = state.connections.get(&event.id).unwrap();
-            handle.quinn_event_tx.send(response).unwrap(); // TODO: Handle error
-        }
+        handle_event(state, event).await;
     }
 
     // Handle incoming connection requests
     while let Ok(request) = state.connection_request_rx.try_recv() {
-        match state.quinn.connect(
-            Instant::now(),
-            request.data.client_config,
-            request.data.address,
-            &request.data.server_name,
-        ) {
-            Ok((id, quinn)) => {
-                request.inner.accept(add_connection(
-                    state,
-                    id,
-                    quinn,
-                ).await);
+        handle_connection_request(state, request).await;
+    }
+}
+
+async fn handle_datagram(
+    state: &mut State,
+    dgram: DatagramRecv,
+) {
+    let mut scratch = Vec::new();
+
+    if let Some(response) = state.quinn.handle(
+        Instant::now(),
+        dgram.origin,
+        None,
+        None,
+        dgram.payload,
+        &mut scratch,
+    ) {
+        match response {
+            quinn_proto::DatagramEvent::ConnectionEvent(
+                id,
+                event,
+            ) => {
+                let handle = state.connections.get(&id).unwrap();
+                handle.quinn_event_tx.send(event).unwrap(); // TODO: Handle error
             },
 
-            Err(err) => {
-                request.inner.reject(ConnectionError::QuicError(err));
+            quinn_proto::DatagramEvent::NewConnection(incoming) => {
+                match state.quinn.accept(
+                    incoming,
+                    Instant::now(),
+                    &mut scratch,
+                    None,
+                ) {
+                    Ok((id, quinn)) => {
+                        let connection = add_connection(
+                            state,
+                            id,
+                            quinn,
+                        ).await;
+
+                        state.connection_accepted_tx.send(connection).unwrap(); // TODO: Handle error
+                    },
+
+                    Err(_) => todo!(),
+                }
+            },
+
+            quinn_proto::DatagramEvent::Response(transmit) => {
+                let mut payload = BytesMut::with_capacity(transmit.size);
+                payload.copy_from_slice(&scratch[..transmit.size]);
+
+                state.socket_dgram_send_tx.send(DatagramSend {
+                    target: transmit.destination,
+                    payload,
+                }).unwrap(); // TODO: Handle error
             },
         }
+    }
+}
+
+async fn handle_event(
+    state: &mut State,
+    event: EndpointEvent,
+) {
+    if let Some(response) = state.quinn.handle_event(event.id, event.data) {
+        let handle = state.connections.get(&event.id).unwrap();
+        handle.quinn_event_tx.send(response).unwrap(); // TODO: Handle error
+    }
+}
+
+async fn handle_connection_request(
+    state: &mut State,
+    request: ConnectionRequest,
+) {
+    match state.quinn.connect(
+        Instant::now(),
+        request.data.client_config,
+        request.data.address,
+        &request.data.server_name,
+    ) {
+        Ok((id, quinn)) => {
+            request.inner.accept(add_connection(
+                state,
+                id,
+                quinn,
+            ).await);
+        },
+
+        Err(err) => {
+            request.inner.reject(ConnectionError::QuicError(err));
+        },
     }
 }
 
