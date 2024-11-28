@@ -5,7 +5,7 @@ use tokio::{net::UdpSocket, sync::{mpsc, Mutex, Notify}, task::JoinHandle};
 use crate::{commands::MakeEndpointInner, connection::ConnectionRef};
 
 pub struct Endpoint {
-    driver: JoinHandle<()>,
+    driver: JoinHandle<ShutdownReason>,
     inner: EndpointRef,
 }
 
@@ -141,7 +141,7 @@ async fn build_task(
 async fn driver(
     runtime: tokio::runtime::Handle,
     endpoint: EndpointRef,
-) {
+) -> ShutdownReason {
     loop {
         // Tick the endpoint once
         let tick = tick(
@@ -149,23 +149,42 @@ async fn driver(
             &endpoint.0,
         ).await;
 
-        // Wait for the next notification from another part of the code
-        // Can also return early after a time without notifications
-        // This is controlled by [`tick`] and handles internal timers
-        let _ = tokio::time::timeout(
-            tick.timeout,
-            endpoint.0.shared.wakeup.notified(),
-        ).await;
+        match tick {
+            Ok(tick) => {
+                // If the timeout is zero, run again immediately
+                // This is checked first so we don't need to await a future
+                if tick.timeout.is_zero() { continue }
+
+                // Wait for the next notification from another part of the code
+                // Can also return early after a time without notifications
+                // This is controlled by [`tick`] and handles internal timers
+                let _ = tokio::time::timeout(
+                    tick.timeout,
+                    endpoint.0.shared.wakeup.notified(),
+                ).await;
+            },
+
+            Err(reason) => {
+                // Finish the future
+                return reason;
+            },
+        }
     }
 }
 
 async fn tick(
     runtime: &tokio::runtime::Handle,
     endpoint: &EndpointInner,
-) -> TickOutput {
+) -> Result<TickOutput, ShutdownReason> {
+    let mut lock = endpoint.state.lock().await;
+
     todo!()
 }
 
 struct TickOutput {
     timeout: Duration,
+}
+
+enum ShutdownReason {
+    BuildFailed(BuildError),
 }
