@@ -1,6 +1,6 @@
 use std::{collections::HashMap, sync::Arc};
 use bevy_ecs::component::{Component, ComponentHooks, StorageType};
-use quinn_proto::{ConnectionEvent, ConnectionHandle as QuinnConnectionId, EndpointEvent};
+use quinn_proto::{ConnectionEvent, ConnectionHandle as QuinnConnectionId};
 use tokio::{net::UdpSocket, sync::{mpsc, Mutex, Notify}, task::JoinHandle};
 use crate::{commands::MakeEndpointInner, connection::ConnectionRef};
 
@@ -57,13 +57,21 @@ struct Established {
 struct Shared {
     runtime: tokio::runtime::Handle,
     wakeup: Notify,
+
+    quinn_event_rx: mpsc::UnboundedReceiver<EndpointEvent>,
+    // Local copy of the sender for quinn_event_rx so it can be given to connections
+    quinn_event_tx: mpsc::UnboundedSender<EndpointEvent>,
+}
+
+pub(crate) struct EndpointEvent {
+    pub id: quinn_proto::ConnectionHandle,
+    pub evt: quinn_proto::EndpointEvent,
 }
 
 struct ConnectionHandle {
     inner_ref: ConnectionRef,
 
-    event_tx: mpsc::UnboundedSender<ConnectionEvent>,
-    event_rx: mpsc::UnboundedReceiver<EndpointEvent>,
+    quinn_event_tx: mpsc::UnboundedSender<ConnectionEvent>,
 }
 
 fn build(
@@ -73,10 +81,16 @@ fn build(
     Shared,
     Building,
 ) {
+    // Create various communication channels
+    let (quinn_event_tx, quinn_event_rx) = mpsc::unbounded_channel();
+
     // Create shared state object
     let shared = Shared {
         runtime: runtime.clone(),
         wakeup: Notify::new(),
+
+        quinn_event_rx,
+        quinn_event_tx,
     };
 
     // Start the building task so it executes in the background

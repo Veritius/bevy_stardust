@@ -33,6 +33,6 @@ struct Shared {
 }
 
 struct EndpointHandle {
-    event_tx: mpsc::UnboundedSender<EndpointEvent>,
-    event_rx: mpsc::UnboundedReceiver<ConnectionEvent>,
+    quinn_event_tx: mpsc::UnboundedSender<EndpointEvent>,
+    quinn_event_rx: mpsc::UnboundedReceiver<ConnectionEvent>,
 }
