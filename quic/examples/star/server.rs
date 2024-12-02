@@ -18,17 +18,19 @@ fn main() {
 
     shared::setup(&mut app);
 
-    app.add_systems(Startup, |mut commands: Commands| {
-        commands.spawn_empty().make_endpoint(MakeEndpoint::advanced(
-            UdpSocket::bind(SERVER_ADDRESS).unwrap(),
-            Arc::new(EndpointConfig::default()),
-            Some(Arc::new(ServerConfig::with_single_cert(
+    app.add_systems(Startup, |mut commands: Commands, runtime: Res<Runtime>| {
+        let endpoint = EndpointBuilder::new()
+            .with_runtime(&runtime)
+            .bind(SERVER_ADDRESS).unwrap()
+            .with_config(Arc::new(EndpointConfig::default()))
+            .server(Arc::new(ServerConfig::with_single_cert(
                 vec![
                     shared::certificate(SERVER_CERTIFICATE),
                 ],
                 private_key(SERVER_PRIVATE_KEY),
-            ).unwrap())),
-        ));
+            ).unwrap()));
+
+        commands.spawn(endpoint);
     });
 
     app.run();

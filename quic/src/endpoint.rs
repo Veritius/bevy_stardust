@@ -1,9 +1,98 @@
-use std::{collections::HashMap, io::ErrorKind, net::SocketAddr, sync::Arc, time::Instant};
+use std::{collections::HashMap, io::ErrorKind, net::{SocketAddr, ToSocketAddrs}, sync::Arc, time::Instant};
 use bevy_ecs::component::{Component, ComponentHooks, StorageType};
 use bytes::BytesMut;
-use quinn_proto::{ConnectionEvent, ConnectionHandle as QuinnConnectionId};
-use tokio::{net::UdpSocket, runtime::Handle as RuntimeHandle, select, sync::{mpsc, watch, Notify}, task::JoinHandle};
-use crate::{commands::MakeEndpointInner, connection::{ConnectionError, ConnectionRequest, NewConnection}};
+use quinn_proto::{ConnectionEvent, ConnectionHandle as QuinnConnectionId, EndpointConfig};
+use tokio::{net::UdpSocket, runtime::Handle as RuntimeHandle, select, sync::{mpsc, watch}, task::JoinHandle};
+use crate::connection::{ConnectionError, ConnectionRequest, NewConnection};
+
+pub struct EndpointBuilder<T = ()> {
+    p: T,
+}
+
+impl EndpointBuilder<()> {
+    pub fn new() -> EndpointBuilder<WantsRuntime> {
+        EndpointBuilder {
+            p: WantsRuntime {
+                _p: (),
+            },
+        }
+    }
+}
+
+pub struct WantsRuntime {
+    _p: (),
+}
+
+impl EndpointBuilder<WantsRuntime> {
+    pub fn with_runtime(self, runtime: &crate::Runtime) -> EndpointBuilder<WantsSocket> {
+        return EndpointBuilder { p: WantsSocket { runtime: runtime.handle() } };
+    }
+}
+
+pub struct WantsSocket {
+    runtime: RuntimeHandle,
+}
+
+impl EndpointBuilder<WantsSocket> {
+    pub fn bind(self, address: impl ToSocketAddrs) -> Result<EndpointBuilder<WantsConfig>, std::io::Error> {
+        let socket = std::net::UdpSocket::bind(address)?;
+        return Self::from_std(self, socket);
+    }
+
+    pub fn from_std(self, socket: std::net::UdpSocket) -> Result<EndpointBuilder<WantsConfig>, std::io::Error> {
+        socket.set_nonblocking(true);
+        let socket = UdpSocket::from_std(socket)?;
+        return Ok(Self::from_tokio(self, socket));
+    }
+
+    pub fn from_tokio(self, socket: tokio::net::UdpSocket) -> EndpointBuilder<WantsConfig> {
+        return EndpointBuilder { p: WantsConfig { runtime: self.p.runtime, socket }};
+    }
+}
+
+pub struct WantsConfig {
+    runtime: RuntimeHandle,
+    socket: UdpSocket,
+}
+
+impl EndpointBuilder<WantsConfig> {
+    pub fn with_config(self, config: impl Into<Arc<EndpointConfig>>) -> EndpointBuilder<MaybeServer> {
+        return EndpointBuilder { p: MaybeServer {
+            runtime: self.p.runtime,
+            socket: self.p.socket,
+            config: config.into(),
+        } };
+    }
+}
+
+pub struct MaybeServer {
+    runtime: RuntimeHandle,
+    socket: UdpSocket,
+    config: Arc<quinn_proto::EndpointConfig>,
+}
+
+impl EndpointBuilder<MaybeServer> {
+    pub fn client(self) -> Endpoint {
+        open(
+            self.p.runtime,
+            self.p.socket,
+            self.p.config,
+            None,
+        )
+    }
+
+    pub fn server(
+        self,
+        server: Arc<quinn_proto::ServerConfig>,
+    ) -> Endpoint {
+        open(
+            self.p.runtime,
+            self.p.socket,
+            self.p.config,
+            Some(server),
+        )
+    }
+}
 
 pub struct Endpoint {
     pub(crate) handle: Handle,
@@ -105,7 +194,9 @@ impl From<rustls::Error> for BuildError {
 
 pub(crate) fn open(
     runtime: RuntimeHandle,
-    config: MakeEndpointInner,
+    socket: UdpSocket,
+    config: Arc<quinn_proto::EndpointConfig>,
+    server: Option<Arc<quinn_proto::ServerConfig>>,
 ) -> Endpoint {
     // Create various communication channels
     let (state_tx, state_rx) = tokio::sync::watch::channel(EndpointState::Building);
@@ -122,7 +213,9 @@ pub(crate) fn open(
 
         driver: runtime.spawn(endpoint(BuildTaskData {
             runtime: runtime.clone(),
+            socket,
             config,
+            server,
 
             state_tx,
             connection_request_rx,
@@ -165,7 +258,9 @@ async fn endpoint(
 
 struct BuildTaskData {
     runtime: RuntimeHandle,
-    config: MakeEndpointInner,
+    socket: UdpSocket,
+    config: Arc<quinn_proto::EndpointConfig>,
+    server: Option<Arc<quinn_proto::ServerConfig>>,
 
     state_tx: watch::Sender<EndpointState>,
     connection_request_rx: mpsc::UnboundedReceiver<ConnectionRequest>,
@@ -180,26 +275,14 @@ async fn build(
     let (socket_dgram_recv_tx, socket_dgram_recv_rx) = mpsc::unbounded_channel();
     let (socket_dgram_send_tx, socket_dgram_send_rx) = mpsc::unbounded_channel();
 
-    // Resolve user configuration
-    let (socket, quinn) = match config.config {
-        MakeEndpointInner::Preconfigured {
-            socket,
-            config,
-            server,
-        } => {
-            socket.set_nonblocking(true)?;
-            let socket = UdpSocket::from_std(socket).map_err(|e| BuildError::IoError(e))?;
+    let quinn = quinn_proto::Endpoint::new(
+        config.config,
+        config.server,
+        true,
+        None,
+    );
 
-            let quinn = quinn_proto::Endpoint::new(
-                config,
-                server,
-                true,
-                None,
-            );
-
-            (Arc::new(socket), quinn)
-        },
-    };
+    let socket = Arc::new(config.socket);
 
     // Spawn tasks for I/O
     config.runtime.spawn(io_recv_task(socket.clone(), socket_dgram_recv_tx));

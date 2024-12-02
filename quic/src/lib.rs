@@ -6,17 +6,16 @@
 )))]
 compile_error!("One of the following features must be enabled: async");
 
-mod commands;
+pub mod connection;
+pub mod endpoint;
+
 mod config;
-mod connection;
-mod endpoint;
 mod plugin;
 mod runtime;
 
 pub use plugin::QuicPlugin;
-pub use endpoint::Endpoint;
+pub use endpoint::{Endpoint, EndpointBuilder};
 pub use connection::Connection;
-pub use commands::*;
 pub use config::*;
 pub use runtime::Runtime;
 
