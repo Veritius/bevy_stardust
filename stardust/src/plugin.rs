@@ -1,10 +1,11 @@
 //! The Stardust core plugin.
 
-use bevy::prelude::*;
+use bevy_app::prelude::*;
+use bevy_ecs::prelude::*;
+
 use crate::prelude::*;
 use crate::channels;
 use crate::connections::*;
-use crate::diagnostics::*;
 
 /// The Stardust multiplayer plugin.
 /// Adds the core functionality of Stardust, but does not add a transport layer.
@@ -14,32 +15,38 @@ impl Plugin for StardustPlugin {
     fn name(&self) -> &str { "StardustPlugin" }
 
     fn build(&self, app: &mut App) {
-        // Register connection types
-        app.register_type::<Peer>();
-        app.register_type::<PeerUid>();
-        app.register_type::<PeerLifestage>();
+        #[cfg(feature="reflect")] {
+            // Register connection types
+            app.register_type::<Peer>();
+            app.register_type::<PeerUid>();
+            app.register_type::<PeerLifestage>();
 
-        // Register diagnostic types
-        app.register_type::<PeerStats>();
-        app.register_type::<DropPackets>();
-        app.register_type::<SimulateLatency>();
+            // Register connnection debug_tools types
+            #[cfg(feature="debug_tools")] {
+                use crate::connections::debug_tools::*;
 
-        // Register channel types
-        app.register_type::<ChannelId>();
-        app.register_type::<channels::ChannelConfiguration>();
-        app.register_type::<channels::MessageConsistency>();
+                app.register_type::<PeerStats>();
+                app.register_type::<DropPackets>();
+                app.register_type::<SimulateLatency>();
+            }
 
-        // Register messaging types
-        app.register_type::<NetDirection>();
-        app.register_type::<Incoming>();
-        app.register_type::<Outgoing>();
+            // Register channel types
+            app.register_type::<ChannelId>();
+            app.register_type::<channels::ChannelConfiguration>();
+            app.register_type::<channels::MessageConsistency>();
 
-        // Register events
-        app.add_event::<DisconnectPeerEvent>();
-        app.add_event::<PeerConnectingEvent>();
-        app.add_event::<PeerConnectedEvent>();
-        app.add_event::<PeerDisconnectingEvent>();
-        app.add_event::<PeerDisconnectedEvent>();
+            // Register messaging types
+            app.register_type::<NetDirection>();
+            app.register_type::<Incoming>();
+            app.register_type::<Outgoing>();
+
+            // Register events
+            app.add_event::<DisconnectPeerEvent>();
+            app.add_event::<PeerConnectingEvent>();
+            app.add_event::<PeerConnectedEvent>();
+            app.add_event::<PeerDisconnectingEvent>();
+            app.add_event::<PeerDisconnectedEvent>();
+        }
 
         // Setup orderings
         crate::scheduling::configure_scheduling(app);

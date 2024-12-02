@@ -1,9 +1,12 @@
 use std::{net::IpAddr, time::Instant};
-use bevy::prelude::*;
+use bevy_ecs::prelude::*;
+
+#[cfg(feature="reflect")]
+use bevy_reflect::Reflect;
 
 /// A component for entities that represent a virtual connection.
-#[derive(Debug, Component, Reflect)]
-#[reflect(Debug, Component)]
+#[derive(Debug, Component)]
+#[cfg_attr(feature="reflect", derive(Reflect), reflect(Debug, Component))]
 #[non_exhaustive]
 pub struct Peer {
     /// The point in time this peer was added to the `World`.
@@ -28,8 +31,8 @@ pub struct PeerAddress(pub IpAddr);
 /// 
 /// If you're working with another ID namespace, like UUIDs and Steam IDs, you should
 /// map the ids from that space into a unique value here through some kind of associative array.
-#[derive(Component, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Reflect)]
-#[reflect(Debug, Component, PartialEq, Hash)]
+#[derive(Component, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[cfg_attr(feature="reflect", derive(Reflect), reflect(Debug, Component, PartialEq, Hash))]
 pub struct PeerUid(pub u64);
 
 impl std::fmt::Debug for PeerUid {

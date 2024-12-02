@@ -1,13 +1,13 @@
 //! Adds `add_channel` to the `App`.
 
-use bevy::app::App;
+use bevy_app::App;
 use super::config::ChannelConfiguration;
 use super::ChannelId;
 use super::{id::Channel, ChannelRegistryBuilder};
 
 mod sealed {
     pub trait Sealed {}
-    impl Sealed for bevy::app::App {}
+    impl Sealed for bevy_app::App {}
 }
 
 /// Adds channel-related functions to the `App`.

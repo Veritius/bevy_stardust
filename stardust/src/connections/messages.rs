@@ -1,5 +1,5 @@
 use std::marker::PhantomData;
-use bevy::prelude::*;
+use bevy_ecs::prelude::*;
 use crate::{channels::ChannelId, messages::*};
 use super::Peer;
 

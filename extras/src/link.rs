@@ -5,7 +5,8 @@
 //! These 'links' don't do any kind of handshake. Once added to an entity, they communicate immediately.
 
 use std::sync::{mpsc::{channel, Receiver, Sender, TryRecvError}, Mutex};
-use bevy::prelude::*;
+use bevy_app::prelude::*;
+use bevy_ecs::prelude::*;
 use bevy_stardust::prelude::*;
 
 /// Adds a simple transport plugin for apps part of the same process.
@@ -104,7 +105,6 @@ fn remove_disconnected(
 ) {
     for (entity, link, stage) in query.iter_mut() {
         if link.0.disconnected {
-            debug!("Link on entity {entity:?} disconnected");
             commands.entity(entity).remove::<Link>();
 
             events.send(PeerDisconnectedEvent {
