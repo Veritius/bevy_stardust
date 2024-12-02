@@ -3,5 +3,5 @@ resolver="2"
 members = [
     "stardust",
     "extras",
-    "quinn"
+    "quic"
 ]
