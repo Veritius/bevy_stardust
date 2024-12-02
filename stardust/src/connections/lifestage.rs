@@ -47,7 +47,7 @@ pub struct Established<'w> {
     lifestage: Option<&'w PeerLifestage>,
 }
 
-impl<'w> QueryFilter for Established<'w> {
+unsafe impl<'w> QueryFilter for Established<'w> {
     const IS_ARCHETYPAL: bool = false;
 
     unsafe fn filter_fetch(
