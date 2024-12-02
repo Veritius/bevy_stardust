@@ -33,7 +33,7 @@ pub enum PeerLifestage {
 /// A [`QueryFilter`] for entities in the [`Established`](PeerLifestage::Established) lifestage.
 /// 
 /// ```rust
-/// # use bevy::prelude::*;
+/// # use bevy_ecs::prelude::*;
 /// # use bevy_stardust::prelude::*;
 /// #
 /// fn my_system(query: Query<&Peer, Established>) {

@@ -42,7 +42,8 @@ You can use any replication or extra features you want. If you prefer a specific
 
 ```rust
 use std::any::TypeId;
-use bevy::{prelude::*, app::{ScheduleRunnerPlugin, MainSchedulePlugin}};
+use bevy_ecs::prelude::*;
+use bevy_app::{prelude::*, ScheduleRunnerPlugin, MainSchedulePlugin};
 use bevy_stardust::prelude::*;
 
 // Channels are accessed with types in the type system.
