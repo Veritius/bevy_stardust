@@ -3,7 +3,7 @@ use bevy_ecs::component::{Component, ComponentHooks, StorageType};
 use bevy_stardust::prelude::ChannelMessage;
 use futures_lite::FutureExt;
 use quinn_proto::ConnectionEvent;
-use tokio::{select, sync::{mpsc, oneshot, watch}, task::JoinHandle};
+use tokio::{select, sync::{mpsc, oneshot, watch}, task::JoinHandle, runtime::Handle as RuntimeHandle};
 use crate::endpoint::EndpointHandle;
 
 pub struct Connection {
@@ -100,6 +100,46 @@ pub(crate) struct NewConnection {
 pub(crate) enum ConnectionError {
     EndpointClosed,
     QuicError(quinn_proto::ConnectError),
+}
+
+struct BuildData {
+    state: watch::Sender<ConnectionState>,
+    shutdown: oneshot::Receiver<()>,
+
+    outgoing_messages_rx: mpsc::Receiver<ChannelMessage>,
+    incoming_messages_tx: mpsc::Sender<ChannelMessage>,
+}
+
+async fn outgoing(
+    runtime: RuntimeHandle,
+    listener: ConnectionRequestResponseListener,
+    data: BuildData,
+) {
+    let connection = match listener.await {
+        Ok(c) => c,
+        Err(_) => todo!(),
+    };
+
+    task(
+        runtime,
+        connection,
+        data
+    ).await
+}
+
+async fn task(
+    runtime: RuntimeHandle,
+    connection: NewConnection,
+    data: BuildData,
+) {
+    let state = State {
+        state: data.state,
+        shutdown: data.shutdown,
+        endpoint: connection.endpoint,
+        quinn: connection.quinn,
+        outgoing_messages_rx: data.outgoing_messages_rx,
+        incoming_messages_tx: data.incoming_messages_tx,
+    };
 }
 
 async fn tick(
