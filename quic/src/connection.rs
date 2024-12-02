@@ -3,7 +3,7 @@ use bevy_ecs::component::{Component, ComponentHooks, StorageType};
 use bevy_stardust::prelude::ChannelMessage;
 use futures_lite::FutureExt;
 use quinn_proto::ConnectionEvent;
-use tokio::{select, sync::{mpsc, watch}, task::JoinHandle};
+use tokio::{select, sync::{mpsc, oneshot, watch}, task::JoinHandle};
 use crate::endpoint::EndpointHandle;
 
 pub struct Connection {
@@ -20,6 +20,7 @@ impl Component for Connection {
 
 struct State {
     state: watch::Sender<ConnectionState>,
+    shutdown: oneshot::Receiver<()>,
 
     endpoint: EndpointHandle,
 
@@ -31,6 +32,7 @@ struct State {
 
 pub(crate) struct Handle {
     state: watch::Receiver<ConnectionState>,
+    shutdown: Option<oneshot::Sender<()>>,
 
     outgoing_messages_tx: mpsc::Sender<ChannelMessage>,
     incoming_messages_rx: mpsc::Receiver<ChannelMessage>,
