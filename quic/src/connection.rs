@@ -6,6 +6,10 @@ use quinn_proto::ConnectionEvent;
 use tokio::{select, sync::{mpsc, oneshot, watch}, task::JoinHandle, runtime::Handle as RuntimeHandle};
 use crate::endpoint::EndpointHandle;
 
+/// A handle to an existing connection.
+/// 
+/// This component can be transferred freely.
+/// When dropped, the connection will be closed.
 pub struct Connection {
     pub(crate) handle: Handle,
 
@@ -38,6 +42,7 @@ pub(crate) struct Handle {
     incoming_messages_rx: mpsc::Receiver<ChannelMessage>,
 }
 
+/// The state of the connection.
 pub enum ConnectionState {
     Connecting,
     Connected,

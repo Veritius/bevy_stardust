@@ -5,11 +5,15 @@ use quinn_proto::{ConnectionEvent, ConnectionHandle as QuinnConnectionId, Endpoi
 use tokio::{net::UdpSocket, runtime::Handle as RuntimeHandle, select, sync::{mpsc, watch}, task::JoinHandle};
 use crate::connection::{ConnectionError, ConnectionRequest, NewConnection};
 
+/// A builder for the [`Endpoint`] component, using the [typestate] pattern.
+/// 
+/// [typestate]: http://cliffle.com/blog/rust-typestate/
 pub struct EndpointBuilder<T = ()> {
     p: T,
 }
 
 impl EndpointBuilder<()> {
+    /// Creates a new builder.
     pub fn new() -> EndpointBuilder<WantsRuntime> {
         EndpointBuilder {
             p: WantsRuntime {
@@ -19,43 +23,51 @@ impl EndpointBuilder<()> {
     }
 }
 
+/// Step where a runtime is added.
 pub struct WantsRuntime {
     _p: (),
 }
 
 impl EndpointBuilder<WantsRuntime> {
+    /// Uses a runtime.
     pub fn with_runtime(self, runtime: &crate::Runtime) -> EndpointBuilder<WantsSocket> {
         return EndpointBuilder { p: WantsSocket { runtime: runtime.handle() } };
     }
 }
 
+/// Step where a socket is added.
 pub struct WantsSocket {
     runtime: RuntimeHandle,
 }
 
 impl EndpointBuilder<WantsSocket> {
+    /// Binds to a new UDP socket.
     pub fn bind(self, address: impl ToSocketAddrs) -> Result<EndpointBuilder<WantsConfig>, std::io::Error> {
         let socket = std::net::UdpSocket::bind(address)?;
         return Self::from_std(self, socket);
     }
 
+    /// Adds an existing stdlib UDP socket.
     pub fn from_std(self, socket: std::net::UdpSocket) -> Result<EndpointBuilder<WantsConfig>, std::io::Error> {
-        socket.set_nonblocking(true);
+        socket.set_nonblocking(true)?;
         let socket = UdpSocket::from_std(socket)?;
         return Ok(Self::from_tokio(self, socket));
     }
 
+    /// Adds an existing Tokio UDP socket.
     pub fn from_tokio(self, socket: tokio::net::UdpSocket) -> EndpointBuilder<WantsConfig> {
         return EndpointBuilder { p: WantsConfig { runtime: self.p.runtime, socket }};
     }
 }
 
+/// Step where config is added.
 pub struct WantsConfig {
     runtime: RuntimeHandle,
     socket: UdpSocket,
 }
 
 impl EndpointBuilder<WantsConfig> {
+    /// Adds endpoint config.
     pub fn with_config(self, config: impl Into<Arc<EndpointConfig>>) -> EndpointBuilder<MaybeServer> {
         return EndpointBuilder { p: MaybeServer {
             runtime: self.p.runtime,
@@ -65,6 +77,7 @@ impl EndpointBuilder<WantsConfig> {
     }
 }
 
+/// Step where the endpoint may become a server.
 pub struct MaybeServer {
     runtime: RuntimeHandle,
     socket: UdpSocket,
@@ -72,6 +85,7 @@ pub struct MaybeServer {
 }
 
 impl EndpointBuilder<MaybeServer> {
+    /// Act as a client.
     pub fn client(self) -> Endpoint {
         open(
             self.p.runtime,
@@ -81,6 +95,7 @@ impl EndpointBuilder<MaybeServer> {
         )
     }
 
+    /// Act as a server.
     pub fn server(
         self,
         server: Arc<quinn_proto::ServerConfig>,
@@ -94,6 +109,10 @@ impl EndpointBuilder<MaybeServer> {
     }
 }
 
+/// An existing handle to an endpoint.
+/// 
+/// This component can be transferred freely between entities.
+/// When dropped, the endpoint (and all related components) will be dropped.
 pub struct Endpoint {
     pub(crate) handle: Handle,
 

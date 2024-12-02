@@ -1,6 +1,6 @@
 mod shared;
 
-use std::{net::UdpSocket, sync::Arc};
+use std::sync::Arc;
 use bevy_app::prelude::*;
 use bevy_ecs::prelude::*;
 use bevy_stardust_quic::*;
@@ -22,13 +22,13 @@ fn main() {
         let endpoint = EndpointBuilder::new()
             .with_runtime(&runtime)
             .bind(SERVER_ADDRESS).unwrap()
-            .with_config(Arc::new(EndpointConfig::default()))
-            .server(Arc::new(ServerConfig::with_single_cert(
+            .with_config(EndpointConfig::default())
+            .server(ServerConfig::with_single_cert(
                 vec![
                     shared::certificate(SERVER_CERTIFICATE),
                 ],
                 private_key(SERVER_PRIVATE_KEY),
-            ).unwrap()));
+            ).unwrap().into());
 
         commands.spawn(endpoint);
     });
