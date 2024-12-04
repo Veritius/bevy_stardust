@@ -1,4 +1,6 @@
-use bevy::{prelude::*, diagnostic::*};
+use bevy_app::prelude::*;
+use bevy_ecs::prelude::*;
+use bevy_diagnostic::*;
 use crate::prelude::*;
 
 /// Adds diagnostics about connections.

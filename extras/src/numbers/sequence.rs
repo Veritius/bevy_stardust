@@ -16,20 +16,19 @@ use std::{cmp::Ordering, ops::{Add, AddAssign, Sub, SubAssign}};
 /// difference between `4` and `9` is `5`, but the difference between `254` and `1` is `3`, again
 /// assuming you're using a `Sequence<u8>`.
 /// 
-/// The `SeqValue` trait is intentionally hidden, as its internals are not important.
 /// `T` can be any one of `u8`, `u16`, `u32`, `u64`, or `u128`.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 #[repr(transparent)]
-pub struct Sequence<T: SeqValue>(T);
+pub struct Sequence<T: Sequential>(T);
 
-impl<T: SeqValue> From<T> for Sequence<T> {
+impl<T: Sequential> From<T> for Sequence<T> {
     #[inline]
     fn from(value: T) -> Self {
         Self(value)
     }
 }
 
-impl<T: SeqValue> Sequence<T> {
+impl<T: Sequential> Sequence<T> {
     /// Returns the inner integer value.
     #[inline]
     pub fn inner(&self) -> T {
@@ -37,14 +36,14 @@ impl<T: SeqValue> Sequence<T> {
     }
 
     /// Increment the value by `1`. Wraps at numerical bounds.
+    #[inline]
     pub fn increment(&mut self) {
-        *self = *self + T::ONE;
+        self.0.increment();
     }
 
     /// Returns the difference between two sequence values.
     pub fn diff(&self, other: &Self) -> T {
-        let a = self.0;
-        let b = other.0;
+        let (a, b) = (self.0, other.0);
 
         let diff = a.abs_diff(b);
         if diff < T::MID { return diff }
@@ -57,13 +56,13 @@ impl<T: SeqValue> Sequence<T> {
     }
 }
 
-impl<T: SeqValue> PartialOrd for Sequence<T> {
+impl<T: Sequential> PartialOrd for Sequence<T> {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         Some(self.cmp(other))
     }
 }
 
-impl<T: SeqValue> Ord for Sequence<T> {
+impl<T: Sequential> Ord for Sequence<T> {
     fn cmp(&self, other: &Self) -> Ordering {
         // An adaptation of Glenn Fiedler's wrapping sequence identifier algorithm, modified to output an Ordering
         // https://www.gafferongames.com/post/reliability_ordering_and_congestion_avoidance_over_udp/
@@ -77,13 +76,13 @@ impl<T: SeqValue> Ord for Sequence<T> {
     }
 }
 
-impl<T: SeqValue> PartialEq<T> for Sequence<T> {
+impl<T: Sequential> PartialEq<T> for Sequence<T> {
     fn eq(&self, other: &T) -> bool {
         self.0.eq(other)
     }
 }
 
-impl<T: SeqValue> Add<T> for Sequence<T> {
+impl<T: Sequential> Add<T> for Sequence<T> {
     type Output = Sequence<T>;
 
     #[inline]
@@ -92,13 +91,13 @@ impl<T: SeqValue> Add<T> for Sequence<T> {
     }
 }
 
-impl<T: SeqValue> AddAssign<T> for Sequence<T> {
+impl<T: Sequential> AddAssign<T> for Sequence<T> {
     fn add_assign(&mut self, rhs: T) {
         *self = *self + rhs;
     }
 }
 
-impl<T: SeqValue> Sub<T> for Sequence<T> {
+impl<T: Sequential> Sub<T> for Sequence<T> {
     type Output = Sequence<T>;
 
     #[inline]
@@ -107,37 +106,54 @@ impl<T: SeqValue> Sub<T> for Sequence<T> {
     }
 }
 
-impl<T: SeqValue> SubAssign<T> for Sequence<T> {
+impl<T: Sequential> SubAssign<T> for Sequence<T> {
     fn sub_assign(&mut self, rhs: T) {
         *self = *self - rhs;
     }
 }
 
 /// A number that can be used in a [`Sequence`] value.
-#[doc(hidden)]
-pub trait SeqValue
+pub trait Sequential
 where
     Self: sealed::Sealed,
     Self: Sized + Clone + Copy + Default + Ord,
     Self: Add<Output = Self> + Sub<Output = Self>,
 {
-    const ONE: Self;
+    /// The minimum representable value.
     const MIN: Self;
+
+    /// The value between `MIN` and `MAX`.
     const MID: Self;
+
+    /// The maximum representable value.
     const MAX: Self;
 
+    /// Increment the value by `1`.
+    fn increment(&mut self);
+
+    /// Absolute difference between two values.
+    /// 
+    /// `abs_diff(50, 120)` is the same as `abs_diff(-50, -120)`.
     fn abs_diff(self, other: Self) -> Self;
+
+    /// Subtraction that wraps at numerical bounds.
     fn wrapping_sub(self, other: Self) -> Self;
+
+    /// Addition that wraps at numerical bounds.
     fn wrapping_add(self, other: Self) -> Self;
 }
 
 macro_rules! impl_seqvalue {
     ($type:ty, $val:expr) => {
-        impl SeqValue for $type {
-            const ONE: $type = 1;
+        impl Sequential for $type {
             const MIN: $type = <$type>::MIN;
             const MID: $type = $val;
             const MAX: $type = <$type>::MAX;
+
+            #[inline]
+            fn increment(&mut self) {
+                *self = *self + 1;
+            }
 
             #[inline]
             fn abs_diff(self, other: Self) -> Self {
@@ -230,9 +246,9 @@ fn sequence_id_ordering_test() {
 #[cfg(feature="octs")]
 mod octs {
     use octs::{Encode, FixedEncodeLen, Decode};
-    use super::{Sequence, SeqValue};
+    use super::{Sequence, Sequential};
 
-    impl<T: SeqValue + Encode> Encode for Sequence<T> {
+    impl<T: Sequential + Encode> Encode for Sequence<T> {
         type Error = T::Error;
 
         #[inline]
@@ -241,11 +257,11 @@ mod octs {
         }
     }
 
-    impl<T: SeqValue + FixedEncodeLen> FixedEncodeLen for Sequence<T> {
+    impl<T: Sequential + FixedEncodeLen> FixedEncodeLen for Sequence<T> {
         const ENCODE_LEN: usize = T::ENCODE_LEN;
     }
 
-    impl<T: SeqValue + Decode> Decode for Sequence<T> {
+    impl<T: Sequential + Decode> Decode for Sequence<T> {
         type Error = T::Error;
 
         #[inline]

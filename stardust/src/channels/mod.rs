@@ -63,15 +63,15 @@
 //! you put in the `ChannelConfiguration` you defined.
 //! 
 //! ```no_run
-//! # use bevy::prelude::*;
+//! # use bevy_ecs::prelude::*;
+//! # use bevy_app::prelude::*;
 //! # use bevy_stardust::prelude::*;
 //! #
 //! pub struct MyChannel;
 //! 
 //! fn main() {
-//!     // Normal Bevy app setup
-//!     let mut app = App::new();
-//!     app.add_plugins(DefaultPlugins);
+//!     /* Do your regular app setup here */
+//!     # let mut app = App::new();
 //! 
 //!     // StardustPlugin must be added
 //!     app.add_plugins(StardustPlugin);
@@ -106,8 +106,10 @@
 //! and use it in `add_channel`, or you could use `MovementEvent`.
 //! 
 //! ```no_run
-//! # use bevy::prelude::*;
+//! # use bevy_ecs::prelude::*;
+//! # use bevy_app::prelude::*;
 //! # use bevy_stardust::prelude::*;
+//! # type Vec3 = [f32; 3]; // we dont use bevy math so we hack this in
 //! #
 //! #[derive(Event)]
 //! struct MovementEvent {
@@ -115,9 +117,10 @@
 //! }
 //! 
 //! fn main() {
-//!     // App setup as detailed earlier
-//!     let mut app = App::new();
-//!     app.add_plugins((DefaultPlugins, StardustPlugin));
+//!     /* Do your regular app setup here */
+//!     # let mut app = App::new();
+//! 
+//!     app.add_plugins(StardustPlugin);
 //! 
 //!     // Register MovementEvent as an event
 //!     app.add_event::<MovementEvent>();
@@ -158,7 +161,7 @@ pub use registry::{ChannelRegistry, ChannelMetadata};
 pub use params::{Channels, ChannelData};
 pub use extension::ChannelSetupAppExt;
 
-use bevy::prelude::*;
+use bevy_app::App;
 use registry::ChannelRegistryBuilder;
 
 pub(crate) fn plugin_build(app: &mut App) {

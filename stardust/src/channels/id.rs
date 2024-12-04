@@ -1,5 +1,7 @@
+#[cfg(feature="reflect")]
+use bevy_reflect::Reflect;
+
 use std::any::Any;
-use bevy::prelude::*;
 use super::ChannelRegistry;
 
 /// Types that can be used to identify channels within the type system.
@@ -22,7 +24,8 @@ impl<T: Any> Channel for T {}
 /// or have additional consequences because of transport
 /// layers, such as causing undefined behavior. Make sure
 /// you read the documentation!
-#[derive(Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord, Reflect)]
+#[derive(Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
+#[cfg_attr(feature="reflect", derive(Reflect), reflect(Debug, PartialEq, Hash))]
 #[repr(transparent)]
 pub struct ChannelId(u32);
 

@@ -1,7 +1,7 @@
 //! The channel registry.
 
 use std::{any::{type_name, TypeId}, collections::BTreeMap, ops::Deref, sync::Arc};
-use bevy::prelude::*;
+use bevy_ecs::prelude::*;
 use crate::prelude::ChannelConfiguration;
 use super::{id::{Channel, ChannelId}, ToChannelId};
 

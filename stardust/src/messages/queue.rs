@@ -1,4 +1,4 @@
-use bevy::utils::HashMap;
+use hashbrown::HashMap;
 use smallvec::SmallVec;
 use crate::prelude::*;
 
@@ -191,7 +191,7 @@ impl<'a> IntoIterator for &'a MessageQueue {
 #[derive(Clone)]
 pub struct ChannelIter<'a> {
     messages: &'a [Message],
-    map_iter: bevy::utils::hashbrown::hash_map::Iter<'a, ChannelId, IdxVec>,
+    map_iter: hashbrown::hash_map::Iter<'a, ChannelId, IdxVec>,
 }
 
 impl<'a> Iterator for ChannelIter<'a> {

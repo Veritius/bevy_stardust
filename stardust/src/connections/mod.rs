@@ -29,6 +29,9 @@ pub(crate) use messages::clear_message_queues_system;
 
 pub mod events;
 
+#[cfg(feature="debug_tools")]
+pub mod debug_tools;
+
 pub use messages::PeerMessages;
 pub use peer::{Peer, PeerAddress, PeerUid};
 pub use stats::PeerRtt;

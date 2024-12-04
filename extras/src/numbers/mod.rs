@@ -3,5 +3,5 @@
 mod sequence;
 mod varint;
 
-pub use sequence::Sequence;
+pub use sequence::{Sequence, Sequential};
 pub use varint::VarInt;
