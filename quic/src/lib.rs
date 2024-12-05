@@ -9,6 +9,7 @@ compile_error!("One of the following features must be enabled: async");
 pub mod connection;
 pub mod endpoint;
 
+mod channels;
 mod plugin;
 mod runtime;
 mod socket;
