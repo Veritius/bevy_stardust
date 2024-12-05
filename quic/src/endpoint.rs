@@ -1,9 +1,10 @@
 use std::{collections::HashMap, io::ErrorKind, net::{SocketAddr, ToSocketAddrs}, sync::Arc, time::Instant};
+use async_task::Task;
 use bevy_ecs::component::{Component, ComponentHooks, StorageType};
 use bytes::BytesMut;
 use quinn_proto::{ConnectionEvent, ConnectionHandle as QuinnConnectionId, EndpointConfig};
-use tokio::{net::UdpSocket, runtime::Handle as RuntimeHandle, select, sync::{mpsc, watch}, task::JoinHandle};
-use crate::connection::{ConnectionError, ConnectionRequest, NewConnection};
+use crate::runtime::Handle as RuntimeHandle;
+use crate::{channels::watch, connection::{ConnectionError, ConnectionRequest, NewConnection}, socket::Socket};
 
 /// A builder for the [`Endpoint`] component, using the [typestate] pattern.
 /// 
@@ -30,8 +31,8 @@ pub struct WantsRuntime {
 
 impl EndpointBuilder<WantsRuntime> {
     /// Uses a runtime.
-    pub fn with_runtime(self, runtime: &crate::Runtime) -> EndpointBuilder<WantsSocket> {
-        return EndpointBuilder { p: WantsSocket { runtime: runtime.handle() } };
+    pub fn with_runtime(self, runtime: RuntimeHandle) -> EndpointBuilder<WantsSocket> {
+        return EndpointBuilder { p: WantsSocket { runtime } };
     }
 }
 
@@ -43,27 +44,21 @@ pub struct WantsSocket {
 impl EndpointBuilder<WantsSocket> {
     /// Binds to a new UDP socket.
     pub fn bind(self, address: impl ToSocketAddrs) -> Result<EndpointBuilder<WantsConfig>, std::io::Error> {
-        let socket = std::net::UdpSocket::bind(address)?;
-        return Self::from_std(self, socket);
-    }
+        let socket = Socket::new(address)?;
 
-    /// Adds an existing stdlib UDP socket.
-    pub fn from_std(self, socket: std::net::UdpSocket) -> Result<EndpointBuilder<WantsConfig>, std::io::Error> {
-        socket.set_nonblocking(true)?;
-        let socket = UdpSocket::from_std(socket)?;
-        return Ok(Self::from_tokio(self, socket));
-    }
-
-    /// Adds an existing Tokio UDP socket.
-    pub fn from_tokio(self, socket: tokio::net::UdpSocket) -> EndpointBuilder<WantsConfig> {
-        return EndpointBuilder { p: WantsConfig { runtime: self.p.runtime, socket }};
+        return Ok(EndpointBuilder {
+            p: WantsConfig {
+                runtime: self.p.runtime,
+                socket,
+            }
+        })
     }
 }
 
 /// Step where config is added.
 pub struct WantsConfig {
     runtime: RuntimeHandle,
-    socket: UdpSocket,
+    socket: Socket,
 }
 
 impl EndpointBuilder<WantsConfig> {
@@ -80,7 +75,7 @@ impl EndpointBuilder<WantsConfig> {
 /// Step where the endpoint may become a server.
 pub struct MaybeServer {
     runtime: RuntimeHandle,
-    socket: UdpSocket,
+    socket: Socket,
     config: Arc<quinn_proto::EndpointConfig>,
 }
 
@@ -116,7 +111,7 @@ impl EndpointBuilder<MaybeServer> {
 pub struct Endpoint {
     pub(crate) handle: Handle,
 
-    driver: JoinHandle<()>,
+    driver: Task<()>,
 }
 
 impl Component for Endpoint {
@@ -128,27 +123,27 @@ impl Component for Endpoint {
 struct State {
     state: watch::Sender<EndpointState>,
 
-    socket: Arc<UdpSocket>,
+    socket: Socket,
 
-    socket_dgram_recv_rx: mpsc::UnboundedReceiver<DatagramRecv>,
-    socket_dgram_send_tx: mpsc::UnboundedSender<DatagramSend>,
+    socket_dgram_recv_rx: crossbeam_channel::Receiver<DatagramRecv>,
+    socket_dgram_send_tx: crossbeam_channel::Sender<DatagramSend>,
 
     quinn: quinn_proto::Endpoint,
 
-    quinn_event_rx: mpsc::UnboundedReceiver<EndpointEvent>,
-    quinn_event_tx: mpsc::UnboundedSender<EndpointEvent>,
+    quinn_event_rx: crossbeam_channel::Receiver<EndpointEvent>,
+    quinn_event_tx: crossbeam_channel::Sender<EndpointEvent>,
 
     connections: HashMap<QuinnConnectionId, ConnectionHandle>,
 
-    connection_request_rx: mpsc::UnboundedReceiver<ConnectionRequest>,
-    connection_accepted_tx: mpsc::UnboundedSender<NewConnection>,
+    connection_request_rx: crossbeam_channel::Receiver<ConnectionRequest>,
+    connection_accepted_tx: crossbeam_channel::Sender<NewConnection>,
 }
 
 pub(crate) struct Handle {
     state: watch::Receiver<EndpointState>,
 
-    connection_request_tx: mpsc::UnboundedSender<ConnectionRequest>,
-    connection_accepted_rx: mpsc::UnboundedReceiver<NewConnection>,
+    connection_request_tx: crossbeam_channel::Sender<ConnectionRequest>,
+    connection_accepted_rx: crossbeam_channel::Receiver<NewConnection>,
 }
 
 impl Handle {
@@ -170,18 +165,12 @@ pub(crate) struct EndpointEvent {
 }
 
 struct ConnectionHandle {
-    quinn_event_tx: mpsc::UnboundedSender<ConnectionEvent>,
+    quinn_event_tx: crossbeam_channel::Sender<ConnectionEvent>,
 }
 
 pub(crate) struct EndpointHandle {
-    quinn_event_tx: mpsc::UnboundedSender<EndpointEvent>,
-    quinn_event_rx: mpsc::UnboundedReceiver<ConnectionEvent>,
-}
-
-impl EndpointHandle {
-    pub async fn recv_connection_event(&mut self) -> Option<ConnectionEvent> {
-        self.quinn_event_rx.recv().await
-    }
+    quinn_event_tx: crossbeam_channel::Sender<EndpointEvent>,
+    quinn_event_rx: crossbeam_channel::Receiver<ConnectionEvent>,
 }
 
 struct DatagramRecv {
@@ -213,14 +202,14 @@ impl From<rustls::Error> for BuildError {
 
 pub(crate) fn open(
     runtime: RuntimeHandle,
-    socket: UdpSocket,
+    socket: Socket,
     config: Arc<quinn_proto::EndpointConfig>,
     server: Option<Arc<quinn_proto::ServerConfig>>,
 ) -> Endpoint {
     // Create various communication channels
-    let (state_tx, state_rx) = tokio::sync::watch::channel(EndpointState::Building);
-    let (connection_request_tx, connection_request_rx) = mpsc::unbounded_channel();
-    let (connection_accepted_tx, connection_accepted_rx) = mpsc::unbounded_channel();
+    let (state_tx, state_rx) = watch::channel(EndpointState::Building);
+    let (connection_request_tx, connection_request_rx) = crossbeam_channel::unbounded();
+    let (connection_accepted_tx, connection_accepted_rx) = crossbeam_channel::unbounded();
 
     Endpoint {
         handle: Handle {
@@ -253,46 +242,46 @@ async fn endpoint(
     };
 
     loop {
-        select! {
-            // Receive datagrams
-            dgram = state.socket_dgram_recv_rx.recv() => match dgram {
-                Some(dgram) => handle_datagram(&mut state, dgram).await,
-                None => todo!(),
-            },
+        // select! {
+        //     // Receive datagrams
+        //     dgram = state.socket_dgram_recv_rx.recv() => match dgram {
+        //         Some(dgram) => handle_datagram(&mut state, dgram).await,
+        //         None => todo!(),
+        //     },
 
-            // Handle events
-            event = state.quinn_event_rx.recv() => match event {
-                Some(event) => handle_event(&mut state, event).await,
-                None => todo!(),
-            },
+        //     // Handle events
+        //     event = state.quinn_event_rx.recv() => match event {
+        //         Some(event) => handle_event(&mut state, event).await,
+        //         None => todo!(),
+        //     },
 
-            // Handle connection requests
-            request = state.connection_request_rx.recv() => match request {
-                Some(request) => handle_connection_request(&mut state, request).await,
-                None => todo!(),
-            }
-        }
+        //     // Handle connection requests
+        //     request = state.connection_request_rx.recv() => match request {
+        //         Some(request) => handle_connection_request(&mut state, request).await,
+        //         None => todo!(),
+        //     }
+        // }
     }
 }
 
 struct BuildTaskData {
     runtime: RuntimeHandle,
-    socket: UdpSocket,
+    socket: Socket,
     config: Arc<quinn_proto::EndpointConfig>,
     server: Option<Arc<quinn_proto::ServerConfig>>,
 
     state_tx: watch::Sender<EndpointState>,
-    connection_request_rx: mpsc::UnboundedReceiver<ConnectionRequest>,
-    connection_accepted_tx: mpsc::UnboundedSender<NewConnection>,
+    connection_request_rx: crossbeam_channel::Receiver<ConnectionRequest>,
+    connection_accepted_tx: crossbeam_channel::Sender<NewConnection>,
 }
 
 async fn build(
     config: BuildTaskData,
 ) -> Result<State, BuildError> {
     // Create communications channels
-    let (quinn_event_tx, quinn_event_rx) = mpsc::unbounded_channel();
-    let (socket_dgram_recv_tx, socket_dgram_recv_rx) = mpsc::unbounded_channel();
-    let (socket_dgram_send_tx, socket_dgram_send_rx) = mpsc::unbounded_channel();
+    let (quinn_event_tx, quinn_event_rx) = crossbeam_channel::unbounded();
+    let (socket_dgram_recv_tx, socket_dgram_recv_rx) = crossbeam_channel::unbounded();
+    let (socket_dgram_send_tx, socket_dgram_send_rx) = crossbeam_channel::unbounded();
 
     let quinn = quinn_proto::Endpoint::new(
         config.config,
@@ -301,16 +290,10 @@ async fn build(
         None,
     );
 
-    let socket = Arc::new(config.socket);
-
-    // Spawn tasks for I/O
-    config.runtime.spawn(io_recv_task(socket.clone(), socket_dgram_recv_tx));
-    config.runtime.spawn(io_send_task(socket.clone(), socket_dgram_send_rx));
-
     // Return state object
     return Ok(State {
         state: config.state_tx,
-        socket,
+        socket: config.socket,
         socket_dgram_recv_rx,
         socket_dgram_send_tx,
         quinn,
@@ -418,7 +401,7 @@ async fn add_connection(
     id: QuinnConnectionId,
     quinn: quinn_proto::Connection,
 ) -> NewConnection {
-    let (quinn_event_tx, quinn_event_rx) = mpsc::unbounded_channel();
+    let (quinn_event_tx, quinn_event_rx) = crossbeam_channel::unbounded();
 
     state.connections.insert(id, ConnectionHandle {
         quinn_event_tx,
@@ -432,45 +415,4 @@ async fn add_connection(
             quinn_event_tx: state.quinn_event_tx.clone(),
         },
     };
-}
-
-async fn io_recv_task(
-    socket: Arc<UdpSocket>,
-    socket_dgram_recv_tx: mpsc::UnboundedSender<DatagramRecv>,
-) {
-    loop {
-        let mut payload = BytesMut::with_capacity(2048); // TODO: Increase this size
-
-        match socket.recv_buf_from(&mut payload).await {
-            Ok((_, origin)) => {
-                let message = DatagramRecv {
-                    origin,
-                    payload,
-                };
-
-                if let Err(_) = socket_dgram_recv_tx.send(message) {
-                    return; // Channel is closed
-                }
-            },
-
-            Err(e) if e.kind() == ErrorKind::WouldBlock => {},
-
-            Err(_) => todo!(),
-        }
-    }
-}
-
-async fn io_send_task(
-    socket: Arc<UdpSocket>,
-    mut socket_dgram_send_rx: mpsc::UnboundedReceiver<DatagramSend>,
-) {
-    while let Some(dgram) = socket_dgram_send_rx.recv().await {
-        match socket.send_to(&dgram.payload, dgram.target).await {
-            Ok(_) => continue, // Success
-
-            Err(e) if e.kind() == ErrorKind::WouldBlock => todo!(),
-
-            Err(_) => todo!(),
-        }
-    }
 }

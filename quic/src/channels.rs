@@ -39,6 +39,8 @@ pub mod watch {
 }
 
 pub mod oneshot {
+    use std::future::Future;
+
     pub(crate) fn channel<T>() -> (Sender<T>, Receiver<T>) {
         let (tx, rx) = crossbeam_channel::bounded(1);
         let sender = Sender { inner: tx };
@@ -74,6 +76,17 @@ pub mod oneshot {
 
         pub fn inner(&self) -> &crossbeam_channel::Receiver<T> {
             &self.inner
+        }
+    }
+
+    impl<T> Future for Receiver<T> {
+        type Output = Result<T, ()>;
+
+        fn poll(
+            self: std::pin::Pin<&mut Self>,
+            cx: &mut std::task::Context<'_>,
+        ) -> std::task::Poll<Self::Output> {
+            todo!()
         }
     }
 

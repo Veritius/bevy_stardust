@@ -3,25 +3,38 @@ use async_task::{Runnable, Task};
 use bevy_ecs::system::Resource;
 use crossbeam_deque::Injector;
 
+/// Builder for a [`Runtime`].
 pub struct RuntimeBuilder {
-    prefix: Box<str>,
     threads: usize,
 }
 
 impl RuntimeBuilder {
+    /// Creates a new [`RuntimeBuilder`].
     pub fn new() -> RuntimeBuilder {
         RuntimeBuilder {
-            prefix: "quic worker".into(),
             threads: 1,
         }
     }
 
-    pub fn name(&mut self, name: impl Into<Box<str>>) {
-        self.prefix = name.into();
+    /// Sets the number of worker threads used.
+    /// Defaults to `1`.
+    pub fn threads(mut self, count: usize) -> Self {
+        self.threads = count;
+        return self;
     }
 
-    pub fn threads(&mut self, count: usize) {
-        self.threads = count;
+    /// Builds the [`Runtime`].
+    pub fn build(self) -> Runtime {
+        let mut runtime = Runtime {
+            workers: Vec::with_capacity(self.threads),
+            state: Arc::new(State {
+                tasks: Injector::new(),
+            }),
+        };
+
+        runtime.add_workers(self.threads);
+
+        return runtime;
     }
 }
 
@@ -29,7 +42,6 @@ impl RuntimeBuilder {
 /// 
 /// Can be used as a Bevy [`Resource`].
 pub struct Runtime {
-    prefix: Box<str>,
     workers: Vec<Worker>,
     state: Arc<State>,
 }
@@ -46,7 +58,7 @@ impl Runtime {
 
         let iter = (0..amount)
             .map(|_| Worker::new(
-                self.prefix.clone(),
+                format!("quic worker"),
                 self.state.clone(),
             ));
 

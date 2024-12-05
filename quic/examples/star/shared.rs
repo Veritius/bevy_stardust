@@ -74,7 +74,9 @@ pub fn setup(app: &mut App) {
     app.add_systems(Update, send_and_receive_system::<ReliableUnordered>);
     app.add_systems(Update, send_and_receive_system::<ReliableOrdered>);
 
-    app.insert_resource(Runtime::new(1));
+    app.insert_resource(RuntimeBuilder::new()
+        .threads(1)
+        .build());
 }
 
 enum UnreliableUnordered {}

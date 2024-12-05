@@ -1,10 +1,11 @@
 use std::{future::Future, net::SocketAddr, sync::Arc, task::Poll};
+use async_task::Task;
 use bevy_ecs::component::{Component, ComponentHooks, StorageType};
 use bevy_stardust::prelude::ChannelMessage;
 use futures_lite::FutureExt;
 use quinn_proto::ConnectionEvent;
-use tokio::{select, sync::{mpsc, oneshot, watch}, task::JoinHandle, runtime::Handle as RuntimeHandle};
-use crate::{endpoint::EndpointHandle, Endpoint, Runtime};
+use crate::runtime::Handle as RuntimeHandle;
+use crate::{channels::{oneshot, watch}, endpoint::EndpointHandle, Endpoint, Runtime};
 
 /// A handle to an existing connection.
 /// 
@@ -13,7 +14,7 @@ use crate::{endpoint::EndpointHandle, Endpoint, Runtime};
 pub struct Connection {
     pub(crate) handle: Handle,
 
-    driver: JoinHandle<()>,
+    driver: Task<()>,
 }
 
 impl Connection {
@@ -25,7 +26,7 @@ impl Connection {
         address: SocketAddr,
         server_name: Arc<str>,
     ) -> Result<Connection, ConnectionError> {
-        let (request_tx, request_rx) = tokio::sync::oneshot::channel();
+        let (request_tx, request_rx) = oneshot::channel();
 
         endpoint.handle.connect(ConnectionRequest {
             data: ConnectionRequestData {
@@ -62,16 +63,16 @@ struct State {
 
     quinn: quinn_proto::Connection,
 
-    outgoing_messages_rx: mpsc::UnboundedReceiver<ChannelMessage>,
-    incoming_messages_tx: mpsc::UnboundedSender<ChannelMessage>,
+    outgoing_messages_rx: crossbeam_channel::Receiver<ChannelMessage>,
+    incoming_messages_tx: crossbeam_channel::Sender<ChannelMessage>,
 }
 
 pub(crate) struct Handle {
     state_rx: watch::Receiver<ConnectionState>,
     shutdown_tx: Option<oneshot::Sender<()>>,
 
-    outgoing_messages_tx: mpsc::UnboundedSender<ChannelMessage>,
-    incoming_messages_rx: mpsc::UnboundedReceiver<ChannelMessage>,
+    outgoing_messages_tx: crossbeam_channel::Sender<ChannelMessage>,
+    incoming_messages_rx: crossbeam_channel::Receiver<ChannelMessage>,
 }
 
 /// The state of the connection.
@@ -93,7 +94,7 @@ pub(crate) struct ConnectionRequestData {
 }
 
 pub(crate) struct ConnectionRequestInner {
-    request_tx: tokio::sync::oneshot::Sender<
+    request_tx: oneshot::Sender<
         Result<NewConnection, ConnectionError>,
     >,
 }
@@ -109,7 +110,7 @@ impl ConnectionRequestInner {
 }
 
 struct ConnectionRequestResponseListener {
-    request_rx: tokio::sync::oneshot::Receiver<
+    request_rx: oneshot::Receiver<
         Result<NewConnection, ConnectionError>
     >,
 }
@@ -145,18 +146,18 @@ struct BuildData {
     state_tx: watch::Sender<ConnectionState>,
     shutdown_rx: oneshot::Receiver<()>,
 
-    outgoing_messages_rx: mpsc::UnboundedReceiver<ChannelMessage>,
-    incoming_messages_tx: mpsc::UnboundedSender<ChannelMessage>,
+    outgoing_messages_rx: crossbeam_channel::Receiver<ChannelMessage>,
+    incoming_messages_tx: crossbeam_channel::Sender<ChannelMessage>,
 }
 
 fn outgoing(
     runtime: RuntimeHandle,
     listener: ConnectionRequestResponseListener,
-) -> (Handle, JoinHandle<()>) {
+) -> (Handle, Task<()>) {
     let (state_tx, state_rx) = watch::channel(ConnectionState::Connecting);
     let (shutdown_tx, shutdown_rx) = oneshot::channel();
-    let (outgoing_messages_tx, outgoing_messages_rx) = mpsc::unbounded_channel();
-    let (incoming_messages_tx, incoming_messages_rx) = mpsc::unbounded_channel();
+    let (outgoing_messages_tx, outgoing_messages_rx) = crossbeam_channel::unbounded();
+    let (incoming_messages_tx, incoming_messages_rx) = crossbeam_channel::unbounded();
 
     // Spawn task
     let task = runtime.spawn(build(
@@ -216,17 +217,17 @@ async fn task(
 async fn tick(
     state: &mut State,
 ) {
-    select! {
-        event = state.endpoint.recv_connection_event() => match event {
-            Some(event) => handle_connection_event(state, event).await,
-            None => todo!(),
-        },
+    // select! {
+    //     event = state.endpoint.recv_connection_event() => match event {
+    //         Some(event) => handle_connection_event(state, event).await,
+    //         None => todo!(),
+    //     },
 
-        message = state.outgoing_messages_rx.recv() => match message {
-            Some(message) => handle_outgoing_message(state, message).await,
-            None => todo!(),
-        },
-    }
+    //     message = state.outgoing_messages_rx.recv() => match message {
+    //         Some(message) => handle_outgoing_message(state, message).await,
+    //         None => todo!(),
+    //     },
+    // }
 }
 
 async fn handle_connection_event(
