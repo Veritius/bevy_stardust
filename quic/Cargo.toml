@@ -39,11 +39,12 @@ version = "0.8"
 [dependencies.async-task]
 version = "4.7"
 
+[dependencies.mio]
+version = "1"
+features = ["net", "os-poll"]
+
 [dependencies.bytes]
 version = "1.5.0"
-
-[dependencies.socket2]
-version = "0.5.7"
 
 [dependencies.anyhow]
 version = "1"
