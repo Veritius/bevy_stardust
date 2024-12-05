@@ -1,4 +1,4 @@
-use std::{sync::{atomic::AtomicBool, Arc}, thread::JoinHandle};
+use std::{sync::{atomic::{AtomicBool, Ordering}, Arc}, thread::JoinHandle};
 use async_task::{Runnable, Task};
 use bevy_ecs::system::Resource;
 use crossbeam_deque::Injector;
@@ -109,7 +109,25 @@ impl Worker {
         state: Arc<State>,
         shutdown: Arc<AtomicBool>,
     ) {
+        // Thread-local queue of tasks needing completion
+        let mut local = crossbeam_deque::Worker::new_lifo();
 
+        loop {
+            // Check if we've been signalled to shut down
+            if shutdown.load(Ordering::Relaxed) {
+                return; // Stop processing immediately
+            }
+
+            if local.is_empty() {
+                // Fill up our local queue from the runtime's global queue
+                state.tasks.steal_batch_with_limit(&local, 8);
+            }
+
+            // Run any tasks we have in our local queue
+            if let Some(runnable) = local.pop() {
+                runnable.run();
+            }
+        }
     }
 }
 
