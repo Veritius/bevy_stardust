@@ -1,10 +1,9 @@
-use std::{collections::VecDeque, io::ErrorKind, net::{SocketAddr, ToSocketAddrs}, sync::Arc, thread::JoinHandle};
+use std::{collections::VecDeque, io::ErrorKind, net::{SocketAddr, ToSocketAddrs}, thread::JoinHandle};
 use bytes::BytesMut;
 use crossbeam_channel::{Receiver, Sender, TryRecvError};
 
 /// A UDP socket and associated thread for handling I/O with the operating system.
 pub(crate) struct Socket {
-    socket: Arc<mio::net::UdpSocket>,
     dgram_rx: Receiver<DgramRecv>,
     dgram_tx: Sender<DgramSend>,
     thread: JoinHandle<Result<(), std::io::Error>>,
@@ -33,14 +32,8 @@ impl Socket {
         mio_poll.registry().register(&mut socket, TKN_READABLE, mio::Interest::READABLE);
         mio_poll.registry().register(&mut socket, TKN_WRITABLE, mio::Interest::WRITABLE);
 
-        // Put socket in an arc since we're done mutating it
-        let socket = Arc::new(socket);
-        let thread_socket = socket.clone();
-
         // Start thread
         let thread = std::thread::spawn(move || {
-            let socket = thread_socket;
-
             let mut blocked_sends: VecDeque<DgramSend> = VecDeque::with_capacity(1);
 
             loop {
@@ -117,7 +110,6 @@ impl Socket {
         });
 
         return Ok(Socket {
-            socket,
             dgram_rx: dgram_recv_rx,
             dgram_tx: dgram_send_tx,
             thread,
