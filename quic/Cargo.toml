@@ -53,7 +53,7 @@ version = "2.4"
 version = "2"
 
 [dev-dependencies.bevy_log]
-version = "0.14"
+version = "0.15"
 
 [[example]]
 name = "star_client"
