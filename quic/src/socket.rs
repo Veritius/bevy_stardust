@@ -13,8 +13,7 @@ pub(crate) struct Socket {
 impl Socket {
     pub fn new(addr: impl ToSocketAddrs) -> Result<Self, std::io::Error> {
         // mio tokens as consts so they can be changed easily
-        const TKN_READABLE: mio::Token = mio::Token(0);
-        const TKN_WRITABLE: mio::Token = mio::Token(1);
+        const SKT_READABLE_OR_WRITABLE: mio::Token = mio::Token(0);
 
         // Bind UDP socket and configure it
         let socket = std::net::UdpSocket::bind(addr)?;
@@ -31,8 +30,7 @@ impl Socket {
         // Set up mio's polling system
         let mut mio_poll = mio::Poll::new()?;
         let mut mio_events = mio::Events::with_capacity(32);
-        mio_poll.registry().register(&mut socket, TKN_READABLE, mio::Interest::READABLE)?;
-        mio_poll.registry().register(&mut socket, TKN_WRITABLE, mio::Interest::WRITABLE)?;
+        mio_poll.registry().register(&mut socket, SKT_READABLE_OR_WRITABLE, mio::Interest::READABLE | mio::Interest::WRITABLE)?;
 
         // Start thread
         let thread = std::thread::spawn(move || {
@@ -43,7 +41,7 @@ impl Socket {
 
                 'events: for event in mio_events.iter() {
                     match event.token() {
-                        TKN_READABLE => {
+                        SKT_READABLE_OR_WRITABLE => {
                             // TODO: Allow configuring scratch size
                             let mut scratch = vec![0u8; 1472];
 
@@ -56,15 +54,15 @@ impl Socket {
                                         buf
                                     },
                                 }) {
-                                    Ok(_) => { continue },
+                                    Ok(_) => {},
                                     Err(_) => todo!(),
                                 },
 
-                                Err(_) => todo!(),
-                            }
-                        },
+                                Err(e) if e.kind() == ErrorKind::WouldBlock => {}, // Do nothing
 
-                        TKN_WRITABLE => {
+                                Err(e) => todo!(),
+                            }
+
                             while let Some(dgram) = blocked_sends.pop_front() {
                                 match socket.send_to(&dgram.payload, dgram.target) {
                                     Ok(_) => {}, // Success
