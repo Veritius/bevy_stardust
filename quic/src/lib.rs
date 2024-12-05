@@ -11,6 +11,7 @@ pub mod endpoint;
 
 mod plugin;
 mod runtime;
+mod socket;
 
 pub use plugin::QuicPlugin;
 pub use endpoint::{Endpoint, EndpointBuilder};
