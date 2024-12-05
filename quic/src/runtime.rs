@@ -1,6 +1,7 @@
-use std::{sync::Arc, thread::JoinHandle};
-
+use std::{sync::{atomic::AtomicBool, Arc}, thread::JoinHandle};
+use async_task::{Runnable, Task};
 use bevy_ecs::system::Resource;
+use crossbeam_deque::Injector;
 
 pub struct RuntimeBuilder {
     prefix: Box<str>,
@@ -76,6 +77,7 @@ pub struct Handle {
 /// A worker thread.
 struct Worker {
     thread: JoinHandle<()>,
+    shutdown: Arc<AtomicBool>,
 }
 
 impl Worker {
@@ -83,19 +85,35 @@ impl Worker {
         name: impl Into<String>,
         state: Arc<State>,
     ) -> Worker {
+        // Notification system for shutting down threads
+        let shutdown = Arc::new(AtomicBool::new(false));
+
         // Start a new worker thread
+        let thread_shutdown = shutdown.clone();
         let thread = std::thread::Builder::new()
             .name(name.into())
-            .spawn(move || { todo!() })
+            .spawn(move || Worker::task(
+                state,
+                thread_shutdown,
+            ))
             .unwrap();
 
+        // We're done here
         return Worker {
             thread,
+            shutdown,
         };
+    }
+
+    fn task(
+        state: Arc<State>,
+        shutdown: Arc<AtomicBool>,
+    ) {
+
     }
 }
 
 /// Internal state for execution.
 struct State {
-
+    tasks: Injector<Runnable>,
 }
