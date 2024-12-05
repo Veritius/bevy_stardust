@@ -71,6 +71,10 @@ pub mod oneshot {
                 }),
             }
         }
+
+        pub fn inner(&self) -> &crossbeam_channel::Receiver<T> {
+            &self.inner
+        }
     }
 
     pub(crate) enum TryRecvError {
