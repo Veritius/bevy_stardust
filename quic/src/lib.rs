@@ -17,7 +17,16 @@ pub use endpoint::{Endpoint, EndpointBuilder};
 pub use connection::Connection;
 pub use runtime::Runtime;
 
+pub use rustls;
+pub use quinn_proto;
+
 pub use rustls::pki_types::{
     CertificateDer,
     PrivateKeyDer,
+};
+
+pub use quinn_proto::{
+    EndpointConfig,
+    ServerConfig,
+    ClientConfig
 };
