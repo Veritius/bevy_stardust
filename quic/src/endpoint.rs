@@ -244,6 +244,8 @@ async fn endpoint(
         Err(err) => todo!(),
     };
 
+    log::debug!("Opened endpoint on address {}", state.socket.local_addr());
+
     EndpointDriver(state).await;
 }
 

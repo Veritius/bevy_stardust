@@ -6,6 +6,7 @@ use crossbeam_channel::{Receiver, Sender, TryRecvError};
 pub(crate) struct Socket {
     pub dgram_rx: Receiver<DgramRecv>,
     pub dgram_tx: Sender<DgramSend>,
+    address: SocketAddr,
     thread: JoinHandle<Result<(), std::io::Error>>,
 }
 
@@ -18,6 +19,7 @@ impl Socket {
         // Bind UDP socket and configure it
         let socket = std::net::UdpSocket::bind(addr)?;
         socket.set_nonblocking(true)?;
+        let address = socket.local_addr().unwrap();
 
         // Put udp socket in mio's wrapper type
         let mut socket = mio::net::UdpSocket::from_std(socket);
@@ -29,8 +31,8 @@ impl Socket {
         // Set up mio's polling system
         let mut mio_poll = mio::Poll::new()?;
         let mut mio_events = mio::Events::with_capacity(32);
-        mio_poll.registry().register(&mut socket, TKN_READABLE, mio::Interest::READABLE);
-        mio_poll.registry().register(&mut socket, TKN_WRITABLE, mio::Interest::WRITABLE);
+        mio_poll.registry().register(&mut socket, TKN_READABLE, mio::Interest::READABLE)?;
+        mio_poll.registry().register(&mut socket, TKN_WRITABLE, mio::Interest::WRITABLE)?;
 
         // Start thread
         let thread = std::thread::spawn(move || {
@@ -112,8 +114,13 @@ impl Socket {
         return Ok(Socket {
             dgram_rx: dgram_recv_rx,
             dgram_tx: dgram_send_tx,
+            address,
             thread,
         });
+    }
+
+    pub fn local_addr(&self) -> SocketAddr {
+        self.address
     }
 }
 
