@@ -398,6 +398,8 @@ fn add_connection(
     id: QuinnConnectionId,
     quinn: quinn_proto::Connection,
 ) -> NewConnection {
+    log::debug!("Connection established with {}", quinn.remote_address());
+
     let (quinn_event_tx, quinn_event_rx) = mpsc::channel();
 
     state.connections.insert(id, ConnectionHandle {
