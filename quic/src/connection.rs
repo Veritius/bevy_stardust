@@ -4,6 +4,7 @@ use bevy_ecs::component::{Component, ComponentHooks, StorageType};
 use bevy_stardust::prelude::ChannelMessage;
 use futures_lite::FutureExt;
 use quinn_proto::ConnectionEvent;
+use crate::channels::mpsc;
 use crate::runtime::Handle as RuntimeHandle;
 use crate::{channels::{oneshot, watch}, endpoint::EndpointHandle, Endpoint, Runtime};
 
@@ -63,16 +64,16 @@ struct State {
 
     quinn: quinn_proto::Connection,
 
-    outgoing_messages_rx: crossbeam_channel::Receiver<ChannelMessage>,
-    incoming_messages_tx: crossbeam_channel::Sender<ChannelMessage>,
+    outgoing_messages_rx: mpsc::Receiver<ChannelMessage>,
+    incoming_messages_tx: mpsc::Sender<ChannelMessage>,
 }
 
 pub(crate) struct Handle {
     state_rx: watch::Receiver<ConnectionState>,
     shutdown_tx: Option<oneshot::Sender<()>>,
 
-    outgoing_messages_tx: crossbeam_channel::Sender<ChannelMessage>,
-    incoming_messages_rx: crossbeam_channel::Receiver<ChannelMessage>,
+    outgoing_messages_tx: mpsc::Sender<ChannelMessage>,
+    incoming_messages_rx: mpsc::Receiver<ChannelMessage>,
 }
 
 /// The state of the connection.
@@ -146,8 +147,8 @@ struct BuildData {
     state_tx: watch::Sender<ConnectionState>,
     shutdown_rx: oneshot::Receiver<()>,
 
-    outgoing_messages_rx: crossbeam_channel::Receiver<ChannelMessage>,
-    incoming_messages_tx: crossbeam_channel::Sender<ChannelMessage>,
+    outgoing_messages_rx: mpsc::Receiver<ChannelMessage>,
+    incoming_messages_tx: mpsc::Sender<ChannelMessage>,
 }
 
 fn outgoing(
@@ -156,8 +157,8 @@ fn outgoing(
 ) -> (Handle, Task<()>) {
     let (state_tx, state_rx) = watch::channel(ConnectionState::Connecting);
     let (shutdown_tx, shutdown_rx) = oneshot::channel();
-    let (outgoing_messages_tx, outgoing_messages_rx) = crossbeam_channel::unbounded();
-    let (incoming_messages_tx, incoming_messages_rx) = crossbeam_channel::unbounded();
+    let (outgoing_messages_tx, outgoing_messages_rx) = mpsc::channel();
+    let (incoming_messages_tx, incoming_messages_rx) = mpsc::channel();
 
     // Spawn task
     let task = runtime.spawn(build(

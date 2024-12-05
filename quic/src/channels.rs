@@ -1,11 +1,18 @@
 pub mod mpmc {
+    use std::fmt::Debug;
+
     pub(crate) fn channel<T>() -> (Sender<T>, Receiver<T>) {
         let (tx, rx) = crossbeam_channel::unbounded::<T>();
         return (Sender(tx), Receiver(rx));
     }
 
-    #[derive(Clone)]
     pub(crate) struct Sender<T>(crossbeam_channel::Sender<T>);
+
+    impl<T> Clone for Sender<T> {
+        fn clone(&self) -> Self {
+            Self(self.0.clone())
+        }
+    }
 
     impl<T> Sender<T> {
         pub fn send(&self, msg: T) -> Result<(), SendError<T>> {
@@ -13,8 +20,13 @@ pub mod mpmc {
         }
     }
 
-    #[derive(Clone)]
     pub(crate) struct Receiver<T>(crossbeam_channel::Receiver<T>);
+
+    impl<T> Clone for Receiver<T> {
+        fn clone(&self) -> Self {
+            Self(self.0.clone())
+        }
+    }
 
     impl<T> Receiver<T> {
         pub fn try_recv(&self) -> Result<T, TryRecvError> {
@@ -27,6 +39,13 @@ pub mod mpmc {
 
     pub(crate) struct SendError<T>(pub T);
 
+    impl<T> Debug for SendError<T> {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            f.write_str("SendError")
+        }
+    }
+
+    #[derive(Debug)]
     pub(crate) enum TryRecvError {
         Empty,
         Disconnected,
@@ -34,13 +53,20 @@ pub mod mpmc {
 }
 
 pub mod mpsc {
+    use std::fmt::Debug;
+
     pub(crate) fn channel<T>() -> (Sender<T>, Receiver<T>) {
         let (tx, rx) = crossbeam_channel::unbounded::<T>();
         return (Sender(tx), Receiver(rx));
     }
 
-    #[derive(Clone)]
     pub(crate) struct Sender<T>(crossbeam_channel::Sender<T>);
+
+    impl<T> Clone for Sender<T> {
+        fn clone(&self) -> Self {
+            Self(self.0.clone())
+        }
+    }
 
     impl<T> Sender<T> {
         pub fn send(&self, msg: T) -> Result<(), SendError<T>> {
@@ -61,6 +87,13 @@ pub mod mpsc {
 
     pub(crate) struct SendError<T>(pub T);
 
+    impl<T> Debug for SendError<T> {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            f.write_str("SendError")
+        }
+    }
+
+    #[derive(Debug)]
     pub(crate) enum TryRecvError {
         Empty,
         Disconnected,
@@ -163,8 +196,10 @@ pub mod oneshot {
         }
     }
 
+    #[derive(Debug)]
     pub struct SendError<T>(pub T);
 
+    #[derive(Debug)]
     pub(crate) enum TryRecvError {
         Empty,
         Disconnected,

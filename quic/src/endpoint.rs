@@ -4,7 +4,7 @@ use bevy_ecs::component::{Component, ComponentHooks, StorageType};
 use bytes::BytesMut;
 use crossbeam_channel::TryRecvError;
 use quinn_proto::{ConnectionEvent, ConnectionHandle as QuinnConnectionId, EndpointConfig};
-use crate::runtime::Handle as RuntimeHandle;
+use crate::{channels::mpsc, runtime::Handle as RuntimeHandle, socket::{DgramRecv, DgramSend}};
 use crate::{channels::watch, connection::{ConnectionError, ConnectionRequest, NewConnection}, socket::Socket};
 
 /// A builder for the [`Endpoint`] component, using the [typestate] pattern.
@@ -126,25 +126,22 @@ struct State {
 
     socket: Socket,
 
-    socket_dgram_recv_rx: crossbeam_channel::Receiver<DatagramRecv>,
-    socket_dgram_send_tx: crossbeam_channel::Sender<DatagramSend>,
-
     quinn: quinn_proto::Endpoint,
 
-    quinn_event_rx: crossbeam_channel::Receiver<EndpointEvent>,
-    quinn_event_tx: crossbeam_channel::Sender<EndpointEvent>,
+    quinn_event_rx: mpsc::Receiver<EndpointEvent>,
+    quinn_event_tx: mpsc::Sender<EndpointEvent>,
 
     connections: HashMap<QuinnConnectionId, ConnectionHandle>,
 
-    connection_request_rx: crossbeam_channel::Receiver<ConnectionRequest>,
-    connection_accepted_tx: crossbeam_channel::Sender<NewConnection>,
+    connection_request_rx: mpsc::Receiver<ConnectionRequest>,
+    connection_accepted_tx: mpsc::Sender<NewConnection>,
 }
 
 pub(crate) struct Handle {
     state: watch::Receiver<EndpointState>,
 
-    connection_request_tx: crossbeam_channel::Sender<ConnectionRequest>,
-    connection_accepted_rx: crossbeam_channel::Receiver<NewConnection>,
+    connection_request_tx: mpsc::Sender<ConnectionRequest>,
+    connection_accepted_rx: mpsc::Receiver<NewConnection>,
 }
 
 impl Handle {
@@ -166,24 +163,14 @@ pub(crate) struct EndpointEvent {
 }
 
 struct ConnectionHandle {
-    quinn_event_tx: crossbeam_channel::Sender<ConnectionEvent>,
+    quinn_event_tx: mpsc::Sender<ConnectionEvent>,
 }
 
 pub(crate) struct EndpointHandle {
-    pub quinn_event_tx: crossbeam_channel::Sender<EndpointEvent>,
-    pub quinn_event_rx: crossbeam_channel::Receiver<ConnectionEvent>,
+    pub quinn_event_tx: mpsc::Sender<EndpointEvent>,
+    pub quinn_event_rx: mpsc::Receiver<ConnectionEvent>,
 
     _hidden: (),
-}
-
-struct DatagramRecv {
-    origin: SocketAddr,
-    payload: BytesMut,
-}
-
-struct DatagramSend {
-    target: SocketAddr,
-    payload: BytesMut,
 }
 
 enum BuildError {
@@ -211,8 +198,8 @@ pub(crate) fn open(
 ) -> Endpoint {
     // Create various communication channels
     let (state_tx, state_rx) = watch::channel(EndpointState::Building);
-    let (connection_request_tx, connection_request_rx) = crossbeam_channel::unbounded();
-    let (connection_accepted_tx, connection_accepted_rx) = crossbeam_channel::unbounded();
+    let (connection_request_tx, connection_request_rx) = mpsc::channel();
+    let (connection_accepted_tx, connection_accepted_rx) = mpsc::channel();
 
     Endpoint {
         handle: Handle {
@@ -260,7 +247,7 @@ impl Future for EndpointDriver {
     ) -> std::task::Poll<Self::Output> {
         let mut state = &mut self.0;
 
-        while let Ok(dgram) = state.socket_dgram_recv_rx.try_recv() {
+        while let Ok(dgram) = state.socket.dgram_rx.try_recv() {
             handle_datagram(&mut state, dgram);
         };
 
@@ -283,17 +270,15 @@ struct BuildTaskData {
     server: Option<Arc<quinn_proto::ServerConfig>>,
 
     state_tx: watch::Sender<EndpointState>,
-    connection_request_rx: crossbeam_channel::Receiver<ConnectionRequest>,
-    connection_accepted_tx: crossbeam_channel::Sender<NewConnection>,
+    connection_request_rx: mpsc::Receiver<ConnectionRequest>,
+    connection_accepted_tx: mpsc::Sender<NewConnection>,
 }
 
 async fn build(
     config: BuildTaskData,
 ) -> Result<State, BuildError> {
     // Create communications channels
-    let (quinn_event_tx, quinn_event_rx) = crossbeam_channel::unbounded();
-    let (socket_dgram_recv_tx, socket_dgram_recv_rx) = crossbeam_channel::unbounded();
-    let (socket_dgram_send_tx, socket_dgram_send_rx) = crossbeam_channel::unbounded();
+    let (quinn_event_tx, quinn_event_rx) = mpsc::channel();
 
     let quinn = quinn_proto::Endpoint::new(
         config.config,
@@ -306,8 +291,6 @@ async fn build(
     return Ok(State {
         state: config.state_tx,
         socket: config.socket,
-        socket_dgram_recv_rx,
-        socket_dgram_send_tx,
         quinn,
         quinn_event_rx,
         quinn_event_tx,
@@ -319,7 +302,7 @@ async fn build(
 
 fn handle_datagram(
     state: &mut State,
-    dgram: DatagramRecv,
+    dgram: DgramRecv,
 ) {
     let mut scratch = Vec::new();
 
@@ -354,7 +337,9 @@ fn handle_datagram(
                             quinn,
                         );
 
-                        state.connection_accepted_tx.send(connection).unwrap(); // TODO: Handle error
+                        state.connection_accepted_tx
+                            .send(connection)
+                            .unwrap(); // TODO: Handle error
                     },
 
                     Err(_) => todo!(),
@@ -365,7 +350,7 @@ fn handle_datagram(
                 let mut payload = BytesMut::with_capacity(transmit.size);
                 payload.copy_from_slice(&scratch[..transmit.size]);
 
-                state.socket_dgram_send_tx.send(DatagramSend {
+                state.socket.dgram_tx.send(DgramSend {
                     target: transmit.destination,
                     payload,
                 }).unwrap(); // TODO: Handle error
@@ -413,7 +398,7 @@ fn add_connection(
     id: QuinnConnectionId,
     quinn: quinn_proto::Connection,
 ) -> NewConnection {
-    let (quinn_event_tx, quinn_event_rx) = crossbeam_channel::unbounded();
+    let (quinn_event_tx, quinn_event_rx) = mpsc::channel();
 
     state.connections.insert(id, ConnectionHandle {
         quinn_event_tx,
