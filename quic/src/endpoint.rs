@@ -1,4 +1,4 @@
-use std::{collections::HashMap, io::ErrorKind, net::{SocketAddr, ToSocketAddrs}, sync::Arc, time::Instant};
+use std::{collections::HashMap, future::Future, io::ErrorKind, net::{SocketAddr, ToSocketAddrs}, sync::Arc, task::Poll, time::Instant};
 use async_task::Task;
 use bevy_ecs::component::{Component, ComponentHooks, StorageType};
 use bytes::BytesMut;
@@ -169,8 +169,10 @@ struct ConnectionHandle {
 }
 
 pub(crate) struct EndpointHandle {
-    quinn_event_tx: crossbeam_channel::Sender<EndpointEvent>,
-    quinn_event_rx: crossbeam_channel::Receiver<ConnectionEvent>,
+    pub quinn_event_tx: crossbeam_channel::Sender<EndpointEvent>,
+    pub quinn_event_rx: crossbeam_channel::Receiver<ConnectionEvent>,
+
+    _hidden: (),
 }
 
 struct DatagramRecv {
@@ -236,31 +238,41 @@ async fn endpoint(
     config: BuildTaskData,
 ) {
     // Try to build endpoint
-    let mut state = match build(config).await {
+    let state = match build(config).await {
         Ok(state) => state,
         Err(err) => todo!(),
     };
 
-    loop {
-        // select! {
-        //     // Receive datagrams
-        //     dgram = state.socket_dgram_recv_rx.recv() => match dgram {
-        //         Some(dgram) => handle_datagram(&mut state, dgram).await,
-        //         None => todo!(),
-        //     },
+    EndpointDriver(state).await;
+}
 
-        //     // Handle events
-        //     event = state.quinn_event_rx.recv() => match event {
-        //         Some(event) => handle_event(&mut state, event).await,
-        //         None => todo!(),
-        //     },
+struct EndpointDriver(State);
 
-        //     // Handle connection requests
-        //     request = state.connection_request_rx.recv() => match request {
-        //         Some(request) => handle_connection_request(&mut state, request).await,
-        //         None => todo!(),
-        //     }
-        // }
+impl Future for EndpointDriver {
+    type Output = ();
+
+    fn poll(
+        mut self: std::pin::Pin<&mut Self>,
+        _cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Self::Output> {
+        let mut state = &mut self.0;
+
+        match state.socket_dgram_recv_rx.try_recv() {
+            Ok(dgram) => handle_datagram(&mut state, dgram),
+            Err(_) => todo!(),
+        };
+
+        match state.quinn_event_rx.try_recv() {
+            Ok(event) => handle_event(&mut state, event),
+            Err(_) => todo!(),
+        };
+
+        match state.connection_request_rx.try_recv() {
+            Ok(request) => handle_connection_request(&mut state, request),
+            Err(_) => todo!(),
+        };
+
+        return Poll::Pending;
     }
 }
 
@@ -305,7 +317,7 @@ async fn build(
     });
 }
 
-async fn handle_datagram(
+fn handle_datagram(
     state: &mut State,
     dgram: DatagramRecv,
 ) {
@@ -340,7 +352,7 @@ async fn handle_datagram(
                             state,
                             id,
                             quinn,
-                        ).await;
+                        );
 
                         state.connection_accepted_tx.send(connection).unwrap(); // TODO: Handle error
                     },
@@ -362,7 +374,7 @@ async fn handle_datagram(
     }
 }
 
-async fn handle_event(
+fn handle_event(
     state: &mut State,
     event: EndpointEvent,
 ) {
@@ -372,7 +384,7 @@ async fn handle_event(
     }
 }
 
-async fn handle_connection_request(
+fn handle_connection_request(
     state: &mut State,
     request: ConnectionRequest,
 ) {
@@ -387,7 +399,7 @@ async fn handle_connection_request(
                 state,
                 id,
                 quinn,
-            ).await);
+            ));
         },
 
         Err(err) => {
@@ -396,7 +408,7 @@ async fn handle_connection_request(
     }
 }
 
-async fn add_connection(
+fn add_connection(
     state: &mut State,
     id: QuinnConnectionId,
     quinn: quinn_proto::Connection,
@@ -413,6 +425,8 @@ async fn add_connection(
         endpoint: EndpointHandle {
             quinn_event_rx,
             quinn_event_tx: state.quinn_event_tx.clone(),
+
+            _hidden: (),
         },
     };
 }

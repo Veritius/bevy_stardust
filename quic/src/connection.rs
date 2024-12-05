@@ -214,30 +214,26 @@ async fn task(
     };
 }
 
-async fn tick(
+fn tick(
     state: &mut State,
 ) {
-    // select! {
-    //     event = state.endpoint.recv_connection_event() => match event {
-    //         Some(event) => handle_connection_event(state, event).await,
-    //         None => todo!(),
-    //     },
+    while let Ok(event) = state.endpoint.quinn_event_rx.try_recv() {
+        handle_connection_event(state, event);
+    }
 
-    //     message = state.outgoing_messages_rx.recv() => match message {
-    //         Some(message) => handle_outgoing_message(state, message).await,
-    //         None => todo!(),
-    //     },
-    // }
+    while let Ok(message) = state.outgoing_messages_rx.try_recv() {
+        handle_outgoing_message(state, message);
+    }
 }
 
-async fn handle_connection_event(
+fn handle_connection_event(
     state: &mut State,
     event: ConnectionEvent,
 ) {
     state.quinn.handle_event(event);
 }
 
-async fn handle_outgoing_message(
+fn handle_outgoing_message(
     state: &mut State,
     message: ChannelMessage,
 ) {
