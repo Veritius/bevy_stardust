@@ -15,7 +15,7 @@ mod runtime;
 pub use plugin::QuicPlugin;
 pub use endpoint::{Endpoint, EndpointBuilder};
 pub use connection::Connection;
-pub use runtime::Runtime;
+pub use runtime::{RuntimeBuilder, Runtime};
 
 pub use rustls;
 pub use quinn_proto;
