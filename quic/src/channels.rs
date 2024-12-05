@@ -1,3 +1,72 @@
+pub mod mpmc {
+    pub(crate) fn channel<T>() -> (Sender<T>, Receiver<T>) {
+        let (tx, rx) = crossbeam_channel::unbounded::<T>();
+        return (Sender(tx), Receiver(rx));
+    }
+
+    #[derive(Clone)]
+    pub(crate) struct Sender<T>(crossbeam_channel::Sender<T>);
+
+    impl<T> Sender<T> {
+        pub fn send(&self, msg: T) -> Result<(), SendError<T>> {
+            self.0.send(msg).map_err(|v| SendError(v.0))
+        }
+    }
+
+    #[derive(Clone)]
+    pub(crate) struct Receiver<T>(crossbeam_channel::Receiver<T>);
+
+    impl<T> Receiver<T> {
+        pub fn try_recv(&self) -> Result<T, TryRecvError> {
+            self.0.try_recv().map_err(|v| match v {
+                crossbeam_channel::TryRecvError::Empty => TryRecvError::Empty,
+                crossbeam_channel::TryRecvError::Disconnected => TryRecvError::Disconnected,
+            })
+        }
+    }
+
+    pub(crate) struct SendError<T>(pub T);
+
+    pub(crate) enum TryRecvError {
+        Empty,
+        Disconnected,
+    }
+}
+
+pub mod mpsc {
+    pub(crate) fn channel<T>() -> (Sender<T>, Receiver<T>) {
+        let (tx, rx) = crossbeam_channel::unbounded::<T>();
+        return (Sender(tx), Receiver(rx));
+    }
+
+    #[derive(Clone)]
+    pub(crate) struct Sender<T>(crossbeam_channel::Sender<T>);
+
+    impl<T> Sender<T> {
+        pub fn send(&self, msg: T) -> Result<(), SendError<T>> {
+            self.0.send(msg).map_err(|v| SendError(v.0))
+        }
+    }
+
+    pub(crate) struct Receiver<T>(crossbeam_channel::Receiver<T>);
+
+    impl<T> Receiver<T> {
+        pub fn try_recv(&self) -> Result<T, TryRecvError> {
+            self.0.try_recv().map_err(|v| match v {
+                crossbeam_channel::TryRecvError::Empty => TryRecvError::Empty,
+                crossbeam_channel::TryRecvError::Disconnected => TryRecvError::Disconnected,
+            })
+        }
+    }
+
+    pub(crate) struct SendError<T>(pub T);
+
+    pub(crate) enum TryRecvError {
+        Empty,
+        Disconnected,
+    }
+}
+
 pub mod watch {
     use std::sync::{Arc, Mutex, MutexGuard};
 
@@ -53,8 +122,8 @@ pub mod oneshot {
     }
 
     impl<T> Sender<T> {
-        pub fn send(self, value: T) {
-            self.inner.send(value);
+        pub fn send(self, value: T) -> Result<(), SendError<T>> {
+            self.inner.send(value).map_err(|v| SendError(v.0))
         }
     }
 
@@ -93,6 +162,8 @@ pub mod oneshot {
             }
         }
     }
+
+    pub struct SendError<T>(pub T);
 
     pub(crate) enum TryRecvError {
         Empty,
