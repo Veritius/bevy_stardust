@@ -20,13 +20,17 @@ pub use runtime::Runtime;
 pub use rustls;
 pub use quinn_proto;
 
-pub use rustls::pki_types::{
-    CertificateDer,
-    PrivateKeyDer,
+pub use rustls::{
+    RootCertStore,
+    pki_types::{
+        CertificateDer,
+        PrivateKeyDer,
+    },
 };
 
 pub use quinn_proto::{
     EndpointConfig,
+    TransportConfig,
     ServerConfig,
     ClientConfig
 };

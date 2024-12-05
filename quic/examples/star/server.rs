@@ -1,6 +1,5 @@
 mod shared;
 
-use std::sync::Arc;
 use bevy_app::prelude::*;
 use bevy_ecs::prelude::*;
 use bevy_stardust_quic::*;

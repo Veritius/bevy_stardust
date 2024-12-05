@@ -135,6 +135,7 @@ pub(crate) struct NewConnection {
 }
 
 /// An error produced by a [`Connection`].
+#[derive(Debug)]
 pub enum ConnectionError {
     EndpointClosed,
     QuicError(quinn_proto::ConnectError),
