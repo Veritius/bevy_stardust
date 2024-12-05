@@ -35,6 +35,9 @@ version = "0.8"
 [dependencies.async-task]
 version = "4.7"
 
+[dependencies.async-channel]
+version = "2.3"
+
 [dependencies.mio]
 version = "1"
 features = ["net", "os-poll"]

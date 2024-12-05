@@ -2,11 +2,11 @@ pub mod mpmc {
     use std::fmt::Debug;
 
     pub(crate) fn channel<T>() -> (Sender<T>, Receiver<T>) {
-        let (tx, rx) = crossbeam_channel::unbounded::<T>();
+        let (tx, rx) = async_channel::unbounded::<T>();
         return (Sender(tx), Receiver(rx));
     }
 
-    pub(crate) struct Sender<T>(crossbeam_channel::Sender<T>);
+    pub(crate) struct Sender<T>(async_channel::Sender<T>);
 
     impl<T> Clone for Sender<T> {
         fn clone(&self) -> Self {
@@ -16,11 +16,13 @@ pub mod mpmc {
 
     impl<T> Sender<T> {
         pub fn send(&self, msg: T) -> Result<(), SendError<T>> {
-            self.0.send(msg).map_err(|v| SendError(v.0))
+            self.0.send_blocking(msg).map_err(|v| SendError(v.0))
         }
     }
 
-    pub(crate) struct Receiver<T>(crossbeam_channel::Receiver<T>);
+    impl<T> Unpin for Sender<T> {}
+
+    pub(crate) struct Receiver<T>(async_channel::Receiver<T>);
 
     impl<T> Clone for Receiver<T> {
         fn clone(&self) -> Self {
@@ -31,11 +33,13 @@ pub mod mpmc {
     impl<T> Receiver<T> {
         pub fn try_recv(&self) -> Result<T, TryRecvError> {
             self.0.try_recv().map_err(|v| match v {
-                crossbeam_channel::TryRecvError::Empty => TryRecvError::Empty,
-                crossbeam_channel::TryRecvError::Disconnected => TryRecvError::Disconnected,
+                async_channel::TryRecvError::Empty => TryRecvError::Empty,
+                async_channel::TryRecvError::Closed => TryRecvError::Closed,
             })
         }
     }
+
+    impl<T> Unpin for Receiver<T> {}
 
     pub(crate) struct SendError<T>(pub T);
 
@@ -48,7 +52,7 @@ pub mod mpmc {
     #[derive(Debug)]
     pub(crate) enum TryRecvError {
         Empty,
-        Disconnected,
+        Closed,
     }
 }
 
@@ -56,11 +60,11 @@ pub mod mpsc {
     use std::fmt::Debug;
 
     pub(crate) fn channel<T>() -> (Sender<T>, Receiver<T>) {
-        let (tx, rx) = crossbeam_channel::unbounded::<T>();
+        let (tx, rx) = async_channel::unbounded::<T>();
         return (Sender(tx), Receiver(rx));
     }
 
-    pub(crate) struct Sender<T>(crossbeam_channel::Sender<T>);
+    pub(crate) struct Sender<T>(async_channel::Sender<T>);
 
     impl<T> Clone for Sender<T> {
         fn clone(&self) -> Self {
@@ -70,20 +74,24 @@ pub mod mpsc {
 
     impl<T> Sender<T> {
         pub fn send(&self, msg: T) -> Result<(), SendError<T>> {
-            self.0.send(msg).map_err(|v| SendError(v.0))
+            self.0.send_blocking(msg).map_err(|v| SendError(v.0))
         }
     }
 
-    pub(crate) struct Receiver<T>(crossbeam_channel::Receiver<T>);
+    impl<T> Unpin for Sender<T> {}
+
+    pub(crate) struct Receiver<T>(async_channel::Receiver<T>);
 
     impl<T> Receiver<T> {
         pub fn try_recv(&self) -> Result<T, TryRecvError> {
             self.0.try_recv().map_err(|v| match v {
-                crossbeam_channel::TryRecvError::Empty => TryRecvError::Empty,
-                crossbeam_channel::TryRecvError::Disconnected => TryRecvError::Disconnected,
+                async_channel::TryRecvError::Empty => TryRecvError::Empty,
+                async_channel::TryRecvError::Closed => TryRecvError::Closed,
             })
         }
     }
+
+    impl<T> Unpin for Receiver<T> {}
 
     pub(crate) struct SendError<T>(pub T);
 
@@ -96,7 +104,7 @@ pub mod mpsc {
     #[derive(Debug)]
     pub(crate) enum TryRecvError {
         Empty,
-        Disconnected,
+        Closed,
     }
 }
 
@@ -122,6 +130,8 @@ pub mod watch {
         }
     }
 
+    impl<T> Unpin for Sender<T> {}
+
     #[derive(Clone)]
     pub(crate) struct Receiver<T> {
         inner: Arc<Mutex<T>>
@@ -135,6 +145,8 @@ pub mod watch {
         }
     }
 
+    impl<T> Unpin for Receiver<T> {}
+
     pub(crate) struct Ref<'a, T> {
         inner: MutexGuard<'a, T>,
     }
@@ -144,24 +156,26 @@ pub mod oneshot {
     use std::{future::Future, task::Poll};
 
     pub(crate) fn channel<T>() -> (Sender<T>, Receiver<T>) {
-        let (tx, rx) = crossbeam_channel::bounded(1);
+        let (tx, rx) = async_channel::bounded(1);
         let sender = Sender { inner: tx };
         let receiver = Receiver { inner: rx };
         return (sender, receiver);
     }
 
     pub(crate) struct Sender<T> {
-        inner: crossbeam_channel::Sender<T>,
+        inner: async_channel::Sender<T>,
     }
 
     impl<T> Sender<T> {
         pub fn send(self, value: T) -> Result<(), SendError<T>> {
-            self.inner.send(value).map_err(|v| SendError(v.0))
+            self.inner.send_blocking(value).map_err(|v| SendError(v.0))
         }
     }
 
+    impl<T> Unpin for Sender<T> {}
+
     pub(crate) struct Receiver<T> {
-        inner: crossbeam_channel::Receiver<T>,
+        inner: async_channel::Receiver<T>,
     }
 
     impl<T> Receiver<T> {
@@ -170,14 +184,10 @@ pub mod oneshot {
                 Ok(v) => Ok(v),
 
                 Err(e) => Err(match e {
-                    crossbeam_channel::TryRecvError::Empty => TryRecvError::Empty,
-                    crossbeam_channel::TryRecvError::Disconnected => TryRecvError::Disconnected,
+                    async_channel::TryRecvError::Empty => TryRecvError::Empty,
+                    async_channel::TryRecvError::Closed => TryRecvError::Closed,
                 }),
             }
-        }
-
-        pub fn inner(&self) -> &crossbeam_channel::Receiver<T> {
-            &self.inner
         }
     }
 
@@ -190,11 +200,13 @@ pub mod oneshot {
         ) -> std::task::Poll<Self::Output> {
             match self.inner.try_recv() {
                 Ok(event) => return Poll::Ready(Some(event)),
-                Err(crossbeam_channel::TryRecvError::Empty) => Poll::Pending,
-                Err(crossbeam_channel::TryRecvError::Disconnected) => Poll::Ready(None),
+                Err(async_channel::TryRecvError::Empty) => Poll::Pending,
+                Err(async_channel::TryRecvError::Closed) => Poll::Ready(None),
             }
         }
     }
+
+    impl<T> Unpin for Receiver<T> {}
 
     #[derive(Debug)]
     pub struct SendError<T>(pub T);
@@ -202,6 +214,6 @@ pub mod oneshot {
     #[derive(Debug)]
     pub(crate) enum TryRecvError {
         Empty,
-        Disconnected,
+        Closed,
     }
 }

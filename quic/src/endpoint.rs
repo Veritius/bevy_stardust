@@ -1,8 +1,7 @@
-use std::{collections::HashMap, future::Future, io::ErrorKind, net::{SocketAddr, ToSocketAddrs}, sync::Arc, task::Poll, time::Instant};
+use std::{collections::HashMap, future::Future, net::ToSocketAddrs, sync::Arc, task::Poll, time::Instant};
 use async_task::Task;
 use bevy_ecs::component::{Component, ComponentHooks, StorageType};
 use bytes::BytesMut;
-use crossbeam_channel::TryRecvError;
 use quinn_proto::{ConnectionEvent, ConnectionHandle as QuinnConnectionId, EndpointConfig};
 use crate::{channels::mpsc, runtime::Handle as RuntimeHandle, socket::{DgramRecv, DgramSend}};
 use crate::{channels::watch, connection::{ConnectionError, ConnectionRequest, NewConnection}, socket::Socket};
