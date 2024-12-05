@@ -1,5 +1,5 @@
-use std::{sync::{atomic::{AtomicBool, Ordering}, Arc}, thread::JoinHandle};
-use async_task::Runnable;
+use std::{future::Future, sync::{atomic::{AtomicBool, Ordering}, Arc}, thread::JoinHandle};
+use async_task::{Runnable, Task};
 use bevy_ecs::system::Resource;
 use crossbeam_deque::Injector;
 
@@ -72,6 +72,21 @@ impl Resource for Runtime {}
 #[derive(Clone)]
 pub struct Handle {
     state: Arc<State>,
+}
+
+impl Handle {
+    pub(crate) fn spawn<F, O>(&self, fut: F) -> Task<O>
+    where
+        F: Future<Output = O>,
+        F: Send + Sync + 'static,
+        O: Send + Sync + 'static,
+    {
+        let state = self.state.clone();
+        let schedule = move |runnable| state.tasks.push(runnable);
+        let (runnable, task) = async_task::spawn(fut, schedule);
+        runnable.schedule();
+        return task;
+    }
 }
 
 /// A worker thread.
