@@ -79,7 +79,7 @@ impl Handle {
     where
         F: Future<Output = O>,
         F: Send + Sync + 'static,
-        O: Send + Sync + 'static,
+        O: Send + 'static,
     {
         let state = self.state.clone();
         let schedule = move |runnable| state.tasks.push(runnable);
