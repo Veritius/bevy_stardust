@@ -56,6 +56,13 @@ impl Runtime {
     pub fn remove_workers(&mut self, amount: usize) {
         todo!()
     }
+
+    /// Returns the corresponding [`Handle`] for this [`Runtime`].
+    pub fn handle(&self) -> Handle {
+        Handle {
+            state: self.state.clone(),
+        }
+    }
 }
 
 impl Resource for Runtime {}
