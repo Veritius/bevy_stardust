@@ -39,55 +39,38 @@ pub mod watch {
 }
 
 pub mod oneshot {
-    use std::sync::{Arc, Mutex};
-
     pub(crate) fn channel<T>() -> (Sender<T>, Receiver<T>) {
-        let inner = Arc::new(Mutex::new(Inner {
-            value: None,
-        }));
-
-        let sender = Sender { inner: inner.clone() };
-        let receiver = Receiver { inner: inner.clone() };
+        let (tx, rx) = crossbeam_channel::bounded(1);
+        let sender = Sender { inner: tx };
+        let receiver = Receiver { inner: rx };
         return (sender, receiver);
     }
 
     pub(crate) struct Sender<T> {
-        inner: Arc<Mutex<Inner<T>>>,
+        inner: crossbeam_channel::Sender<T>,
     }
 
     impl<T> Sender<T> {
         pub fn send(self, value: T) {
-            // If the reference count is 1, the other side has been dropped, and we do nothing
-            if Arc::strong_count(&self.inner) == 1 { return }
-
-            // Lock mutex and assign value
-            let mut lock = self.inner.lock().unwrap();
-            lock.value = Some(value);
+            self.inner.send(value);
         }
     }
 
     pub(crate) struct Receiver<T> {
-        inner: Arc<Mutex<Inner<T>>>
+        inner: crossbeam_channel::Receiver<T>,
     }
 
     impl<T> Receiver<T> {
         pub fn try_recv(&mut self) -> Result<T, TryRecvError> {
-            // If the reference count is 1, the other side has been dropped, and we return an error.
-            if Arc::strong_count(&self.inner) == 1 { return Err(TryRecvError::Disconnected); }
+            match self.inner.try_recv() {
+                Ok(v) => Ok(v),
 
-            // Lock the mutex to access the inner value
-            let mut lock = self.inner.lock().unwrap();
-            if lock.value.is_none() { return Err(TryRecvError::Empty); }
-
-            // Retrieve value from mutex
-            let mut value = None;
-            std::mem::swap(&mut value, &mut lock.value);
-            return Ok(value.unwrap());
+                Err(e) => Err(match e {
+                    crossbeam_channel::TryRecvError::Empty => TryRecvError::Empty,
+                    crossbeam_channel::TryRecvError::Disconnected => TryRecvError::Disconnected,
+                }),
+            }
         }
-    }
-
-    struct Inner<T> {
-        value: Option<T>,
     }
 
     pub(crate) enum TryRecvError {
