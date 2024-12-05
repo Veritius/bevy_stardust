@@ -147,7 +147,7 @@ impl Worker {
 
             if local.is_empty() {
                 // Fill up our local queue from the runtime's global queue
-                state.tasks.steal_batch_with_limit(&local, 8);
+                let _ = state.tasks.steal_batch_with_limit(&local, 8);
             }
 
             // Run any tasks we have in our local queue
