@@ -2,6 +2,7 @@ use std::{collections::HashMap, future::Future, io::ErrorKind, net::{SocketAddr,
 use async_task::Task;
 use bevy_ecs::component::{Component, ComponentHooks, StorageType};
 use bytes::BytesMut;
+use crossbeam_channel::TryRecvError;
 use quinn_proto::{ConnectionEvent, ConnectionHandle as QuinnConnectionId, EndpointConfig};
 use crate::runtime::Handle as RuntimeHandle;
 use crate::{channels::watch, connection::{ConnectionError, ConnectionRequest, NewConnection}, socket::Socket};
@@ -257,20 +258,17 @@ impl Future for EndpointDriver {
     ) -> std::task::Poll<Self::Output> {
         let mut state = &mut self.0;
 
-        match state.socket_dgram_recv_rx.try_recv() {
-            Ok(dgram) => handle_datagram(&mut state, dgram),
-            Err(_) => todo!(),
+        while let Ok(dgram) = state.socket_dgram_recv_rx.try_recv() {
+            handle_datagram(&mut state, dgram);
         };
 
-        match state.quinn_event_rx.try_recv() {
-            Ok(event) => handle_event(&mut state, event),
-            Err(_) => todo!(),
+        while let Ok(event) = state.quinn_event_rx.try_recv() {
+            handle_event(&mut state, event);
         };
 
-        match state.connection_request_rx.try_recv() {
-            Ok(request) => handle_connection_request(&mut state, request),
-            Err(_) => todo!(),
-        };
+        while let Ok(request) = state.connection_request_rx.try_recv() {
+            handle_connection_request(&mut state, request);
+        }
 
         return Poll::Pending;
     }
