@@ -124,8 +124,8 @@ impl Future for ConnectionRequestResponseListener {
     ) -> Poll<Self::Output> {
         match self.request_rx.poll(cx) {
             Poll::Pending => Poll::Pending,
-            Poll::Ready(Ok(v)) => Poll::Ready(v),
-            Poll::Ready(Err(_)) => Poll::Ready(Err(ConnectionError::EndpointClosed)),
+            Poll::Ready(Some(v)) => Poll::Ready(v),
+            Poll::Ready(None) => Poll::Ready(Err(ConnectionError::EndpointClosed)),
         }
     }
 }

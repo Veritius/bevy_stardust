@@ -39,7 +39,7 @@ pub mod watch {
 }
 
 pub mod oneshot {
-    use std::future::Future;
+    use std::{future::Future, task::Poll};
 
     pub(crate) fn channel<T>() -> (Sender<T>, Receiver<T>) {
         let (tx, rx) = crossbeam_channel::bounded(1);
@@ -80,13 +80,17 @@ pub mod oneshot {
     }
 
     impl<T> Future for Receiver<T> {
-        type Output = Result<T, ()>;
+        type Output = Option<T>;
 
         fn poll(
             self: std::pin::Pin<&mut Self>,
-            cx: &mut std::task::Context<'_>,
+            _cx: &mut std::task::Context<'_>,
         ) -> std::task::Poll<Self::Output> {
-            todo!()
+            match self.inner.try_recv() {
+                Ok(event) => return Poll::Ready(Some(event)),
+                Err(crossbeam_channel::TryRecvError::Empty) => Poll::Pending,
+                Err(crossbeam_channel::TryRecvError::Disconnected) => Poll::Ready(None),
+            }
         }
     }
 
