@@ -20,7 +20,7 @@ fn main() {
     app.add_systems(Startup, |mut commands: Commands, runtime: Res<Runtime>| {
         let endpoint = EndpointBuilder::new()
             .with_runtime(runtime.handle())
-            .bind(SERVER_ADDRESS).unwrap()
+            .bind(WILDCARD_ADDRESS).unwrap()
             .with_config(EndpointConfig::default())
             .client();
 
