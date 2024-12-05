@@ -138,7 +138,8 @@ struct State {
     tasks: Injector<Runnable>,
 }
 
-struct Socket {
+/// A UDP socket and associated thread for handling I/O with the operating system.
+pub(crate) struct Socket {
     socket: Arc<mio::net::UdpSocket>,
     dgram_rx: Receiver<DgramRecv>,
     dgram_tx: Sender<DgramSend>,
@@ -146,7 +147,7 @@ struct Socket {
 }
 
 impl Socket {
-    fn new(addr: impl ToSocketAddrs) -> Result<Self, std::io::Error> {
+    pub fn new(addr: impl ToSocketAddrs) -> Result<Self, std::io::Error> {
         // mio tokens as consts so they can be changed easily
         const TKN_READABLE: mio::Token = mio::Token(0);
         const TKN_WRITABLE: mio::Token = mio::Token(1);
