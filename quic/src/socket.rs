@@ -4,8 +4,8 @@ use crossbeam_channel::{Receiver, Sender, TryRecvError};
 
 /// A UDP socket and associated thread for handling I/O with the operating system.
 pub(crate) struct Socket {
-    dgram_rx: Receiver<DgramRecv>,
-    dgram_tx: Sender<DgramSend>,
+    pub dgram_rx: Receiver<DgramRecv>,
+    pub dgram_tx: Sender<DgramSend>,
     thread: JoinHandle<Result<(), std::io::Error>>,
 }
 
