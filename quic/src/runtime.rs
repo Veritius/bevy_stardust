@@ -110,7 +110,7 @@ impl Worker {
         shutdown: Arc<AtomicBool>,
     ) {
         // Thread-local queue of tasks needing completion
-        let mut local = crossbeam_deque::Worker::new_lifo();
+        let local = crossbeam_deque::Worker::new_lifo();
 
         loop {
             // Check if we've been signalled to shut down
