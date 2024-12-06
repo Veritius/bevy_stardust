@@ -23,7 +23,10 @@ macro_rules! join_tuple_impl {
             ) -> Poll<Z> {
                 let x = &mut self.0;
             
-                $(set_try!(&mut x.$b, cx);)+
+                $(match Pin::new(&mut x.$b).poll(cx) {
+                    Poll::Ready(v) => return Poll::Ready(v),
+                    Poll::Pending => {},
+                })+
 
                 return Poll::Pending;
             }
