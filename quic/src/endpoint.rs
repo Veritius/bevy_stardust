@@ -219,11 +219,6 @@ impl Endpoint {
         let (io_recv_tx, io_recv_rx) = async_channel::unbounded();
         let (io_send_tx, io_send_rx) = async_channel::unbounded();
 
-        // Construct shared state
-        let shared = Arc::new(Shared {
-
-        });
-
         // Construct the inner state
         let state = State {
             io_socket: socket.clone(),
@@ -247,14 +242,12 @@ impl Endpoint {
 
         // Start driver task to run in the background
         let driver = task_pool.spawn(driver_task(
-            shared.clone(),
             state,
         ));
 
         // Return shared endpoint thing
         return Ok(Endpoint(Arc::new(Handle {
             driver,
-            shared,
         })));
     }
 
@@ -282,11 +275,6 @@ impl From<std::io::Error> for EndpointError {
 
 struct Handle {
     driver: Task<EndpointError>,
-    shared: Arc<Shared>,
-}
-
-struct Shared {
-
 }
 
 struct State {
@@ -351,7 +339,6 @@ struct DgramSend {
 }
 
 async fn driver_task(
-    shared: Arc<Shared>,
     state: State,
 ) -> EndpointError {
     todo!()
