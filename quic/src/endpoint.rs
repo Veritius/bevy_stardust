@@ -189,6 +189,10 @@ impl Future for LoadingEndpoint {
 }
 
 /// A reference-counted handle to a QUIC endpoint, handling I/O for [connections](crate::Connection).
+/// 
+/// As long as an instance of this handle exists, its corresponding endpoint will be kept alive and running.
+/// When all handles are dropped, the endpoint will shut down. Endpoints can be closed early, without dropping
+/// all handles, by using [`close`](Self::close). This frees up most resources until all handles are dropped.
 #[derive(Clone)]
 pub struct Endpoint(Arc<Handle>);
 

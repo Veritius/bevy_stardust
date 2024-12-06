@@ -5,11 +5,19 @@ use bevy_ecs::prelude::*;
 use bevy_stardust::prelude::*;
 use crate::{endpoint::Endpoint, EndpointError};
 
-/// A handle to a QUIC connection.
+/// A unique handle to a QUIC connection.
+/// 
+/// # Endpoints
+/// A `Connection` is associated with an [`Endpoint`],
+/// usually one it was created with through [`connect`](Self::connect).
+/// Endpoints manage I/O for multiple connections.
+/// 
+/// Holds a shared handle to the [`Endpoint`] it was created with.
+/// As a result, a connection will keep its endpoint open for as long as it lives.
+/// When the connection finishes, the handle is dropped, even if this type still exists.
 #[derive(Component)]
 pub struct Connection {
     task: Task<()>,
-    shared: Arc<Shared>,
 
     message_incoming_rx: Receiver<ChannelMessage>,
     message_outgoing_tx: Sender<ChannelMessage>,
@@ -25,9 +33,12 @@ impl Connection {
         todo!()
     }
 
-    /// Returns the [`Endpoint`] managing this connection.
-    pub fn endpoint(&self) -> Endpoint {
-        self.shared.endpoint.clone()
+    /// Gracefully closes the connection.
+    /// 
+    /// If the connection is the only holder of an [`Endpoint`] handle,
+    /// the endpoint will also shut down shortly after.
+    pub fn close(&self) {
+        todo!()
     }
 }
 
@@ -48,11 +59,9 @@ pub enum ConnectionError {
     }
 }
 
-struct Shared {
-    endpoint: Endpoint,
-}
-
 struct State {
+    endpoint: Endpoint,
+
     message_incoming_tx: Sender<ChannelMessage>,
     message_outgoing_rx: Receiver<ChannelMessage>,
 }
