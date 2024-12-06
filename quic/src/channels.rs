@@ -89,7 +89,7 @@ pub mod mpsc {
 }
 
 pub mod watch {
-    use std::sync::{Arc, Mutex, MutexGuard};
+    use std::{ops::Deref, sync::{Arc, Mutex, MutexGuard}};
 
     pub(crate) fn channel<T>(initial: T) -> (Sender<T>, Receiver<T>) {
         let inner = Arc::new(Mutex::new(initial));
@@ -129,6 +129,14 @@ pub mod watch {
 
     pub(crate) struct Ref<'a, T> {
         inner: MutexGuard<'a, T>,
+    }
+
+    impl<'a, T> Deref for Ref<'a, T> {
+        type Target = T;
+
+        fn deref(&self) -> &Self::Target {
+            &self.inner
+        }
     }
 }
 
