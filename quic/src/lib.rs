@@ -7,6 +7,7 @@ pub mod endpoint;
 mod channels;
 mod plugin;
 mod runtime;
+mod select;
 mod socket;
 
 pub use plugin::QuicPlugin;
