@@ -2,31 +2,66 @@ use std::{net::{ToSocketAddrs, UdpSocket}, sync::Arc};
 use async_channel::{Receiver, Sender};
 use async_io::Async;
 use async_task::Task;
-use crate::taskpool::get_task_pool;
+use crate::taskpool::{get_task_pool, NetworkTaskPool};
 
-/// A clonable handle to an endpoint.
-#[derive(Clone)]
-pub struct Endpoint(Arc<EndpointInner>);
+/// A builder for an [`Endpoint`].
+pub struct EndpointBuilder<S = ()> {
+    task_pool: &'static NetworkTaskPool,
+    state: S,
+}
 
-impl Endpoint {
-    /// Constructs a new [`Endpoint`].
-    pub fn new<A>(
-        address: A,
-    ) -> Task<Result<Endpoint, EndpointError>>
+impl EndpointBuilder<()> {
+    /// Creates a new [`EndpointBuilder`].
+    pub fn new() -> EndpointBuilder::<WantsSocket> {
+        EndpointBuilder {
+            task_pool: get_task_pool(),
+            state: WantsSocket { _p: () },
+        }
+    }
+}
+
+/// State for adding a socket.
+pub struct WantsSocket {
+    _p: (),
+}
+
+impl EndpointBuilder<WantsSocket> {
+    /// Uses a pre-existing standard library UDP socket.
+    pub fn use_existing(self, socket: UdpSocket) -> EndpointBuilder<WantsConfig> {
+        let socket = blocking::unblock(move || Async::new(socket));
+
+        EndpointBuilder {
+            task_pool: self.task_pool,
+            state: WantsConfig { socket },
+        }
+    }
+
+    /// Binds to the given address, creating a new socket.
+    pub fn bind<A>(self, address: A) -> EndpointBuilder<WantsConfig>
     where
         A: ToSocketAddrs,
         A: Send + Sync + 'static,
         A::Iter: Send + Sync + 'static,
     {
-        return get_task_pool().spawn(async move {
-            // We have to bind the socket manually with blocking because AsyncToSocketAddrs has weird trait requirements
-            // that can never be fulfilled while trying to use simple async closures like this. Oh well, it's good enough.
-            let socket = blocking::unblock(move || Async::new(UdpSocket::bind(address)?)).await?;
+        // We have to bind the socket manually with blocking because AsyncToSocketAddrs has weird trait requirements
+        // that can never be fulfilled while trying to use simple async closures like this. Oh well, it's good enough.
+        let socket = blocking::unblock(move || Async::new(UdpSocket::bind(address)?));
 
-            todo!()
-        });
+        EndpointBuilder {
+            task_pool: self.task_pool,
+            state: WantsConfig { socket },
+        }
     }
 }
+
+/// State for adding config.
+pub struct WantsConfig {
+    socket: Task<Result<Async<UdpSocket>, std::io::Error>>,
+}
+
+/// A reference-counted handle to a QUIC endpoint, handling I/O for [connections](crate::Connection).
+#[derive(Clone)]
+pub struct Endpoint(Arc<EndpointInner>);
 
 /// An error returned during the creation or execution of an [`Endpoint`].
 #[derive(Debug)]
