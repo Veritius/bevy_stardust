@@ -231,14 +231,14 @@ impl Future for ConnectionDriver {
 
         match pin_poll!(state.endpoint.quinn_event_rx.recv(), cx) {
             Poll::Ready(Ok(event)) => handle_connection_event(state, event),
-            Poll::Ready(Err(e)) => todo!(),
-            Poll::Pending => todo!(),
+            Poll::Pending => {},
+            Poll::Ready(Err(err)) => todo!(),
         }
 
         match pin_poll!(state.outgoing_messages_rx.recv(), cx) {
             Poll::Ready(Ok(message)) => handle_outgoing_message(state, message),
-            Poll::Ready(Err(e)) => todo!(),
-            Poll::Pending => todo!(),
+            Poll::Pending => {},
+            Poll::Ready(Err(err)) => todo!(),
         }
 
         return Poll::Pending;

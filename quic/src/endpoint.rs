@@ -248,20 +248,20 @@ impl Future for EndpointDriver {
 
         match pin_poll!(state.socket.dgram_rx.recv(), cx) {
             Poll::Ready(Ok(dgram)) => handle_datagram(state, dgram),
-            Poll::Ready(Err(e)) => todo!(),
-            Poll::Pending => todo!(),
+            Poll::Pending => {},
+            Poll::Ready(Err(err)) => todo!(),
         }
 
         match pin_poll!(state.quinn_event_rx.recv(), cx) {
             Poll::Ready(Ok(event)) => handle_event(state, event),
-            Poll::Ready(Err(e)) => todo!(),
-            Poll::Pending => todo!(),
+            Poll::Pending => {},
+            Poll::Ready(Err(err)) => todo!(),
         }
 
         match pin_poll!(state.connection_request_rx.recv(), cx) {
             Poll::Ready(Ok(request)) => handle_connection_request(state, request),
-            Poll::Ready(Err(e)) => todo!(),
-            Poll::Pending => todo!(),
+            Poll::Pending => {},
+            Poll::Ready(Err(err)) => todo!(),
         }
 
         return Poll::Pending;
