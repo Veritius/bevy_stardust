@@ -45,7 +45,7 @@ impl From<std::io::Error> for EndpointError {
 }
 
 struct EndpointInner {
-    io_socket: Arc<UdpSocket>,
+    io_socket: Arc<Async<UdpSocket>>,
     io_task: Task<Result<(), std::io::Error>>,
 
     io_recv_rx: Receiver<DgramRecv>,
@@ -53,7 +53,7 @@ struct EndpointInner {
 }
 
 async fn io_task(
-    socket: Arc<UdpSocket>,
+    socket: Arc<Async<UdpSocket>>,
     io_recv_tx: Sender<DgramRecv>,
     io_send_rx: Receiver<DgramSend>,
 ) {
