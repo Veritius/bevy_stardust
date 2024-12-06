@@ -336,6 +336,8 @@ fn handle_datagram(
                     None,
                 ) {
                     Ok((id, quinn)) => {
+                        log::debug!("Accepted new incoming connection {}", quinn.remote_address());
+
                         let connection = add_connection(
                             state,
                             id,
@@ -355,10 +357,10 @@ fn handle_datagram(
                 let mut payload = BytesMut::with_capacity(transmit.size);
                 payload.copy_from_slice(&scratch[..transmit.size]);
 
-                state.socket.dgram_tx.send(DgramSend {
+                state.socket.send(DgramSend {
                     target: transmit.destination,
                     payload,
-                }).unwrap(); // TODO: Handle error
+                });
             },
         }
     }
