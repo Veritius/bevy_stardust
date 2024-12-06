@@ -31,18 +31,24 @@ macro_rules! join_tuple_impl {
     };
 }
 
-join_tuple_impl!([A:0, B:1]);
-join_tuple_impl!([A:0, B:1, C:2]);
-join_tuple_impl!([A:0, B:1, C:2, D:3]);
-join_tuple_impl!([A:0, B:1, C:2, D:3, E:4]);
-join_tuple_impl!([A:0, B:1, C:2, D:3, E:4, F:5]);
-join_tuple_impl!([A:0, B:1, C:2, D:3, E:4, F:5, G:6]);
-join_tuple_impl!([A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7]);
-join_tuple_impl!([A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8]);
-join_tuple_impl!([A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9]);
-join_tuple_impl!([A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10]);
-join_tuple_impl!([A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, L:11]);
-join_tuple_impl!([A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, L:11, M:12]);
-join_tuple_impl!([A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, L:11, M:12, N:13]);
-join_tuple_impl!([A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, L:11, M:12, N:13, O:14]);
-join_tuple_impl!([A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, L:11, M:12, N:13, O:14, P:15]);
+macro_rules! variadic_tuple {
+    ($p:ident) => {
+        $p!([A:0, B:1]);
+        $p!([A:0, B:1, C:2]);
+        $p!([A:0, B:1, C:2, D:3]);
+        $p!([A:0, B:1, C:2, D:3, E:4]);
+        $p!([A:0, B:1, C:2, D:3, E:4, F:5]);
+        $p!([A:0, B:1, C:2, D:3, E:4, F:5, G:6]);
+        $p!([A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7]);
+        $p!([A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8]);
+        $p!([A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9]);
+        $p!([A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10]);
+        $p!([A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, L:11]);
+        $p!([A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, L:11, M:12]);
+        $p!([A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, L:11, M:12, N:13]);
+        $p!([A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, L:11, M:12, N:13, O:14]);
+        $p!([A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, L:11, M:12, N:13, O:14, P:15]);
+    };
+}
+
+variadic_tuple!(join_tuple_impl);
