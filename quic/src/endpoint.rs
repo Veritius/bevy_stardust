@@ -188,9 +188,13 @@ impl Future for LoadingEndpoint {
     }
 }
 
-/// A reference-counted handle to a QUIC endpoint, handling I/O for [connections](crate::Connection).
+/// A reference-counted handle to a QUIC endpoint.
 /// 
-/// As long as an instance of this handle exists, its corresponding endpoint will be kept alive and running.
+/// Endpoints manage connections and asynchronously handle I/O.
+/// All connections are associated with an endpoint, with which they communicate with frequently.
+/// 
+/// # Reference-counting
+/// As long as an instance of this handle exists, the asynchronous endpoint task will be kept alive and running.
 /// When all handles are dropped, the endpoint will shut down. Endpoints can be closed early, without dropping
 /// all handles, by using [`close`](Self::close). This frees up most resources until all handles are dropped.
 #[derive(Clone)]
