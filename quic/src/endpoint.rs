@@ -191,7 +191,6 @@ impl Future for LoadingEndpoint {
 /// A reference-counted handle to a QUIC endpoint.
 /// 
 /// Endpoints manage connections and asynchronously handle I/O.
-/// All connections are associated with an endpoint, with which they communicate with frequently.
 /// 
 /// # Reference-counting
 /// As long as an instance of this handle exists, the asynchronous endpoint task will be kept alive and running.
