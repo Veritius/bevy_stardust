@@ -5,6 +5,7 @@ use bevy_stardust::prelude::ChannelMessage;
 use futures_lite::FutureExt;
 use quinn_proto::ConnectionEvent;
 use crate::channels::mpsc;
+use crate::macros::pin_poll;
 use crate::runtime::Handle as RuntimeHandle;
 use crate::{channels::{oneshot, watch}, endpoint::EndpointHandle, Endpoint, Runtime};
 
@@ -213,17 +214,34 @@ async fn task(
         outgoing_messages_rx: data.outgoing_messages_rx,
         incoming_messages_tx: data.incoming_messages_tx,
     };
+
+    ConnectionDriver(state).await;
 }
 
-fn tick(
-    state: &mut State,
-) {
-    while let Ok(event) = state.endpoint.quinn_event_rx.try_recv() {
-        handle_connection_event(state, event);
-    }
+struct ConnectionDriver(State);
 
-    while let Ok(message) = state.outgoing_messages_rx.try_recv() {
-        handle_outgoing_message(state, message);
+impl Future for ConnectionDriver {
+    type Output = ();
+
+    fn poll(
+        mut self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> Poll<Self::Output> {
+        let state = &mut self.0;
+
+        match pin_poll!(state.endpoint.quinn_event_rx.recv(), cx) {
+            Poll::Ready(Ok(event)) => handle_connection_event(state, event),
+            Poll::Ready(Err(e)) => todo!(),
+            Poll::Pending => todo!(),
+        }
+
+        match pin_poll!(state.outgoing_messages_rx.recv(), cx) {
+            Poll::Ready(Ok(message)) => handle_outgoing_message(state, message),
+            Poll::Ready(Err(e)) => todo!(),
+            Poll::Pending => todo!(),
+        }
+
+        return Poll::Pending;
     }
 }
 
