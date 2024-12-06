@@ -1,11 +1,11 @@
-use std::{future::Future, sync::OnceLock};
+use std::{collections::VecDeque, future::Future, sync::{Condvar, Mutex, OnceLock}};
 use async_task::{Runnable, Task};
-use crossbeam_deque::Injector;
 
 pub(crate) static NETWORK_TASK_POOL: OnceLock<NetworkTaskPool> = OnceLock::new();
 
 pub(crate) struct NetworkTaskPool {
-    global_queue: Injector<IncompleteTask>,
+    queue: Mutex<VecDeque<IncompleteTask>>,
+    cvar: Condvar,
 }
 
 impl NetworkTaskPool {
@@ -16,17 +16,20 @@ impl NetworkTaskPool {
         O: Send + 'static,
     {
         let (runnable, task) = async_task::spawn(future, Self::schedule);
-        self.global_queue.push(IncompleteTask { runnable });
+        Self::schedule(runnable);
         return task;
     }
 
     fn schedule(runnable: Runnable) {
-        get_task_pool().global_queue.push(IncompleteTask { runnable })
+        let task_pool = get_task_pool();
+        task_pool.queue.lock().unwrap().push_back(IncompleteTask { runnable });
+        task_pool.cvar.notify_one();
     }
 
     fn init() -> Self {
         NetworkTaskPool {
-            global_queue: Injector::new(),
+            queue: Mutex::new(VecDeque::new()),
+            cvar: Condvar::new(),
         }
     }
 }

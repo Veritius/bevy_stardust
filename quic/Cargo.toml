@@ -35,8 +35,5 @@ version = "2.3"
 [dependencies.async-io]
 version = "2.4"
 
-[dependencies.crossbeam-deque]
-version = "0.8"
-
 [dependencies.blocking]
 version = "1.6"
