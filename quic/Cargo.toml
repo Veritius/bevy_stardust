@@ -38,6 +38,9 @@ version = "2.4"
 [dependencies.blocking]
 version = "1.6"
 
+[dependencies.futures-lite]
+version = "2.5"
+
 [dependencies.ring]
 version = "0.17"
 

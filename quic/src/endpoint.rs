@@ -1,4 +1,4 @@
-use std::{future::Future, net::{ToSocketAddrs, UdpSocket}, pin::Pin, sync::Arc};
+use std::{future::Future, net::{SocketAddr, ToSocketAddrs, UdpSocket}, pin::Pin, sync::Arc};
 use async_channel::{Receiver, Sender};
 use async_io::Async;
 use async_task::Task;
@@ -231,13 +231,48 @@ async fn io_task(
     io_recv_tx: Sender<DgramRecv>,
     io_send_rx: Receiver<DgramSend>,
 ) {
-    todo!()
+    // TODO: Make this configurable
+    let mut scratch = vec![0u8; 2048];
+
+    loop {
+        let socket_poller = async {
+            match socket.recv_from(&mut scratch[..]).await {
+                Ok((length, origin)) => match io_recv_tx.send(DgramRecv {
+                    origin,
+                }).await {
+                    Ok(_) => { /* Do nothing */ },
+                    Err(_) => todo!(),
+                },
+
+                Err(_) => todo!(),
+            }
+        };
+    
+        let send_poller = async {
+            match io_send_rx.recv().await {
+                Ok(dgram) => match socket.send_to(
+                    todo!(),
+                    dgram.target,
+                ).await {
+                    Ok(_) => { /* Do nothing */ }
+                    Err(_) => todo!(),
+                },
+
+                Err(_) => todo!(),
+            }
+        };
+    
+        futures_lite::FutureExt::race(
+            socket_poller,
+            send_poller,
+        ).await;
+    }
 }
 
 struct DgramRecv {
-
+    origin: SocketAddr,
 }
 
 struct DgramSend {
-
+    target: SocketAddr,
 }
