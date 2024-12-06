@@ -1,9 +1,10 @@
-use std::{collections::HashMap, future::Future, net::ToSocketAddrs, pin::pin, sync::{Arc, Mutex}, task::Poll, time::Instant};
+use std::{collections::HashMap, future::Future, net::ToSocketAddrs, pin::pin, sync::Arc, task::Poll, time::Instant};
 use async_task::Task;
 use bevy_ecs::component::{Component, ComponentHooks, StorageType};
 use bytes::BytesMut;
+use futures_lite::FutureExt;
 use quinn_proto::{ConnectionEvent, ConnectionHandle as QuinnConnectionId, EndpointConfig};
-use crate::{channels::mpsc, futures::Join, runtime::Handle as RuntimeHandle, socket::{DgramRecv, DgramSend}};
+use crate::{channels::mpsc, runtime::Handle as RuntimeHandle, socket::{DgramRecv, DgramSend}};
 use crate::{channels::watch, connection::{ConnectionError, ConnectionRequest, NewConnection}, socket::Socket};
 
 /// A builder for the [`Endpoint`] component, using the [typestate] pattern.
@@ -225,56 +226,58 @@ async fn endpoint(
     config: BuildTaskData,
 ) {
     // Try to build endpoint
-    let state = match build(config).await {
+    let mut state = match build(config).await {
         Ok(state) => state,
         Err(err) => todo!(),
     };
 
     log::debug!("Opened endpoint on address {}", state.socket.local_addr());
 
-    EndpointDriver(state).await;
-}
-
-struct EndpointDriver(State);
-
-impl Future for EndpointDriver {
-    type Output = ();
-
-    fn poll(
-        mut self: std::pin::Pin<&mut Self>,
-        cx: &mut std::task::Context<'_>,
-    ) -> std::task::Poll<Self::Output> {
-        // TODO: Figure out how to not use a mutex here
-        let state = Mutex::new(&mut self.0);
-
-        let dgrams = pin!(async {
-            let mut state = state.try_lock().unwrap();
-            match state.socket.dgram_rx.recv().await {
-                Ok(dgram) => handle_datagram(&mut state, dgram),
-                Err(_) => todo!(),
-            }
-        });
-
-        let events = pin!(async {
-            let mut state = state.try_lock().unwrap();
-            match state.quinn_event_rx.recv().await {
-                Ok(event) => handle_event(&mut state, event),
-                Err(_) => todo!(),
-            }
-        });
-
-        let requests = pin!(async {
-            let mut state = state.try_lock().unwrap();
-            match state.connection_request_rx.recv().await {
-                Ok(request) => handle_connection_request(&mut state, request),
-                Err(_) => todo!(),
-            }
-        });
-
-        let mut join = Join((dgrams, events, requests));
-        return Future::poll(std::pin::Pin::new(&mut join), cx);
+    loop {
+        todo!()
     }
 }
+
+// struct EndpointDriver(State);
+
+// impl Future for EndpointDriver {
+//     type Output = ();
+
+//     fn poll(
+//         mut self: std::pin::Pin<&mut Self>,
+//         cx: &mut std::task::Context<'_>,
+//     ) -> std::task::Poll<Self::Output> {
+//         // TODO: Figure out how to not use a mutex here
+//         let state = Mutex::new(&mut self.0);
+
+//         let dgrams = pin!(async {
+//             let mut state = state.try_lock().unwrap();
+//             match state.socket.dgram_rx.recv().await {
+//                 Ok(dgram) => handle_datagram(&mut state, dgram),
+//                 Err(_) => todo!(),
+//             }
+//         });
+
+//         let events = pin!(async {
+//             let mut state = state.try_lock().unwrap();
+//             match state.quinn_event_rx.recv().await {
+//                 Ok(event) => handle_event(&mut state, event),
+//                 Err(_) => todo!(),
+//             }
+//         });
+
+//         let requests = pin!(async {
+//             let mut state = state.try_lock().unwrap();
+//             match state.connection_request_rx.recv().await {
+//                 Ok(request) => handle_connection_request(&mut state, request),
+//                 Err(_) => todo!(),
+//             }
+//         });
+
+//         let mut join = Join((dgrams, events, requests));
+//         return Future::poll(std::pin::Pin::new(&mut join), cx);
+//     }
+// }
 
 struct BuildTaskData {
     runtime: RuntimeHandle,

@@ -5,7 +5,6 @@ pub mod connection;
 pub mod endpoint;
 
 mod channels;
-mod futures;
 mod plugin;
 mod runtime;
 mod socket;
