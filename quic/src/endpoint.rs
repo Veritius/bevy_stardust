@@ -190,7 +190,7 @@ impl Future for LoadingEndpoint {
 
 /// A reference-counted handle to a QUIC endpoint, handling I/O for [connections](crate::Connection).
 #[derive(Clone)]
-pub struct Endpoint(Arc<EndpointInner>);
+pub struct Endpoint(Arc<Shared>);
 
 impl Endpoint {
     async fn new_inner(
@@ -208,7 +208,7 @@ impl Endpoint {
         ).await;
 
         // Unwrap any errors and wrap them in appropriate types
-        let socket = Arc::new(socket?);
+        let socket = socket?;
         let server_config = match server_config {
             Some(Ok(v)) => Some(v),
             Some(Err(e)) => return Err(e),
@@ -219,12 +219,15 @@ impl Endpoint {
         let (io_recv_tx, io_recv_rx) = async_channel::unbounded();
         let (io_send_tx, io_send_rx) = async_channel::unbounded();
 
-        // Construct the inner state
-        let state = EndpointInner {
-            io_socket: socket.clone(),
+        // Construct shared state
+        let shared = Arc::new(Shared {
+            socket,
+        });
 
+        // Construct the inner state
+        let state = State {
             io_task: task_pool.spawn(io_task(
-                socket,
+                shared.clone(),
                 io_recv_tx,
                 io_send_rx
             )),
@@ -240,7 +243,10 @@ impl Endpoint {
             ),
         };
 
-        todo!()
+        todo!();
+
+        // Return shared endpoint thing
+        return Ok(Endpoint(shared));
     }
 }
 
@@ -260,8 +266,11 @@ impl From<std::io::Error> for EndpointError {
     }
 }
 
-struct EndpointInner {
-    io_socket: Arc<Async<UdpSocket>>,
+struct Shared {
+    socket: Async<UdpSocket>,
+}
+
+struct State {
     io_task: Task<Result<(), std::io::Error>>,
 
     io_recv_rx: Receiver<DgramRecv>,
@@ -271,7 +280,7 @@ struct EndpointInner {
 }
 
 async fn io_task(
-    socket: Arc<Async<UdpSocket>>,
+    shared: Arc<Shared>,
     io_recv_tx: Sender<DgramRecv>,
     io_send_rx: Receiver<DgramSend>,
 ) -> Result<(), std::io::Error> {
@@ -280,7 +289,7 @@ async fn io_task(
 
     loop {
         let socket_poller = async {
-            match socket.recv_from(&mut scratch[..]).await {
+            match shared.socket.recv_from(&mut scratch[..]).await {
                 Ok((length, origin)) => match io_recv_tx.send(DgramRecv {
                     origin,
                 }).await {
@@ -294,7 +303,7 @@ async fn io_task(
     
         let send_poller = async {
             match io_send_rx.recv().await {
-                Ok(dgram) => match socket.send_to(
+                Ok(dgram) => match shared.socket.send_to(
                     todo!(),
                     dgram.target,
                 ).await {
