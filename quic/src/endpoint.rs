@@ -183,6 +183,18 @@ impl EndpointBuilder<WantsServerCrypto> {
             todo!()
         })
     }
+
+    /// Gets the server configuration from a future.
+    /// 
+    /// Useful for when data is being loaded from the filesystem.
+    pub fn from_future(
+        self,
+        future: impl Future<Output = Result<Arc<dyn ServerConfig>, EndpointError>> + Send + Sync + 'static,
+    ) -> Task<Result<Endpoint, EndpointError>> {
+        self.task_pool.spawn(async move {
+            todo!()
+        })
+    }
 }
 
 /// A reference-counted handle to a QUIC endpoint, handling I/O for [connections](crate::Connection).
