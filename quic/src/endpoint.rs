@@ -1,9 +1,9 @@
-use std::{collections::HashMap, future::Future, net::ToSocketAddrs, sync::Arc, task::Poll, time::Instant};
+use std::{collections::HashMap, future::Future, net::ToSocketAddrs, pin::pin, sync::Arc, task::Poll, time::Instant};
 use async_task::Task;
 use bevy_ecs::component::{Component, ComponentHooks, StorageType};
 use bytes::BytesMut;
 use quinn_proto::{ConnectionEvent, ConnectionHandle as QuinnConnectionId, EndpointConfig};
-use crate::{channels::mpsc, runtime::Handle as RuntimeHandle, socket::{DgramRecv, DgramSend}};
+use crate::{channels::mpsc, futures::Join, runtime::Handle as RuntimeHandle, socket::{DgramRecv, DgramSend}};
 use crate::{channels::watch, connection::{ConnectionError, ConnectionRequest, NewConnection}, socket::Socket};
 
 /// A builder for the [`Endpoint`] component, using the [typestate] pattern.
@@ -242,21 +242,45 @@ impl Future for EndpointDriver {
 
     fn poll(
         mut self: std::pin::Pin<&mut Self>,
-        _cx: &mut std::task::Context<'_>,
+        cx: &mut std::task::Context<'_>,
     ) -> std::task::Poll<Self::Output> {
-        let mut state = &mut self.0;
+        let state = &mut self.0;
 
-        while let Ok(dgram) = state.socket.dgram_rx.try_recv() {
-            handle_datagram(&mut state, dgram);
-        };
+        // let dgrams = pin!(async {
+        //     match state.socket.dgram_rx.recv().await {
+        //         Ok(dgram) => handle_datagram(state, dgram),
+        //         Err(_) => todo!(),
+        //     }
+        // });
 
-        while let Ok(event) = state.quinn_event_rx.try_recv() {
-            handle_event(&mut state, event);
-        };
+        // let events = pin!(async {
+        //     match state.quinn_event_rx.recv().await {
+        //         Ok(event) => handle_event(state, event),
+        //         Err(_) => todo!(),
+        //     }
+        // });
 
-        while let Ok(request) = state.connection_request_rx.try_recv() {
-            handle_connection_request(&mut state, request);
-        }
+        // let requests = pin!(async {
+        //     match state.connection_request_rx.recv().await {
+        //         Ok(request) => handle_connection_request(state, request),
+        //         Err(_) => todo!(),
+        //     }
+        // });
+
+        // let mut join = Join((dgrams, events, requests));
+        // return Future::poll(std::pin::Pin::new(&mut join), cx);
+
+        // while let Ok(dgram) = state.socket.dgram_rx.try_recv() {
+        //     handle_datagram(&mut state, dgram);
+        // };
+
+        // while let Ok(event) = state.quinn_event_rx.try_recv() {
+        //     handle_event(&mut state, event);
+        // };
+
+        // while let Ok(request) = state.connection_request_rx.try_recv() {
+        //     handle_connection_request(&mut state, request);
+        // }
 
         return Poll::Pending;
     }

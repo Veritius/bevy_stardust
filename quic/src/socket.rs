@@ -1,11 +1,11 @@
 use std::{collections::VecDeque, io::ErrorKind, net::{SocketAddr, ToSocketAddrs}, thread::JoinHandle};
 use bytes::BytesMut;
-use crossbeam_channel::{Receiver, Sender, TryRecvError};
+use crate::channels::mpsc;
 
 /// A UDP socket and associated thread for handling I/O with the operating system.
 pub(crate) struct Socket {
-    pub dgram_rx: Receiver<DgramRecv>,
-    pub dgram_tx: Sender<DgramSend>,
+    pub dgram_rx: mpsc::Receiver<DgramRecv>,
+    pub dgram_tx: crossbeam_channel::Sender<DgramSend>,
     address: SocketAddr,
     thread: JoinHandle<Result<(), std::io::Error>>,
 }
@@ -24,7 +24,7 @@ impl Socket {
         let mut socket = mio::net::UdpSocket::from_std(socket);
 
         // Channels for inter-thread communication
-        let (dgram_recv_tx, dgram_recv_rx) = crossbeam_channel::unbounded::<DgramRecv>();
+        let (dgram_recv_tx, dgram_recv_rx) = mpsc::channel::<DgramRecv>();
         let (dgram_send_tx, dgram_send_rx) = crossbeam_channel::unbounded::<DgramSend>();
 
         // Set up mio's polling system
@@ -92,12 +92,12 @@ impl Socket {
                                     Err(e) => return Err(e),
                                 },
     
-                                Err(TryRecvError::Empty) => {
+                                Err(crossbeam_channel::TryRecvError::Empty) => {
                                     continue 'events;
                                 },
     
                                 // If this occurs it means that the handle has been dropped
-                                Err(TryRecvError::Disconnected) => { return Ok(()); }
+                                Err(crossbeam_channel::TryRecvError::Disconnected) => { return Ok(()); }
                             } }
 
                         }
