@@ -5,9 +5,9 @@ pub mod connection;
 pub mod endpoint;
 
 mod channels;
+mod futures;
 mod plugin;
 mod runtime;
-mod select;
 mod socket;
 
 pub use plugin::QuicPlugin;
