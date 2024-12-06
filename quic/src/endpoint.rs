@@ -257,6 +257,11 @@ impl Endpoint {
             shared,
         })));
     }
+
+    /// Gracefully closes all connections and shuts down the endpoint.
+    pub fn close(&self) {
+        todo!()
+    }
 }
 
 /// An error returned during the creation or execution of an [`Endpoint`].
