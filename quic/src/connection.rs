@@ -5,7 +5,7 @@ use bevy_ecs::prelude::*;
 use bevy_stardust::prelude::*;
 use crate::endpoint::Endpoint;
 
-/// A handle to a connection.
+/// A handle to a QUIC connection.
 #[derive(Component)]
 pub struct Connection {
     task: Task<()>,
@@ -16,6 +16,7 @@ pub struct Connection {
 }
 
 impl Connection {
+    /// Creates a new outgoing [`Connection`].
     pub fn connect(
         endpoint: Endpoint,
         remote_address: SocketAddr,
