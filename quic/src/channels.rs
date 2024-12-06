@@ -134,6 +134,7 @@ pub mod watch {
 
 pub mod oneshot {
     use std::{future::Future, task::Poll};
+    use crate::channels::shared::*;
 
     pub(crate) fn channel<T>() -> (Sender<T>, Receiver<T>) {
         let (tx, rx) = async_channel::bounded(1);
@@ -187,15 +188,6 @@ pub mod oneshot {
     }
 
     impl<T> Unpin for Receiver<T> {}
-
-    #[derive(Debug)]
-    pub struct SendError<T>(pub T);
-
-    #[derive(Debug)]
-    pub(crate) enum TryRecvError {
-        Empty,
-        Closed,
-    }
 }
 
 pub mod shared {
