@@ -32,5 +32,8 @@ version = "4.7"
 [dependencies.async-channel]
 version = "2.3"
 
+[dependencies.async-net]
+version = "2.0"
+
 [dependencies.crossbeam-deque]
 version = "0.8"

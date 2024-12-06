@@ -3,7 +3,7 @@ use async_channel::{Receiver, Sender};
 use async_task::Task;
 use bevy_ecs::prelude::*;
 use bevy_stardust::prelude::*;
-use crate::endpoint::Endpoint;
+use crate::{endpoint::Endpoint, EndpointError};
 
 /// A handle to a QUIC connection.
 #[derive(Component)]
@@ -22,15 +22,29 @@ impl Connection {
         remote_address: SocketAddr,
         server_name: Arc<str>,
     ) -> Connection {
-        // let (message_incoming_tx, message_incoming_rx) = async_channel::unbounded();
-        // let (message_outgoing_tx, message_outgoing_rx) = async_channel::unbounded();
-
         todo!()
     }
 
     /// Returns the [`Endpoint`] managing this connection.
     pub fn endpoint(&self) -> Endpoint {
         self.shared.endpoint.clone()
+    }
+}
+
+/// An error returned during the creation or execution of a [`Connection`].
+#[derive(Debug)]
+pub enum ConnectionError {
+    /// The endpoint this connection relied on shut down.
+    EndpointError(EndpointError),
+
+    /// The transport protocol was violated.
+    TransportError {
+        /// The type of error triggered.
+        code: u64,
+        /// The frame type that triggered the error, if any.
+        frame_type: Option<u64>,
+        /// Human-readable reason for the error.
+        reason: Arc<str>,
     }
 }
 
