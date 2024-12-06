@@ -133,7 +133,12 @@ impl EndpointBuilder<CanBecomeServer> {
     /// Skips server configuration.
     pub fn client_only(self) -> LoadingEndpoint {
         LoadingEndpoint(self.task_pool.spawn(async move {
-            todo!()
+            Endpoint::new_inner(
+                self.state.previous.previous.socket,
+                self.state.previous.reset_key,
+                self.state.cid_generator,
+                async { None },
+            ).await
         }))
     }
 }
@@ -180,7 +185,16 @@ impl EndpointBuilder<WantsServerCrypto> {
         server_config: Arc<dyn ServerConfig>
     ) -> LoadingEndpoint {
         LoadingEndpoint(self.task_pool.spawn(async move {
-            todo!()
+            Endpoint::new_inner(
+                self.state.previous.previous.previous.previous.socket,
+                self.state.previous.previous.previous.reset_key,
+                self.state.previous.previous.cid_generator,
+                async { Some(Ok({
+                    let mut config = quinn_proto::ServerConfig::with_crypto(server_config);
+                    config.transport_config(self.state.config);
+                    config
+                })) },
+            ).await
         }))
     }
 
@@ -192,7 +206,21 @@ impl EndpointBuilder<WantsServerCrypto> {
         future: impl Future<Output = Result<Arc<dyn ServerConfig>, EndpointError>> + Send + Sync + 'static,
     ) -> LoadingEndpoint {
         LoadingEndpoint(self.task_pool.spawn(async move {
-            todo!()
+            Endpoint::new_inner(
+                self.state.previous.previous.previous.previous.socket,
+                self.state.previous.previous.previous.reset_key,
+                self.state.previous.previous.cid_generator,
+                async {
+                    let server_config = match future.await {
+                        Ok(v) => v,
+                        Err(e) => return Some(Err(e)),
+                    };
+
+                    let mut config = quinn_proto::ServerConfig::with_crypto(server_config);
+                    config.transport_config(self.state.config);
+                    return Some(Ok(config))
+                },
+            ).await
         }))
     }
 }
@@ -216,6 +244,17 @@ impl Future for LoadingEndpoint {
 /// A reference-counted handle to a QUIC endpoint, handling I/O for [connections](crate::Connection).
 #[derive(Clone)]
 pub struct Endpoint(Arc<EndpointInner>);
+
+impl Endpoint {
+    async fn new_inner(
+        socket: Task<Result<Async<UdpSocket>, std::io::Error>>,
+        reset_key: Arc<dyn HmacKey>,
+        cid_generator: Box<dyn ConnectionIdGenerator>,
+        server: impl Future<Output = Option<Result<quinn_proto::ServerConfig, EndpointError>>> + Send + Sync + 'static,
+    ) -> Result<Endpoint, EndpointError> {
+        todo!()
+    }
+}
 
 /// An error returned during the creation or execution of an [`Endpoint`].
 #[derive(Debug)]
