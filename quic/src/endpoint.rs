@@ -2,8 +2,7 @@ use std::{future::Future, net::{ToSocketAddrs, UdpSocket}, pin::Pin, sync::Arc};
 use async_channel::{Receiver, Sender};
 use async_io::Async;
 use async_task::Task;
-use quinn_proto::{crypto::{HmacKey, ServerConfig}, ConnectionIdGenerator, HashedConnectionIdGenerator, TransportConfig};
-use rand::RngCore;
+use quinn_proto::{crypto::ServerConfig, EndpointConfig, TransportConfig};
 use crate::taskpool::{get_task_pool, NetworkTaskPool};
 
 /// A builder for an [`Endpoint`].
@@ -29,17 +28,17 @@ pub struct WantsSocket {
 
 impl EndpointBuilder<WantsSocket> {
     /// Uses a pre-existing standard library UDP socket.
-    pub fn use_existing(self, socket: UdpSocket) -> EndpointBuilder<WantsResetKey> {
+    pub fn use_existing(self, socket: UdpSocket) -> EndpointBuilder<WantsQuicConfig> {
         let socket = blocking::unblock(move || Async::new(socket));
 
         EndpointBuilder {
             task_pool: self.task_pool,
-            state: WantsResetKey { socket },
+            state: WantsQuicConfig { socket },
         }
     }
 
     /// Binds to the given address, creating a new socket.
-    pub fn bind<A>(self, address: A) -> EndpointBuilder<WantsResetKey>
+    pub fn bind<A>(self, address: A) -> EndpointBuilder<WantsQuicConfig>
     where
         A: ToSocketAddrs,
         A: Send + Sync + 'static,
@@ -51,73 +50,24 @@ impl EndpointBuilder<WantsSocket> {
 
         EndpointBuilder {
             task_pool: self.task_pool,
-            state: WantsResetKey { socket },
+            state: WantsQuicConfig { socket },
         }
     }
 }
 
 /// State for adding a reset key.
-pub struct WantsResetKey {
+pub struct WantsQuicConfig {
     socket: Task<Result<Async<UdpSocket>, std::io::Error>>,
 }
 
-impl EndpointBuilder<WantsResetKey> {
-    /// Generates a new reset key from the system's random number generator.
-    pub fn generate_new(self) -> EndpointBuilder<WantsCidGenerator> {
-        let mut seed = [0; 64];
-        rand::thread_rng().fill_bytes(&mut seed);
-
-        EndpointBuilder {
-            task_pool: self.task_pool,
-            state: WantsCidGenerator {
-                previous: self.state,
-                reset_key: Arc::new(ring::hmac::Key::new(
-                    ring::hmac::HMAC_SHA256,
-                    &seed,
-                )),
-            },
-        }
-    }
-
+impl EndpointBuilder<WantsQuicConfig> {
     /// Uses an existing reset key.
-    pub fn use_existing(self, reset_key: Arc<dyn HmacKey>) -> EndpointBuilder<WantsCidGenerator> {
-        EndpointBuilder {
-            task_pool: self.task_pool,
-            state: WantsCidGenerator {
-                previous: self.state,
-                reset_key,
-            },
-        }
-    }
-}
-
-/// State for adding a connection ID generator.
-pub struct WantsCidGenerator {
-    previous: WantsResetKey,
-    reset_key: Arc<dyn HmacKey>,
-}
-
-impl EndpointBuilder<WantsCidGenerator> {
-    /// Uses the default connection ID generator.
-    /// 
-    /// This is currently [`HashedConnectionIdGenerator`].
-    pub fn use_default(self) -> EndpointBuilder<CanBecomeServer> {
+    pub fn use_existing(self, config: Arc<EndpointConfig>) -> EndpointBuilder<CanBecomeServer> {
         EndpointBuilder {
             task_pool: self.task_pool,
             state: CanBecomeServer {
                 previous: self.state,
-                cid_generator: Box::new(HashedConnectionIdGenerator::new()),
-            },
-        }
-    }
-
-    /// Uses the suppied connection ID generator.
-    pub fn use_existing(self, cid_generator: Box<dyn ConnectionIdGenerator>) -> EndpointBuilder<CanBecomeServer> {
-        EndpointBuilder {
-            task_pool: self.task_pool,
-            state: CanBecomeServer {
-                previous: self.state,
-                cid_generator,
+                config,
             },
         }
     }
@@ -125,8 +75,8 @@ impl EndpointBuilder<WantsCidGenerator> {
 
 /// State for optionally configuring server behavior.
 pub struct CanBecomeServer {
-    previous: WantsCidGenerator,
-    cid_generator: Box<dyn ConnectionIdGenerator>,
+    previous: WantsQuicConfig,
+    config: Arc<EndpointConfig>,
 }
 
 impl EndpointBuilder<CanBecomeServer> {
@@ -134,9 +84,8 @@ impl EndpointBuilder<CanBecomeServer> {
     pub fn client_only(self) -> LoadingEndpoint {
         LoadingEndpoint(self.task_pool.spawn(async move {
             Endpoint::new_inner(
-                self.state.previous.previous.socket,
-                self.state.previous.reset_key,
-                self.state.cid_generator,
+                self.state.previous.socket,
+                self.state.config,
                 async { None },
             ).await
         }))
@@ -186,9 +135,8 @@ impl EndpointBuilder<WantsServerCrypto> {
     ) -> LoadingEndpoint {
         LoadingEndpoint(self.task_pool.spawn(async move {
             Endpoint::new_inner(
-                self.state.previous.previous.previous.previous.socket,
-                self.state.previous.previous.previous.reset_key,
-                self.state.previous.previous.cid_generator,
+                self.state.previous.previous.previous.socket,
+                self.state.previous.previous.config,
                 async { Some(Ok({
                     let mut config = quinn_proto::ServerConfig::with_crypto(server_config);
                     config.transport_config(self.state.config);
@@ -207,9 +155,8 @@ impl EndpointBuilder<WantsServerCrypto> {
     ) -> LoadingEndpoint {
         LoadingEndpoint(self.task_pool.spawn(async move {
             Endpoint::new_inner(
-                self.state.previous.previous.previous.previous.socket,
-                self.state.previous.previous.previous.reset_key,
-                self.state.previous.previous.cid_generator,
+                self.state.previous.previous.previous.socket,
+                self.state.previous.previous.config,
                 async {
                     let server_config = match future.await {
                         Ok(v) => v,
@@ -248,8 +195,7 @@ pub struct Endpoint(Arc<EndpointInner>);
 impl Endpoint {
     async fn new_inner(
         socket: Task<Result<Async<UdpSocket>, std::io::Error>>,
-        reset_key: Arc<dyn HmacKey>,
-        cid_generator: Box<dyn ConnectionIdGenerator>,
+        config: Arc<EndpointConfig>,
         server: impl Future<Output = Option<Result<quinn_proto::ServerConfig, EndpointError>>> + Send + Sync + 'static,
     ) -> Result<Endpoint, EndpointError> {
         todo!()
