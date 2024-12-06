@@ -140,7 +140,7 @@ impl EndpointBuilder<WantsServerCrypto> {
                 async { Some(Ok({
                     let mut config = quinn_proto::ServerConfig::with_crypto(server_config);
                     config.transport_config(self.state.config);
-                    config
+                    Arc::new(config)
                 })) },
             ).await
         }))
@@ -165,7 +165,7 @@ impl EndpointBuilder<WantsServerCrypto> {
 
                     let mut config = quinn_proto::ServerConfig::with_crypto(server_config);
                     config.transport_config(self.state.config);
-                    return Some(Ok(config))
+                    return Some(Ok(Arc::new(config)))
                 },
             ).await
         }))
@@ -196,8 +196,50 @@ impl Endpoint {
     async fn new_inner(
         socket: Task<Result<Async<UdpSocket>, std::io::Error>>,
         config: Arc<EndpointConfig>,
-        server: impl Future<Output = Option<Result<quinn_proto::ServerConfig, EndpointError>>> + Send + Sync + 'static,
+        server: impl Future<Output = Option<Result<Arc<quinn_proto::ServerConfig>, EndpointError>>> + Send + Sync + 'static,
     ) -> Result<Endpoint, EndpointError> {
+        // Retrieve task pool
+        let task_pool = get_task_pool();
+
+        // Zip the futures to run them at the same time
+        let (socket, server_config) = futures_lite::future::zip(
+            socket,
+            server,
+        ).await;
+
+        // Unwrap any errors and wrap them in appropriate types
+        let socket = Arc::new(socket?);
+        let server_config = match server_config {
+            Some(Ok(v)) => Some(v),
+            Some(Err(e)) => return Err(e),
+            None => None,
+        };
+
+        // Create channels for communication
+        let (io_recv_tx, io_recv_rx) = async_channel::unbounded();
+        let (io_send_tx, io_send_rx) = async_channel::unbounded();
+
+        // Construct the inner state
+        let state = EndpointInner {
+            io_socket: socket.clone(),
+
+            io_task: task_pool.spawn(io_task(
+                socket,
+                io_recv_tx,
+                io_send_rx
+            )),
+
+            io_recv_rx,
+            io_send_tx,
+
+            quinn_state: quinn_proto::Endpoint::new(
+                config,
+                server_config,
+                true,
+                None,
+            ),
+        };
+
         todo!()
     }
 }
@@ -224,13 +266,15 @@ struct EndpointInner {
 
     io_recv_rx: Receiver<DgramRecv>,
     io_send_tx: Sender<DgramSend>,
+
+    quinn_state: quinn_proto::Endpoint,
 }
 
 async fn io_task(
     socket: Arc<Async<UdpSocket>>,
     io_recv_tx: Sender<DgramRecv>,
     io_send_rx: Receiver<DgramSend>,
-) {
+) -> Result<(), std::io::Error> {
     // TODO: Make this configurable
     let mut scratch = vec![0u8; 2048];
 
