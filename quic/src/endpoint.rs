@@ -2,7 +2,7 @@ use std::{future::Future, net::{ToSocketAddrs, UdpSocket}, sync::Arc};
 use async_channel::{Receiver, Sender};
 use async_io::Async;
 use async_task::Task;
-use quinn_proto::{crypto::HmacKey, ConnectionIdGenerator, HashedConnectionIdGenerator};
+use quinn_proto::{crypto::{HmacKey, ServerConfig}, ConnectionIdGenerator, HashedConnectionIdGenerator, TransportConfig};
 use rand::RngCore;
 use crate::taskpool::{get_task_pool, NetworkTaskPool};
 
@@ -101,10 +101,10 @@ impl EndpointBuilder<WantsCidGenerator> {
     /// Uses the default connection ID generator.
     /// 
     /// This is currently [`HashedConnectionIdGenerator`].
-    pub fn use_default(self) -> EndpointBuilder<OptionalServerConfig> {
+    pub fn use_default(self) -> EndpointBuilder<CanBecomeServer> {
         EndpointBuilder {
             task_pool: self.task_pool,
-            state: OptionalServerConfig {
+            state: CanBecomeServer {
                 previous: self.state,
                 cid_generator: Box::new(HashedConnectionIdGenerator::new()),
             },
@@ -112,10 +112,10 @@ impl EndpointBuilder<WantsCidGenerator> {
     }
 
     /// Uses the suppied connection ID generator.
-    pub fn use_existing(self, cid_generator: Box<dyn ConnectionIdGenerator>) -> EndpointBuilder<OptionalServerConfig> {
+    pub fn use_existing(self, cid_generator: Box<dyn ConnectionIdGenerator>) -> EndpointBuilder<CanBecomeServer> {
         EndpointBuilder {
             task_pool: self.task_pool,
-            state: OptionalServerConfig {
+            state: CanBecomeServer {
                 previous: self.state,
                 cid_generator,
             },
@@ -124,25 +124,60 @@ impl EndpointBuilder<WantsCidGenerator> {
 }
 
 /// State for optionally configuring server behavior.
-pub struct OptionalServerConfig {
+pub struct CanBecomeServer {
     previous: WantsCidGenerator,
     cid_generator: Box<dyn ConnectionIdGenerator>,
 }
 
-impl EndpointBuilder<OptionalServerConfig> {
+impl EndpointBuilder<CanBecomeServer> {
     /// Skips server configuration.
     pub fn client_only(self) -> Task<Result<Endpoint, EndpointError>> {
         self.task_pool.spawn(async move {
             todo!()
         })
     }
+}
 
-    /// Enables running as a server.
-    pub fn server(
+/// State for setting a [`TransportConfig`] value.
+pub struct WantsTransportConfig {
+    previous: CanBecomeServer,
+}
+
+impl EndpointBuilder<WantsTransportConfig> {
+    /// Uses the default transport configuration suitable for most applications.
+    pub fn use_default(self) -> EndpointBuilder<WantsServerCrypto> {
+        EndpointBuilder {
+            task_pool: self.task_pool,
+            state: WantsServerCrypto {
+                previous: self.state,
+                config: Arc::new(TransportConfig::default()),
+            },
+        }
+    }
+
+    /// Uses an existing transport configuration value.
+    pub fn use_existing(self, transport_config: Arc<TransportConfig>) -> EndpointBuilder<WantsServerCrypto> {
+        EndpointBuilder {
+            task_pool: self.task_pool,
+            state: WantsServerCrypto {
+                previous: self.state,
+                config: transport_config,
+            },
+        }
+    }
+}
+
+/// State for adding cryptographic data.
+pub struct WantsServerCrypto {
+    previous: WantsTransportConfig,
+    config: Arc<TransportConfig>,
+}
+
+impl EndpointBuilder<WantsServerCrypto> {
+    /// Uses an existing server configuration value.
+    pub fn use_existing(
         self,
-        server_config: impl Future<Output = Result<Arc<rustls::ServerConfig>, rustls::Error>> + Send + Sync + 'static,
-        crypto_suite: &'static rustls::Tls13CipherSuite,
-        keygen_alg: &'static dyn rustls::quic::Algorithm,
+        server_config: Arc<dyn ServerConfig>
     ) -> Task<Result<Endpoint, EndpointError>> {
         self.task_pool.spawn(async move {
             todo!()
