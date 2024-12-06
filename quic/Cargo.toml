@@ -1,0 +1,36 @@
+[package]
+name="bevy_stardust_quic"
+version="0.1.0"
+edition="2021"
+authors=["Veritius <veritiusgaming@gmail.com>"]
+license="MIT OR Apache-2.0"
+description="A QUIC transport layer for bevy_stardust."
+repository="https://github.com/veritius/bevy_stardust/"
+keywords=["bevy", "gamedev", "networking"]
+
+[dependencies.bevy_ecs]
+version = "0.15"
+default-features = false
+
+[dependencies.bevy_app]
+version = "0.15"
+default-features = false
+
+[dependencies.bevy_stardust]
+version = "0.7.0"
+path = "../stardust"
+
+[dependencies.quinn-proto]
+version = "0.11.8"
+
+[dependencies.rustls]
+version = "0.23.14"
+
+[dependencies.async-task]
+version = "4.7"
+
+[dependencies.async-channel]
+version = "2.3"
+
+[dependencies.crossbeam-deque]
+version = "0.8"
