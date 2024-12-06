@@ -190,7 +190,7 @@ impl Future for LoadingEndpoint {
 
 /// A reference-counted handle to a QUIC endpoint, handling I/O for [connections](crate::Connection).
 #[derive(Clone)]
-pub struct Endpoint(Arc<Shared>);
+pub struct Endpoint(Arc<Handle>);
 
 impl Endpoint {
     async fn new_inner(
@@ -208,7 +208,7 @@ impl Endpoint {
         ).await;
 
         // Unwrap any errors and wrap them in appropriate types
-        let socket = socket?;
+        let socket = Arc::new(socket?);
         let server_config = match server_config {
             Some(Ok(v)) => Some(v),
             Some(Err(e)) => return Err(e),
@@ -221,13 +221,15 @@ impl Endpoint {
 
         // Construct shared state
         let shared = Arc::new(Shared {
-            socket,
+
         });
 
         // Construct the inner state
         let state = State {
+            io_socket: socket.clone(),
+
             io_task: task_pool.spawn(io_task(
-                shared.clone(),
+                socket,
                 io_recv_tx,
                 io_send_rx
             )),
@@ -243,10 +245,17 @@ impl Endpoint {
             ),
         };
 
-        todo!();
+        // Start driver task to run in the background
+        let driver = task_pool.spawn(driver_task(
+            shared.clone(),
+            state,
+        ));
 
         // Return shared endpoint thing
-        return Ok(Endpoint(shared));
+        return Ok(Endpoint(Arc::new(Handle {
+            driver,
+            shared,
+        })));
     }
 }
 
@@ -266,11 +275,17 @@ impl From<std::io::Error> for EndpointError {
     }
 }
 
+struct Handle {
+    driver: Task<EndpointError>,
+    shared: Arc<Shared>,
+}
+
 struct Shared {
-    socket: Async<UdpSocket>,
+
 }
 
 struct State {
+    io_socket: Arc<Async<UdpSocket>>,
     io_task: Task<Result<(), std::io::Error>>,
 
     io_recv_rx: Receiver<DgramRecv>,
@@ -280,7 +295,7 @@ struct State {
 }
 
 async fn io_task(
-    shared: Arc<Shared>,
+    socket: Arc<Async<UdpSocket>>,
     io_recv_tx: Sender<DgramRecv>,
     io_send_rx: Receiver<DgramSend>,
 ) -> Result<(), std::io::Error> {
@@ -289,7 +304,7 @@ async fn io_task(
 
     loop {
         let socket_poller = async {
-            match shared.socket.recv_from(&mut scratch[..]).await {
+            match socket.recv_from(&mut scratch[..]).await {
                 Ok((length, origin)) => match io_recv_tx.send(DgramRecv {
                     origin,
                 }).await {
@@ -300,10 +315,10 @@ async fn io_task(
                 Err(_) => todo!(),
             }
         };
-    
+
         let send_poller = async {
             match io_send_rx.recv().await {
-                Ok(dgram) => match shared.socket.send_to(
+                Ok(dgram) => match socket.send_to(
                     todo!(),
                     dgram.target,
                 ).await {
@@ -314,7 +329,7 @@ async fn io_task(
                 Err(_) => todo!(),
             }
         };
-    
+
         futures_lite::FutureExt::race(
             socket_poller,
             send_poller,
@@ -328,4 +343,11 @@ struct DgramRecv {
 
 struct DgramSend {
     target: SocketAddr,
+}
+
+async fn driver_task(
+    shared: Arc<Shared>,
+    state: State,
+) -> EndpointError {
+    todo!()
 }
