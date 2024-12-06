@@ -2,6 +2,8 @@ use std::{net::{ToSocketAddrs, UdpSocket}, sync::Arc};
 use async_channel::{Receiver, Sender};
 use async_io::Async;
 use async_task::Task;
+use quinn_proto::{crypto::HmacKey, ConnectionIdGenerator, HashedConnectionIdGenerator, ServerConfig};
+use rand::RngCore;
 use crate::taskpool::{get_task_pool, NetworkTaskPool};
 
 /// A builder for an [`Endpoint`].
@@ -27,17 +29,17 @@ pub struct WantsSocket {
 
 impl EndpointBuilder<WantsSocket> {
     /// Uses a pre-existing standard library UDP socket.
-    pub fn use_existing(self, socket: UdpSocket) -> EndpointBuilder<WantsConfig> {
+    pub fn use_existing(self, socket: UdpSocket) -> EndpointBuilder<WantsResetKey> {
         let socket = blocking::unblock(move || Async::new(socket));
 
         EndpointBuilder {
             task_pool: self.task_pool,
-            state: WantsConfig { socket },
+            state: WantsResetKey { socket },
         }
     }
 
     /// Binds to the given address, creating a new socket.
-    pub fn bind<A>(self, address: A) -> EndpointBuilder<WantsConfig>
+    pub fn bind<A>(self, address: A) -> EndpointBuilder<WantsResetKey>
     where
         A: ToSocketAddrs,
         A: Send + Sync + 'static,
@@ -49,14 +51,91 @@ impl EndpointBuilder<WantsSocket> {
 
         EndpointBuilder {
             task_pool: self.task_pool,
-            state: WantsConfig { socket },
+            state: WantsResetKey { socket },
         }
     }
 }
 
-/// State for adding config.
-pub struct WantsConfig {
+/// State for adding a reset key.
+pub struct WantsResetKey {
     socket: Task<Result<Async<UdpSocket>, std::io::Error>>,
+}
+
+impl EndpointBuilder<WantsResetKey> {
+    /// Generates a new reset key from the system's random number generator.
+    pub fn generate_new(self) -> EndpointBuilder<WantsCidGenerator> {
+        let mut seed = [0; 64];
+        rand::thread_rng().fill_bytes(&mut seed);
+
+        EndpointBuilder {
+            task_pool: self.task_pool,
+            state: WantsCidGenerator {
+                previous: self.state,
+                reset_key: Arc::new(ring::hmac::Key::new(
+                    ring::hmac::HMAC_SHA256,
+                    &seed,
+                )),
+            },
+        }
+    }
+
+    /// Uses an existing reset key.
+    pub fn use_existing(self, reset_key: Arc<dyn HmacKey>) -> EndpointBuilder<WantsCidGenerator> {
+        EndpointBuilder {
+            task_pool: self.task_pool,
+            state: WantsCidGenerator {
+                previous: self.state,
+                reset_key,
+            },
+        }
+    }
+}
+
+/// State for adding a connection ID generator.
+pub struct WantsCidGenerator {
+    previous: WantsResetKey,
+    reset_key: Arc<dyn HmacKey>,
+}
+
+impl EndpointBuilder<WantsCidGenerator> {
+    /// Uses the default connection ID generator.
+    /// 
+    /// This is currently [`HashedConnectionIdGenerator`].
+    pub fn use_default(self) -> EndpointBuilder<OptionalServerConfig> {
+        EndpointBuilder {
+            task_pool: self.task_pool,
+            state: OptionalServerConfig {
+                previous: self.state,
+                cid_generator: Box::new(HashedConnectionIdGenerator::new()),
+            },
+        }
+    }
+
+    /// Uses the suppied connection ID generator.
+    pub fn use_existing(self, cid_generator: Box<dyn ConnectionIdGenerator>) -> EndpointBuilder<OptionalServerConfig> {
+        EndpointBuilder {
+            task_pool: self.task_pool,
+            state: OptionalServerConfig {
+                previous: self.state,
+                cid_generator,
+            },
+        }
+    }
+}
+
+/// State for optionally configuring server behavior.
+pub struct OptionalServerConfig {
+    previous: WantsCidGenerator,
+    cid_generator: Box<dyn ConnectionIdGenerator>,
+}
+
+impl EndpointBuilder<OptionalServerConfig> {
+    /// Skips server configuration.
+    pub fn client_only(self) -> Task<Result<Endpoint, EndpointError>> {
+        self.task_pool.spawn(async move {
+            todo!()
+        })
+    }
 }
 
 /// A reference-counted handle to a QUIC endpoint, handling I/O for [connections](crate::Connection).
