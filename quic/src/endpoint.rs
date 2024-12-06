@@ -1,4 +1,4 @@
-use std::{future::Future, net::{ToSocketAddrs, UdpSocket}, sync::Arc};
+use std::{future::Future, net::{ToSocketAddrs, UdpSocket}, pin::Pin, sync::Arc};
 use async_channel::{Receiver, Sender};
 use async_io::Async;
 use async_task::Task;
@@ -131,10 +131,10 @@ pub struct CanBecomeServer {
 
 impl EndpointBuilder<CanBecomeServer> {
     /// Skips server configuration.
-    pub fn client_only(self) -> Task<Result<Endpoint, EndpointError>> {
-        self.task_pool.spawn(async move {
+    pub fn client_only(self) -> LoadingEndpoint {
+        LoadingEndpoint(self.task_pool.spawn(async move {
             todo!()
-        })
+        }))
     }
 }
 
@@ -178,10 +178,10 @@ impl EndpointBuilder<WantsServerCrypto> {
     pub fn use_existing(
         self,
         server_config: Arc<dyn ServerConfig>
-    ) -> Task<Result<Endpoint, EndpointError>> {
-        self.task_pool.spawn(async move {
+    ) -> LoadingEndpoint {
+        LoadingEndpoint(self.task_pool.spawn(async move {
             todo!()
-        })
+        }))
     }
 
     /// Gets the server configuration from a future.
@@ -190,10 +190,26 @@ impl EndpointBuilder<WantsServerCrypto> {
     pub fn from_future(
         self,
         future: impl Future<Output = Result<Arc<dyn ServerConfig>, EndpointError>> + Send + Sync + 'static,
-    ) -> Task<Result<Endpoint, EndpointError>> {
-        self.task_pool.spawn(async move {
+    ) -> LoadingEndpoint {
+        LoadingEndpoint(self.task_pool.spawn(async move {
             todo!()
-        })
+        }))
+    }
+}
+
+/// A [`Future`] for the creation of an [`Endpoint`].
+/// 
+/// This future is automatically run in the background and does not need to be polled by the user.
+pub struct LoadingEndpoint(Task<Result<Endpoint, EndpointError>>);
+
+impl Future for LoadingEndpoint {
+    type Output = Result<Endpoint, EndpointError>;
+
+    fn poll(
+        mut self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Self::Output> {
+        Future::poll(Pin::new(&mut self.0), cx)
     }
 }
 
