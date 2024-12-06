@@ -206,6 +206,8 @@ async fn task(
     connection: NewConnection,
     data: BuildData,
 ) {
+    log::debug!("Created new connection");
+
     let state = State {
         state: data.state_tx,
         shutdown: data.shutdown_rx,
