@@ -1,8 +1,8 @@
-use std::{net::{ToSocketAddrs, UdpSocket}, sync::Arc};
+use std::{future::Future, net::{ToSocketAddrs, UdpSocket}, sync::Arc};
 use async_channel::{Receiver, Sender};
 use async_io::Async;
 use async_task::Task;
-use quinn_proto::{crypto::HmacKey, ConnectionIdGenerator, HashedConnectionIdGenerator, ServerConfig};
+use quinn_proto::{crypto::HmacKey, ConnectionIdGenerator, HashedConnectionIdGenerator};
 use rand::RngCore;
 use crate::taskpool::{get_task_pool, NetworkTaskPool};
 
@@ -132,6 +132,18 @@ pub struct OptionalServerConfig {
 impl EndpointBuilder<OptionalServerConfig> {
     /// Skips server configuration.
     pub fn client_only(self) -> Task<Result<Endpoint, EndpointError>> {
+        self.task_pool.spawn(async move {
+            todo!()
+        })
+    }
+
+    /// Enables running as a server.
+    pub fn server(
+        self,
+        server_config: impl Future<Output = Result<Arc<rustls::ServerConfig>, rustls::Error>> + Send + Sync + 'static,
+        crypto_suite: &'static rustls::Tls13CipherSuite,
+        keygen_alg: &'static dyn rustls::quic::Algorithm,
+    ) -> Task<Result<Endpoint, EndpointError>> {
         self.task_pool.spawn(async move {
             todo!()
         })
