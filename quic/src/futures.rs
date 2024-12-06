@@ -1,15 +1,52 @@
-use std::{future::Future, pin::Pin, task::{Context, Poll}};
+use std::{future::Future, marker::PhantomData, pin::Pin, task::{Context, Poll}};
 
-pub(crate) struct Join<T>(pub T);
+pub(crate) struct Select<E, S> {
+    pub context: S,
+    pub entries: E,
+}
 
-macro_rules! set_try {
-    ($x:expr, $cx:ident) => {
-        match Pin::new($x).poll($cx) {
-            Poll::Ready(v) => return Poll::Ready(v),
-            Poll::Pending => {},
+pub(crate) struct SelectEntry<S, F, C, Z>
+where
+    F: Future<Output = C>,
+    C: FnMut(S) -> Z,
+{
+    future: F,
+
+    _p1: PhantomData<S>,
+}
+
+macro_rules! select_tuple_impl {
+    ([$($t:ident:$b:tt),+]) => {
+        paste::paste! {
+            impl<S, $([<$t F>], [<$t C>]),+, Z> Future for Select<($(SelectEntry<S, [<$t F>], [<$t C>], [<Z>]>),+), S>
+            where
+                S: Unpin + Copy,
+                $(
+                    [<$t F>]: Future<Output = [<$t C>]> + Unpin,
+                    [<$t C>]: FnMut(S) -> Z
+                ),+
+            {
+                type Output = Z;
+            
+                fn poll(
+                    mut self: Pin<&mut Self>,
+                    cx: &mut Context<'_>,
+                ) -> Poll<Z> {
+                    let e = &mut self.entries;
+
+                    $(match Pin::new(&mut e.$b.future).poll(cx) {
+                        Poll::Ready(mut v) => return Poll::Ready(v(self.context)),
+                        Poll::Pending => {},
+                    })+
+
+                    return Poll::Pending;
+                }
+            }
         }
     };
 }
+
+pub(crate) struct Join<T>(pub T);
 
 macro_rules! join_tuple_impl {
     ([$($t:ident:$b:tt),+]) => {
@@ -22,7 +59,7 @@ macro_rules! join_tuple_impl {
                 cx: &mut Context<'_>,
             ) -> Poll<Z> {
                 let x = &mut self.0;
-            
+
                 $(match Pin::new(&mut x.$b).poll(cx) {
                     Poll::Ready(v) => return Poll::Ready(v),
                     Poll::Pending => {},
@@ -54,4 +91,5 @@ macro_rules! variadic_tuple {
     };
 }
 
+variadic_tuple!(select_tuple_impl);
 variadic_tuple!(join_tuple_impl);

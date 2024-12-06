@@ -54,6 +54,9 @@ version = "2.4"
 [dependencies.log]
 version = "0.4"
 
+[dependencies.paste]
+version = "1"
+
 [dev-dependencies.rustls-pemfile]
 version = "2"
 
