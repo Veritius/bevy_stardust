@@ -1,5 +1,5 @@
 pub mod mpmc {
-    use std::fmt::Debug;
+    use crate::channels::shared::*;
 
     pub(crate) fn channel<T>() -> (Sender<T>, Receiver<T>) {
         let (tx, rx) = async_channel::unbounded::<T>();
@@ -31,6 +31,10 @@ pub mod mpmc {
     }
 
     impl<T> Receiver<T> {
+        pub async fn recv(&self) -> Result<T, RecvError> {
+            self.0.recv().await.map_err(|_| RecvError)
+        }
+
         pub fn try_recv(&self) -> Result<T, TryRecvError> {
             self.0.try_recv().map_err(|v| match v {
                 async_channel::TryRecvError::Empty => TryRecvError::Empty,
@@ -40,24 +44,10 @@ pub mod mpmc {
     }
 
     impl<T> Unpin for Receiver<T> {}
-
-    pub(crate) struct SendError<T>(pub T);
-
-    impl<T> Debug for SendError<T> {
-        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            f.write_str("SendError")
-        }
-    }
-
-    #[derive(Debug)]
-    pub(crate) enum TryRecvError {
-        Empty,
-        Closed,
-    }
 }
 
 pub mod mpsc {
-    use std::fmt::Debug;
+    use crate::channels::shared::*;
 
     pub(crate) fn channel<T>() -> (Sender<T>, Receiver<T>) {
         let (tx, rx) = async_channel::unbounded::<T>();
@@ -83,6 +73,10 @@ pub mod mpsc {
     pub(crate) struct Receiver<T>(async_channel::Receiver<T>);
 
     impl<T> Receiver<T> {
+        pub async fn recv(&self) -> Result<T, RecvError> {
+            self.0.recv().await.map_err(|_| RecvError)
+        }
+
         pub fn try_recv(&self) -> Result<T, TryRecvError> {
             self.0.try_recv().map_err(|v| match v {
                 async_channel::TryRecvError::Empty => TryRecvError::Empty,
@@ -92,20 +86,6 @@ pub mod mpsc {
     }
 
     impl<T> Unpin for Receiver<T> {}
-
-    pub(crate) struct SendError<T>(pub T);
-
-    impl<T> Debug for SendError<T> {
-        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            f.write_str("SendError")
-        }
-    }
-
-    #[derive(Debug)]
-    pub(crate) enum TryRecvError {
-        Empty,
-        Closed,
-    }
 }
 
 pub mod watch {
@@ -210,6 +190,32 @@ pub mod oneshot {
 
     #[derive(Debug)]
     pub struct SendError<T>(pub T);
+
+    #[derive(Debug)]
+    pub(crate) enum TryRecvError {
+        Empty,
+        Closed,
+    }
+}
+
+pub mod shared {
+    use std::fmt::Debug;
+
+    pub(crate) struct SendError<T>(pub T);
+
+    impl<T> Debug for SendError<T> {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            f.write_str("SendError")
+        }
+    }
+
+    pub(crate) struct RecvError;
+
+    impl Debug for RecvError {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            f.write_str("RecvError")
+        }
+    }
 
     #[derive(Debug)]
     pub(crate) enum TryRecvError {
