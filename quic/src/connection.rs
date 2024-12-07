@@ -243,16 +243,22 @@ impl Future for Driver {
     ) -> Poll<Self::Output> {
         let state = &mut self.0;
 
-        if let Poll::Ready(signal) = pin!(state.close_signal_rx.recv()).poll(cx) {
-            todo!()
+        match pin!(state.close_signal_rx.recv()).poll(cx) {
+            Poll::Ready(Ok(signal)) => todo!(),
+            Poll::Ready(Err(_)) => todo!(),
+            Poll::Pending => todo!(),
         }
 
-        if let Poll::Ready(signal) = pin!(state.e2c_event_rx.recv()).poll(cx) {
-            todo!()
+        match pin!(state.e2c_event_rx.recv()).poll(cx) {
+            Poll::Ready(Ok(event)) => todo!(),
+            Poll::Ready(Err(_)) => todo!(),
+            Poll::Pending => todo!(),
         }
 
-        if let Poll::Ready(message) = pin!(state.message_outgoing_rx.recv()).poll(cx) {
-            todo!()
+        match pin!(state.message_outgoing_rx.recv()).poll(cx) {
+            Poll::Ready(Ok(message)) => todo!(),
+            Poll::Ready(Err(_)) => todo!(),
+            Poll::Pending => todo!(),
         }
 
         // We're not done.
