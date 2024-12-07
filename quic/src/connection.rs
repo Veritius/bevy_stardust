@@ -130,9 +130,9 @@ pub(crate) struct OutgoingConnectionAttempt {
 }
 
 pub(crate) struct ConnectionAttemptData {
-    remote_address: SocketAddr,
-    server_name: Arc<str>,
-    config: ClientConfig,
+    pub remote_address: SocketAddr,
+    pub server_name: Arc<str>,
+    pub config: ClientConfig,
 }
 
 pub(crate) enum ConnectionAttemptResponse {
