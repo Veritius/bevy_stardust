@@ -1,6 +1,7 @@
 #![doc = include_str!("../README.md")]
 #![warn(missing_docs)]
 
+mod futures;
 mod taskpool;
 
 pub mod connection;
