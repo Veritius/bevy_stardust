@@ -406,27 +406,33 @@ impl Future for Driver {
         let state = &mut self.0;
 
         match pin!(state.close_signal_rx.recv()).poll(cx) {
+            Poll::Pending => todo!(),
             Poll::Ready(Ok(signal)) => todo!(),
             Poll::Ready(Err(_)) => todo!(),
-            Poll::Pending => todo!(),
         }
 
-        match pin!(state.c2e_event_rx.recv()).poll(cx) {
-            Poll::Ready(Ok((handle, event))) => todo!(),
-            Poll::Ready(Err(_)) => todo!(),
-            Poll::Pending => todo!(),
+        loop {
+            match pin!(state.c2e_event_rx.recv()).poll(cx) {
+                Poll::Ready(Ok((handle, event))) => todo!(),
+                Poll::Pending => break,
+                Poll::Ready(Err(_)) => todo!(),
+            }
         }
 
-        match pin!(state.io_recv_rx.recv()).poll(cx) {
-            Poll::Ready(Ok(dgram)) => todo!(),
-            Poll::Ready(Err(_)) => todo!(),
-            Poll::Pending => todo!(),
+        loop {
+            match pin!(state.io_recv_rx.recv()).poll(cx) {
+                Poll::Ready(Ok(dgram)) => todo!(),
+                Poll::Pending => break,
+                Poll::Ready(Err(_)) => todo!(),
+            }
         }
 
-        match pin!(state.outgoing_request_rx.recv()).poll(cx) {
-            Poll::Ready(Ok(request)) => todo!(),
-            Poll::Ready(Err(_)) => todo!(),
-            Poll::Pending => todo!(),
+        loop {
+            match pin!(state.outgoing_request_rx.recv()).poll(cx) {
+                Poll::Ready(Ok(request)) => todo!(),
+                Poll::Pending => break,
+                Poll::Ready(Err(_)) => todo!(),
+            }
         }
 
         // We're not done.

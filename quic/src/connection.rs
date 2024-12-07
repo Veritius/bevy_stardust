@@ -254,31 +254,53 @@ impl Future for Driver {
         let state = &mut self.0;
 
         match pin!(state.close_signal_rx.recv()).poll(cx) {
-            Poll::Ready(Ok(signal)) => {
-                state.quinn.close(
-                    Instant::now(),
-                    todo!(),
-                    todo!(),
-                );
-            },
-
-            Poll::Ready(Err(_)) => todo!(),
             Poll::Pending => todo!(),
+            Poll::Ready(Ok(signal)) => handle_close_signal(state, signal),
+            Poll::Ready(Err(_)) => todo!(),
         }
 
-        match pin!(state.e2c_event_rx.recv()).poll(cx) {
-            Poll::Ready(Ok(event)) => todo!(),
-            Poll::Ready(Err(_)) => todo!(),
-            Poll::Pending => todo!(),
+        loop {
+            match pin!(state.e2c_event_rx.recv()).poll(cx) {
+                Poll::Ready(Ok(event)) => handle_e2c_event(state, event),
+                Poll::Pending => break,
+                Poll::Ready(Err(_)) => todo!(),
+            }
         }
 
-        match pin!(state.message_outgoing_rx.recv()).poll(cx) {
-            Poll::Ready(Ok(message)) => todo!(),
-            Poll::Ready(Err(_)) => todo!(),
-            Poll::Pending => todo!(),
+        loop {
+            match pin!(state.message_outgoing_rx.recv()).poll(cx) {
+                Poll::Ready(Ok(message)) => handle_outgoing_message(state, message),
+                Poll::Pending => break,
+                Poll::Ready(Err(_)) => todo!(),
+            }   
         }
 
         // We're not done.
         return Poll::Pending;
     }
+}
+
+fn handle_close_signal(
+    state: &mut State,
+    signal: CloseSignal,
+) {
+    state.quinn.close(
+        Instant::now(),
+        todo!(),
+        todo!(),
+    );
+}
+
+fn handle_e2c_event(
+    state: &mut State,
+    event: E2CEvent,
+) {
+    todo!()
+}
+
+fn handle_outgoing_message(
+    state: &mut State,
+    message: ChannelMessage,
+) {
+    todo!()
 }
