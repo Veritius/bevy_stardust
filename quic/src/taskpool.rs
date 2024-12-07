@@ -1,4 +1,4 @@
-use std::{collections::VecDeque, future::Future, ops::{AddAssign, SubAssign}, sync::{atomic::{AtomicUsize, Ordering}, Condvar, Mutex, OnceLock}};
+use std::{collections::VecDeque, future::Future, ops::{AddAssign, SubAssign}, sync::{atomic::{AtomicU32, Ordering}, Condvar, Mutex, OnceLock}};
 use async_task::{Runnable, Task};
 
 pub(crate) static NETWORK_TASK_POOL: OnceLock<NetworkTaskPool> = OnceLock::new();
@@ -43,17 +43,17 @@ pub(crate) fn get_task_pool() -> &'static NetworkTaskPool {
 }
 
 static THREAD_MANAGER: ThreadManager = ThreadManager {
-    tasks: AtomicUsize::new(0),
+    tasks: AtomicU32::new(0),
 };
 
 struct ThreadManager {
-    tasks: AtomicUsize,
+    tasks: AtomicU32,
 }
 
-pub(crate) struct ThreadPoints(usize);
+pub(crate) struct ThreadPoints(u32);
 
 impl ThreadPoints {
-    pub fn new(points: usize) -> Self {
+    pub fn new(points: u32) -> Self {
         THREAD_MANAGER.tasks.fetch_add(points, Ordering::Relaxed);
         return ThreadPoints(points);
     }
@@ -65,15 +65,15 @@ impl Drop for ThreadPoints {
     }
 }
 
-impl AddAssign<usize> for ThreadPoints {
-    fn add_assign(&mut self, rhs: usize) {
+impl AddAssign<u32> for ThreadPoints {
+    fn add_assign(&mut self, rhs: u32) {
         THREAD_MANAGER.tasks.fetch_add(rhs, Ordering::Relaxed);
         self.0 += rhs;
     }
 }
 
-impl SubAssign<usize> for ThreadPoints {
-    fn sub_assign(&mut self, rhs: usize) {
+impl SubAssign<u32> for ThreadPoints {
+    fn sub_assign(&mut self, rhs: u32) {
         THREAD_MANAGER.tasks.fetch_sub(rhs, Ordering::Relaxed);
         self.0 -= rhs;
     }
