@@ -3,7 +3,7 @@ use async_channel::{Receiver, Sender};
 use async_io::Async;
 use async_task::Task;
 use quinn_proto::{crypto::ServerConfig, ConnectionHandle, EndpointConfig, EndpointEvent, TransportConfig};
-use crate::{futures::Race, taskpool::{get_task_pool, NetworkTaskPool}};
+use crate::{events::{C2EEvent, E2CEvent}, futures::Race, taskpool::{get_task_pool, NetworkTaskPool}};
 
 /// A builder for an [`Endpoint`].
 pub struct EndpointBuilder<S = ()> {
@@ -247,8 +247,8 @@ impl Endpoint {
                 None,
             ),
 
-            conn_event_rx,
-            conn_event_tx,
+            c2e_event_rx: conn_event_rx,
+            c2e_event_tx: conn_event_tx,
 
             connections: HashMap::new(),
         };
@@ -299,14 +299,14 @@ struct State {
 
     quinn_state: quinn_proto::Endpoint,
 
-    conn_event_rx: Receiver<(ConnectionHandle, EndpointEvent)>,
-    conn_event_tx: Sender<(ConnectionHandle, EndpointEvent)>,
+    c2e_event_rx: Receiver<(ConnectionHandle, C2EEvent)>,
+    c2e_event_tx: Sender<(ConnectionHandle, C2EEvent)>,
 
     connections: HashMap<ConnectionHandle, HeldConnection>,
 }
 
 struct HeldConnection {
-    endp_event_tx: Sender<EndpointEvent>,
+    e2c_event_tx: Sender<E2CEvent>,
 }
 
 struct DgramRecv {
@@ -371,8 +371,8 @@ async fn driver_task(
             }
         };
 
-        let quinn_recv = async {
-            match state.conn_event_rx.recv().await {
+        let conn_events = async {
+            match state.c2e_event_rx.recv().await {
                 Ok(_) => todo!(),
                 Err(_) => todo!(),
             }
@@ -380,7 +380,7 @@ async fn driver_task(
 
         Race::new((
             pin!(dgram_recv),
-            pin!(quinn_recv),
+            pin!(conn_events),
         )).await
     }
 }

@@ -4,7 +4,7 @@ use async_task::Task;
 use bevy_ecs::prelude::*;
 use bevy_stardust::prelude::*;
 use quinn_proto::{ConnectionHandle, EndpointEvent};
-use crate::{endpoint::Endpoint, EndpointError};
+use crate::{endpoint::Endpoint, events::C2EEvent, EndpointError};
 
 /// A unique handle to a QUIC connection.
 /// 
@@ -65,7 +65,7 @@ struct State {
 
     quinn: quinn_proto::Connection,
 
-    quinn_event_tx: Sender<(ConnectionHandle, EndpointEvent)>,
+    quinn_event_tx: Sender<(ConnectionHandle, C2EEvent)>,
     quinn_event_rx: Receiver<EndpointEvent>,
 
     message_incoming_tx: Sender<ChannelMessage>,
