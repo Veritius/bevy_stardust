@@ -1,8 +1,8 @@
-use std::{future::Future, net::{SocketAddr, ToSocketAddrs, UdpSocket}, pin::{pin, Pin}, sync::Arc};
+use std::{collections::HashMap, future::Future, net::{SocketAddr, ToSocketAddrs, UdpSocket}, pin::{pin, Pin}, sync::Arc};
 use async_channel::{Receiver, Sender};
 use async_io::Async;
 use async_task::Task;
-use quinn_proto::{crypto::ServerConfig, EndpointConfig, TransportConfig};
+use quinn_proto::{crypto::ServerConfig, ConnectionHandle, EndpointConfig, EndpointEvent, TransportConfig};
 use crate::{futures::Race, taskpool::{get_task_pool, NetworkTaskPool}};
 
 /// A builder for an [`Endpoint`].
@@ -225,6 +225,7 @@ impl Endpoint {
         // Create channels for communication
         let (io_recv_tx, io_recv_rx) = async_channel::unbounded();
         let (io_send_tx, io_send_rx) = async_channel::unbounded();
+        let (conn_event_tx, conn_event_rx) = async_channel::unbounded();
 
         // Construct the inner state
         let state = State {
@@ -245,6 +246,11 @@ impl Endpoint {
                 true,
                 None,
             ),
+
+            conn_event_rx,
+            conn_event_tx,
+
+            connections: HashMap::new(),
         };
 
         // Start driver task to run in the background
@@ -292,6 +298,15 @@ struct State {
     io_send_tx: Sender<DgramSend>,
 
     quinn_state: quinn_proto::Endpoint,
+
+    conn_event_rx: Receiver<(ConnectionHandle, EndpointEvent)>,
+    conn_event_tx: Sender<(ConnectionHandle, EndpointEvent)>,
+
+    connections: HashMap<ConnectionHandle, HeldConnection>,
+}
+
+struct HeldConnection {
+    endp_event_tx: Sender<EndpointEvent>,
 }
 
 async fn io_task(
@@ -348,5 +363,21 @@ struct DgramSend {
 async fn driver_task(
     state: State,
 ) -> EndpointError {
-    todo!()
+    loop {
+        let dgram_recv = async {
+            match state.io_recv_rx.recv().await {
+                Ok(_) => todo!(),
+                Err(_) => todo!(),
+            }
+        };
+
+        let quinn_recv = async {
+            todo!()
+        };
+
+        Race::new((
+            pin!(dgram_recv),
+            pin!(quinn_recv),
+        )).await
+    }
 }

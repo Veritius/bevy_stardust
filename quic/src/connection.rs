@@ -3,6 +3,7 @@ use async_channel::{Receiver, Sender};
 use async_task::Task;
 use bevy_ecs::prelude::*;
 use bevy_stardust::prelude::*;
+use quinn_proto::{ConnectionHandle, EndpointEvent};
 use crate::{endpoint::Endpoint, EndpointError};
 
 /// A unique handle to a QUIC connection.
@@ -61,6 +62,11 @@ pub enum ConnectionError {
 
 struct State {
     endpoint: Endpoint,
+
+    quinn: quinn_proto::Connection,
+
+    quinn_event_tx: Sender<(ConnectionHandle, EndpointEvent)>,
+    quinn_event_rx: Receiver<EndpointEvent>,
 
     message_incoming_tx: Sender<ChannelMessage>,
     message_outgoing_rx: Receiver<ChannelMessage>,
