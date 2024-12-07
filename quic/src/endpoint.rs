@@ -430,26 +430,26 @@ impl Future for Driver {
         let state = &mut self.0;
 
         match pin!(state.close_signal_rx.recv()).poll(cx) {
-            Poll::Pending => todo!(),
+            Poll::Pending => { /* Do nothing */ },
             Poll::Ready(Ok(signal)) => handle_close_signal(state, signal),
             Poll::Ready(Err(_)) => todo!(),
         }
 
         match pin!(state.c2e_event_rx.recv()).poll(cx) {
             Poll::Ready(Ok((handle, event))) => handle_c2e_event(state, handle, event),
-            Poll::Pending => todo!(),
+            Poll::Pending => { /* Do nothing */ },
             Poll::Ready(Err(_)) => todo!(),
         }
 
         match pin!(state.io_recv_rx.recv()).poll(cx) {
             Poll::Ready(Ok(dgram)) => handle_dgram_recv(state, dgram),
-            Poll::Pending => todo!(),
+            Poll::Pending => { /* Do nothing */ },
             Poll::Ready(Err(_)) => todo!(),
         }
 
         match pin!(state.outgoing_request_rx.recv()).poll(cx) {
             Poll::Ready(Ok(attempt)) => handle_out_request(state, attempt),
-            Poll::Pending => todo!(),
+            Poll::Pending => { /* Do nothing */ },
             Poll::Ready(Err(_)) => todo!(),
         }
 
