@@ -20,6 +20,7 @@ use crate::{endpoint::Endpoint, events::C2EEvent, EndpointError};
 pub struct Connection {
     task: Task<()>,
 
+    close_signal_tx: Sender<CloseSignal>,
     message_incoming_rx: Receiver<ChannelMessage>,
     message_outgoing_tx: Sender<ChannelMessage>,
 }
@@ -39,7 +40,12 @@ impl Connection {
     /// If the connection is the only holder of an [`Endpoint`] handle,
     /// the endpoint will also shut down shortly after.
     pub fn close(&self) {
-        todo!()
+        // We send an event to the state object to shut it down.
+        // If there's an error, it means the connection is either
+        // already closing or closed, so we can safely ignore it.
+        let _ = self.close_signal_tx.try_send(CloseSignal {
+
+        });
     }
 }
 
@@ -61,6 +67,8 @@ pub enum ConnectionError {
 }
 
 struct State {
+    close_signal_rx: Receiver<CloseSignal>,
+
     endpoint: Endpoint,
 
     quinn: quinn_proto::Connection,
@@ -70,6 +78,10 @@ struct State {
 
     message_incoming_tx: Sender<ChannelMessage>,
     message_outgoing_rx: Receiver<ChannelMessage>,
+}
+
+struct CloseSignal {
+
 }
 
 struct Driver {

@@ -226,9 +226,12 @@ impl Endpoint {
         let (io_recv_tx, io_recv_rx) = async_channel::unbounded();
         let (io_send_tx, io_send_rx) = async_channel::unbounded();
         let (conn_event_tx, conn_event_rx) = async_channel::unbounded();
+        let (close_signal_tx, close_signal_rx) = async_channel::unbounded();
 
         // Construct the inner state
         let state = State {
+            close_signal_rx,
+
             io_socket: socket.clone(),
 
             io_task: task_pool.spawn(io_task(
@@ -261,12 +264,19 @@ impl Endpoint {
         // Return shared endpoint thing
         return Ok(Endpoint(Arc::new(Handle {
             driver,
+
+            close_signal_tx,
         })));
     }
 
     /// Gracefully closes all connections and shuts down the endpoint.
     pub fn close(&self) {
-        todo!()
+        // We send an event to the state object to shut it down.
+        // If there's an error, it means the endpoint is either
+        // already closing or closed, so we can safely ignore it.
+        let _ = self.0.close_signal_tx.send(CloseSignal {
+
+        });
     }
 }
 
@@ -288,9 +298,13 @@ impl From<std::io::Error> for EndpointError {
 
 struct Handle {
     driver: Task<EndpointError>,
+
+    close_signal_tx: Sender<CloseSignal>,
 }
 
 struct State {
+    close_signal_rx: Receiver<CloseSignal>,
+
     io_socket: Arc<Async<UdpSocket>>,
     io_task: Task<Result<(), std::io::Error>>,
 
@@ -307,6 +321,10 @@ struct State {
 
 struct HeldConnection {
     e2c_event_tx: Sender<E2CEvent>,
+}
+
+struct CloseSignal {
+
 }
 
 struct DgramRecv {
