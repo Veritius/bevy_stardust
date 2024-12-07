@@ -370,6 +370,21 @@ struct DgramSend {
     payload: Bytes,
 }
 
+pub(crate) struct ConnectionDgramSender {
+    address: SocketAddr,
+    sender: Sender<DgramSend>,
+}
+
+impl ConnectionDgramSender {
+    pub fn send(&self, payload: Bytes) {
+        // Blocking sends should be fine since the channel is unbounded
+        let _ = self.sender.send_blocking(DgramSend {
+            destination: self.address,
+            payload,
+        });
+    }
+}
+
 async fn io_task(
     socket: Arc<Async<UdpSocket>>,
     io_recv_tx: Sender<DgramRecv>,
@@ -554,6 +569,9 @@ fn handle_out_request(
         },
     };
 
+    // Extract some data from the connection before we lose access
+    let address = quinn.remote_address();
+
     // Construct channels for exchanging messages
     let c2e_event_tx = C2EEventSender::new(handle, state.c2e_event_tx.clone());
     let (e2c_event_tx, e2c_event_rx) = async_channel::unbounded();
@@ -563,12 +581,16 @@ fn handle_out_request(
     // so we have to handle that case. Also, funny closure magic
     // so we can use the ? operator. It probably gets optimised out
     // so I don't really care. One day we'll have try blocks...
-    if (move || -> Result<(), ()> {
+    if (|| -> Result<(), ()> {
         // Notify the sender. Blocking sends should be fine since the channel is only filled here.
         attempt.tx.send_blocking(ConnectionAttemptResponse::Accepted(ConnectionAccepted {
             quinn,
             c2e_event_tx,
             e2c_event_rx,
+            dgram_tx: ConnectionDgramSender {
+                address,
+                sender: state.io_send_tx.clone(),
+            },
         })).map_err(|_| ())?;
 
         // all messages successfully sent

@@ -4,7 +4,7 @@ use async_task::Task;
 use bevy_ecs::prelude::*;
 use bevy_stardust::prelude::*;
 use quinn_proto::{ClientConfig, ConnectionHandle, EndpointEvent};
-use crate::{endpoint::Endpoint, events::{C2EEvent, C2EEventSender, E2CEvent}, taskpool::get_task_pool};
+use crate::{endpoint::{ConnectionDgramSender, Endpoint}, events::{C2EEvent, C2EEventSender, E2CEvent}, taskpool::get_task_pool};
 
 /// A unique handle to a QUIC connection.
 /// 
@@ -155,6 +155,8 @@ pub(crate) struct ConnectionAccepted {
 
     pub c2e_event_tx: C2EEventSender,
     pub e2c_event_rx: Receiver<E2CEvent>,
+
+    pub dgram_tx: ConnectionDgramSender,
 }
 
 struct ConnectionAttempt {
