@@ -601,6 +601,11 @@ fn handle_dgram_recv(
                     state.connections.insert(handle, HeldConnection {
                         e2c_event_tx,
                     });
+
+                    // Throw the connection into the queue for the user to pick up
+                    // Blocking send is fine since the channel is unbounded
+                    // We can discard the result because if this fails, the endpoint is being dropped
+                    let _ = state.incoming_connect_tx.send_blocking(connection);
                 },
 
                 Err(err) => {
