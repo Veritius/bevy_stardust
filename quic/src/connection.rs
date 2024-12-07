@@ -1,9 +1,9 @@
-use std::{future::Future, net::SocketAddr, pin::{pin, Pin}, sync::Arc, task::{Context, Poll}};
+use std::{net::SocketAddr, pin::pin, sync::Arc};
 use async_channel::{Receiver, Sender};
 use async_task::Task;
 use bevy_ecs::prelude::*;
 use bevy_stardust::prelude::*;
-use quinn_proto::{ConnectionHandle, EndpointEvent};
+use quinn_proto::ConnectionHandle;
 use crate::{endpoint::Endpoint, events::{C2EEvent, E2CEvent}, futures::Race, EndpointError};
 
 /// A unique handle to a QUIC connection.

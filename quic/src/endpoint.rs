@@ -2,7 +2,7 @@ use std::{collections::HashMap, future::Future, net::{SocketAddr, ToSocketAddrs,
 use async_channel::{Receiver, Sender};
 use async_io::Async;
 use async_task::Task;
-use quinn_proto::{crypto::ServerConfig, ConnectionHandle, EndpointConfig, EndpointEvent, TransportConfig};
+use quinn_proto::{crypto::ServerConfig, ConnectionHandle, EndpointConfig, TransportConfig};
 use crate::{events::{C2EEvent, E2CEvent}, futures::Race, taskpool::{get_task_pool, NetworkTaskPool}};
 
 /// A builder for an [`Endpoint`].
