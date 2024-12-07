@@ -330,7 +330,7 @@ async fn io_task(
             }
         };
 
-        Race::<(), _>::new((
+        Race::new((
             pin!(socket_poller),
             pin!(send_poller),
         )).await;
