@@ -372,7 +372,10 @@ async fn driver_task(
         };
 
         let quinn_recv = async {
-            todo!()
+            match state.conn_event_rx.recv().await {
+                Ok(_) => todo!(),
+                Err(_) => todo!(),
+            }
         };
 
         Race::new((
