@@ -2,7 +2,8 @@ use std::{collections::HashMap, future::Future, net::{SocketAddr, ToSocketAddrs,
 use async_task::Task;
 use async_channel::{Receiver, Sender};
 use async_io::Async;
-use quinn_proto::{crypto::ServerConfig, ConnectionHandle, EndpointConfig, EndpointEvent, TransportConfig};
+use bytes::{Bytes, BytesMut};
+use quinn_proto::{crypto::ServerConfig, ConnectionHandle, DatagramEvent, EndpointConfig, EndpointEvent, TransportConfig};
 use crate::{connection::{ConnectError, ConnectionAccepted, ConnectionAttemptResponse, OutgoingConnectionAttempt}, events::{C2EEvent, C2EEventSender, E2CEvent}, futures::Race, taskpool::{get_task_pool, NetworkTaskPool}, ConnectionError};
 
 /// A builder for an [`Endpoint`].
@@ -352,10 +353,12 @@ struct CloseSignal {
 
 struct DgramRecv {
     origin: SocketAddr,
+    payload: BytesMut,
 }
 
 struct DgramSend {
-    target: SocketAddr,
+    destination: SocketAddr,
+    payload: Bytes,
 }
 
 async fn io_task(
@@ -371,6 +374,11 @@ async fn io_task(
             match socket.recv_from(&mut scratch[..]).await {
                 Ok((length, origin)) => match io_recv_tx.send(DgramRecv {
                     origin,
+                    payload: {
+                        let mut buf = BytesMut::with_capacity(length);
+                        buf.copy_from_slice(&scratch[..length]);
+                        buf
+                    },
                 }).await {
                     Ok(_) => { /* Do nothing */ },
                     Err(_) => todo!(),
@@ -383,8 +391,8 @@ async fn io_task(
         let send_poller = async {
             match io_send_rx.recv().await {
                 Ok(dgram) => match socket.send_to(
-                    todo!(),
-                    dgram.target,
+                    &dgram.payload,
+                    dgram.destination,
                 ).await {
                     Ok(_) => { /* Do nothing */ }
                     Err(_) => todo!(),
@@ -460,7 +468,56 @@ fn handle_dgram_recv(
     state: &mut State,
     dgram: DgramRecv,
 ) {
-    todo!()
+    let mut scratch = Vec::new();
+
+    match state.quinn.handle(
+        Instant::now(),
+        dgram.origin,
+        None, // TODO: Figure out what this does
+        None, // TODO: ECN with async_io/async_net
+        dgram.payload,
+        &mut scratch,
+    ) {
+        // Connection event intended for a connection we're taking care of
+        Some(DatagramEvent::ConnectionEvent(handle, event)) => {
+            // Retrieve the connection from the map so we can use its channels
+            // This shouldn't panic as long as we clean up after ourselves well
+            let connection = state.connections.get(&handle).unwrap();
+
+            // This channel is unbounded, so it should be fine to just send 
+            let _ = connection.e2c_event_tx.send_blocking(E2CEvent::Quinn(event));
+        },
+
+        // An incoming connection can be made
+        Some(DatagramEvent::NewConnection(incoming)) => {
+            match state.quinn.accept(
+                incoming,
+                Instant::now(),
+                &mut scratch,
+                None,
+            ) {
+                Ok((handle, quinn)) => {
+                    todo!()
+                },
+
+                Err(err) => {
+                    todo!()
+                },
+            }
+        },
+
+        // Endpoint wants to send a datagram, no strings attached
+        Some(DatagramEvent::Response(transmit)) => {
+            // Blocking sends should be fine since the channel is unbounded
+            let _ = state.io_send_tx.send_blocking(DgramSend {
+                destination: transmit.destination,
+                payload: Bytes::copy_from_slice(&scratch[..transmit.size])
+            });
+        }
+
+        // No side effects.
+        None => {},
+    }
 }
 
 fn handle_out_request(
