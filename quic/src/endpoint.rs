@@ -232,49 +232,54 @@ impl Endpoint {
         let (outgoing_request_tx, outgoing_request_rx) = async_channel::unbounded();
         let (incoming_connect_tx, incoming_connect_rx) = async_channel::unbounded();
 
-        // Construct the inner state
-        let state = State {
-            handle: todo!(),
+        // we have to do the next steps in a closure because of a cyclic reference
+        let handle = Arc::new_cyclic(move |handle| {
+            // Construct the inner state
+            let state = State {
+                handle: handle.clone(),
 
-            close_signal_rx,
-            outgoing_request_rx,
-            incoming_connect_tx,
+                close_signal_rx,
+                outgoing_request_rx,
+                incoming_connect_tx,
 
-            io_socket: socket.clone(),
+                io_socket: socket.clone(),
 
-            io_task: task_pool.spawn(io_task(
-                socket,
-                io_recv_tx,
-                io_send_rx
-            )),
+                io_task: task_pool.spawn(io_task(
+                    socket,
+                    io_recv_tx,
+                    io_send_rx
+                )),
 
-            io_recv_rx,
-            io_send_tx,
+                io_recv_rx,
+                io_send_tx,
 
-            quinn: quinn_proto::Endpoint::new(
-                config,
-                server_config,
-                true,
-                None,
-            ),
+                quinn: quinn_proto::Endpoint::new(
+                    config,
+                    server_config,
+                    true,
+                    None,
+                ),
 
-            c2e_event_rx: conn_event_rx,
-            c2e_event_tx: conn_event_tx,
+                c2e_event_rx: conn_event_rx,
+                c2e_event_tx: conn_event_tx,
 
-            connections: HashMap::new(),
-        };
+                connections: HashMap::new(),
+            };
 
-        // Start driver task to run in the background
-        let driver = task_pool.spawn(Driver(state));
+            // Start driver task to run in the background
+            let driver = task_pool.spawn(Driver(state));
 
-        // Return shared endpoint thing
-        return Ok(Endpoint(Arc::new(Handle {
-            driver,
+            Handle {
+                driver,
 
-            close_signal_tx,
-            outgoing_request_tx,
-            incoming_connect_rx,
-        })));
+                close_signal_tx,
+                outgoing_request_tx,
+                incoming_connect_rx,
+            }
+        });
+
+        // Return endpoint handle
+        return Ok(Endpoint(handle));
     }
 
     /// Gracefully closes all connections and shuts down the endpoint.
