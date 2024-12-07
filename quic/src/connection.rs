@@ -93,6 +93,42 @@ impl Connection {
         };
     }
 
+    pub(crate) fn new_inner(
+        endpoint: Endpoint,
+        data: ConnectionAccepted,
+    ) -> Connection {
+        // Channels for communication
+        let (close_signal_tx, close_signal_rx) = async_channel::bounded(1);
+        let (message_incoming_tx, message_incoming_rx) = async_channel::unbounded();
+        let (message_outgoing_tx, message_outgoing_rx) = async_channel::unbounded();
+
+        let state = State {
+            close_signal_rx,
+            endpoint,
+            dgram_tx: data.dgram_tx,
+            quinn: data.quinn,
+            c2e_event_tx: data.c2e_event_tx,
+            e2c_event_rx: data.e2c_event_rx,
+            message_incoming_tx,
+            message_outgoing_rx,
+        };
+
+        // get the task pool so we can spawn tasks
+        let task_pool = get_task_pool();
+
+        // Spawn the driver directly since we've already constructed the endpoint
+        let task = task_pool.spawn(Driver(state));
+
+        // Return component handle thingy
+        return Connection {
+            task,
+
+            close_signal_tx,
+            message_incoming_rx,
+            message_outgoing_tx,
+        };
+    }
+
     /// Gracefully closes the connection.
     /// 
     /// If the connection is the only holder of an [`Endpoint`] handle,
@@ -110,6 +146,9 @@ impl Connection {
 /// An error returned during the creation of a [`Connection`].
 #[derive(Debug)]
 pub enum ConnectError {
+    /// The endpoint this connection relied on was closed.
+    EndpointClosed,
+
     /// An error relating to the QUIC protocol.
     Quic(quinn_proto::ConnectError),
 }
@@ -120,7 +159,7 @@ pub enum ConnectionError {
     /// Error returned while creating an endpoint.
     ConnectError(ConnectError),
 
-    /// The endpoint this connection relied was closed.
+    /// The endpoint this connection relied on was closed.
     EndpointClosed,
 
     /// The transport protocol was violated.

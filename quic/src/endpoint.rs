@@ -4,7 +4,7 @@ use async_channel::{Receiver, Sender};
 use async_io::Async;
 use bytes::{Bytes, BytesMut};
 use quinn_proto::{crypto::ServerConfig, ConnectionHandle, DatagramEvent, EndpointConfig, EndpointEvent, TransportConfig};
-use crate::{connection::{ConnectError, ConnectionAccepted, ConnectionAttemptResponse, OutgoingConnectionAttempt}, events::{C2EEvent, C2EEventSender, E2CEvent}, futures::Race, taskpool::{get_task_pool, NetworkTaskPool}, ConnectionError};
+use crate::{connection::{ConnectError, ConnectionAccepted, ConnectionAttemptResponse, OutgoingConnectionAttempt}, events::{C2EEvent, C2EEventSender, E2CEvent}, futures::Race, taskpool::{get_task_pool, NetworkTaskPool}, Connection, ConnectionError};
 
 /// A builder for an [`Endpoint`].
 pub struct EndpointBuilder<S = ()> {
@@ -230,11 +230,13 @@ impl Endpoint {
         let (conn_event_tx, conn_event_rx) = async_channel::unbounded();
         let (close_signal_tx, close_signal_rx) = async_channel::bounded(1);
         let (outgoing_request_tx, outgoing_request_rx) = async_channel::unbounded();
+        let (incoming_connect_tx, incoming_connect_rx) = async_channel::unbounded();
 
         // Construct the inner state
         let state = State {
             close_signal_rx,
             outgoing_request_rx,
+            incoming_connect_tx,
 
             io_socket: socket.clone(),
 
@@ -269,6 +271,7 @@ impl Endpoint {
 
             close_signal_tx,
             outgoing_request_tx,
+            incoming_connect_rx,
         })));
     }
 
@@ -280,6 +283,30 @@ impl Endpoint {
         let _ = self.0.close_signal_tx.send(CloseSignal {
 
         });
+    }
+
+    /// Polls for any new, incoming connections.
+    /// This should be done once a frame.
+    pub fn poll_incoming(&self) -> Option<Connection> {
+        self.0.incoming_connect_rx.try_recv().ok()
+    }
+
+    /// A future that polls for any new, incoming connections.
+    /// 
+    /// Returns `Ok` when a new connection appears, and `Err` when the endpoint can no longer produce connections.
+    pub async fn wait_incoming(&self) -> Result<Connection, ConnectError> {
+        let msg_recv = async {
+            match self.0.incoming_connect_rx.recv().await {
+                Ok(c) => Ok(c),
+                Err(_) => Err(ConnectError::EndpointClosed),
+            }
+        };
+
+        let ept_close = async {
+            todo!()
+        };
+
+        futures_lite::FutureExt::or(msg_recv, ept_close).await
     }
 }
 
@@ -313,11 +340,13 @@ struct Handle {
 
     close_signal_tx: Sender<CloseSignal>,
     outgoing_request_tx: Sender<OutgoingConnectionAttempt>,
+    incoming_connect_rx: Receiver<Connection>,
 }
 
 struct State {
     close_signal_rx: Receiver<CloseSignal>,
     outgoing_request_rx: Receiver<OutgoingConnectionAttempt>,
+    incoming_connect_tx: Sender<Connection>,
 
     io_socket: Arc<Async<UdpSocket>>,
     io_task: Task<Result<(), std::io::Error>>,
