@@ -487,7 +487,7 @@ fn handle_out_request(
     let (e2c_event_tx, e2c_event_rx) = async_channel::unbounded();
 
     // Try to notify the receiver that they've been accepted
-    // Sending messages can fail if the receiver is dropped.
+    // Sending messages can fail if the receiver is dropped,
     // so we have to handle that case. Also, funny closure magic
     // so we can use the ? operator. It probably gets optimised out
     // so I don't really care. One day we'll have try blocks...
