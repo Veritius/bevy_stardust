@@ -1,9 +1,9 @@
-use std::{collections::HashMap, future::Future, net::{SocketAddr, ToSocketAddrs, UdpSocket}, pin::{pin, Pin}, sync::Arc, task::{Context, Poll}};
+use std::{collections::HashMap, future::Future, net::{SocketAddr, ToSocketAddrs, UdpSocket}, pin::{pin, Pin}, sync::Arc, task::{Context, Poll}, time::Instant};
 use async_task::Task;
 use async_channel::{Receiver, Sender};
 use async_io::Async;
-use quinn_proto::{crypto::ServerConfig, ConnectionHandle, EndpointConfig, TransportConfig};
-use crate::{connection::OutgoingConnectionAttempt, events::{C2EEvent, E2CEvent}, futures::Race, taskpool::{get_task_pool, NetworkTaskPool}};
+use quinn_proto::{crypto::ServerConfig, ConnectionHandle, EndpointConfig, EndpointEvent, TransportConfig};
+use crate::{connection::{ConnectError, ConnectionAccepted, ConnectionAttemptResponse, OutgoingConnectionAttempt}, events::{C2EEvent, C2EEventSender, E2CEvent}, futures::Race, taskpool::{get_task_pool, NetworkTaskPool}, ConnectionError};
 
 /// A builder for an [`Endpoint`].
 pub struct EndpointBuilder<S = ()> {
@@ -246,7 +246,7 @@ impl Endpoint {
             io_recv_rx,
             io_send_tx,
 
-            quinn_state: quinn_proto::Endpoint::new(
+            quinn: quinn_proto::Endpoint::new(
                 config,
                 server_config,
                 true,
@@ -324,12 +324,19 @@ struct State {
     io_recv_rx: Receiver<DgramRecv>,
     io_send_tx: Sender<DgramSend>,
 
-    quinn_state: quinn_proto::Endpoint,
+    quinn: quinn_proto::Endpoint,
 
     c2e_event_rx: Receiver<(ConnectionHandle, C2EEvent)>,
     c2e_event_tx: Sender<(ConnectionHandle, C2EEvent)>,
 
     connections: HashMap<ConnectionHandle, HeldConnection>,
+}
+
+impl State {
+    fn remove_connection(&mut self, handle: ConnectionHandle) {
+        self.quinn.handle_event(handle, EndpointEvent::drained());
+        self.connections.remove(&handle);
+    }
 }
 
 // Needed for the driver future
@@ -460,5 +467,51 @@ fn handle_out_request(
     state: &mut State,
     attempt: OutgoingConnectionAttempt,
 ) {
-    todo!()
+    // Try to create a connection through Quinn first
+    let (handle, quinn) = match state.quinn.connect(
+        Instant::now(),
+        attempt.data.config,
+        attempt.data.remote_address,
+        &attempt.data.server_name,
+    ) {
+        Ok(v) => v,
+        Err(err) => {
+            let err = ConnectionError::ConnectError(ConnectError::Quic(err));
+            let _ = attempt.tx.send(ConnectionAttemptResponse::Rejected(err));
+            return;
+        },
+    };
+
+    // Construct channels for exchanging messages
+    let c2e_event_tx = C2EEventSender::new(handle, state.c2e_event_tx.clone());
+    let (e2c_event_tx, e2c_event_rx) = async_channel::unbounded();
+
+    // Try to notify the receiver that they've been accepted
+    // Sending messages can fail if the receiver is dropped.
+    // so we have to handle that case. Also, funny closure magic
+    // so we can use the ? operator. It probably gets optimised out
+    // so I don't really care. One day we'll have try blocks...
+    if (move || -> Result<(), ()> {
+        // Notify the sender. Blocking sends should be fine since the channel is only filled here.
+        attempt.tx.send_blocking(ConnectionAttemptResponse::Accepted(ConnectionAccepted {
+            quinn,
+            c2e_event_tx,
+            e2c_event_rx,
+        })).map_err(|_| ())?;
+
+        // all messages successfully sent
+        return Ok(());
+    })().is_err() {
+        // We have to do some cleanup here, like letting the endpoint know that the connection has now been removed.
+        // We don't use State::remove_connection as that does unnecessary work, since we haven't fully added the connection.
+        state.quinn.handle_event(handle, EndpointEvent::drained());
+
+        // All done.
+        return;
+    };
+
+    // Add connection to the map
+    state.connections.insert(handle, HeldConnection {
+        e2c_event_tx,
+    });
 }

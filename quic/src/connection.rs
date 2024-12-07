@@ -107,9 +107,19 @@ impl Connection {
     }
 }
 
+/// An error returned during the creation of a [`Connection`].
+#[derive(Debug)]
+pub enum ConnectError {
+    /// An error relating to the QUIC protocol.
+    Quic(quinn_proto::ConnectError),
+}
+
 /// An error returned during the creation or execution of a [`Connection`].
 #[derive(Debug)]
 pub enum ConnectionError {
+    /// Error returned while creating an endpoint.
+    ConnectError(ConnectError),
+
     /// The endpoint this connection relied was closed.
     EndpointClosed,
 
@@ -192,7 +202,8 @@ impl Drop for State {
     fn drop(&mut self) {
         // Notify the endpoint of the state object being dropped
         // This is necessary to free up memory in the endpoint
-        self.c2e_event_tx.send_blocking(C2EEvent::Quinn(
+        // Blocking sends should be fine since the channel is unbounded
+        let _ = self.c2e_event_tx.send_blocking(C2EEvent::Quinn(
             EndpointEvent::drained()
         ));
     }
