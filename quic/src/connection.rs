@@ -252,9 +252,6 @@ impl Drop for State {
     }
 }
 
-// Needed for the driver future
-impl Unpin for State {}
-
 struct CloseSignal {
 
 }

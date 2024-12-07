@@ -1,4 +1,4 @@
-use std::{collections::HashMap, future::Future, net::{SocketAddr, ToSocketAddrs, UdpSocket}, pin::{pin, Pin}, sync::{Arc, Weak}, task::{Context, Poll}, time::Instant};
+use std::{collections::HashMap, future::Future, marker::PhantomPinned, net::{SocketAddr, ToSocketAddrs, UdpSocket}, pin::{pin, Pin}, sync::{Arc, Weak}, task::{Context, Poll}, time::Instant};
 use async_task::Task;
 use async_channel::{Receiver, Sender};
 use async_io::Async;
@@ -262,6 +262,8 @@ impl Endpoint {
             c2e_event_tx: conn_event_tx,
 
             connections: HashMap::new(),
+
+            _pp: PhantomPinned,
         };
 
         // Start driver task to run in the background
@@ -364,6 +366,8 @@ struct State {
     c2e_event_tx: Sender<(ConnectionHandle, C2EEvent)>,
 
     connections: HashMap<ConnectionHandle, HeldConnection>,
+
+    _pp: PhantomPinned,
 }
 
 impl State {
@@ -381,9 +385,6 @@ impl State {
         let _ = connection.e2c_event_tx.send_blocking(event);
     }
 }
-
-// Needed for the driver future
-impl Unpin for State {}
 
 struct HeldConnection {
     e2c_event_tx: Sender<E2CEvent>,
