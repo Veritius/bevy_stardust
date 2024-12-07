@@ -429,6 +429,7 @@ async fn driver_task(
             pin!(close_signal),
             pin!(dgram_recv),
             pin!(conn_events),
+            pin!(out_requests),
         )).await
     }
 }
