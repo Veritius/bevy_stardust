@@ -1,10 +1,10 @@
-use std::{future::Future, net::SocketAddr, pin::pin, sync::Arc, task::Poll};
+use std::{future::Future, net::SocketAddr, pin::{pin, Pin}, sync::Arc, task::{Context, Poll}};
 use async_channel::{Receiver, Sender};
 use async_task::Task;
 use bevy_ecs::prelude::*;
 use bevy_stardust::prelude::*;
 use quinn_proto::{ClientConfig, ConnectionHandle};
-use crate::{endpoint::Endpoint, events::{C2EEvent, E2CEvent}, futures::Race, taskpool::get_task_pool, EndpointError};
+use crate::{endpoint::Endpoint, events::{C2EEvent, E2CEvent}, taskpool::get_task_pool};
 
 /// A unique handle to a QUIC connection.
 /// 
@@ -18,7 +18,7 @@ use crate::{endpoint::Endpoint, events::{C2EEvent, E2CEvent}, futures::Race, tas
 /// When the connection finishes, the handle is dropped, even if this type still exists.
 #[derive(Component)]
 pub struct Connection {
-    task: Task<()>,
+    task: Task<Result<(), ConnectionError>>,
 
     close_signal_tx: Sender<CloseSignal>,
     message_incoming_rx: Receiver<ChannelMessage>,
@@ -110,8 +110,8 @@ impl Connection {
 /// An error returned during the creation or execution of a [`Connection`].
 #[derive(Debug)]
 pub enum ConnectionError {
-    /// The endpoint this connection relied on shut down.
-    EndpointError(EndpointError),
+    /// The endpoint this connection relied was closed.
+    EndpointClosed,
 
     /// The transport protocol was violated.
     TransportError {
@@ -137,7 +137,7 @@ pub(crate) struct ConnectionAttemptData {
 
 pub(crate) enum ConnectionAttemptResponse {
     Accepted(ConnectionAccepted),
-    Rejected(ConnectionRejected),
+    Rejected(ConnectionError),
 }
 
 pub(crate) struct ConnectionAccepted {
@@ -145,10 +145,6 @@ pub(crate) struct ConnectionAccepted {
 
     pub c2e_event_tx: Sender<(ConnectionHandle, C2EEvent)>,
     pub e2c_event_rx: Receiver<E2CEvent>,
-}
-
-pub(crate) struct ConnectionRejected {
-
 }
 
 struct ConnectionAttempt {
@@ -168,9 +164,9 @@ impl Future for ConnectionAttempt {
 
             // Channel is dropped and empty
             // Fabricate a response saying we were rejected
-            Poll::Ready(Err(_)) => Poll::Ready(ConnectionAttemptResponse::Rejected(ConnectionRejected {
-
-            })),
+            Poll::Ready(Err(_)) => Poll::Ready(ConnectionAttemptResponse::Rejected(
+                ConnectionError::EndpointClosed,
+            )),
 
             // Nothing yet, keep waiting
             Poll::Pending => Poll::Pending,
@@ -192,6 +188,9 @@ struct State {
     message_outgoing_rx: Receiver<ChannelMessage>,
 }
 
+// Needed for the driver future
+impl Unpin for State {}
+
 struct CloseSignal {
 
 }
@@ -206,7 +205,7 @@ async fn build_task(
     endpoint: Endpoint,
     attempt: ConnectionAttempt,
     bundle: ChannelBundle,
-) {
+) -> Result<(), ConnectionError> {
     // Wait for the response of the endpoint
     let accepted = match attempt.await {
         // directly return this and continue with the rest of the code
@@ -214,7 +213,7 @@ async fn build_task(
 
         // if we get rejected, we just end the task right here
         ConnectionAttemptResponse::Rejected(response) => {
-            return;
+            return Err(todo!());
         },
     };
 
@@ -230,38 +229,33 @@ async fn build_task(
     };
 
     // Run the driver task to completion
-    driver_task(state).await;
+    return Driver(state).await;
 }
 
-async fn driver_task(
-    state: State,
-) -> EndpointError {
-    loop {
-        let close_signal = async {
-            match state.close_signal_rx.recv().await {
-                Ok(_) => todo!(),
-                Err(_) => todo!(),
-            };
-        };
+struct Driver(State);
 
-        let event_recv = async {
-            match state.e2c_event_rx.recv().await {
-                Ok(_) => todo!(),
-                Err(_) => todo!(),
-            };
-        };
+impl Future for Driver {
+    type Output = Result<(), ConnectionError>;
 
-        let msg_recv = async {
-            match state.message_outgoing_rx.recv().await {
-                Ok(_) => todo!(),
-                Err(_) => todo!(),
-            };
-        };
+    fn poll(
+        mut self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+    ) -> Poll<Self::Output> {
+        let state = &mut self.0;
 
-        Race::new((
-            pin!(close_signal),
-            pin!(event_recv),
-            pin!(msg_recv),
-        )).await;
+        if let Poll::Ready(signal) = pin!(state.close_signal_rx.recv()).poll(cx) {
+            todo!()
+        }
+
+        if let Poll::Ready(signal) = pin!(state.e2c_event_rx.recv()).poll(cx) {
+            todo!()
+        }
+
+        if let Poll::Ready(message) = pin!(state.message_outgoing_rx.recv()).poll(cx) {
+            todo!()
+        }
+
+        // We're not done.
+        return Poll::Pending;
     }
 }

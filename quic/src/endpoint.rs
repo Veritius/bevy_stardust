@@ -1,7 +1,7 @@
-use std::{collections::HashMap, future::Future, net::{SocketAddr, ToSocketAddrs, UdpSocket}, pin::{pin, Pin}, sync::Arc};
+use std::{collections::HashMap, future::Future, net::{SocketAddr, ToSocketAddrs, UdpSocket}, pin::{pin, Pin}, sync::Arc, task::{Context, Poll}};
+use async_task::Task;
 use async_channel::{Receiver, Sender};
 use async_io::Async;
-use async_task::Task;
 use quinn_proto::{crypto::ServerConfig, ConnectionHandle, EndpointConfig, TransportConfig};
 use crate::{connection::OutgoingConnectionAttempt, events::{C2EEvent, E2CEvent}, futures::Race, taskpool::{get_task_pool, NetworkTaskPool}};
 
@@ -260,9 +260,7 @@ impl Endpoint {
         };
 
         // Start driver task to run in the background
-        let driver = task_pool.spawn(driver_task(
-            state,
-        ));
+        let driver = task_pool.spawn(Driver(state));
 
         // Return shared endpoint thing
         return Ok(Endpoint(Arc::new(Handle {
@@ -310,7 +308,7 @@ impl From<std::io::Error> for EndpointError {
 }
 
 struct Handle {
-    driver: Task<EndpointError>,
+    driver: Task<Result<(), EndpointError>>,
 
     close_signal_tx: Sender<CloseSignal>,
     outgoing_request_tx: Sender<OutgoingConnectionAttempt>,
@@ -333,6 +331,9 @@ struct State {
 
     connections: HashMap<ConnectionHandle, HeldConnection>,
 }
+
+// Needed for the driver future
+impl Unpin for State {}
 
 struct HeldConnection {
     e2c_event_tx: Sender<E2CEvent>,
@@ -393,43 +394,34 @@ async fn io_task(
     }
 }
 
-async fn driver_task(
-    state: State,
-) -> EndpointError {
-    loop {
-        let close_signal = async {
-            match state.close_signal_rx.recv().await {
-                Ok(_) => todo!(),
-                Err(_) => todo!(),
-            }
-        };
+struct Driver(State);
 
-        let dgram_recv = async {
-            match state.io_recv_rx.recv().await {
-                Ok(_) => todo!(),
-                Err(_) => todo!(),
-            }
-        };
+impl Future for Driver {
+    type Output = Result<(), EndpointError>;
 
-        let conn_events = async {
-            match state.c2e_event_rx.recv().await {
-                Ok(_) => todo!(),
-                Err(_) => todo!(),
-            }
-        };
+    fn poll(
+        mut self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+    ) -> Poll<Self::Output> {
+        let state = &mut self.0;
 
-        let out_requests = async {
-            match state.outgoing_request_rx.recv().await {
-                Ok(_) => todo!(),
-                Err(_) => todo!(),
-            }
-        };
+        if let Poll::Ready(signal) = pin!(state.close_signal_rx.recv()).poll(cx) {
+            todo!()
+        }
 
-        Race::new((
-            pin!(close_signal),
-            pin!(dgram_recv),
-            pin!(conn_events),
-            pin!(out_requests),
-        )).await
+        if let Poll::Ready(dgram) = pin!(state.io_recv_rx.recv()).poll(cx) {
+            todo!()
+        }
+
+        if let Poll::Ready(event) = pin!(state.c2e_event_rx.recv()).poll(cx) {
+            todo!()
+        }
+
+        if let Poll::Ready(request) = pin!(state.outgoing_request_rx.recv()).poll(cx) {
+            todo!()
+        }
+
+        // We're not done.
+        return Poll::Pending;
     }
 }
