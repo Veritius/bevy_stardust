@@ -1,10 +1,10 @@
-use std::{future::Future, net::SocketAddr, pin::{pin, Pin}, sync::Arc, task::{Context, Poll}};
+use std::{future::Future, net::SocketAddr, pin::{pin, Pin}, sync::Arc, task::{Context, Poll}, time::Instant};
 use async_channel::{Receiver, Sender};
 use async_task::Task;
 use bevy_ecs::prelude::*;
 use bevy_stardust::prelude::*;
-use quinn_proto::{ClientConfig, ConnectionHandle};
-use crate::{endpoint::Endpoint, events::{C2EEvent, E2CEvent}, taskpool::get_task_pool};
+use quinn_proto::{ClientConfig, ConnectionHandle, EndpointEvent};
+use crate::{endpoint::Endpoint, events::{C2EEvent, C2EEventSender, E2CEvent}, taskpool::get_task_pool};
 
 /// A unique handle to a QUIC connection.
 /// 
@@ -143,7 +143,7 @@ pub(crate) enum ConnectionAttemptResponse {
 pub(crate) struct ConnectionAccepted {
     pub quinn: quinn_proto::Connection,
 
-    pub c2e_event_tx: Sender<(ConnectionHandle, C2EEvent)>,
+    pub c2e_event_tx: C2EEventSender,
     pub e2c_event_rx: Receiver<E2CEvent>,
 }
 
@@ -181,11 +181,21 @@ struct State {
 
     quinn: quinn_proto::Connection,
 
-    c2e_event_tx: Sender<(ConnectionHandle, C2EEvent)>,
+    c2e_event_tx: C2EEventSender,
     e2c_event_rx: Receiver<E2CEvent>,
 
     message_incoming_tx: Sender<ChannelMessage>,
     message_outgoing_rx: Receiver<ChannelMessage>,
+}
+
+impl Drop for State {
+    fn drop(&mut self) {
+        // Notify the endpoint of the state object being dropped
+        // This is necessary to free up memory in the endpoint
+        self.c2e_event_tx.send_blocking(C2EEvent::Quinn(
+            EndpointEvent::drained()
+        ));
+    }
 }
 
 // Needed for the driver future
@@ -244,7 +254,14 @@ impl Future for Driver {
         let state = &mut self.0;
 
         match pin!(state.close_signal_rx.recv()).poll(cx) {
-            Poll::Ready(Ok(signal)) => todo!(),
+            Poll::Ready(Ok(signal)) => {
+                state.quinn.close(
+                    Instant::now(),
+                    todo!(),
+                    todo!(),
+                );
+            },
+
             Poll::Ready(Err(_)) => todo!(),
             Poll::Pending => todo!(),
         }
