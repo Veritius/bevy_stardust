@@ -407,24 +407,24 @@ impl Future for Driver {
 
         match pin!(state.close_signal_rx.recv()).poll(cx) {
             Poll::Pending => todo!(),
-            Poll::Ready(Ok(signal)) => todo!(),
+            Poll::Ready(Ok(signal)) => handle_close_signal(state, signal),
             Poll::Ready(Err(_)) => todo!(),
         }
 
         match pin!(state.c2e_event_rx.recv()).poll(cx) {
-            Poll::Ready(Ok((handle, event))) => todo!(),
+            Poll::Ready(Ok((handle, event))) => handle_c2e_event(state, event),
             Poll::Pending => todo!(),
             Poll::Ready(Err(_)) => todo!(),
         }
 
         match pin!(state.io_recv_rx.recv()).poll(cx) {
-            Poll::Ready(Ok(dgram)) => todo!(),
+            Poll::Ready(Ok(dgram)) => handle_dgram_recv(state, dgram),
             Poll::Pending => todo!(),
             Poll::Ready(Err(_)) => todo!(),
         }
 
         match pin!(state.outgoing_request_rx.recv()).poll(cx) {
-            Poll::Ready(Ok(request)) => todo!(),
+            Poll::Ready(Ok(attempt)) => handle_out_request(state, attempt),
             Poll::Pending => todo!(),
             Poll::Ready(Err(_)) => todo!(),
         }
@@ -432,4 +432,32 @@ impl Future for Driver {
         // We're not done.
         return Poll::Pending;
     }
+}
+
+fn handle_close_signal(
+    state: &mut State,
+    signal: CloseSignal,
+) {
+    todo!()
+}
+
+fn handle_c2e_event(
+    state: &mut State,
+    event: C2EEvent,
+) {
+    todo!()
+}
+
+fn handle_dgram_recv(
+    state: &mut State,
+    dgram: DgramRecv,
+) {
+    todo!()
+}
+
+fn handle_out_request(
+    state: &mut State,
+    attempt: OutgoingConnectionAttempt,
+) {
+    todo!()
 }
