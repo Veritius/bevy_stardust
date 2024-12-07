@@ -580,14 +580,20 @@ fn handle_dgram_recv(
                     let c2e_event_tx = C2EEventSender::new(handle, state.c2e_event_tx.clone());
                     let (e2c_event_tx, e2c_event_rx) = async_channel::unbounded();
 
+                    // Extract some data from the connection that we won't be able to later
+                    let address = quinn.remote_address();
+
                     // Construct connection
                     let connection = Connection::new_inner(
                         Endpoint(endpoint_handle),
                         ConnectionAccepted {
                             quinn,
-                            c2e_event_tx: todo!(),
-                            e2c_event_rx: todo!(),
-                            dgram_tx: todo!(),
+                            c2e_event_tx,
+                            e2c_event_rx,
+                            dgram_tx: ConnectionDgramSender {
+                                address,
+                                sender: state.io_send_tx.clone(),
+                            },
                         },
                     );
 
