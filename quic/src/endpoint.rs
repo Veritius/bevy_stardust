@@ -338,6 +338,15 @@ impl State {
         self.quinn.handle_event(handle, EndpointEvent::drained());
         self.connections.remove(&handle);
     }
+
+    fn send_e2c_event(&self, handle: ConnectionHandle, event: E2CEvent) {
+        // Retrieve the connection from the map so we can use its channels
+        // This shouldn't panic as long as we clean up after ourselves well
+        let connection = self.connections.get(&handle).unwrap();
+
+        // This channel is unbounded, so it should be fine to just do a blocking send
+        let _ = connection.e2c_event_tx.send_blocking(event);
+    }
 }
 
 // Needed for the driver future
@@ -461,7 +470,18 @@ fn handle_c2e_event(
     handle: ConnectionHandle,
     event: C2EEvent,
 ) {
-    todo!()
+    match event {
+        // Quinn events are given directly to the inner endpoint state for handling
+        C2EEvent::Quinn(event) => {
+            if let Some(event) = state.quinn.handle_event(
+                handle,
+                event,
+            ) {
+                // Send the event to the connection
+                state.send_e2c_event(handle, E2CEvent::Quinn(event));
+            };
+        },
+    }
 }
 
 fn handle_dgram_recv(
@@ -480,12 +500,7 @@ fn handle_dgram_recv(
     ) {
         // Connection event intended for a connection we're taking care of
         Some(DatagramEvent::ConnectionEvent(handle, event)) => {
-            // Retrieve the connection from the map so we can use its channels
-            // This shouldn't panic as long as we clean up after ourselves well
-            let connection = state.connections.get(&handle).unwrap();
-
-            // This channel is unbounded, so it should be fine to just send 
-            let _ = connection.e2c_event_tx.send_blocking(E2CEvent::Quinn(event));
+            state.send_e2c_event(handle, E2CEvent::Quinn(event));
         },
 
         // An incoming connection can be made
