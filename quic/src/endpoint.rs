@@ -1,9 +1,9 @@
-use std::{future::Future, net::{SocketAddr, ToSocketAddrs, UdpSocket}, pin::Pin, sync::Arc};
+use std::{future::Future, net::{SocketAddr, ToSocketAddrs, UdpSocket}, pin::{pin, Pin}, sync::Arc};
 use async_channel::{Receiver, Sender};
 use async_io::Async;
 use async_task::Task;
 use quinn_proto::{crypto::ServerConfig, EndpointConfig, TransportConfig};
-use crate::taskpool::{get_task_pool, NetworkTaskPool};
+use crate::{futures::Race, taskpool::{get_task_pool, NetworkTaskPool}};
 
 /// A builder for an [`Endpoint`].
 pub struct EndpointBuilder<S = ()> {
@@ -330,10 +330,10 @@ async fn io_task(
             }
         };
 
-        futures_lite::FutureExt::race(
-            socket_poller,
-            send_poller,
-        ).await;
+        Race::<(), _>::new((
+            pin!(socket_poller),
+            pin!(send_poller),
+        )).await;
     }
 }
 
