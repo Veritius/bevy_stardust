@@ -309,6 +309,14 @@ struct HeldConnection {
     endp_event_tx: Sender<EndpointEvent>,
 }
 
+struct DgramRecv {
+    origin: SocketAddr,
+}
+
+struct DgramSend {
+    target: SocketAddr,
+}
+
 async fn io_task(
     socket: Arc<Async<UdpSocket>>,
     io_recv_tx: Sender<DgramRecv>,
@@ -350,14 +358,6 @@ async fn io_task(
             pin!(send_poller),
         )).await;
     }
-}
-
-struct DgramRecv {
-    origin: SocketAddr,
-}
-
-struct DgramSend {
-    target: SocketAddr,
 }
 
 async fn driver_task(
