@@ -382,6 +382,13 @@ async fn driver_task(
     state: State,
 ) -> EndpointError {
     loop {
+        let close_signal = async {
+            match state.close_signal_rx.recv().await {
+                Ok(_) => todo!(),
+                Err(_) => todo!(),
+            }
+        };
+
         let dgram_recv = async {
             match state.io_recv_rx.recv().await {
                 Ok(_) => todo!(),
@@ -397,6 +404,7 @@ async fn driver_task(
         };
 
         Race::new((
+            pin!(close_signal),
             pin!(dgram_recv),
             pin!(conn_events),
         )).await

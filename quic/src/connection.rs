@@ -1,10 +1,10 @@
-use std::{future::Future, net::SocketAddr, pin::Pin, sync::Arc, task::{Context, Poll}};
+use std::{future::Future, net::SocketAddr, pin::{pin, Pin}, sync::Arc, task::{Context, Poll}};
 use async_channel::{Receiver, Sender};
 use async_task::Task;
 use bevy_ecs::prelude::*;
 use bevy_stardust::prelude::*;
 use quinn_proto::{ConnectionHandle, EndpointEvent};
-use crate::{endpoint::Endpoint, events::C2EEvent, EndpointError};
+use crate::{endpoint::Endpoint, events::{C2EEvent, E2CEvent}, futures::Race, EndpointError};
 
 /// A unique handle to a QUIC connection.
 /// 
@@ -73,8 +73,8 @@ struct State {
 
     quinn: quinn_proto::Connection,
 
-    quinn_event_tx: Sender<(ConnectionHandle, C2EEvent)>,
-    quinn_event_rx: Receiver<EndpointEvent>,
+    c2e_event_tx: Sender<(ConnectionHandle, C2EEvent)>,
+    e2c_event_rx: Receiver<E2CEvent>,
 
     message_incoming_tx: Sender<ChannelMessage>,
     message_outgoing_rx: Receiver<ChannelMessage>,
@@ -84,17 +84,28 @@ struct CloseSignal {
 
 }
 
-struct Driver {
+
+async fn driver_task(
     state: State,
-}
+) -> EndpointError {
+    loop {
+        let close_signal = async {
+            match state.close_signal_rx.recv().await {
+                Ok(_) => todo!(),
+                Err(_) => todo!(),
+            };
+        };
 
-impl Future for Driver {
-    type Output = ();
+        let event_recv = async {
+            match state.e2c_event_rx.recv().await {
+                Ok(_) => todo!(),
+                Err(_) => todo!(),
+            };
+        };
 
-    fn poll(
-        self: Pin<&mut Self>,
-        cx: &mut Context<'_>,
-    ) -> Poll<Self::Output> {
-        todo!()
+        Race::new((
+            pin!(close_signal),
+            pin!(event_recv),
+        )).await;
     }
 }
