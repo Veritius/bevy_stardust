@@ -5,6 +5,15 @@ pub(crate) struct Race<Output, Set> {
     phantom: PhantomData<Output>,
 }
 
+impl<Output, Set> Race<Output, Set> {
+    pub fn new(futures: Set) -> Self {
+        Self {
+            futures,
+            phantom: PhantomData,
+        }
+    }
+}
+
 macro_rules! impl_race_tuple {
     ([$($t:ident:$n:tt),+]) => {
         impl<Output, $($t),+> Future for Race<Output, ($($t),+)>
