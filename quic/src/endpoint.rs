@@ -411,28 +411,22 @@ impl Future for Driver {
             Poll::Ready(Err(_)) => todo!(),
         }
 
-        loop {
-            match pin!(state.c2e_event_rx.recv()).poll(cx) {
-                Poll::Ready(Ok((handle, event))) => todo!(),
-                Poll::Pending => break,
-                Poll::Ready(Err(_)) => todo!(),
-            }
+        match pin!(state.c2e_event_rx.recv()).poll(cx) {
+            Poll::Ready(Ok((handle, event))) => todo!(),
+            Poll::Pending => todo!(),
+            Poll::Ready(Err(_)) => todo!(),
         }
 
-        loop {
-            match pin!(state.io_recv_rx.recv()).poll(cx) {
-                Poll::Ready(Ok(dgram)) => todo!(),
-                Poll::Pending => break,
-                Poll::Ready(Err(_)) => todo!(),
-            }
+        match pin!(state.io_recv_rx.recv()).poll(cx) {
+            Poll::Ready(Ok(dgram)) => todo!(),
+            Poll::Pending => todo!(),
+            Poll::Ready(Err(_)) => todo!(),
         }
 
-        loop {
-            match pin!(state.outgoing_request_rx.recv()).poll(cx) {
-                Poll::Ready(Ok(request)) => todo!(),
-                Poll::Pending => break,
-                Poll::Ready(Err(_)) => todo!(),
-            }
+        match pin!(state.outgoing_request_rx.recv()).poll(cx) {
+            Poll::Ready(Ok(request)) => todo!(),
+            Poll::Pending => todo!(),
+            Poll::Ready(Err(_)) => todo!(),
         }
 
         // We're not done.

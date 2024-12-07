@@ -259,20 +259,16 @@ impl Future for Driver {
             Poll::Ready(Err(_)) => todo!(),
         }
 
-        loop {
-            match pin!(state.e2c_event_rx.recv()).poll(cx) {
-                Poll::Ready(Ok(event)) => handle_e2c_event(state, event),
-                Poll::Pending => break,
-                Poll::Ready(Err(_)) => todo!(),
-            }
+        match pin!(state.e2c_event_rx.recv()).poll(cx) {
+            Poll::Ready(Ok(event)) => handle_e2c_event(state, event),
+            Poll::Pending => todo!(),
+            Poll::Ready(Err(_)) => todo!(),
         }
 
-        loop {
-            match pin!(state.message_outgoing_rx.recv()).poll(cx) {
-                Poll::Ready(Ok(message)) => handle_outgoing_message(state, message),
-                Poll::Pending => break,
-                Poll::Ready(Err(_)) => todo!(),
-            }   
+        match pin!(state.message_outgoing_rx.recv()).poll(cx) {
+            Poll::Ready(Ok(message)) => handle_outgoing_message(state, message),
+            Poll::Pending => todo!(),
+            Poll::Ready(Err(_)) => todo!(),
         }
 
         // We're not done.
