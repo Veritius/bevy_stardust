@@ -302,7 +302,9 @@ fn handle_e2c_event(
     state: &mut State,
     event: E2CEvent,
 ) {
-    todo!()
+    match event {
+        E2CEvent::Quinn(event) => state.quinn.handle_event(event),
+    }
 }
 
 fn handle_outgoing_message(
