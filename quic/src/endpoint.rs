@@ -3,7 +3,7 @@ use async_channel::{Receiver, Sender};
 use async_io::Async;
 use async_task::Task;
 use quinn_proto::{crypto::ServerConfig, ConnectionHandle, EndpointConfig, TransportConfig};
-use crate::{events::{C2EEvent, E2CEvent}, futures::Race, taskpool::{get_task_pool, NetworkTaskPool}};
+use crate::{connection::OutgoingConnectionAttempt, events::{C2EEvent, E2CEvent}, futures::Race, taskpool::{get_task_pool, NetworkTaskPool}};
 
 /// A builder for an [`Endpoint`].
 pub struct EndpointBuilder<S = ()> {
@@ -13,6 +13,7 @@ pub struct EndpointBuilder<S = ()> {
 
 impl EndpointBuilder<()> {
     /// Creates a new [`EndpointBuilder`].
+    #[must_use]
     pub fn new() -> EndpointBuilder::<WantsSocket> {
         EndpointBuilder {
             task_pool: get_task_pool(),
@@ -226,11 +227,13 @@ impl Endpoint {
         let (io_recv_tx, io_recv_rx) = async_channel::unbounded();
         let (io_send_tx, io_send_rx) = async_channel::unbounded();
         let (conn_event_tx, conn_event_rx) = async_channel::unbounded();
-        let (close_signal_tx, close_signal_rx) = async_channel::unbounded();
+        let (close_signal_tx, close_signal_rx) = async_channel::bounded(1);
+        let (outgoing_request_tx, outgoing_request_rx) = async_channel::unbounded();
 
         // Construct the inner state
         let state = State {
             close_signal_rx,
+            outgoing_request_rx,
 
             io_socket: socket.clone(),
 
@@ -266,6 +269,7 @@ impl Endpoint {
             driver,
 
             close_signal_tx,
+            outgoing_request_tx,
         })));
     }
 
@@ -277,6 +281,15 @@ impl Endpoint {
         let _ = self.0.close_signal_tx.send(CloseSignal {
 
         });
+    }
+}
+
+impl Endpoint {
+    pub(crate) fn request_outgoing(
+        &self,
+        request: OutgoingConnectionAttempt,
+    ) {
+        let _ = self.0.outgoing_request_tx.send(request);
     }
 }
 
@@ -300,10 +313,12 @@ struct Handle {
     driver: Task<EndpointError>,
 
     close_signal_tx: Sender<CloseSignal>,
+    outgoing_request_tx: Sender<OutgoingConnectionAttempt>,
 }
 
 struct State {
     close_signal_rx: Receiver<CloseSignal>,
+    outgoing_request_rx: Receiver<OutgoingConnectionAttempt>,
 
     io_socket: Arc<Async<UdpSocket>>,
     io_task: Task<Result<(), std::io::Error>>,
@@ -398,6 +413,13 @@ async fn driver_task(
 
         let conn_events = async {
             match state.c2e_event_rx.recv().await {
+                Ok(_) => todo!(),
+                Err(_) => todo!(),
+            }
+        };
+
+        let out_requests = async {
+            match state.outgoing_request_rx.recv().await {
                 Ok(_) => todo!(),
                 Err(_) => todo!(),
             }
