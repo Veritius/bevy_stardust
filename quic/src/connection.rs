@@ -103,9 +103,17 @@ async fn driver_task(
             };
         };
 
+        let msg_recv = async {
+            match state.message_outgoing_rx.recv().await {
+                Ok(_) => todo!(),
+                Err(_) => todo!(),
+            };
+        };
+
         Race::new((
             pin!(close_signal),
             pin!(event_recv),
+            pin!(msg_recv),
         )).await;
     }
 }
