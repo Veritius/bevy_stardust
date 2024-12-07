@@ -604,7 +604,8 @@ fn handle_dgram_recv(
 
                     // Throw the connection into the queue for the user to pick up
                     // Blocking send is fine since the channel is unbounded
-                    // We can discard the result because if this fails, the endpoint is being dropped
+                    // We can discard the result because we know that the receiver
+                    // exists, because we're holding a reference to it right now.
                     let _ = state.incoming_connect_tx.send_blocking(connection);
                 },
 
