@@ -191,6 +191,8 @@ struct State {
 
     endpoint: Endpoint,
 
+    dgram_tx: ConnectionDgramSender,
+
     quinn: quinn_proto::Connection,
 
     c2e_event_tx: C2EEventSender,
@@ -244,6 +246,7 @@ async fn build_task(
     let state = State {
         close_signal_rx: bundle.close_signal_rx,
         endpoint,
+        dgram_tx: accepted.dgram_tx,
         quinn: accepted.quinn,
         c2e_event_tx: accepted.c2e_event_tx,
         e2c_event_rx: accepted.e2c_event_rx,
