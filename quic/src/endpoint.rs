@@ -412,7 +412,7 @@ impl Future for Driver {
         }
 
         match pin!(state.c2e_event_rx.recv()).poll(cx) {
-            Poll::Ready(Ok((handle, event))) => handle_c2e_event(state, event),
+            Poll::Ready(Ok((handle, event))) => handle_c2e_event(state, handle, event),
             Poll::Pending => todo!(),
             Poll::Ready(Err(_)) => todo!(),
         }
@@ -443,6 +443,7 @@ fn handle_close_signal(
 
 fn handle_c2e_event(
     state: &mut State,
+    handle: ConnectionHandle,
     event: C2EEvent,
 ) {
     todo!()
