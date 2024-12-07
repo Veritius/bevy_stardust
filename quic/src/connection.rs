@@ -241,6 +241,9 @@ struct State {
     message_outgoing_rx: Receiver<ChannelMessage>,
 }
 
+// Required for the driver future
+impl Unpin for State {}
+
 impl Drop for State {
     fn drop(&mut self) {
         // Notify the endpoint of the state object being dropped
