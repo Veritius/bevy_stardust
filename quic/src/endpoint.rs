@@ -1,4 +1,4 @@
-use std::{collections::HashMap, future::Future, net::{SocketAddr, ToSocketAddrs, UdpSocket}, pin::{pin, Pin}, sync::Arc, task::{Context, Poll}, time::Instant};
+use std::{collections::HashMap, future::Future, net::{SocketAddr, ToSocketAddrs, UdpSocket}, pin::{pin, Pin}, sync::{Arc, Weak}, task::{Context, Poll}, time::Instant};
 use async_task::Task;
 use async_channel::{Receiver, Sender};
 use async_io::Async;
@@ -234,6 +234,8 @@ impl Endpoint {
 
         // Construct the inner state
         let state = State {
+            handle: todo!(),
+
             close_signal_rx,
             outgoing_request_rx,
             incoming_connect_tx,
@@ -344,6 +346,8 @@ struct Handle {
 }
 
 struct State {
+    handle: Weak<Handle>,
+
     close_signal_rx: Receiver<CloseSignal>,
     outgoing_request_rx: Receiver<OutgoingConnectionAttempt>,
     incoming_connect_tx: Sender<Connection>,
@@ -556,7 +560,36 @@ fn handle_dgram_recv(
                 None,
             ) {
                 Ok((handle, quinn)) => {
-                    todo!()
+                    // We handle the case for all strong handles being dropped as
+                    // technically this State object is owned by the task, and the
+                    // task is owned by the handle we're trying to upgrade. There is
+                    // a period when the handle is dropped before this type is dropped,
+                    // therefore we cannot guarantee that we won't panic when we try to
+                    // unwrap the handle.
+                    let endpoint_handle = match state.handle.upgrade() {
+                        Some(v) => v,
+                        None => { return },
+                    };
+
+                    // Construct channels for exchanging messages
+                    let c2e_event_tx = C2EEventSender::new(handle, state.c2e_event_tx.clone());
+                    let (e2c_event_tx, e2c_event_rx) = async_channel::unbounded();
+
+                    // Construct connection
+                    let connection = Connection::new_inner(
+                        Endpoint(endpoint_handle),
+                        ConnectionAccepted {
+                            quinn,
+                            c2e_event_tx: todo!(),
+                            e2c_event_rx: todo!(),
+                            dgram_tx: todo!(),
+                        },
+                    );
+
+                    // Add connection to the map
+                    state.connections.insert(handle, HeldConnection {
+                        e2c_event_tx,
+                    });
                 },
 
                 Err(err) => {
