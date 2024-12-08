@@ -694,7 +694,7 @@ fn handle_dgram_recv(
                     let (connection, close_signal_tx) = Connection::incoming(
                         Endpoint(endpoint_handle),
                         ConnectionAccepted {
-                            quinn,
+                            quinn: Box::new(quinn),
                             c2e_event_tx,
                             e2c_event_rx,
                             dgram_tx: ConnectionDgramSender {
@@ -793,7 +793,7 @@ fn handle_out_request(
     if (|| -> Result<(), ()> {
         // Notify the sender. Blocking sends should be fine since the channel is only filled here.
         attempt.tx.send_blocking(ConnectionAttemptResponse::Accepted(ConnectionAccepted {
-            quinn,
+            quinn: Box::new(quinn),
             c2e_event_tx,
             e2c_event_rx,
             dgram_tx: ConnectionDgramSender {

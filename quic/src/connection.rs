@@ -125,7 +125,7 @@ impl Connection {
             endpoint,
             dgram_tx: data.dgram_tx,
             lifestage: Lifestage::Connecting,
-            quinn: data.quinn,
+            quinn: *data.quinn,
             c2e_event_tx: data.c2e_event_tx,
             e2c_event_rx: data.e2c_event_rx,
             message_incoming_tx,
@@ -255,7 +255,7 @@ pub(crate) enum ConnectionAttemptResponse {
 }
 
 pub(crate) struct ConnectionAccepted {
-    pub quinn: quinn_proto::Connection,
+    pub quinn: Box<quinn_proto::Connection>,
 
     pub c2e_event_tx: C2EEventSender,
     pub e2c_event_rx: Receiver<E2CEvent>,
@@ -380,7 +380,7 @@ async fn build_task(
         endpoint,
         dgram_tx: accepted.dgram_tx,
         lifestage: Lifestage::Connected,
-        quinn: accepted.quinn,
+        quinn: *accepted.quinn,
         c2e_event_tx: accepted.c2e_event_tx,
         e2c_event_rx: accepted.e2c_event_rx,
         message_incoming_tx: bundle.message_incoming_tx,
