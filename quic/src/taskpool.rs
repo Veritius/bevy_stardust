@@ -99,7 +99,7 @@ fn start_worker_thread(
             // This can occur when available_parallelism() returns an inaccurate estimate, so it's worth accounting for.
             state.max_threads = Some(NonZero::new(state.total_threads).unwrap());
 
-            log::error!("Failed to spawn new thread for processing. This can happen i: {err}");
+            log::error!("Failed to spawn new thread for processing.: {err}");
         },
     }
 }
