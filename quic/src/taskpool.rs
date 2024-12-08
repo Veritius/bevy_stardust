@@ -114,8 +114,8 @@ impl WorkerThreads {
 
         match state.current.cmp(&state.desired) {
             Ordering::Less => Self::increase_threads_to_fit(state)?,
-            Ordering::Greater => { /* do nothing, threads automatically wake up every so often */},
-            Ordering::Equal => { /* do nothing, we're already at the target number of threads */},
+            Ordering::Greater => { /* do nothing, threads automatically wake up every so often */ },
+            Ordering::Equal => { /* do nothing, we're already at the target number of threads */ },
         };
 
         return Ok(())
