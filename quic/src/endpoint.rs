@@ -4,7 +4,7 @@ use async_channel::{Receiver, Sender};
 use async_io::Async;
 use bytes::{Bytes, BytesMut};
 use quinn_proto::{crypto::ServerConfig, ConnectionHandle, DatagramEvent, EndpointConfig, EndpointEvent, TransportConfig};
-use crate::{connection::{ConnectError, ConnectionAccepted, ConnectionAttemptResponse, OutgoingConnectionAttempt}, events::{C2EEvent, C2EEventSender, E2CEvent}, futures::Race, taskpool::{get_task_pool, NetworkTaskPool}, Connection, ConnectionError};
+use crate::{connection::{ConnectError, ConnectionAccepted, ConnectionAttemptResponse, ConnectionCloseSignal, OutgoingConnectionAttempt}, events::{C2EEvent, C2EEventSender, E2CEvent}, futures::Race, taskpool::{get_task_pool, NetworkTaskPool}, Connection, ConnectionError};
 
 /// A builder for an [`Endpoint`].
 pub struct EndpointBuilder<S = ()> {
@@ -293,7 +293,7 @@ impl Endpoint {
         // We send an event to the state object to shut it down.
         // If there's an error, it means the endpoint is either
         // already closing or closed, so we can safely ignore it.
-        let _ = self.0.close_signal_tx.send(CloseSignal {
+        let _ = self.0.close_signal_tx.send(EndpointCloseSignal {
 
         });
     }
@@ -351,7 +351,7 @@ impl From<std::io::Error> for EndpointError {
 struct Handle {
     driver: Task<Result<(), EndpointError>>,
 
-    close_signal_tx: Sender<CloseSignal>,
+    close_signal_tx: Sender<EndpointCloseSignal>,
     outgoing_request_tx: Sender<OutgoingConnectionAttempt>,
     incoming_connect_rx: Receiver<Connection>,
 }
@@ -359,7 +359,7 @@ struct Handle {
 struct State {
     handle: Weak<Handle>,
 
-    close_signal_rx: Receiver<CloseSignal>,
+    close_signal_rx: Receiver<EndpointCloseSignal>,
     outgoing_request_rx: Receiver<OutgoingConnectionAttempt>,
     incoming_connect_tx: Sender<Connection>,
 
@@ -398,9 +398,10 @@ impl State {
 
 struct HeldConnection {
     e2c_event_tx: Sender<E2CEvent>,
+    close_signal_tx: Sender<ConnectionCloseSignal>,
 }
 
-struct CloseSignal {
+struct EndpointCloseSignal {
 
 }
 
@@ -519,7 +520,7 @@ impl Future for Driver {
 
 fn handle_close_signal(
     state: &mut State,
-    signal: CloseSignal,
+    signal: EndpointCloseSignal,
 ) {
     todo!()
 }
@@ -592,7 +593,7 @@ fn handle_dgram_recv(
                     let (e2c_event_tx, e2c_event_rx) = async_channel::unbounded();
 
                     // Construct connection
-                    let connection = Connection::incoming(
+                    let (connection, close_signal_tx) = Connection::incoming(
                         Endpoint(endpoint_handle),
                         ConnectionAccepted {
                             quinn,
@@ -608,6 +609,7 @@ fn handle_dgram_recv(
                     // Add connection to the map
                     state.connections.insert(handle, HeldConnection {
                         e2c_event_tx,
+                        close_signal_tx,
                     });
 
                     // Throw the connection into the queue for the user to pick up
@@ -718,6 +720,7 @@ fn handle_out_request(
     // Add connection to the map
     state.connections.insert(handle, HeldConnection {
         e2c_event_tx,
+        close_signal_tx: attempt.data.close_signal_tx,
     });
 
     // Log the connection being accepted

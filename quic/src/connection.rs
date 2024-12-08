@@ -20,7 +20,7 @@ use crate::{endpoint::{ConnectionDgramSender, Endpoint}, events::{C2EEvent, C2EE
 pub struct Connection {
     task: Task<Result<(), ConnectionError>>,
 
-    close_signal_tx: Sender<CloseSignal>,
+    close_signal_tx: Sender<ConnectionCloseSignal>,
     message_incoming_rx: Receiver<ChannelMessage>,
     message_outgoing_tx: Sender<ChannelMessage>,
 }
@@ -29,7 +29,7 @@ impl Drop for Connection {
     fn drop(&mut self) {
         // Order the task to close, since normally dropping it would detach it, running it to completion in the background.
         // We also don't care about the error case here since it means the connection is already closing or closed.
-        let _ = self.close_signal_tx.try_send(CloseSignal {
+        let _ = self.close_signal_tx.try_send(ConnectionCloseSignal {
 
         });
     }
@@ -44,8 +44,11 @@ impl Connection {
         server_name: Arc<str>,
         config: ClientConfig,
     ) -> Connection {
-        // Create attempt sender/receiver pair
+        // Create attempt sender/receiver pair and various channels for communication
         let (tx, rx) = async_channel::bounded(1);
+        let (close_signal_tx, close_signal_rx) = async_channel::bounded(1);
+        let (message_incoming_tx, message_incoming_rx) = async_channel::unbounded();
+        let (message_outgoing_tx, message_outgoing_rx) = async_channel::unbounded();
 
         // Construct and send the attempt to the endpoint
         endpoint.request_outgoing(OutgoingConnectionAttempt {
@@ -53,6 +56,7 @@ impl Connection {
                 remote_address,
                 server_name,
                 config,
+                close_signal_tx: close_signal_tx.clone(),
             },
 
             tx,
@@ -60,11 +64,6 @@ impl Connection {
 
         // Our future for waiting for the response of the endpoint
         let attempt = ConnectionAttempt { rx };
-
-        // Channels for communication
-        let (close_signal_tx, close_signal_rx) = async_channel::bounded(1);
-        let (message_incoming_tx, message_incoming_rx) = async_channel::unbounded();
-        let (message_outgoing_tx, message_outgoing_rx) = async_channel::unbounded();
 
         // A bundle of channels used to build the connection
         let bundle = ChannelBundle {
@@ -96,7 +95,7 @@ impl Connection {
     pub(crate) fn incoming(
         endpoint: Endpoint,
         data: ConnectionAccepted,
-    ) -> Connection {
+    ) -> (Connection, Sender<ConnectionCloseSignal>) {
         // Fetch some data before we lose the ability to access it
         let address = data.quinn.remote_address();
 
@@ -123,18 +122,21 @@ impl Connection {
         // Spawn the driver directly since we've already constructed the endpoint
         let task = task_pool.spawn(Driver(state));
 
+        // Construct connection handle
+        let connection = Connection {
+            task,
+
+            close_signal_tx: close_signal_tx.clone(),
+            message_incoming_rx,
+            message_outgoing_tx,
+        };
+
         // Log the creation of the new incoming connection
         // This is separate from outgoing connections because that's behind a future
         log::debug!("Incoming connection {address} created");
 
         // Return component handle thingy
-        return Connection {
-            task,
-
-            close_signal_tx,
-            message_incoming_rx,
-            message_outgoing_tx,
-        };
+        return (connection, close_signal_tx);
     }
 
     /// Gracefully closes the connection.
@@ -145,7 +147,7 @@ impl Connection {
         // We send an event to the state object to shut it down.
         // If there's an error, it means the connection is either
         // already closing or closed, so we can safely ignore it.
-        let _ = self.close_signal_tx.try_send(CloseSignal {
+        let _ = self.close_signal_tx.try_send(ConnectionCloseSignal {
 
         });
     }
@@ -190,6 +192,8 @@ pub(crate) struct ConnectionAttemptData {
     pub remote_address: SocketAddr,
     pub server_name: Arc<str>,
     pub config: ClientConfig,
+
+    pub close_signal_tx: Sender<ConnectionCloseSignal>,
 }
 
 pub(crate) enum ConnectionAttemptResponse {
@@ -234,7 +238,7 @@ impl Future for ConnectionAttempt {
 }
 
 struct State {
-    close_signal_rx: Receiver<CloseSignal>,
+    close_signal_rx: Receiver<ConnectionCloseSignal>,
 
     endpoint: Endpoint,
 
@@ -263,12 +267,12 @@ impl Drop for State {
     }
 }
 
-struct CloseSignal {
+pub(crate) struct ConnectionCloseSignal {
 
 }
 
 struct ChannelBundle {
-    close_signal_rx: Receiver<CloseSignal>,
+    close_signal_rx: Receiver<ConnectionCloseSignal>,
     message_incoming_tx: Sender<ChannelMessage>,
     message_outgoing_rx: Receiver<ChannelMessage>,
 }
@@ -341,7 +345,7 @@ impl Future for Driver {
 
 fn handle_close_signal(
     state: &mut State,
-    signal: CloseSignal,
+    signal: ConnectionCloseSignal,
 ) {
     log::trace!("Received close signal for connection {}", state.quinn.remote_address());
 
