@@ -305,30 +305,6 @@ impl Endpoint {
     pub fn state(&self) -> EndpointState {
         self.0.outer_state.lock().unwrap().clone()
     }
-
-    /// Polls for any new, incoming connections.
-    /// This should be done once a frame.
-    pub fn poll_incoming(&self) -> Option<Connection> {
-        self.0.incoming_connect_rx.try_recv().ok()
-    }
-
-    /// A future that polls for any new, incoming connections.
-    /// 
-    /// Returns `Ok` when a new connection appears, and `Err` when the endpoint can no longer produce connections.
-    pub async fn wait_incoming(&self) -> Result<Connection, ConnectError> {
-        let msg_recv = async {
-            match self.0.incoming_connect_rx.recv().await {
-                Ok(c) => Ok(c),
-                Err(_) => Err(ConnectError::EndpointClosed),
-            }
-        };
-
-        let ept_close = async {
-            todo!()
-        };
-
-        futures_lite::FutureExt::or(msg_recv, ept_close).await
-    }
 }
 
 impl Endpoint {
@@ -547,8 +523,24 @@ impl Future for Driver {
             Poll::Ready(Err(_)) => todo!(),
         }
 
-        // We're not done.
-        return Poll::Pending;
+        // Decide whether we need to terminate the endpoint
+        match (state.lifestage, state.connections.len()) {
+            // All connections are drained
+            (Lifestage::Closing, 0) => {
+                if let Some(handle) = state.handle.upgrade() {
+                    // Update the state handle
+                    *handle.outer_state.lock().unwrap() = EndpointState::Closed;
+                }
+
+                return Poll::Ready(Ok(()));
+            },
+
+            // Set to closed in another function
+            (Lifestage::Closed, _) => return Poll::Ready(Ok(())),
+
+            // We're not done yet.
+            _ => return Poll::Pending,
+        }
     }
 }
 
