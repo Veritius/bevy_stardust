@@ -1,12 +1,16 @@
-use std::{cmp::Ordering, future::Future, sync::{Condvar, Mutex, OnceLock}, thread};
+use std::{cmp::Ordering, future::Future, sync::{Mutex, OnceLock}, thread, time::Duration};
 use async_task::{Runnable, Task};
 use concurrent_queue::ConcurrentQueue;
+use crossbeam_channel::{Receiver, Sender};
+
+const THREAD_TIMEOUT: Duration = Duration::from_millis(500);
 
 pub(crate) static NETWORK_TASK_POOL: OnceLock<NetworkTaskPool> = OnceLock::new();
 
 pub(crate) struct NetworkTaskPool {
     queue: ConcurrentQueue<IncompleteTask>,
-    cvar: Condvar,
+    waker_tx: Sender<()>,
+    waker_rx: Receiver<()>,
 }
 
 impl NetworkTaskPool {
@@ -24,7 +28,7 @@ impl NetworkTaskPool {
     fn schedule(runnable: Runnable) {
         let task_pool = get_task_pool();
         let _ = task_pool.queue.push(IncompleteTask { runnable });
-        task_pool.cvar.notify_one();
+        task_pool.waker_tx.send(()).unwrap();
     }
 }
 
@@ -34,9 +38,12 @@ struct IncompleteTask {
 
 pub(crate) fn get_task_pool() -> &'static NetworkTaskPool {
     NETWORK_TASK_POOL.get_or_init(|| {
+        let (waker_tx, waker_rx) = crossbeam_channel::unbounded();
+
         return NetworkTaskPool {
             queue: ConcurrentQueue::unbounded(),
-            cvar: Condvar::new(),
+            waker_tx,
+            waker_rx,
         };
     })
 }
@@ -64,7 +71,7 @@ impl WorkerThreads {
 
         match lock.current.cmp(&lock.desired) {
             Ordering::Less => Self::increase_threads_to_fit(&mut lock),
-            Ordering::Greater => get_task_pool().cvar.notify_all(),
+            Ordering::Greater => { let _ = get_task_pool().waker_tx.send(()); },
             Ordering::Equal => { /* do nothing */},
         }
     }
@@ -114,6 +121,20 @@ fn worker_thread(
     task_pool: &'static NetworkTaskPool,
 ) {
     loop {
+        // Check if we're over budget and stop ourselves if we are, to reduce the number of threads
+        let mut lock = WORKER_THREAD_STATE.lock().unwrap();
+        if lock.current > lock.desired { lock.current -= 1; return; }
 
+        // Free the lock now rather than later
+        // This reduces the chance of blocking other threads
+        drop(lock);
+
+        // Consume as many tasks as possible
+        while let Ok(task) = task_pool.queue.pop() {
+            task.runnable.run();
+        }
+
+        // Wait for the next event or time out
+        let _ = task_pool.waker_rx.recv_timeout(THREAD_TIMEOUT);
     }
 }

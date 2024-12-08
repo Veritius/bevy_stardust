@@ -22,7 +22,7 @@ pub struct Connection {
     shared: Arc<Shared>,
 
     close_signal_tx: Sender<ConnectionCloseSignal>,
-    message_incoming_rx: Receiver<ChannelMessage>,
+    message_incoming_rx: crossbeam_channel::Receiver<ChannelMessage>,
     message_outgoing_tx: Sender<ChannelMessage>,
 }
 
@@ -48,7 +48,7 @@ impl Connection {
         // Create attempt sender/receiver pair and various channels for communication
         let (tx, rx) = async_channel::bounded(1);
         let (close_signal_tx, close_signal_rx) = async_channel::bounded(1);
-        let (message_incoming_tx, message_incoming_rx) = async_channel::unbounded();
+        let (message_incoming_tx, message_incoming_rx) = crossbeam_channel::unbounded();
         let (message_outgoing_tx, message_outgoing_rx) = async_channel::unbounded();
 
         // Construct and send the attempt to the endpoint
@@ -114,7 +114,7 @@ impl Connection {
 
         // Channels for communication
         let (close_signal_tx, close_signal_rx) = async_channel::bounded(1);
-        let (message_incoming_tx, message_incoming_rx) = async_channel::unbounded();
+        let (message_incoming_tx, message_incoming_rx) = crossbeam_channel::unbounded();
         let (message_outgoing_tx, message_outgoing_rx) = async_channel::unbounded();
 
         // Construct state object
@@ -311,7 +311,7 @@ struct State {
     c2e_event_tx: C2EEventSender,
     e2c_event_rx: Receiver<E2CEvent>,
 
-    message_incoming_tx: Sender<ChannelMessage>,
+    message_incoming_tx: crossbeam_channel::Sender<ChannelMessage>,
     message_outgoing_rx: Receiver<ChannelMessage>,
 }
 
@@ -351,7 +351,7 @@ impl ConnectionCloseSignal {
 
 struct ChannelBundle {
     close_signal_rx: Receiver<ConnectionCloseSignal>,
-    message_incoming_tx: Sender<ChannelMessage>,
+    message_incoming_tx: crossbeam_channel::Sender<ChannelMessage>,
     message_outgoing_rx: Receiver<ChannelMessage>,
 }
 
