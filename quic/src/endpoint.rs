@@ -324,7 +324,7 @@ impl Endpoint {
 }
 
 /// The current state of an [`Endpoint`].
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum EndpointState {
     /// The endpoint is currently running.
     /// Dropping all handles will cause data loss.
@@ -335,7 +335,7 @@ pub enum EndpointState {
     Closing,
 
     /// The endpoint has fully shut down and been drained.
-    /// Dropping all handles can be done without data loss.
+    /// Dropping all handles will not cause data loss.
     Closed,
 }
 

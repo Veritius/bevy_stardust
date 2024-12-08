@@ -1,4 +1,4 @@
-use std::{future::Future, net::SocketAddr, pin::{pin, Pin}, sync::Arc, task::{Context, Poll}, time::Instant};
+use std::{future::Future, net::SocketAddr, pin::{pin, Pin}, sync::{Arc, Mutex}, task::{Context, Poll}, time::Instant};
 use async_channel::{Receiver, Sender};
 use async_task::Task;
 use bevy_ecs::prelude::*;
@@ -19,6 +19,7 @@ use crate::{endpoint::{ConnectionDgramSender, Endpoint}, events::{C2EEvent, C2EE
 #[derive(Component)]
 pub struct Connection {
     task: Task<Result<(), ConnectionError>>,
+    shared: Arc<Shared>,
 
     close_signal_tx: Sender<ConnectionCloseSignal>,
     message_incoming_rx: Receiver<ChannelMessage>,
@@ -65,6 +66,10 @@ impl Connection {
         // Our future for waiting for the response of the endpoint
         let attempt = ConnectionAttempt { rx };
 
+        let shared = Arc::new(Shared {
+            outer_state: Mutex::new(ConnectionState::Connecting),
+        });
+
         // A bundle of channels used to build the connection
         let bundle = ChannelBundle {
             close_signal_rx,
@@ -78,6 +83,7 @@ impl Connection {
         // Spawn a task to build and run the endpoint
         let task = task_pool.spawn(build_task(
             endpoint,
+            shared.clone(),
             attempt,
             bundle,
         ));
@@ -85,6 +91,7 @@ impl Connection {
         // Return component handle thingy
         return Connection {
             task,
+            shared,
 
             close_signal_tx,
             message_incoming_rx,
@@ -101,6 +108,10 @@ impl Connection {
         // Fetch some data before we lose the ability to access it
         let address = data.quinn.remote_address();
 
+        let shared = Arc::new(Shared {
+            outer_state: Mutex::new(ConnectionState::Connecting),
+        });
+
         // Channels for communication
         let (close_signal_tx, close_signal_rx) = async_channel::bounded(1);
         let (message_incoming_tx, message_incoming_rx) = async_channel::unbounded();
@@ -109,9 +120,11 @@ impl Connection {
         // Construct state object
         let state = State {
             log_id: log_id.clone(),
+            shared: shared.clone(),
             close_signal_rx,
             endpoint,
             dgram_tx: data.dgram_tx,
+            lifestage: Lifestage::Connecting,
             quinn: data.quinn,
             c2e_event_tx: data.c2e_event_tx,
             e2c_event_rx: data.e2c_event_rx,
@@ -128,6 +141,7 @@ impl Connection {
         // Construct connection handle
         let connection = Connection {
             task,
+            shared,
 
             close_signal_tx: close_signal_tx.clone(),
             message_incoming_rx,
@@ -153,6 +167,42 @@ impl Connection {
         let _ = self.close_signal_tx.try_send(ConnectionCloseSignal {
 
         });
+    }
+
+    /// Returns the current state of the connection.
+    pub fn state(&self) -> ConnectionState {
+        *self.shared.outer_state.lock().unwrap()
+    }
+}
+
+/// The current state of a [`Connection`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum ConnectionState {
+    /// The connection is still being established.
+    /// Dropping the handle may cause data loss.
+    Connecting,
+
+    /// The connection is currently running.
+    /// Dropping the handle will cause data loss.
+    Connected,
+
+    /// The connection is in the process of shutting down.
+    /// Dropping the handle will cause data loss.
+    Closing,
+
+    /// The connection has fully shut down and been drained.
+    /// Dropping the handle will not cause data loss.
+    Closed,
+}
+
+impl From<Lifestage> for ConnectionState {
+    fn from(value: Lifestage) -> Self {
+        match value {
+            Lifestage::Connecting => ConnectionState::Connecting,
+            Lifestage::Connected => ConnectionState::Connected,
+            Lifestage::Closing => ConnectionState::Closing,
+            Lifestage::Closed => ConnectionState::Closed,
+        }
     }
 }
 
@@ -240,7 +290,12 @@ impl Future for ConnectionAttempt {
     }
 }
 
+struct Shared {
+    outer_state: Mutex<ConnectionState>
+}
+
 struct State {
+    shared: Arc<Shared>,
     log_id: LogId,
 
     close_signal_rx: Receiver<ConnectionCloseSignal>,
@@ -248,6 +303,8 @@ struct State {
     endpoint: Endpoint,
 
     dgram_tx: ConnectionDgramSender,
+
+    lifestage: Lifestage,
 
     quinn: quinn_proto::Connection,
 
@@ -272,6 +329,14 @@ impl Drop for State {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Lifestage {
+    Connecting,
+    Connected,
+    Closing,
+    Closed,
+}
+
 pub(crate) struct ConnectionCloseSignal {
 
 }
@@ -292,6 +357,7 @@ struct ChannelBundle {
 
 async fn build_task(
     endpoint: Endpoint,
+    shared: Arc<Shared>,
     attempt: ConnectionAttempt,
     bundle: ChannelBundle,
 ) -> Result<(), ConnectionError> {
@@ -308,10 +374,12 @@ async fn build_task(
 
     // Construct the state object
     let state = State {
+        shared,
         log_id: LogIdGen::next(),
         close_signal_rx: bundle.close_signal_rx,
         endpoint,
         dgram_tx: accepted.dgram_tx,
+        lifestage: Lifestage::Connected,
         quinn: accepted.quinn,
         c2e_event_tx: accepted.c2e_event_tx,
         e2c_event_rx: accepted.e2c_event_rx,

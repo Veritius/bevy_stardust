@@ -9,5 +9,5 @@ mod taskpool;
 pub mod connection;
 pub mod endpoint;
 
-pub use connection::{Connection, ConnectionError};
+pub use connection::{Connection, ConnectionState, ConnectError, ConnectionError};
 pub use endpoint::{Endpoint, EndpointState, EndpointError};
