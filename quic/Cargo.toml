@@ -44,6 +44,9 @@ version = "1.6"
 [dependencies.futures-lite]
 version = "2.5"
 
+[dependencies.concurrent-queue]
+version = "2.5"
+
 [dependencies.log]
 version = "0.4"
 

@@ -1,11 +1,18 @@
-use std::{collections::VecDeque, future::Future, ops::{AddAssign, SubAssign}, sync::{atomic::{AtomicU32, Ordering}, Condvar, Mutex, OnceLock}};
+use std::{future::Future, num::NonZero, sync::{atomic::{AtomicUsize, Ordering}, Condvar, Mutex, OnceLock}, thread::{self, available_parallelism}, time::Duration};
 use async_task::{Runnable, Task};
+use concurrent_queue::ConcurrentQueue;
+
+const DESPAWN_TIMEOUT: Duration = Duration::from_millis(500);
 
 pub(crate) static NETWORK_TASK_POOL: OnceLock<NetworkTaskPool> = OnceLock::new();
 
 pub(crate) struct NetworkTaskPool {
-    queue: Mutex<VecDeque<IncompleteTask>>,
+    queue: ConcurrentQueue<IncompleteTask>,
     cvar: Condvar,
+
+    thread_index: AtomicUsize,
+    idle_threads: AtomicUsize,
+    spawn_state: Mutex<ThreadSpawnState>,
 }
 
 impl NetworkTaskPool {
@@ -20,17 +27,30 @@ impl NetworkTaskPool {
         return task;
     }
 
-    fn schedule(runnable: Runnable) {
-        let task_pool = get_task_pool();
-        task_pool.queue.lock().unwrap().push_back(IncompleteTask { runnable });
-        task_pool.cvar.notify_one();
-    }
-
     fn init() -> Self {
         NetworkTaskPool {
-            queue: Mutex::new(VecDeque::new()),
+            queue: ConcurrentQueue::unbounded(),
             cvar: Condvar::new(),
+
+            thread_index: AtomicUsize::new(0),
+            idle_threads: AtomicUsize::new(0),
+
+            spawn_state: Mutex::new(ThreadSpawnState {
+                total_threads: 0,
+                max_threads: None,
+            }),
         }
+    }
+
+    fn schedule(runnable: Runnable) {
+        let task_pool = get_task_pool();
+        let _ = task_pool.queue.push(IncompleteTask { runnable });
+        task_pool.cvar.notify_one();
+        task_pool.grow();
+    }
+
+    fn grow(&'static self) {
+        todo!()
     }
 }
 
@@ -38,43 +58,58 @@ struct IncompleteTask {
     runnable: Runnable,
 }
 
+struct ThreadSpawnState {
+    total_threads: usize,
+    max_threads: Option<NonZero<usize>>,
+}
+
 pub(crate) fn get_task_pool() -> &'static NetworkTaskPool {
     NETWORK_TASK_POOL.get_or_init(NetworkTaskPool::init)
 }
 
-static THREAD_MANAGER: ThreadManager = ThreadManager {
-    tasks: AtomicU32::new(0),
-};
+fn start_worker_thread(
+    task_pool: &'static NetworkTaskPool
+) {
+    // Default value for when a max thread count can't be found.
+    const UNRETRIEVABLE_LIMIT_DEFAULT: NonZero<usize> = NonZero::new(usize::MAX).unwrap();
 
-struct ThreadManager {
-    tasks: AtomicU32,
-}
+    // Lock the spawn state. This prevents other worker threads from accidentally
+    let mut state = task_pool.spawn_state.lock().unwrap();
 
-pub(crate) struct ThreadPoints(u32);
+    // Calculate the maximum number of threads we can create
+    let max_threads = available_parallelism()
+        .unwrap_or(UNRETRIEVABLE_LIMIT_DEFAULT)
+        .max(state.max_threads.unwrap_or(UNRETRIEVABLE_LIMIT_DEFAULT));
 
-impl ThreadPoints {
-    pub fn new(points: u32) -> Self {
-        THREAD_MANAGER.tasks.fetch_add(points, Ordering::Relaxed);
-        return ThreadPoints(points);
+    // Check that spawning a new thread won't exceed the limit
+    if state.total_threads >= max_threads.into() { return }
+
+    // Try to spawn the thread
+    let res = thread::Builder::new()
+        .name(format!("quic-{}", task_pool.thread_index.fetch_add(1, Ordering::Relaxed)))
+        .spawn(move || worker_thread(task_pool));
+
+    match res {
+        Ok(_) => {
+            // We've successfully added the thread, so we can increment the counter
+            state.total_threads += 1;
+            task_pool.idle_threads.fetch_add(1, Ordering::Relaxed);
+        },
+
+        Err(err) => {
+            // It's likely that we've hit some kind of imposed system limit, so update the max thread count accordingly.
+            // This can occur when available_parallelism() returns an inaccurate estimate, so it's worth accounting for.
+            state.max_threads = Some(NonZero::new(state.total_threads).unwrap());
+
+            log::error!("Failed to spawn new thread for processing. This can happen i: {err}");
+        },
     }
 }
 
-impl Drop for ThreadPoints {
-    fn drop(&mut self) {
-        THREAD_MANAGER.tasks.fetch_sub(self.0, Ordering::Relaxed);
-    }
-}
+fn worker_thread(
+    task_pool: &'static NetworkTaskPool,
+) {
+    loop {
 
-impl AddAssign<u32> for ThreadPoints {
-    fn add_assign(&mut self, rhs: u32) {
-        THREAD_MANAGER.tasks.fetch_add(rhs, Ordering::Relaxed);
-        self.0 += rhs;
-    }
-}
-
-impl SubAssign<u32> for ThreadPoints {
-    fn sub_assign(&mut self, rhs: u32) {
-        THREAD_MANAGER.tasks.fetch_sub(rhs, Ordering::Relaxed);
-        self.0 -= rhs;
     }
 }
