@@ -76,7 +76,8 @@ impl WorkerThreads {
     /// 
     /// # Warning
     /// If the number of threads is set to `0`, all tasks are immediately dropped!
-    /// All endpoints and connections will be closed immediately, without warning any remote peers.
+    /// All endpoints and connections will be closed immediately, without informing any remote peers.
+    /// Remote peers will eventually time out, and it will probably look like a bug to players!
     pub fn set(count: usize) -> Result<(), std::io::Error> {
         let mut lock = WORKER_THREAD_STATE.lock().unwrap();
         lock.desired = count.into();
