@@ -1,4 +1,4 @@
-use std::{cmp::Ordering, future::Future, sync::{atomic::{self, AtomicBool}, Mutex, OnceLock}, thread, time::Duration};
+use std::{cmp::Ordering, future::Future, sync::{Mutex, Once, OnceLock}, thread, time::Duration};
 use async_task::{Runnable, Task};
 use concurrent_queue::ConcurrentQueue;
 use crossbeam_channel::{Receiver, Sender};
@@ -8,8 +8,8 @@ const THREAD_TIMEOUT: Duration = Duration::from_millis(500);
 pub(crate) static NETWORK_TASK_POOL: OnceLock<NetworkTaskPool> = OnceLock::new();
 
 pub(crate) struct NetworkTaskPool {
-    block_insertions: AtomicBool,
-    queue: ConcurrentQueue<IncompleteTask>,
+    fallback_thread: Once,
+    task_queue: ConcurrentQueue<IncompleteTask>,
 
     waker_tx: Sender<()>,
     waker_rx: Receiver<()>,
@@ -29,8 +29,16 @@ impl NetworkTaskPool {
 
     fn schedule(runnable: Runnable) {
         let task_pool = get_task_pool();
-        if task_pool.block_insertions.load(atomic::Ordering::Relaxed) { return }
-        let _ = task_pool.queue.push(IncompleteTask { runnable });
+
+        // Ensures there's at least one thread running to handle network tasks
+        task_pool.fallback_thread.call_once(|| {
+            thread::Builder::new()
+                .name(format!("quic-0"))
+                .spawn(|| fallback_thread(task_pool))
+                .unwrap(); // shouldn't fail
+        });
+
+        let _ = task_pool.task_queue.push(IncompleteTask { runnable });
         task_pool.waker_tx.send(()).unwrap();
     }
 }
@@ -44,8 +52,8 @@ pub(crate) fn get_task_pool() -> &'static NetworkTaskPool {
         let (waker_tx, waker_rx) = crossbeam_channel::unbounded();
 
         return NetworkTaskPool {
-            block_insertions: AtomicBool::new(false),
-            queue: ConcurrentQueue::unbounded(),
+            fallback_thread: Once::new(),
+            task_queue: ConcurrentQueue::unbounded(),
 
             waker_tx,
             waker_rx,
@@ -56,7 +64,7 @@ pub(crate) fn get_task_pool() -> &'static NetworkTaskPool {
 static WORKER_THREAD_STATE: Mutex<WorkerThreadsState> = Mutex::new(WorkerThreadsState {
     current: 0,
     desired: 0,
-    index: 0,
+    index: 1, // fallback thread uses 1
 });
 
 struct WorkerThreadsState {
@@ -74,17 +82,11 @@ impl WorkerThreads {
     /// Threads will be added/removed to try and match the desired value.
     /// If adding threads fails, an error is returned. Removing threads cannot fail.
     /// 
-    /// # Warning
-    /// If the number of threads is set to `0`, all tasks are immediately dropped!
-    /// All endpoints and connections will be closed immediately, without informing any remote peers.
-    /// Remote peers will eventually time out, and it will probably look like a bug to players!
+    /// **Note:** There is always one additional thread that cannot be shut down or removed.
+    /// This is to make sure that tasks cannot get stuck forever and waste resources.
     pub fn set(count: usize) -> Result<(), std::io::Error> {
         let mut lock = WORKER_THREAD_STATE.lock().unwrap();
         lock.desired = count.into();
-
-        // Block insertions into the task pool if there are no threads to copy them
-        // Over time this will slowly but surely drop all the tasks as the threads return
-        get_task_pool().block_insertions.store(lock.desired == 0, atomic::Ordering::Relaxed);
 
         match lock.current.cmp(&lock.desired) {
             Ordering::Less => Self::increase_threads_to_fit(&mut lock)?,
@@ -139,23 +141,26 @@ impl WorkerThreads {
     }
 }
 
+fn fallback_thread(
+    task_pool: &'static NetworkTaskPool,
+) {
+    loop {
+        // Consume as many tasks as possible
+        while let Ok(task) = task_pool.task_queue.pop() {
+            task.runnable.run();
+        }
+
+        // Wait for the next event
+        let _ = task_pool.waker_rx.recv();
+    }
+}
+
 fn worker_thread(
     task_pool: &'static NetworkTaskPool,
 ) {
     loop {
         // Check if we're over budget and stop ourselves if we are, to reduce the number of threads
         let mut lock = WORKER_THREAD_STATE.lock().unwrap();
-
-        if lock.desired == 0 {
-            // Drop all tasks that we can and then return.
-            // This prevents any tasks from being stuck unprocessed (but still taking up resources)
-            // until at least one worker thread exists again, which is not guaranteed within any
-            // reasonable amount of time (or at all). Hopefully...
-            while let Ok(task) = task_pool.queue.pop() { drop(task); }
-        }
-
-
-        // Check if we're over budget and stop ourselves if we are, to reduce the number of threads.
         if lock.current > lock.desired { lock.current -= 1; return; }
 
         // Free the lock now rather than later
@@ -163,7 +168,7 @@ fn worker_thread(
         drop(lock);
 
         // Consume as many tasks as possible
-        while let Ok(task) = task_pool.queue.pop() {
+        while let Ok(task) = task_pool.task_queue.pop() {
             task.runnable.run();
         }
 
