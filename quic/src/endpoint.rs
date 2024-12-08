@@ -3,7 +3,7 @@ use async_task::Task;
 use async_channel::{Receiver, Sender};
 use async_io::Async;
 use bytes::{Bytes, BytesMut};
-use quinn_proto::{crypto::ServerConfig, ConnectionHandle, DatagramEvent, EndpointConfig, EndpointEvent, TransportConfig};
+use quinn_proto::{ConnectionHandle, DatagramEvent, EndpointConfig, EndpointEvent, ServerConfig, TransportConfig};
 use crate::{connection::{ConnectError, ConnectionAccepted, ConnectionAttemptResponse, ConnectionCloseSignal, OutgoingConnectionAttempt}, events::{C2EEvent, C2EEventSender, E2CEvent}, futures::Race, logging::{LogId, LogIdGen}, taskpool::{get_task_pool, NetworkTaskPool}, Connection, ConnectionError};
 
 /// A builder for an [`Endpoint`].
@@ -92,82 +92,42 @@ impl EndpointBuilder<CanBecomeServer> {
             ).await
         }))
     }
-}
 
-/// State for setting a [`TransportConfig`] value.
-pub struct WantsTransportConfig {
-    previous: CanBecomeServer,
-}
-
-impl EndpointBuilder<WantsTransportConfig> {
-    /// Uses the default transport configuration suitable for most applications.
-    pub fn use_default(self) -> EndpointBuilder<WantsServerCrypto> {
-        EndpointBuilder {
-            task_pool: self.task_pool,
-            state: WantsServerCrypto {
-                previous: self.state,
-                config: Arc::new(TransportConfig::default()),
-            },
-        }
-    }
-
-    /// Uses an existing transport configuration value.
-    pub fn use_existing(self, transport_config: Arc<TransportConfig>) -> EndpointBuilder<WantsServerCrypto> {
-        EndpointBuilder {
-            task_pool: self.task_pool,
-            state: WantsServerCrypto {
-                previous: self.state,
-                config: transport_config,
-            },
-        }
-    }
-}
-
-/// State for adding cryptographic data.
-pub struct WantsServerCrypto {
-    previous: WantsTransportConfig,
-    config: Arc<TransportConfig>,
-}
-
-impl EndpointBuilder<WantsServerCrypto> {
-    /// Uses an existing server configuration value.
-    pub fn use_existing(
+    /// Add server configuration to handle incoming connections.
+    /// 
+    /// Accepts the config values as-is.
+    pub fn server_from_config(
         self,
-        server_config: Arc<dyn ServerConfig>
+        config: Arc<ServerConfig>,
     ) -> LoadingEndpoint {
         LoadingEndpoint(self.task_pool.spawn(async move {
             Endpoint::new_inner(
-                self.state.previous.previous.previous.socket,
-                self.state.previous.previous.config,
-                async { Some(Ok({
-                    let mut config = quinn_proto::ServerConfig::with_crypto(server_config);
-                    config.transport_config(self.state.config);
-                    Arc::new(config)
-                })) },
+                self.state.previous.socket,
+                self.state.config,
+                async { Some(Ok(config)) },
             ).await
         }))
     }
 
-    /// Gets the server configuration from a future.
+    /// Add server configuration to handle incoming connections.
     /// 
-    /// Useful for when data is being loaded from the filesystem.
-    pub fn from_future(
-        self,
-        future: impl Future<Output = Result<Arc<dyn ServerConfig>, EndpointError>> + Send + Sync + 'static,
-    ) -> LoadingEndpoint {
+    /// Loads the config values from a future.
+    pub fn server_from_future<F>(self, future: F) -> LoadingEndpoint
+    where
+        F: Future<Output = Result<Arc<ServerConfig>, EndpointError>>,
+        F: Send + Sync + 'static,
+    {
         LoadingEndpoint(self.task_pool.spawn(async move {
             Endpoint::new_inner(
-                self.state.previous.previous.previous.socket,
-                self.state.previous.previous.config,
+                self.state.previous.socket,
+                self.state.config,
                 async {
-                    let server_config = match future.await {
+                    let config = match future.await {
                         Ok(v) => v,
                         Err(e) => return Some(Err(e)),
                     };
 
-                    let mut config = quinn_proto::ServerConfig::with_crypto(server_config);
-                    config.transport_config(self.state.config);
-                    return Some(Ok(Arc::new(config)))
+                    return Some(Ok(config))
                 },
             ).await
         }))
