@@ -268,6 +268,12 @@ impl Endpoint {
     pub fn state(&self) -> EndpointState {
         self.0.outer_state.lock().unwrap().clone()
     }
+
+    /// Produces a weak handle ([`EndpointWeak`]), which can still be used to
+    /// access the endpoint so long as at least one strong handle exists.
+    pub fn downgrade(self) -> EndpointWeak {
+        EndpointWeak(Arc::downgrade(&self.0))
+    }
 }
 
 impl Endpoint {
@@ -280,6 +286,19 @@ impl Endpoint {
         request: OutgoingConnectionAttempt,
     ) {
         let _ = self.0.outgoing_request_tx.send(request);
+    }
+}
+
+/// A weak handle to an [`Endpoint`]. Doesn't prevent the endpoint from being dropped.
+#[derive(Clone)]
+pub struct EndpointWeak(Weak<Handle>);
+
+impl EndpointWeak {
+    /// Attempts to upgrade to a [strong handle](Endpoint).
+    /// 
+    /// Returns `None` if the endpoint has been dropped.
+    pub fn upgrade(self) -> Option<Endpoint> {
+        self.0.upgrade().map(|v| Endpoint(v))
     }
 }
 
