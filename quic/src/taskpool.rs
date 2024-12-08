@@ -1,4 +1,4 @@
-use std::{cmp::Ordering, future::Future, num::NonZero, sync::{Mutex, OnceLock}, thread, time::Duration};
+use std::{cmp::Ordering, future::Future, sync::{atomic::{self, AtomicBool}, Mutex, OnceLock}, thread, time::Duration};
 use async_task::{Runnable, Task};
 use concurrent_queue::ConcurrentQueue;
 use crossbeam_channel::{Receiver, Sender};
@@ -8,7 +8,9 @@ const THREAD_TIMEOUT: Duration = Duration::from_millis(500);
 pub(crate) static NETWORK_TASK_POOL: OnceLock<NetworkTaskPool> = OnceLock::new();
 
 pub(crate) struct NetworkTaskPool {
+    block_insertions: AtomicBool,
     queue: ConcurrentQueue<IncompleteTask>,
+
     waker_tx: Sender<()>,
     waker_rx: Receiver<()>,
 }
@@ -27,6 +29,7 @@ impl NetworkTaskPool {
 
     fn schedule(runnable: Runnable) {
         let task_pool = get_task_pool();
+        if task_pool.block_insertions.load(atomic::Ordering::Relaxed) { return }
         let _ = task_pool.queue.push(IncompleteTask { runnable });
         task_pool.waker_tx.send(()).unwrap();
     }
@@ -41,7 +44,9 @@ pub(crate) fn get_task_pool() -> &'static NetworkTaskPool {
         let (waker_tx, waker_rx) = crossbeam_channel::unbounded();
 
         return NetworkTaskPool {
+            block_insertions: AtomicBool::new(false),
             queue: ConcurrentQueue::unbounded(),
+
             waker_tx,
             waker_rx,
         };
@@ -68,14 +73,22 @@ impl WorkerThreads {
     /// 
     /// Threads will be added/removed to try and match the desired value.
     /// If adding threads fails, an error is returned. Removing threads cannot fail.
-    pub fn set(count: NonZero<usize>) -> Result<(), std::io::Error> {
+    /// 
+    /// # Warning
+    /// If the number of threads is set to `0`, all tasks are immediately dropped!
+    /// All endpoints and connections will be closed immediately, without warning any remote peers.
+    pub fn set(count: usize) -> Result<(), std::io::Error> {
         let mut lock = WORKER_THREAD_STATE.lock().unwrap();
         lock.desired = count.into();
 
+        // Block insertions into the task pool if there are no threads to copy them
+        // Over time this will slowly but surely drop all the tasks as the threads return
+        get_task_pool().block_insertions.store(lock.desired == 0, atomic::Ordering::Relaxed);
+
         match lock.current.cmp(&lock.desired) {
             Ordering::Less => Self::increase_threads_to_fit(&mut lock)?,
-            Ordering::Greater => { let _ = get_task_pool().waker_tx.send(()); },
-            Ordering::Equal => { /* do nothing */},
+            Ordering::Greater => { /* do nothing, threads automatically wake up every so often */},
+            Ordering::Equal => { /* do nothing, we're already at the target number of threads */},
         };
 
         return Ok(());
@@ -131,6 +144,17 @@ fn worker_thread(
     loop {
         // Check if we're over budget and stop ourselves if we are, to reduce the number of threads
         let mut lock = WORKER_THREAD_STATE.lock().unwrap();
+
+        if lock.desired == 0 {
+            // Drop all tasks that we can and then return.
+            // This prevents any tasks from being stuck unprocessed (but still taking up resources)
+            // until at least one worker thread exists again, which is not guaranteed within any
+            // reasonable amount of time (or at all). Hopefully...
+            while let Ok(task) = task_pool.queue.pop() { drop(task); }
+        }
+
+
+        // Check if we're over budget and stop ourselves if we are, to reduce the number of threads.
         if lock.current > lock.desired { lock.current -= 1; return; }
 
         // Free the lock now rather than later
