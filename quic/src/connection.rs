@@ -93,15 +93,19 @@ impl Connection {
         };
     }
 
-    pub(crate) fn new_inner(
+    pub(crate) fn incoming(
         endpoint: Endpoint,
         data: ConnectionAccepted,
     ) -> Connection {
+        // Fetch some data before we lose the ability to access it
+        let address = data.quinn.remote_address();
+
         // Channels for communication
         let (close_signal_tx, close_signal_rx) = async_channel::bounded(1);
         let (message_incoming_tx, message_incoming_rx) = async_channel::unbounded();
         let (message_outgoing_tx, message_outgoing_rx) = async_channel::unbounded();
 
+        // Construct state object
         let state = State {
             close_signal_rx,
             endpoint,
@@ -118,6 +122,10 @@ impl Connection {
 
         // Spawn the driver directly since we've already constructed the endpoint
         let task = task_pool.spawn(Driver(state));
+
+        // Log the creation of the new incoming connection
+        // This is separate from outgoing connections because that's behind a future
+        log::debug!("Incoming connection {address} created");
 
         // Return component handle thingy
         return Connection {
@@ -335,6 +343,8 @@ fn handle_close_signal(
     state: &mut State,
     signal: CloseSignal,
 ) {
+    log::trace!("Received close signal for connection {}", state.quinn.remote_address());
+
     state.quinn.close(
         Instant::now(),
         todo!(),

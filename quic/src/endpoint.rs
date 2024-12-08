@@ -224,6 +224,9 @@ impl Endpoint {
             None => None,
         };
 
+        // Unwrapping is fine here because we always bind our sockets
+        let address = socket.get_ref().local_addr().unwrap();
+
         // Create channels for communication
         let (io_recv_tx, io_recv_rx) = async_channel::unbounded();
         let (io_send_tx, io_send_rx) = async_channel::unbounded();
@@ -277,6 +280,9 @@ impl Endpoint {
                 incoming_connect_rx,
             }
         });
+
+        // Log the creation of the connection
+        log::debug!("Endpoint {address} successfully created");
 
         // Return endpoint handle
         return Ok(Endpoint(handle));
@@ -558,6 +564,11 @@ fn handle_dgram_recv(
 
         // An incoming connection can be made
         Some(DatagramEvent::NewConnection(incoming)) => {
+            // Extract some data we use later on
+            // We do this here because it's inaccessible by the time we want it
+            let address = incoming.remote_address();
+
+            // Try to accept the connection
             match state.quinn.accept(
                 incoming,
                 Instant::now(),
@@ -580,11 +591,8 @@ fn handle_dgram_recv(
                     let c2e_event_tx = C2EEventSender::new(handle, state.c2e_event_tx.clone());
                     let (e2c_event_tx, e2c_event_rx) = async_channel::unbounded();
 
-                    // Extract some data from the connection that we won't be able to later
-                    let address = quinn.remote_address();
-
                     // Construct connection
-                    let connection = Connection::new_inner(
+                    let connection = Connection::incoming(
                         Endpoint(endpoint_handle),
                         ConnectionAccepted {
                             quinn,
@@ -607,10 +615,23 @@ fn handle_dgram_recv(
                     // We can discard the result because we know that the receiver
                     // exists, because we're holding a reference to it right now.
                     let _ = state.incoming_connect_tx.send_blocking(connection);
+
+                    // Log the beginning of the connection
+                    log::debug!("Incoming connection supposedly from {address} accepted");
                 },
 
                 Err(err) => {
-                    todo!()
+                    // Send the response packet if one is included
+                    if let Some(transmit) = err.response {
+                        // Blocking sends should be fine since the channel is unbounded
+                        let _ = state.io_send_tx.send_blocking(DgramSend {
+                            destination: transmit.destination,
+                            payload: Bytes::copy_from_slice(&scratch[..transmit.size])
+                        });
+                    }
+
+                    // Log the failure to connect, useful for debugging
+                    log::debug!("Incoming connection supposedly from {address} rejected: {}", err.cause);
                 },
             }
         },
@@ -642,8 +663,16 @@ fn handle_out_request(
     ) {
         Ok(v) => v,
         Err(err) => {
+            // Construct friendly error message
             let err = ConnectionError::ConnectError(ConnectError::Quic(err));
+
+            // Log the rejection for debugging purposes
+            log::debug!("Outgoing connection to {} rejected: {err:?}", attempt.data.remote_address);
+
+            // Message handling to notify the receiver so it can be dropped
             let _ = attempt.tx.send(ConnectionAttemptResponse::Rejected(err));
+
+            // Done
             return;
         },
     };
@@ -679,6 +708,9 @@ fn handle_out_request(
         // We don't use State::remove_connection as that does unnecessary work, since we haven't fully added the connection.
         state.quinn.handle_event(handle, EndpointEvent::drained());
 
+        // Log the request being denied
+        log::trace!("Outgoing connection from {address} was almost accepted but the handle was dropped");
+
         // All done.
         return;
     };
@@ -687,4 +719,7 @@ fn handle_out_request(
     state.connections.insert(handle, HeldConnection {
         e2c_event_tx,
     });
+
+    // Log the connection being accepted
+    log::trace!("Outgoing connection from {address} was accepted");
 }
