@@ -269,6 +269,13 @@ impl Endpoint {
         self.0.outer_state.lock().unwrap().clone()
     }
 
+    /// Returns any new incoming connections on the endpoint.
+    /// 
+    /// This should be called multiple times until it returns `None` once a frame.
+    pub fn poll_connections(&self) -> Option<Connection> {
+        self.0.incoming_connect_rx.try_recv().ok()
+    }
+
     /// Produces a weak handle ([`EndpointWeak`]), which can still be used to
     /// access the endpoint so long as at least one strong handle exists.
     pub fn downgrade(self) -> EndpointWeak {
