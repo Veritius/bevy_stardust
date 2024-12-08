@@ -3,6 +3,7 @@
 
 mod events;
 mod futures;
+mod logging;
 mod taskpool;
 
 pub mod connection;

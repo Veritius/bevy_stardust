@@ -1,10 +1,10 @@
-use std::{collections::HashMap, future::Future, net::{SocketAddr, ToSocketAddrs, UdpSocket}, pin::{pin, Pin}, sync::{Arc, Mutex, Weak}, task::{Context, Poll}, time::Instant};
+use std::{collections::HashMap, future::Future, net::{SocketAddr, ToSocketAddrs, UdpSocket}, pin::{pin, Pin}, sync::{atomic::{AtomicUsize, Ordering}, Arc, Mutex, Weak}, task::{Context, Poll}, time::Instant};
 use async_task::Task;
 use async_channel::{Receiver, Sender};
 use async_io::Async;
 use bytes::{Bytes, BytesMut};
 use quinn_proto::{crypto::ServerConfig, ConnectionHandle, DatagramEvent, EndpointConfig, EndpointEvent, TransportConfig};
-use crate::{connection::{ConnectError, ConnectionAccepted, ConnectionAttemptResponse, ConnectionCloseSignal, OutgoingConnectionAttempt}, events::{C2EEvent, C2EEventSender, E2CEvent}, futures::Race, taskpool::{get_task_pool, NetworkTaskPool}, Connection, ConnectionError};
+use crate::{connection::{ConnectError, ConnectionAccepted, ConnectionAttemptResponse, ConnectionCloseSignal, OutgoingConnectionAttempt}, events::{C2EEvent, C2EEventSender, E2CEvent}, futures::Race, logging::{LogId, LogIdGen}, taskpool::{get_task_pool, NetworkTaskPool}, Connection, ConnectionError};
 
 /// A builder for an [`Endpoint`].
 pub struct EndpointBuilder<S = ()> {
@@ -207,7 +207,8 @@ impl Endpoint {
         config: Arc<EndpointConfig>,
         server: impl Future<Output = Option<Result<Arc<quinn_proto::ServerConfig>, EndpointError>>> + Send + Sync + 'static,
     ) -> Result<Endpoint, EndpointError> {
-        // Retrieve task pool
+        // Retrieve task pool and create a logging id
+        let log_id = LogIdGen::next();
         let task_pool = get_task_pool();
 
         // Zip the futures to run them at the same time
@@ -236,10 +237,11 @@ impl Endpoint {
         let (incoming_connect_tx, incoming_connect_rx) = async_channel::unbounded();
 
         // we have to do the next steps in a closure because of a cyclic reference
-        let handle = Arc::new_cyclic(move |handle| {
+        let handle = Arc::new_cyclic(|handle| {
             // Construct the inner state
             let state = State {
                 handle: handle.clone(),
+                log_id: log_id.clone(),
 
                 close_signal_rx,
                 outgoing_request_rx,
@@ -275,6 +277,7 @@ impl Endpoint {
             let driver = task_pool.spawn(Driver(state));
 
             Handle {
+                log_id: log_id.clone(),
                 driver,
 
                 outer_state: Mutex::new(EndpointState::Running),
@@ -285,7 +288,7 @@ impl Endpoint {
         });
 
         // Log the creation of the connection
-        log::debug!("Endpoint {address} successfully created");
+        log::debug!("Endpoint {log_id} successfully created on socket {address}");
 
         // Return endpoint handle
         return Ok(Endpoint(handle));
@@ -308,6 +311,10 @@ impl Endpoint {
 }
 
 impl Endpoint {
+    pub(crate) fn log_id(&self) -> &LogId {
+        &self.0.log_id
+    }
+
     pub(crate) fn request_outgoing(
         &self,
         request: OutgoingConnectionAttempt,
@@ -359,6 +366,7 @@ impl From<std::io::Error> for EndpointError {
 }
 
 struct Handle {
+    log_id: LogId,
     driver: Task<Result<(), EndpointError>>,
 
     outer_state: Mutex<EndpointState>,
@@ -367,8 +375,15 @@ struct Handle {
     incoming_connect_rx: Receiver<Connection>,
 }
 
+impl Drop for Handle {
+    fn drop(&mut self) {
+        log::trace!("Handle for endpoint {} dropped", self.log_id);
+    }
+}
+
 struct State {
     handle: Weak<Handle>,
+    log_id: LogId,
 
     close_signal_rx: Receiver<EndpointCloseSignal>,
     outgoing_request_rx: Receiver<OutgoingConnectionAttempt>,
@@ -392,6 +407,15 @@ struct State {
 
 // Required for the driver future
 impl Unpin for State {}
+
+impl Drop for State {
+    fn drop(&mut self) {
+        match self.lifestage {
+            Lifestage::Running | Lifestage::Closing => log::warn!("Endpoint {} was dropped without being closed", self.log_id),
+            Lifestage::Closed => log::trace!("Endpoint {} dropped", self.log_id),
+        }
+    }
+}
 
 impl State {
     fn update_lifestage(&mut self, lifestage: Lifestage) {
@@ -588,6 +612,9 @@ fn handle_close_signal(
         // it means the connection has already been signalled to shut down before this point.
         let _ = connection.close_signal_tx.try_send(ConnectionCloseSignal::endpoint_shutdown());
     }
+
+    // Log the close signal
+    log::trace!("Endpoint {} received close signal", state.log_id);
 }
 
 fn handle_c2e_event(
@@ -684,7 +711,7 @@ fn handle_dgram_recv(
                     let _ = state.incoming_connect_tx.send_blocking(connection);
 
                     // Log the beginning of the connection
-                    log::debug!("Incoming connection supposedly from {address} accepted");
+                    log::debug!("Incoming connection supposedly from {address} accepted on endpoint {}", state.log_id);
                 },
 
                 Err(err) => {
@@ -698,7 +725,7 @@ fn handle_dgram_recv(
                     }
 
                     // Log the failure to connect, useful for debugging
-                    log::debug!("Incoming connection supposedly from {address} rejected: {}", err.cause);
+                    log::debug!("Incoming connection supposedly from {address} rejected from endpoint {}: {}", state.log_id, err.cause);
                 },
             }
         },
@@ -734,7 +761,7 @@ fn handle_out_request(
             let err = ConnectionError::ConnectError(ConnectError::Quic(err));
 
             // Log the rejection for debugging purposes
-            log::debug!("Outgoing connection to {} rejected: {err:?}", attempt.data.remote_address);
+            log::debug!("Outgoing connection to {} rejected by endpoint {}: {err:?}", state.log_id, attempt.data.remote_address);
 
             // Message handling to notify the receiver so it can be dropped
             let _ = attempt.tx.send(ConnectionAttemptResponse::Rejected(err));
@@ -776,7 +803,7 @@ fn handle_out_request(
         state.quinn.handle_event(handle, EndpointEvent::drained());
 
         // Log the request being denied
-        log::trace!("Outgoing connection from {address} was almost accepted but the handle was dropped");
+        log::trace!("Outgoing connection from {address} was almost accepted by endpoint {} but the handle was dropped", state.log_id);
 
         // All done.
         return;
@@ -789,5 +816,5 @@ fn handle_out_request(
     });
 
     // Log the connection being accepted
-    log::trace!("Outgoing connection from {address} was accepted");
+    log::trace!("Outgoing connection from {address} was accepted by endpoint {}", state.log_id);
 }

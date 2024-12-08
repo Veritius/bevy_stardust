@@ -4,7 +4,7 @@ use async_task::Task;
 use bevy_ecs::prelude::*;
 use bevy_stardust::prelude::*;
 use quinn_proto::{ClientConfig, EndpointEvent};
-use crate::{endpoint::{ConnectionDgramSender, Endpoint}, events::{C2EEvent, C2EEventSender, E2CEvent}, taskpool::get_task_pool};
+use crate::{endpoint::{ConnectionDgramSender, Endpoint}, events::{C2EEvent, C2EEventSender, E2CEvent}, logging::{LogId, LogIdGen}, taskpool::get_task_pool};
 
 /// A unique handle to a QUIC connection.
 /// 
@@ -96,6 +96,8 @@ impl Connection {
         endpoint: Endpoint,
         data: ConnectionAccepted,
     ) -> (Connection, Sender<ConnectionCloseSignal>) {
+        let log_id = LogIdGen::next();
+
         // Fetch some data before we lose the ability to access it
         let address = data.quinn.remote_address();
 
@@ -106,6 +108,7 @@ impl Connection {
 
         // Construct state object
         let state = State {
+            log_id: log_id.clone(),
             close_signal_rx,
             endpoint,
             dgram_tx: data.dgram_tx,
@@ -133,7 +136,7 @@ impl Connection {
 
         // Log the creation of the new incoming connection
         // This is separate from outgoing connections because that's behind a future
-        log::debug!("Incoming connection {address} created");
+        log::debug!("Incoming connection {log_id} from address {address} created");
 
         // Return component handle thingy
         return (connection, close_signal_tx);
@@ -238,6 +241,8 @@ impl Future for ConnectionAttempt {
 }
 
 struct State {
+    log_id: LogId,
+
     close_signal_rx: Receiver<ConnectionCloseSignal>,
 
     endpoint: Endpoint,
@@ -303,6 +308,7 @@ async fn build_task(
 
     // Construct the state object
     let state = State {
+        log_id: LogIdGen::next(),
         close_signal_rx: bundle.close_signal_rx,
         endpoint,
         dgram_tx: accepted.dgram_tx,
@@ -312,6 +318,9 @@ async fn build_task(
         message_incoming_tx: bundle.message_incoming_tx,
         message_outgoing_rx: bundle.message_outgoing_rx,
     };
+
+    // Log the acceptance of the connection
+    log::trace!("Connection {} was accepted by endpoint {}", state.log_id, state.endpoint.log_id());
 
     // Run the driver task to completion
     return Driver(state).await;
@@ -355,7 +364,7 @@ fn handle_close_signal(
     state: &mut State,
     signal: ConnectionCloseSignal,
 ) {
-    log::trace!("Received close signal for connection {}", state.quinn.remote_address());
+    // log::trace!("Received close signal for connection {}", state.log_id);
 
     state.quinn.close(
         Instant::now(),
