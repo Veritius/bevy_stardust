@@ -1,4 +1,4 @@
-use std::{collections::HashMap, future::Future, net::{SocketAddr, ToSocketAddrs, UdpSocket}, pin::{pin, Pin}, sync::{Arc, Weak}, task::{Context, Poll}, time::Instant};
+use std::{collections::HashMap, future::Future, net::{SocketAddr, ToSocketAddrs, UdpSocket}, pin::{pin, Pin}, sync::{Arc, Mutex, Weak}, task::{Context, Poll}, time::Instant};
 use async_task::Task;
 use async_channel::{Receiver, Sender};
 use async_io::Async;
@@ -256,6 +256,8 @@ impl Endpoint {
                 io_recv_rx,
                 io_send_tx,
 
+                lifestage: Lifestage::Running,
+
                 quinn: quinn_proto::Endpoint::new(
                     config,
                     server_config,
@@ -275,6 +277,7 @@ impl Endpoint {
             Handle {
                 driver,
 
+                outer_state: Mutex::new(EndpointState::Running),
                 close_signal_tx,
                 outgoing_request_tx,
                 incoming_connect_rx,
@@ -296,6 +299,11 @@ impl Endpoint {
         let _ = self.0.close_signal_tx.send(EndpointCloseSignal {
 
         });
+    }
+
+    /// Returns the state of the [`Endpoint`].
+    pub fn state(&self) -> EndpointState {
+        self.0.outer_state.lock().unwrap().clone()
     }
 
     /// Polls for any new, incoming connections.
@@ -332,6 +340,22 @@ impl Endpoint {
     }
 }
 
+/// The current state of an [`Endpoint`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum EndpointState {
+    /// The endpoint is currently running.
+    /// Dropping all handles will cause data loss.
+    Running,
+
+    /// The endpoint is in the process of shutting down.
+    /// Dropping all handles may cause data loss.
+    Closing,
+
+    /// The endpoint has fully shut down and been drained.
+    /// Dropping all handles can be done without data loss.
+    Closed,
+}
+
 /// An error returned during the creation or execution of an [`Endpoint`].
 #[derive(Debug)]
 pub enum EndpointError {
@@ -351,6 +375,7 @@ impl From<std::io::Error> for EndpointError {
 struct Handle {
     driver: Task<Result<(), EndpointError>>,
 
+    outer_state: Mutex<EndpointState>,
     close_signal_tx: Sender<EndpointCloseSignal>,
     outgoing_request_tx: Sender<OutgoingConnectionAttempt>,
     incoming_connect_rx: Receiver<Connection>,
@@ -368,6 +393,8 @@ struct State {
 
     io_recv_rx: Receiver<DgramRecv>,
     io_send_tx: Sender<DgramSend>,
+
+    lifestage: Lifestage,
 
     quinn: quinn_proto::Endpoint,
 
@@ -394,6 +421,13 @@ impl State {
         // This channel is unbounded, so it should be fine to just do a blocking send
         let _ = connection.e2c_event_tx.send_blocking(event);
     }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Lifestage {
+    Running,
+    Closing,
+    Closed,
 }
 
 struct HeldConnection {
@@ -522,7 +556,33 @@ fn handle_close_signal(
     state: &mut State,
     signal: EndpointCloseSignal,
 ) {
-    todo!()
+    match state.lifestage {
+        // If we're running, we can close.
+        Lifestage::Running => {},
+
+        // If we're already closing/closed, ignore this signal and early return.
+        // If we go through it'll probably just muck everything up.
+        Lifestage::Closing | Lifestage::Closed => { return },
+    }
+
+    // As explained in handle_dgram_recv, we have to handle the error case for upgrading the handle,
+    // as there is a short time where this code could run after it's been dropped, due to how tasks are handled.
+    // We return early if there's no handle, because we'll most likely be dropped before we can finish our work anyway.
+    let handle = match state.handle.upgrade() {
+        Some(handle) => handle,
+        None => { return },
+    };
+
+    // Update lifestage/visible outer state to closing
+    state.lifestage = Lifestage::Closing;
+    *handle.outer_state.lock().unwrap() = EndpointState::Closing;
+
+    // Iterate over all connections and signal them to close
+    for (_, connection) in state.connections.iter() {
+        // We're fine to ignore any errors from this method, since if it does happen,
+        // it means the connection has already been signalled to shut down before this point.
+        let _ = connection.close_signal_tx.try_send(ConnectionCloseSignal::endpoint_shutdown());
+    }
 }
 
 fn handle_c2e_event(
@@ -537,7 +597,7 @@ fn handle_c2e_event(
                 handle,
                 event,
             ) {
-                // Send the event to the connection
+                // Send the response event to the connection
                 state.send_e2c_event(handle, E2CEvent::Quinn(event));
             };
         },

@@ -3,7 +3,7 @@ use async_channel::{Receiver, Sender};
 use async_task::Task;
 use bevy_ecs::prelude::*;
 use bevy_stardust::prelude::*;
-use quinn_proto::{ClientConfig, ConnectionHandle, EndpointEvent};
+use quinn_proto::{ClientConfig, EndpointEvent};
 use crate::{endpoint::{ConnectionDgramSender, Endpoint}, events::{C2EEvent, C2EEventSender, E2CEvent}, taskpool::get_task_pool};
 
 /// A unique handle to a QUIC connection.
@@ -269,6 +269,14 @@ impl Drop for State {
 
 pub(crate) struct ConnectionCloseSignal {
 
+}
+
+impl ConnectionCloseSignal {
+    pub(crate) fn endpoint_shutdown() -> ConnectionCloseSignal {
+        ConnectionCloseSignal {
+            
+        }
+    }
 }
 
 struct ChannelBundle {
