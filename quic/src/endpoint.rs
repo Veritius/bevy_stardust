@@ -332,6 +332,16 @@ pub enum EndpointState {
     Closed,
 }
 
+impl From<Lifestage> for EndpointState {
+    fn from(value: Lifestage) -> Self {
+        match value {
+            Lifestage::Running => EndpointState::Running,
+            Lifestage::Closing => EndpointState::Closing,
+            Lifestage::Closed => EndpointState::Closed,
+        }
+    }
+}
+
 /// An error returned during the creation or execution of an [`Endpoint`].
 #[derive(Debug)]
 pub enum EndpointError {
@@ -384,6 +394,18 @@ struct State {
 impl Unpin for State {}
 
 impl State {
+    fn update_lifestage(&mut self, lifestage: Lifestage) {
+        // Update inner lifestage value
+        self.lifestage = lifestage;
+
+        // Try to update the state value in the endpoint handle
+        // If this fails it's irrelevant since it means it's no longer
+        // readable by anyone and that the state object is about to be dropped.
+        if let Some(handle) = self.handle.upgrade() {
+            *handle.outer_state.lock().unwrap() = lifestage.into();
+        }
+    }
+
     fn remove_connection(&mut self, handle: ConnectionHandle) {
         self.quinn.handle_event(handle, EndpointEvent::drained());
         self.connections.remove(&handle);
@@ -557,17 +579,8 @@ fn handle_close_signal(
         Lifestage::Closing | Lifestage::Closed => { return },
     }
 
-    // As explained in handle_dgram_recv, we have to handle the error case for upgrading the handle,
-    // as there is a short time where this code could run after it's been dropped, due to how tasks are handled.
-    // We return early if there's no handle, because we'll most likely be dropped before we can finish our work anyway.
-    let handle = match state.handle.upgrade() {
-        Some(handle) => handle,
-        None => { return },
-    };
-
     // Update lifestage/visible outer state to closing
-    state.lifestage = Lifestage::Closing;
-    *handle.outer_state.lock().unwrap() = EndpointState::Closing;
+    state.update_lifestage(Lifestage::Closing);
 
     // Iterate over all connections and signal them to close
     for (_, connection) in state.connections.iter() {
