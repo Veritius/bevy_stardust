@@ -68,13 +68,11 @@ pub(crate) fn get_task_pool() -> &'static NetworkTaskPool {
 }
 
 fn start_worker_thread(
-    task_pool: &'static NetworkTaskPool
+    task_pool: &'static NetworkTaskPool,
+    state: &mut ThreadSpawnState,
 ) {
     // Default value for when a max thread count can't be found.
     const UNRETRIEVABLE_LIMIT_DEFAULT: NonZero<usize> = NonZero::new(usize::MAX).unwrap();
-
-    // Lock the spawn state. This prevents other worker threads from accidentally
-    let mut state = task_pool.spawn_state.lock().unwrap();
 
     // Calculate the maximum number of threads we can create
     let max_threads = available_parallelism()
