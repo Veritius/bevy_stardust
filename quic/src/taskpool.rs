@@ -106,6 +106,20 @@ impl WorkerThreads {
         return Ok(());
     }
 
+    /// Returns the target number of threads.
+    pub fn desired() -> usize {
+        let lock = WORKER_THREAD_STATE.lock().unwrap();
+        return lock.current;
+    }
+
+    /// Returns the current number of threads.
+    /// 
+    /// Does not include threads yet to spawn, or in the process of spawning.
+    pub fn current() -> usize {
+        let lock = WORKER_THREAD_STATE.lock().unwrap();
+        return lock.current;
+    }
+
     fn set_inner(
         state: &mut WorkerThreadsState,
         value: usize,
@@ -119,20 +133,6 @@ impl WorkerThreads {
         };
 
         return Ok(())
-    }
-
-    /// Returns the target number of threads.
-    pub fn desired() -> usize {
-        let lock = WORKER_THREAD_STATE.lock().unwrap();
-        return lock.current;
-    }
-
-    /// Returns the current number of threads.
-    /// 
-    /// Does not include threads yet to spawn, or in the process of spawning.
-    pub fn current() -> usize {
-        let lock = WORKER_THREAD_STATE.lock().unwrap();
-        return lock.current;
     }
 
     fn increase_threads_to_fit(
