@@ -11,3 +11,4 @@ pub mod endpoint;
 
 pub use connection::{Connection, ConnectionState, ConnectError, ConnectionError};
 pub use endpoint::{Endpoint, EndpointState, EndpointError};
+pub use taskpool::WorkerThreads;

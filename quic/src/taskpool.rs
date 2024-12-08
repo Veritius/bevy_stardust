@@ -1,4 +1,4 @@
-use std::{future::Future, num::NonZero, sync::{atomic::{AtomicUsize, Ordering}, Condvar, Mutex, OnceLock}, thread::{self, available_parallelism}, time::Duration};
+use std::{future::Future, sync::{Condvar, Mutex, OnceLock}, thread, time::Duration};
 use async_task::{Runnable, Task};
 use concurrent_queue::ConcurrentQueue;
 
@@ -9,10 +9,6 @@ pub(crate) static NETWORK_TASK_POOL: OnceLock<NetworkTaskPool> = OnceLock::new()
 pub(crate) struct NetworkTaskPool {
     queue: ConcurrentQueue<IncompleteTask>,
     cvar: Condvar,
-
-    thread_index: AtomicUsize,
-    idle_threads: AtomicUsize,
-    spawn_state: Mutex<ThreadSpawnState>,
 }
 
 impl NetworkTaskPool {
@@ -27,30 +23,10 @@ impl NetworkTaskPool {
         return task;
     }
 
-    fn init() -> Self {
-        NetworkTaskPool {
-            queue: ConcurrentQueue::unbounded(),
-            cvar: Condvar::new(),
-
-            thread_index: AtomicUsize::new(0),
-            idle_threads: AtomicUsize::new(0),
-
-            spawn_state: Mutex::new(ThreadSpawnState {
-                total_threads: 0,
-                max_threads: None,
-            }),
-        }
-    }
-
     fn schedule(runnable: Runnable) {
         let task_pool = get_task_pool();
         let _ = task_pool.queue.push(IncompleteTask { runnable });
         task_pool.cvar.notify_one();
-        task_pool.grow();
-    }
-
-    fn grow(&'static self) {
-        todo!()
     }
 }
 
@@ -58,49 +34,76 @@ struct IncompleteTask {
     runnable: Runnable,
 }
 
-struct ThreadSpawnState {
-    total_threads: usize,
-    max_threads: Option<NonZero<usize>>,
-}
-
 pub(crate) fn get_task_pool() -> &'static NetworkTaskPool {
-    NETWORK_TASK_POOL.get_or_init(NetworkTaskPool::init)
+    NETWORK_TASK_POOL.get_or_init(|| {
+        return NetworkTaskPool {
+            queue: ConcurrentQueue::unbounded(),
+            cvar: Condvar::new(),
+        };
+    })
 }
 
-fn start_worker_thread(
-    task_pool: &'static NetworkTaskPool,
-    state: &mut ThreadSpawnState,
-) {
-    // Default value for when a max thread count can't be found.
-    const UNRETRIEVABLE_LIMIT_DEFAULT: NonZero<usize> = NonZero::new(usize::MAX).unwrap();
+static WORKER_THREAD_STATE: Mutex<WorkerThreadsState> = Mutex::new(WorkerThreadsState {
+    current: 0,
+    desired: 0,
+    index: 0,
+});
 
-    // Calculate the maximum number of threads we can create
-    let max_threads = available_parallelism()
-        .unwrap_or(UNRETRIEVABLE_LIMIT_DEFAULT)
-        .max(state.max_threads.unwrap_or(UNRETRIEVABLE_LIMIT_DEFAULT));
+struct WorkerThreadsState {
+    current: usize,
+    desired: usize,
+    index: usize,
+}
 
-    // Check that spawning a new thread won't exceed the limit
-    if state.total_threads >= max_threads.into() { return }
+/// Object for controlling the number of threads handling QUIC networking.
+pub enum WorkerThreads {}
 
-    // Try to spawn the thread
-    let res = thread::Builder::new()
-        .name(format!("quic-{}", task_pool.thread_index.fetch_add(1, Ordering::Relaxed)))
-        .spawn(move || worker_thread(task_pool));
+impl WorkerThreads {
+    /// Sets the number of threads to `count`.
+    pub fn set(count: usize) {
+        let mut lock = WORKER_THREAD_STATE.lock().unwrap();
+        lock.current += 1;
+        Self::increase_threads_to_fit(&mut lock);
+    }
 
-    match res {
-        Ok(_) => {
-            // We've successfully added the thread, so we can increment the counter
-            state.total_threads += 1;
-            task_pool.idle_threads.fetch_add(1, Ordering::Relaxed);
-        },
+    /// Returns the target number of threads.
+    pub fn desired() -> usize {
+        let lock = WORKER_THREAD_STATE.lock().unwrap();
+        return lock.current;
+    }
 
-        Err(err) => {
-            // It's likely that we've hit some kind of imposed system limit, so update the max thread count accordingly.
-            // This can occur when available_parallelism() returns an inaccurate estimate, so it's worth accounting for.
-            state.max_threads = Some(NonZero::new(state.total_threads).unwrap());
+    /// Returns the current number of threads.
+    /// 
+    /// Does not include threads yet to spawn, or in the process of spawning.
+    pub fn current() -> usize {
+        let lock = WORKER_THREAD_STATE.lock().unwrap();
+        return lock.current;
+    }
 
-            log::error!("Failed to spawn new thread for processing.: {err}");
-        },
+    fn increase_threads_to_fit(
+        state: &mut WorkerThreadsState,
+    ) {
+        // If we're at the desired count, don't do anything.
+        if state.desired <= state.current { return }
+
+        // Get task pool once so we can give it to the worker thread fn
+        // This also prevents us from repeatedly checking the OnceLock
+        let task_pool = get_task_pool();
+    
+        // Spawn enough threads to make up the difference.
+        // Subtract won't cause problems as we just compared them.
+        for _ in 0..(state.desired - state.current) {
+            let res = thread::Builder::new()
+                .name(format!("quic-{}", state.index))
+                .spawn(|| worker_thread(task_pool));
+    
+            if let Err(err) = res {
+                log::error!("Error while spawning threads to match desired amount: {err}");
+                return;
+            }
+            
+            state.index += 1;
+        }
     }
 }
 
