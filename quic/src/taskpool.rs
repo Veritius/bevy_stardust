@@ -90,16 +90,16 @@ impl WorkerThreads {
         return Ok(());
     }
 
-    /// Spawns additional threads. See [`set`](Self::set) for more details.
-    pub fn add(value: usize) -> Result<(), std::io::Error> {
+    /// Increases the desired number of threads. See [`set`](Self::set) for more details.
+    pub fn increase(value: usize) -> Result<(), std::io::Error> {
         let mut lock = WORKER_THREAD_STATE.lock().unwrap();
         let value = lock.desired + value;
         Self::set_inner(&mut lock, value)?;
         return Ok(());
     }
 
-    /// Removes threads, saturating at zero. See [`set`](Self::set) for more details.
-    pub fn sub(value: usize) -> Result<(), std::io::Error> {
+    /// Decreases the desired number of threads, saturating at zero. See [`set`](Self::set) for more details.
+    pub fn decrease(value: usize) -> Result<(), std::io::Error> {
         let mut lock = WORKER_THREAD_STATE.lock().unwrap();
         let value = lock.desired.saturating_sub(value);
         Self::set_inner(&mut lock, value)?;
