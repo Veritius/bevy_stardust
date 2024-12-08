@@ -144,19 +144,19 @@ impl WorkerThreads {
         // Get task pool once so we can give it to the worker thread fn
         // This also prevents us from repeatedly checking the OnceLock
         let task_pool = get_task_pool();
-    
+
         // Spawn enough threads to make up the difference.
         // Subtract won't cause problems as we just compared them.
         for _ in 0..(state.desired - state.current) {
             let res = thread::Builder::new()
                 .name(format!("quic-{}", state.index))
                 .spawn(|| worker_thread(task_pool));
-    
+
             if let Err(err) = res {
                 log::error!("Error while spawning threads to match desired amount: {err}");
                 return Err(err);
             }
-            
+
             state.index += 1;
         }
 
