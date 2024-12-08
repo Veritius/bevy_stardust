@@ -1,8 +1,6 @@
-use std::{future::Future, sync::{Condvar, Mutex, OnceLock}, thread, time::Duration};
+use std::{cmp::Ordering, future::Future, sync::{Condvar, Mutex, OnceLock}, thread};
 use async_task::{Runnable, Task};
 use concurrent_queue::ConcurrentQueue;
-
-const DESPAWN_TIMEOUT: Duration = Duration::from_millis(500);
 
 pub(crate) static NETWORK_TASK_POOL: OnceLock<NetworkTaskPool> = OnceLock::new();
 
@@ -62,8 +60,13 @@ impl WorkerThreads {
     /// Sets the number of threads to `count`.
     pub fn set(count: usize) {
         let mut lock = WORKER_THREAD_STATE.lock().unwrap();
-        lock.current += 1;
-        Self::increase_threads_to_fit(&mut lock);
+        lock.desired = count;
+
+        match lock.current.cmp(&lock.desired) {
+            Ordering::Less => Self::increase_threads_to_fit(&mut lock),
+            Ordering::Greater => get_task_pool().cvar.notify_all(),
+            Ordering::Equal => { /* do nothing */},
+        }
     }
 
     /// Returns the target number of threads.
