@@ -58,3 +58,22 @@ version = "0.17"
 
 [dependencies.rand]
 version = "0.8"
+
+[dev-dependencies.rustls-pemfile]
+version = "2"
+
+[dev-dependencies.bevy_log]
+version = "0.15"
+
+[[example]]
+name = "star_client"
+path = "examples/star/client.rs"
+
+[[example]]
+name = "star_server"
+path = "examples/star/server.rs"
+
+[[example]]
+name = "star_shared"
+path = "examples/star/shared.rs"
+crate-type = ["lib"]
