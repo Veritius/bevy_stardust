@@ -289,6 +289,16 @@ impl Endpoint {
     }
 }
 
+impl PartialEq for Endpoint {
+    fn eq(&self, other: &Self) -> bool {
+        let a = Arc::as_ptr(&self.0);
+        let b = Arc::as_ptr(&other.0);
+        a as usize == b as usize
+    }
+}
+
+impl Eq for Endpoint {}
+
 /// A weak handle to an [`Endpoint`]. Doesn't prevent the endpoint from being dropped.
 #[derive(Clone)]
 pub struct EndpointWeak(Weak<Handle>);
@@ -301,6 +311,16 @@ impl EndpointWeak {
         self.0.upgrade().map(|v| Endpoint(v))
     }
 }
+
+impl PartialEq for EndpointWeak {
+    fn eq(&self, other: &Self) -> bool {
+        let a = Weak::as_ptr(&self.0);
+        let b = Weak::as_ptr(&other.0);
+        a as usize == b as usize
+    }
+}
+
+impl Eq for EndpointWeak {}
 
 /// The current state of an [`Endpoint`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
