@@ -1,4 +1,4 @@
-use std::{cmp::Ordering, future::Future, sync::{Mutex, OnceLock}, thread, time::Duration};
+use std::{cmp::Ordering, future::Future, num::NonZero, sync::{Mutex, OnceLock}, thread, time::Duration};
 use async_task::{Runnable, Task};
 use concurrent_queue::ConcurrentQueue;
 use crossbeam_channel::{Receiver, Sender};
@@ -64,16 +64,21 @@ struct WorkerThreadsState {
 pub enum WorkerThreads {}
 
 impl WorkerThreads {
-    /// Sets the number of threads to `count`.
-    pub fn set(count: usize) {
+    /// Sets the desired number of threads.
+    /// 
+    /// Threads will be added/removed to try and match the desired value.
+    /// If adding threads fails, an error is returned. Removing threads cannot fail.
+    pub fn set(count: NonZero<usize>) -> Result<(), std::io::Error> {
         let mut lock = WORKER_THREAD_STATE.lock().unwrap();
-        lock.desired = count;
+        lock.desired = count.into();
 
         match lock.current.cmp(&lock.desired) {
-            Ordering::Less => Self::increase_threads_to_fit(&mut lock),
+            Ordering::Less => Self::increase_threads_to_fit(&mut lock)?,
             Ordering::Greater => { let _ = get_task_pool().waker_tx.send(()); },
             Ordering::Equal => { /* do nothing */},
-        }
+        };
+
+        return Ok(());
     }
 
     /// Returns the target number of threads.
@@ -92,9 +97,9 @@ impl WorkerThreads {
 
     fn increase_threads_to_fit(
         state: &mut WorkerThreadsState,
-    ) {
+    ) -> Result<(), std::io::Error> {
         // If we're at the desired count, don't do anything.
-        if state.desired <= state.current { return }
+        if state.desired <= state.current { return Ok(()); }
 
         // Get task pool once so we can give it to the worker thread fn
         // This also prevents us from repeatedly checking the OnceLock
@@ -109,11 +114,14 @@ impl WorkerThreads {
     
             if let Err(err) = res {
                 log::error!("Error while spawning threads to match desired amount: {err}");
-                return;
+                return Err(err);
             }
             
             state.index += 1;
         }
+
+        // done
+        return Ok(());
     }
 }
 
