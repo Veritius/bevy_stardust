@@ -84,17 +84,41 @@ impl WorkerThreads {
     /// 
     /// **Note:** There is always one additional thread that cannot be shut down or removed.
     /// This is to make sure that tasks cannot get stuck forever and waste resources.
-    pub fn set(count: usize) -> Result<(), std::io::Error> {
+    pub fn set(value: usize) -> Result<(), std::io::Error> {
         let mut lock = WORKER_THREAD_STATE.lock().unwrap();
-        lock.desired = count.into();
+        Self::set_inner(&mut lock, value)?;
+        return Ok(());
+    }
 
-        match lock.current.cmp(&lock.desired) {
-            Ordering::Less => Self::increase_threads_to_fit(&mut lock)?,
+    /// Spawns additional threads. See [`set`](Self::set) for more details.
+    pub fn add(value: usize) -> Result<(), std::io::Error> {
+        let mut lock = WORKER_THREAD_STATE.lock().unwrap();
+        let value = lock.desired + value;
+        Self::set_inner(&mut lock, value)?;
+        return Ok(());
+    }
+
+    /// Removes threads, saturating at zero. See [`set`](Self::set) for more details.
+    pub fn sub(value: usize) -> Result<(), std::io::Error> {
+        let mut lock = WORKER_THREAD_STATE.lock().unwrap();
+        let value = lock.desired.saturating_sub(value);
+        Self::set_inner(&mut lock, value)?;
+        return Ok(());
+    }
+
+    fn set_inner(
+        state: &mut WorkerThreadsState,
+        value: usize,
+    ) -> Result<(), std::io::Error> {
+        state.desired = value.into();
+
+        match state.current.cmp(&state.desired) {
+            Ordering::Less => Self::increase_threads_to_fit(state)?,
             Ordering::Greater => { /* do nothing, threads automatically wake up every so often */},
             Ordering::Equal => { /* do nothing, we're already at the target number of threads */},
         };
 
-        return Ok(());
+        return Ok(())
     }
 
     /// Returns the target number of threads.
