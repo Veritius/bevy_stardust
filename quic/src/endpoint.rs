@@ -761,7 +761,8 @@ fn handle_out_request(
             let err = ConnectionError::ConnectError(ConnectError::Quic(err));
 
             // Log the rejection for debugging purposes
-            log::debug!("Outgoing connection to {} rejected by endpoint {}: {err:?}", state.log_id, attempt.data.remote_address);
+            log::debug!("Outgoing connection {} to {} rejected by endpoint {}: {err:?}",
+                state.log_id, attempt.data.remote_address, attempt.data.remote_address);
 
             // Message handling to notify the receiver so it can be dropped
             let _ = attempt.tx.send(ConnectionAttemptResponse::Rejected(err));
