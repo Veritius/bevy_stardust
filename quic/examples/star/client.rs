@@ -1,6 +1,6 @@
 mod shared;
 
-use std::{sync::Arc, time::{Duration, Instant}};
+use std::sync::Arc;
 use bevy_app::prelude::*;
 use bevy_ecs::prelude::*;
 use bevy_stardust_quic::*;
@@ -17,27 +17,28 @@ fn main() {
 
     shared::setup(&mut app);
 
-    app.add_systems(Startup, |mut commands: Commands| {
+    app.add_systems(Startup, |mut endpoints: ResMut<Endpoints>| {
         let endpoint = EndpointBuilder::new()
             .bind(SERVER_ADDRESS)
             .use_existing(Arc::new(EndpointConfig::default()))
             .client_only();
 
-        // let connection = Connection::connect(
-        //     &runtime,
-        //     &endpoint,
-        //     ClientConfig::with_root_certificates(root_certs()).unwrap(),
-        //     SERVER_ADDRESS,
-        //     "server.example.com".into(),
-        // ).unwrap();
-
-        // commands.spawn(connection);
+        endpoints.waiting.insert(endpoint);
     });
 
-    let started = Instant::now();
-    app.add_systems(Update, move |mut events: EventWriter<AppExit>| {
-        if started.elapsed() <= Duration::from_secs(10) { return }
-        events.send(AppExit::Success);
+    app.add_systems(Update, |mut endpoints: ResMut<Endpoints>, mut commands: Commands| {
+        while let Some(endpoint) = endpoints.waiting.poll() {
+            let endpoint = endpoint.unwrap();
+
+            commands.spawn(Connection::connect(
+                endpoint.clone(),
+                SERVER_ADDRESS,
+                "server.example.com".into(),
+                ClientConfig::with_root_certificates(root_certs()).unwrap(),
+            ));
+
+            endpoints.endpoints.push(endpoint);
+        }
     });
 
     app.run();

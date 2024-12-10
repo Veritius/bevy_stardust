@@ -7,6 +7,7 @@ use bevy_log::{info, LogPlugin};
 use bevy_stardust::prelude::*;
 use bevy_stardust_quic::*;
 use rustls_pemfile::Item;
+use utilities::WaitingEndpoints;
 
 // NOTE: It is very, very, very bad practice to compile-in certificates.
 // This is only done for the sake of simplicity. In reality, you should
@@ -34,6 +35,12 @@ pub fn private_key(str: &'static str) -> PrivateKeyDer<'static> {
         Ok(Some((Item::Sec1Key(key), _))) => return key.into(),
         _ => panic!(),
     }
+}
+
+#[derive(Resource, Default)]
+pub struct Endpoints {
+    pub waiting: WaitingEndpoints,
+    pub endpoints: Vec<Endpoint>,
 }
 
 pub fn setup(app: &mut App) {
@@ -73,6 +80,8 @@ pub fn setup(app: &mut App) {
     app.add_systems(Update, send_and_receive_system::<UnreliableSequenced>);
     app.add_systems(Update, send_and_receive_system::<ReliableUnordered>);
     app.add_systems(Update, send_and_receive_system::<ReliableOrdered>);
+
+    app.init_resource::<Endpoints>();
 }
 
 enum UnreliableUnordered {}

@@ -17,6 +17,10 @@ use crate::{endpoint::{ConnectionDgramSender, Endpoint}, events::{C2EEvent, C2EE
 /// As a result, a connection will keep its endpoint open for as long as it lives.
 /// When the connection finishes, the handle is dropped, even if this type still exists.
 #[derive(Component)]
+#[require(Peer(Peer::new))]
+#[require(PeerMessages<Incoming>(PeerMessages::new))]
+#[require(PeerMessages<Outgoing>(PeerMessages::new))]
+#[require(PeerLifestage(|| PeerLifestage::Handshaking))]
 pub struct Connection {
     task: Task<Result<(), ConnectionError>>,
     shared: Arc<Shared>,
