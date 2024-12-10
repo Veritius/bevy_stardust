@@ -158,6 +158,8 @@ impl Future for LoadingEndpoint {
 /// As long as an instance of this handle exists, the asynchronous endpoint task will be kept alive and running.
 /// When all handles are dropped, the endpoint will shut down. Endpoints can be closed early, without dropping
 /// all handles, by using [`close`](Self::close). This frees up most resources until all handles are dropped.
+/// 
+/// If you want to have access to the endpoint without holding it open, see [`downgrade`](Self::downgrade) and [`EndpointWeak`].
 #[derive(Clone)]
 pub struct Endpoint(Arc<Handle>);
 
