@@ -372,7 +372,7 @@ async fn build_task(
 
         // if we get rejected, we just end the task right here
         ConnectionAttemptResponse::Rejected(response) => {
-            return Err(todo!());
+            return Err(response);
         },
     };
 
