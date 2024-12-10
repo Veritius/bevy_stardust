@@ -154,3 +154,9 @@ impl EndpointHandler {
         }
     }
 }
+
+impl Default for EndpointHandler {
+    fn default() -> Self {
+        Self::new()
+    }
+}
