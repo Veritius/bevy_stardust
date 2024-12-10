@@ -436,7 +436,7 @@ fn handle_close_signal(
     state: &mut State,
     signal: ConnectionCloseSignal,
 ) {
-    // log::trace!("Received close signal for connection {}", state.log_id);
+    log::trace!("Received close signal for connection {}", state.log_id);
 
     state.quinn.close(
         Instant::now(),
