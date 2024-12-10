@@ -1,6 +1,6 @@
 use bevy_app::prelude::*;
 use bevy_ecs::prelude::*;
-use crate::EndpointHandler;
+use crate::utilities::*;
 
 /// Adds QUIC support.
 pub struct QuicPlugin;

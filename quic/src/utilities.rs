@@ -1,6 +1,53 @@
+use std::mem;
 use bevy_ecs::prelude::*;
 use bevy_stardust::prelude::*;
-use crate::{ConnectionState, EndpointWeak};
+use crate::{endpoint::LoadingEndpoint, ConnectionState, Endpoint, EndpointError, EndpointWeak};
+
+/// Waits for endpoints to finish.
+pub struct WaitingEndpoints {
+    set: Vec<LoadingEndpoint>,
+    swap: Vec<LoadingEndpoint>,
+}
+
+impl WaitingEndpoints {
+    /// Adds `future` to the queue of endpoints being checked.
+    pub fn insert(&mut self, future: LoadingEndpoint) {
+        self.set.push(future);
+    }
+
+    /// Returns the next endpoint that's done processing, if any
+    pub fn poll(&mut self) -> Option<Result<Endpoint, EndpointError>> {
+        // if there's nothing in the set we just return
+        if self.set.len() == 0 { return None; }
+
+        // Iterate over all 
+        while let Some(future) = self.set.pop() {
+            // Check if the future is finished
+            if !future.0.is_finished() {
+                self.swap.push(future);
+                continue;
+            }
+
+            // Put the swap queue back into the main one
+            self.set.extend(self.swap.drain(..));
+
+            // Poll the future and return it
+            // This will panic instead of blocking
+            // This is fine since we checked if the future was finished
+            // If it does panic, it's a bug that should be fixed
+            return Some(futures_lite::future::block_on(
+                future.0.fallible()
+            ).unwrap());
+        }
+
+        // Swap the sets
+        // This is because swap now contains all of set
+        mem::swap(&mut self.set, &mut self.swap);
+
+        // Nothing done yet
+        return None;
+    }
+}
 
 /// Manages endpoints when used as a `Resource` in the world.
 /// 

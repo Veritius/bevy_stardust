@@ -137,7 +137,7 @@ impl EndpointBuilder<CanBecomeServer> {
 /// A [`Future`] for the creation of an [`Endpoint`].
 /// 
 /// This future is automatically run in the background and does not need to be polled by the user.
-pub struct LoadingEndpoint(Task<Result<Endpoint, EndpointError>>);
+pub struct LoadingEndpoint(pub(crate) Task<Result<Endpoint, EndpointError>>);
 
 impl Future for LoadingEndpoint {
     type Output = Result<Endpoint, EndpointError>;

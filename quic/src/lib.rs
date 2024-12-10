@@ -7,16 +7,15 @@ mod logging;
 mod plugin;
 mod systems;
 mod taskpool;
-mod utilities;
 
 pub mod connection;
 pub mod endpoint;
+pub mod utilities;
 
 pub use connection::{Connection, ConnectionState, ConnectError, ConnectionError};
 pub use endpoint::{Endpoint, EndpointWeak, EndpointBuilder, EndpointState, EndpointError};
 pub use plugin::QuicPlugin;
 pub use taskpool::WorkerThreads;
-pub use utilities::EndpointHandler;
 
 pub use rustls::{
     RootCertStore,
