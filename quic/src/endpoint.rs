@@ -236,7 +236,7 @@ impl Endpoint {
             };
 
             // Start driver task to run in the background
-            let driver = task_pool.spawn(Driver(state));
+            let driver = task_pool.spawn(Driver::new(state));
 
             Handle {
                 log_id: log_id.clone(),
@@ -542,7 +542,17 @@ async fn io_task(
     }
 }
 
-struct Driver(State);
+struct Driver {
+    state: State,
+}
+
+impl Driver {
+    fn new(state: State) -> Driver {
+        Driver {
+            state,
+        }
+    }
+}
 
 impl Future for Driver {
     type Output = Result<(), EndpointError>;
@@ -551,7 +561,7 @@ impl Future for Driver {
         mut self: Pin<&mut Self>,
         cx: &mut Context<'_>,
     ) -> Poll<Self::Output> {
-        let state = &mut self.0;
+        let state = &mut self.state;
 
         match pin!(state.close_signal_rx.recv()).poll(cx) {
             Poll::Pending => { /* Do nothing */ },

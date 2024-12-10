@@ -140,7 +140,7 @@ impl Connection {
         let task_pool = get_task_pool();
 
         // Spawn the driver directly since we've already constructed the endpoint
-        let task = task_pool.spawn(Driver(state));
+        let task = task_pool.spawn(Driver::new(state));
 
         // Construct connection handle
         let connection = Connection {
@@ -395,10 +395,20 @@ async fn build_task(
     log::trace!("Connection {} was accepted by endpoint {}", state.log_id, state.endpoint.log_id());
 
     // Run the driver task to completion
-    return Driver(state).await;
+    return Driver::new(state).await;
 }
 
-struct Driver(State);
+struct Driver {
+    state: State,
+}
+
+impl Driver {
+    fn new(state: State) -> Driver {
+        Driver {
+            state,
+        }
+    }
+}
 
 impl Future for Driver {
     type Output = Result<(), ConnectionError>;
@@ -407,7 +417,7 @@ impl Future for Driver {
         mut self: Pin<&mut Self>,
         cx: &mut Context<'_>,
     ) -> Poll<Self::Output> {
-        let state = &mut self.0;
+        let state = &mut self.state;
 
         match pin!(state.close_signal_rx.recv()).poll(cx) {
             Poll::Pending => { /* Do nothing */ },
