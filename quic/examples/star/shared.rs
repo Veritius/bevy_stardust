@@ -99,6 +99,7 @@ fn send_and_receive_system<C: Channel>(
     ), (
         With<Connection>,
         With<Peer>,
+        Established,
     )>,
 ) {
     for (
