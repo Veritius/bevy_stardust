@@ -19,7 +19,7 @@ fn main() {
 
     app.add_systems(Startup, |mut endpoints: ResMut<Endpoints>| {
         let endpoint = EndpointBuilder::new()
-            .bind(SERVER_ADDRESS)
+            .bind(WILDCARD_ADDRESS)
             .use_existing(Arc::new(EndpointConfig::default()))
             .client_only();
 
