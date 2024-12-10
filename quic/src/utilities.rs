@@ -10,6 +10,14 @@ pub struct WaitingEndpoints {
 }
 
 impl WaitingEndpoints {
+    /// Returns a new, empty `WaitingEndpoints` struct.
+    pub fn new() -> Self {
+        Self {
+            set: Vec::new(),
+            swap: Vec::new(),
+        }
+    }
+
     /// Adds `future` to the queue of endpoints being checked.
     pub fn insert(&mut self, future: LoadingEndpoint) {
         self.set.push(future);
@@ -46,6 +54,12 @@ impl WaitingEndpoints {
 
         // Nothing done yet
         return None;
+    }
+}
+
+impl Default for WaitingEndpoints {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
