@@ -476,6 +476,9 @@ impl State {
 // Polling stuff
 impl State {
     fn tick(&mut self, scratch: &mut Vec<u8>) {
+        // Handle timeouts
+        self.quinn.handle_timeout(Instant::now());
+
         // Drain all datagrams into the sending queue
         while let Some(transmit) = self.quinn.poll_transmit(
             Instant::now(),
@@ -485,9 +488,6 @@ impl State {
             let payload = Bytes::copy_from_slice(&scratch[..transmit.size]);
             self.dgram_tx.send(payload);
         }
-
-        // Handle timeouts
-        self.quinn.handle_timeout(Instant::now());
 
         // Drain all endpoint events into the channel
         while let Some(event) = self.quinn.poll_endpoint_events() {
