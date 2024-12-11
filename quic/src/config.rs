@@ -72,7 +72,7 @@ pub mod endpoint {
             return self;
         }
 
-        pub fn override_supported_versions(mut self, versions: Vec<u32>) -> Self {
+        pub fn set_supported_versions(mut self, versions: Vec<u32>) -> Self {
             self.state.config.supported_versions(versions);
             return self;
         }
