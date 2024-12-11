@@ -375,9 +375,6 @@ async fn build_task(
         message_outgoing_rx: bundle.message_outgoing_rx,
     };
 
-    // Log the acceptance of the connection
-    log::trace!("Connection {} was accepted by endpoint {}", state.log_id, state.endpoint.log_id());
-
     // Run the driver task to completion
     return driver(state).await;
 }
