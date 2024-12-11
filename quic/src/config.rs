@@ -67,11 +67,6 @@ pub mod endpoint {
     }
 
     impl EndpointConfigBuilder<Ready> {
-        pub fn set_reset_key(mut self, key: Arc<dyn quinn_proto::crypto::HmacKey>) -> Self {
-            self.state.config.reset_key(key);
-            return self;
-        }
-
         pub fn set_max_udp_payload_size(mut self, value: u16) -> Self {
             self.state.config.max_udp_payload_size(value.max(1200)).unwrap();
             return self;
