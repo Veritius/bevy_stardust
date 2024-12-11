@@ -157,9 +157,9 @@ pub mod server {
     }
 
     impl ServerConfig {
-        pub fn builder() -> ServerConfigBuilder<WantsCryptoConfig> {
+        pub fn builder() -> ServerConfigBuilder<WantsTransportConfig> {
             ServerConfigBuilder {
-                state: WantsCryptoConfig {
+                state: WantsTransportConfig {
                     _p: (),
                 }
             }
@@ -170,8 +170,23 @@ pub mod server {
         state: T
     }
 
-    pub struct WantsCryptoConfig {
+    pub struct WantsTransportConfig {
         _p: (),
+    }
+
+    impl ServerConfigBuilder<WantsTransportConfig> {
+        pub fn with_transport_config(
+            self,
+            transport_config: Arc<TransportConfig>,
+        ) -> ServerConfigBuilder<WantsCryptoConfig> {
+            ServerConfigBuilder { state: WantsCryptoConfig {
+                transport_config,
+            } }
+        }
+    }
+
+    pub struct WantsCryptoConfig {
+        transport_config: Arc<TransportConfig>,
     }
 
     impl ServerConfigBuilder<WantsCryptoConfig> {
@@ -185,6 +200,7 @@ pub mod server {
     }
 
     pub struct WantsChannelRegistry {
+        transport_config: Arc<TransportConfig>,
         crypto: Arc<dyn quinn_proto::crypto::ServerConfig>,
     }
 
