@@ -419,6 +419,8 @@ async fn driver(
             .or(message_outgoing_rx)
     });
 
+    let mut scratch = Vec::new();
+
     loop {
         let event = match stream.next().await {
             Some(event) => event,
@@ -426,38 +428,102 @@ async fn driver(
         };
 
         match event {
-            Event::CloseSignal(signal) => handle_close_signal(&mut state, signal),
-            Event::E2CEvent(event) => handle_e2c_event(&mut state, event),
-            Event::OutgoingMessage(message) => handle_outgoing_message(&mut state, message),
+            Event::CloseSignal(signal) => state.handle_close_signal(signal),
+            Event::E2CEvent(event) => state.handle_e2c_event(event),
+            Event::OutgoingMessage(message) => state.handle_outgoing_message(message),
+        }
+
+        state.tick(&mut scratch);
+
+        todo!()
+    }
+}
+
+// Events
+impl State {
+    fn handle_close_signal(&mut self, signal: ConnectionCloseSignal) {
+        log::trace!("Received close signal for connection {}", self.log_id);
+
+        self.quinn.close(
+            Instant::now(),
+            todo!(),
+            todo!(),
+        );
+    }
+
+    fn handle_e2c_event(&mut self, event: E2CEvent, ) {
+        match event {
+            E2CEvent::Quinn(event) => self.quinn.handle_event(event),
         }
     }
-}
 
-fn handle_close_signal(
-    state: &mut State,
-    signal: ConnectionCloseSignal,
-) {
-    log::trace!("Received close signal for connection {}", state.log_id);
-
-    state.quinn.close(
-        Instant::now(),
-        todo!(),
-        todo!(),
-    );
-}
-
-fn handle_e2c_event(
-    state: &mut State,
-    event: E2CEvent,
-) {
-    match event {
-        E2CEvent::Quinn(event) => state.quinn.handle_event(event),
+    fn handle_outgoing_message(&mut self, message: ChannelMessage) {
+        todo!()
     }
 }
 
-fn handle_outgoing_message(
-    state: &mut State,
-    message: ChannelMessage,
-) {
-    todo!()
+// Polling stuff
+impl State {
+    fn tick(&mut self, scratch: &mut Vec<u8>) {
+        // Drain all datagrams into the sending queue
+        while let Some(transmit) = self.quinn.poll_transmit(
+            Instant::now(),
+            1,
+            scratch,
+        )  {
+            let payload = Bytes::copy_from_slice(&scratch[..transmit.size]);
+            self.dgram_tx.send(payload);
+        }
+
+        // Handle timeouts
+        self.quinn.handle_timeout(Instant::now());
+
+        // Drain all endpoint events into the channel
+        while let Some(event) = self.quinn.poll_endpoint_events() {
+            // The channel is unbounded, so it shouldn't error in most cases
+            let _ = self.c2e_event_tx.send_blocking(C2EEvent::Quinn(event));
+        }
+    }
+
+    #[must_use]
+    fn poll_timeout(&mut self) -> Option<Instant> {
+        self.quinn.poll_timeout()
+    }
+}
+
+// Quinn stuff
+impl State {
+    fn handle_quinn_app_event(&mut self, event: quinn_proto::Event) {
+        match event {
+            quinn_proto::Event::Stream(event) => self.handle_quinn_stream_event(event),
+            quinn_proto::Event::DatagramReceived => self.handle_potential_incoming_dgrams(),
+            quinn_proto::Event::DatagramsUnblocked => todo!(),
+    
+            quinn_proto::Event::Connected => todo!(),
+            quinn_proto::Event::ConnectionLost { reason } => todo!(),
+    
+            quinn_proto::Event::HandshakeDataReady => todo!(),
+        }
+    }
+
+    fn handle_quinn_stream_event(&mut self, event: quinn_proto::StreamEvent) {
+        match event {
+            quinn_proto::StreamEvent::Opened { dir } => todo!(),
+            quinn_proto::StreamEvent::Readable { id } => todo!(),
+            quinn_proto::StreamEvent::Writable { id } => todo!(),
+            quinn_proto::StreamEvent::Finished { id } => todo!(),
+            quinn_proto::StreamEvent::Stopped { id, error_code } => todo!(),
+            quinn_proto::StreamEvent::Available { dir } => todo!(),
+        }
+    }
+
+    fn handle_potential_incoming_dgrams(&mut self) {
+        while let Some(dgram) = self.quinn.datagrams().recv() {
+            self.handle_incoming_datagram(dgram);
+        }
+    }
+
+    fn handle_incoming_datagram(&mut self, dgram: Bytes) {
+        todo!()
+    }
 }
