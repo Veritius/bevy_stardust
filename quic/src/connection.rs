@@ -1,4 +1,4 @@
-use std::{future::Future, net::SocketAddr, pin::{pin, Pin}, sync::{Arc, Mutex}, task::{Context, Poll}, time::Instant};
+use std::{future::Future, net::SocketAddr, pin::{pin, Pin}, sync::{Arc, Mutex}, task::{Context, Poll}, time::{Duration, Instant}};
 use async_channel::{Receiver, Sender};
 use async_io::Timer;
 use async_task::Task;
@@ -406,7 +406,7 @@ async fn driver(
     loop {
         let timer = match state.poll_timeout() {
             Some(deadline) => Timer::at(deadline),
-            None => Timer::never(),
+            None => Timer::after(Duration::from_secs(3)),
         };
 
         let future = futures_lite::future::race(
