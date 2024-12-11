@@ -261,7 +261,7 @@ impl Endpoint {
         // We send an event to the state object to shut it down.
         // If there's an error, it means the endpoint is either
         // already closing or closed, so we can safely ignore it.
-        let _ = self.0.close_signal_tx.send(EndpointCloseSignal {
+        let _ = self.0.close_signal_tx.send_blocking(EndpointCloseSignal {
 
         });
     }
@@ -758,7 +758,7 @@ fn handle_out_attempt(
                 state.log_id, attempt.data.remote_address, attempt.data.remote_address);
 
             // Message handling to notify the receiver so it can be dropped
-            let _ = attempt.tx.send(ConnectionAttemptResponse::Rejected(err));
+            let _ = attempt.tx.send_blocking(ConnectionAttemptResponse::Rejected(err));
 
             // Done
             return;
