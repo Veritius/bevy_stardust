@@ -511,7 +511,7 @@ async fn io_task(
                     origin,
                     payload: {
                         let mut buf = BytesMut::with_capacity(length);
-                        buf.copy_from_slice(&scratch[..length]);
+                        buf.extend_from_slice(&scratch[..length]);
                         buf
                     },
                 }).await {
