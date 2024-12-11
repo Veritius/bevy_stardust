@@ -447,6 +447,8 @@ async fn driver(
         }
 
         state.tick(&mut scratch);
+
+        if state.quinn.is_drained() { return Ok(()); }
     }
 }
 
