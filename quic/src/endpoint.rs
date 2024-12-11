@@ -422,6 +422,8 @@ impl Drop for State {
             Lifestage::Running | Lifestage::Closing => log::warn!("Endpoint {} was dropped without being closed", self.log_id),
             Lifestage::Closed => log::trace!("Endpoint {} dropped", self.log_id),
         }
+
+        self.update_lifestage(Lifestage::Closed);
     }
 }
 
