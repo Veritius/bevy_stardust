@@ -429,10 +429,17 @@ async fn driver(
         state.tick(&mut scratch);
 
         if state.quinn.is_drained() {
-            *state.shared.outer_state.lock().unwrap() = ConnectionState::Closed;
+            state.update_lifestage(Lifestage::Closed);
             let _ = state.c2e_event_tx.send_blocking(C2EEvent::Quinn(EndpointEvent::drained()));
             return Ok(());
         }
+    }
+}
+
+impl State {
+    fn update_lifestage(&mut self, lifestage: Lifestage) {
+        self.lifestage = lifestage;
+        *self.shared.outer_state.lock().unwrap() = lifestage.into();
     }
 }
 
@@ -502,8 +509,15 @@ impl State {
             quinn_proto::Event::DatagramReceived => self.handle_potential_incoming_dgrams(),
             quinn_proto::Event::DatagramsUnblocked => todo!(),
 
-            quinn_proto::Event::Connected => todo!(),
-            quinn_proto::Event::ConnectionLost { reason } => todo!(),
+            quinn_proto::Event::Connected => {
+                log::debug!("Connection {} now fully connected", self.log_id);
+                self.update_lifestage(Lifestage::Connected);
+            },
+
+            quinn_proto::Event::ConnectionLost { reason } => {
+                log::debug!("Connection {} lost: {reason}", self.log_id);
+                self.update_lifestage(Lifestage::Closing);
+            },
     
             quinn_proto::Event::HandshakeDataReady => { /* Don't care */ },
         }
