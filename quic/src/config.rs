@@ -233,7 +233,10 @@ pub mod client {
             remote_address: SocketAddr,
             server_name: impl Into<Arc<str>>,
         ) -> ClientConfigBuilder<WantsTransportConfig> {
-            todo!()
+            ClientConfigBuilder { state: WantsTransportConfig {
+                remote_address,
+                server_name: server_name.into(),
+            } }
         }
     }
 
@@ -247,7 +250,11 @@ pub mod client {
             self,
             transport_config: Arc<TransportConfig>,
         ) -> ClientConfigBuilder<WantsCryptoConfig> {
-            todo!()
+            ClientConfigBuilder { state: WantsCryptoConfig {
+                remote_address: self.remote_address,
+                server_name: self.server_name,
+                transport_config,
+            } }
         }
     }
 
@@ -255,6 +262,6 @@ pub mod client {
         remote_address: SocketAddr,
         server_name: Arc<str>,
 
-        transport: Arc<TransportConfig>,
+        transport_config: Arc<TransportConfig>,
     }
 }
