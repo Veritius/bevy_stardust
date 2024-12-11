@@ -41,9 +41,6 @@ version = "2.3"
 [dependencies.async-io]
 version = "2.4"
 
-[dependencies.blocking]
-version = "1.6"
-
 [dependencies.futures-lite]
 version = "2.5"
 

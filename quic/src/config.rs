@@ -99,23 +99,30 @@ pub mod endpoint {
     }
 
     impl EndpointConfigBuilder<WantsSocket> {
+        /// This operation will block until complete.
+        /// It is strongly recommended to use the `blocking` crate.
         pub fn bind_address(
             self,
             address: impl ToSocketAddrs,
         ) -> Result<EndpointConfigBuilder<Ready>, io::Error> {
-            todo!()
+            self.with_socket(UdpSocket::bind(address)?)
         }
 
+        /// This operation will block until complete.
+        /// It is strongly recommended to use the `blocking` crate.
         pub fn with_socket(
             self,
             socket: UdpSocket,
         ) -> Result<EndpointConfigBuilder<Ready>, io::Error> {
-            todo!()
+            Ok(EndpointConfigBuilder { state: Ready {
+                socket: Arc::new(Async::new(socket)?),
+                config: quinn_proto::EndpointConfig::default(),
+            } })
         }
     }
 
     pub struct Ready {
-        socket: UdpSocket,
+        socket: Arc<Async<UdpSocket>>,
         config: quinn_proto::EndpointConfig,
     }
 
