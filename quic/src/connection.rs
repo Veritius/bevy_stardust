@@ -140,7 +140,7 @@ impl Connection {
         let task_pool = get_task_pool();
 
         // Spawn the driver directly since we've already constructed the endpoint
-        let task = task_pool.spawn(Driver::new(state));
+        let task = task_pool.spawn(driver(state));
 
         // Construct connection handle
         let connection = Connection {
@@ -395,50 +395,41 @@ async fn build_task(
     log::trace!("Connection {} was accepted by endpoint {}", state.log_id, state.endpoint.log_id());
 
     // Run the driver task to completion
-    return Driver::new(state).await;
+    return driver(state).await;
 }
 
-struct Driver {
-    state: State,
-}
+async fn driver(
+    mut state: State,
+) -> Result<(), ConnectionError> {
+    use futures_lite::StreamExt;
 
-impl Driver {
-    fn new(state: State) -> Driver {
-        Driver {
-            state,
-        }
+    enum Event {
+        CloseSignal(ConnectionCloseSignal),
+        E2CEvent(E2CEvent),
+        OutgoingMessage(ChannelMessage),
     }
-}
 
-impl Future for Driver {
-    type Output = Result<(), ConnectionError>;
+    let mut stream = pin!({
+            let close_signal_rx = state.close_signal_rx.clone().map(|v| Event::CloseSignal(v));
+            let e2c_event_rx = state.e2c_event_rx.clone().map(|v| Event::E2CEvent(v));
+            let message_outgoing_rx = state.message_outgoing_rx.clone().map(|v| Event::OutgoingMessage(v));
 
-    fn poll(
-        mut self: Pin<&mut Self>,
-        cx: &mut Context<'_>,
-    ) -> Poll<Self::Output> {
-        let state = &mut self.state;
+            close_signal_rx
+                .or(e2c_event_rx)
+                .or(message_outgoing_rx)
+    });
 
-        match pin!(state.close_signal_rx.recv()).poll(cx) {
-            Poll::Pending => { /* Do nothing */ },
-            Poll::Ready(Ok(signal)) => handle_close_signal(state, signal),
-            Poll::Ready(Err(_)) => todo!(),
+    loop {
+        let event = match stream.next().await {
+            Some(event) => event,
+            None => todo!(),
+        };
+
+        match event {
+            Event::CloseSignal(signal) => handle_close_signal(&mut state, signal),
+            Event::E2CEvent(event) => handle_e2c_event(&mut state, event),
+            Event::OutgoingMessage(message) => handle_outgoing_message(&mut state, message),
         }
-
-        match pin!(state.e2c_event_rx.recv()).poll(cx) {
-            Poll::Ready(Ok(event)) => handle_e2c_event(state, event),
-            Poll::Pending => { /* Do nothing */ },
-            Poll::Ready(Err(_)) => todo!(),
-        }
-
-        match pin!(state.message_outgoing_rx.recv()).poll(cx) {
-            Poll::Ready(Ok(message)) => handle_outgoing_message(state, message),
-            Poll::Pending => { /* Do nothing */ },
-            Poll::Ready(Err(_)) => todo!(),
-        }
-
-        // We're not done.
-        return Poll::Pending;
     }
 }
 
