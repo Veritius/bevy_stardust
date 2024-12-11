@@ -294,7 +294,7 @@ impl Endpoint {
         &self,
         request: OutgoingConnectionAttempt,
     ) {
-        let _ = self.0.outgoing_request_tx.send(request);
+        let _ = self.0.outgoing_request_tx.send_blocking(request);
     }
 }
 
