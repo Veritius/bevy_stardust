@@ -236,7 +236,7 @@ impl Endpoint {
             };
 
             // Start driver task to run in the background
-            let driver = task_pool.spawn(Driver::new(state));
+            let driver = task_pool.spawn(driver(state));
 
             Handle {
                 log_id: log_id.clone(),
@@ -542,68 +542,41 @@ async fn io_task(
     }
 }
 
-struct Driver {
-    state: State,
-}
+async fn driver(
+    mut state: State,
+) -> Result<(), EndpointError> {
+    use futures_lite::StreamExt;
 
-impl Driver {
-    fn new(state: State) -> Driver {
-        Driver {
-            state,
-        }
+    enum Event {
+        CloseSignal(EndpointCloseSignal),
+        C2EEvent(ConnectionHandle, C2EEvent),
+        DgramRecv(DgramRecv),
+        OutgoingAttempt(OutgoingConnectionAttempt),
     }
-}
 
-impl Future for Driver {
-    type Output = Result<(), EndpointError>;
+    let mut stream = pin!({
+        let close_signal_rx = state.close_signal_rx.clone().map(|v| Event::CloseSignal(v));
+        let c2e_event_rx = state.c2e_event_rx.clone().map(|v| Event::C2EEvent(v.0, v.1));
+        let dgram_recv_rx = state.io_recv_rx.clone().map(|v| Event::DgramRecv(v));
+        let outgoing_request_rx = state.outgoing_request_rx.clone().map(|v| Event::OutgoingAttempt(v));
 
-    fn poll(
-        mut self: Pin<&mut Self>,
-        cx: &mut Context<'_>,
-    ) -> Poll<Self::Output> {
-        let state = &mut self.state;
+        close_signal_rx
+            .or(c2e_event_rx)
+            .or(dgram_recv_rx)
+            .or(outgoing_request_rx)
+    });
 
-        match pin!(state.close_signal_rx.recv()).poll(cx) {
-            Poll::Pending => { /* Do nothing */ },
-            Poll::Ready(Ok(signal)) => handle_close_signal(state, signal),
-            Poll::Ready(Err(_)) => todo!(),
-        }
+    loop {
+        let event = match stream.next().await {
+            Some(event) => event,
+            None => todo!(),
+        };
 
-        match pin!(state.c2e_event_rx.recv()).poll(cx) {
-            Poll::Ready(Ok((handle, event))) => handle_c2e_event(state, handle, event),
-            Poll::Pending => { /* Do nothing */ },
-            Poll::Ready(Err(_)) => todo!(),
-        }
-
-        match pin!(state.io_recv_rx.recv()).poll(cx) {
-            Poll::Ready(Ok(dgram)) => handle_dgram_recv(state, dgram),
-            Poll::Pending => { /* Do nothing */ },
-            Poll::Ready(Err(_)) => todo!(),
-        }
-
-        match pin!(state.outgoing_request_rx.recv()).poll(cx) {
-            Poll::Ready(Ok(attempt)) => handle_out_request(state, attempt),
-            Poll::Pending => { /* Do nothing */ },
-            Poll::Ready(Err(_)) => todo!(),
-        }
-
-        // Decide whether we need to terminate the endpoint
-        match (state.lifestage, state.connections.len()) {
-            // All connections are drained
-            (Lifestage::Closing, 0) => {
-                if let Some(handle) = state.handle.upgrade() {
-                    // Update the state handle
-                    *handle.outer_state.lock().unwrap() = EndpointState::Closed;
-                }
-
-                return Poll::Ready(Ok(()));
-            },
-
-            // Set to closed in another function
-            (Lifestage::Closed, _) => return Poll::Ready(Ok(())),
-
-            // We're not done yet.
-            _ => return Poll::Pending,
+        match event {
+            Event::CloseSignal(signal) => handle_close_signal(&mut state, signal),
+            Event::C2EEvent(handle, event) => handle_c2e_event(&mut state, handle, event),
+            Event::DgramRecv(dgram) => handle_dgram_recv(&mut state, dgram),
+            Event::OutgoingAttempt(attempt) => handle_out_attempt(&mut state, attempt),
         }
     }
 }
@@ -762,7 +735,7 @@ fn handle_dgram_recv(
     }
 }
 
-fn handle_out_request(
+fn handle_out_attempt(
     state: &mut State,
     attempt: OutgoingConnectionAttempt,
 ) {
