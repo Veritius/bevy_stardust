@@ -494,6 +494,11 @@ impl State {
             // The channel is unbounded, so it shouldn't error in most cases
             let _ = self.c2e_event_tx.send_blocking(C2EEvent::Quinn(event));
         }
+
+        // Handle all quinn app events
+        while let Some(event) = self.quinn.poll() {
+            self.handle_quinn_app_event(event);
+        }
     }
 
     #[must_use]
