@@ -466,7 +466,7 @@ impl State {
         self.quinn.handle_timeout(Instant::now());
 
         // Drain all datagrams into the sending queue
-        while let Some(transmit) = self.quinn.poll_transmit(
+        if let Some(transmit) = self.quinn.poll_transmit(
             Instant::now(),
             1,
             scratch,
