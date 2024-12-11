@@ -350,4 +350,11 @@ pub mod client {
         crypto_config: Arc<dyn quinn_proto::crypto::ClientConfig>,
         quic_version: u32,
     }
+
+    impl ClientConfigBuilder<Ready> {
+        pub fn set_quic_version(&mut self, version: u32) -> &mut Self {
+            self.state.quic_version = version;
+            return self;
+        }
+    }
 }
