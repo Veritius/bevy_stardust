@@ -9,7 +9,7 @@ pub(crate) static NETWORK_TASK_POOL: OnceLock<NetworkTaskPool> = OnceLock::new()
 
 pub(crate) struct NetworkTaskPool {
     fallback_thread: Once,
-    task_queue: ConcurrentQueue<IncompleteTask>,
+    task_queue: ConcurrentQueue<Runnable>,
 
     waker_tx: Sender<()>,
     waker_rx: Receiver<()>,
@@ -38,13 +38,9 @@ impl NetworkTaskPool {
                 .unwrap(); // shouldn't fail
         });
 
-        let _ = task_pool.task_queue.push(IncompleteTask { runnable });
+        let _ = task_pool.task_queue.push(runnable);
         task_pool.waker_tx.send(()).unwrap();
     }
-}
-
-struct IncompleteTask {
-    runnable: Runnable,
 }
 
 pub(crate) fn get_task_pool() -> &'static NetworkTaskPool {
@@ -171,7 +167,7 @@ fn fallback_thread(
     loop {
         // Consume as many tasks as possible
         while let Ok(task) = task_pool.task_queue.pop() {
-            task.runnable.run();
+            task.run();
         }
 
         // Wait for the next event
@@ -193,7 +189,7 @@ fn worker_thread(
 
         // Consume as many tasks as possible
         while let Ok(task) = task_pool.task_queue.pop() {
-            task.runnable.run();
+            task.run();
         }
 
         // Wait for the next event or time out
