@@ -3,6 +3,7 @@ mod shared;
 use std::sync::Arc;
 use bevy_app::prelude::*;
 use bevy_ecs::prelude::*;
+use bevy_stardust::prelude::Channels;
 use bevy_stardust_quic::*;
 use quinn_proto::{EndpointConfig, ServerConfig};
 use shared::*;
@@ -21,9 +22,10 @@ fn main() {
 
     app.init_resource::<EndpointHandler>();
 
-    app.add_systems(Startup, |mut endpoints: ResMut<Endpoints>| {
+    app.add_systems(Startup, |mut endpoints: ResMut<Endpoints>, channels: Channels| {
         let endpoint = EndpointBuilder::new()
             .bind(SERVER_ADDRESS)
+            .with_channel_registry(channels.clone_arc())
             .use_existing(Arc::new(EndpointConfig::default()))
             .server_from_config(ServerConfig::with_single_cert(
                 vec![

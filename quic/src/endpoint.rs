@@ -2,6 +2,7 @@ use std::{collections::HashMap, future::Future, net::{SocketAddr, ToSocketAddrs,
 use async_task::Task;
 use async_channel::{Receiver, Sender};
 use async_io::Async;
+use bevy_stardust::channels::ChannelRegistry;
 use bytes::{Bytes, BytesMut};
 use quinn_proto::{ConnectionHandle, DatagramEvent, EndpointConfig, EndpointEvent, ServerConfig};
 use crate::{connection::{ConnectError, ConnectionAccepted, ConnectionAttemptResponse, ConnectionCloseSignal, OutgoingConnectionAttempt}, events::{C2EEvent, C2EEventSender, E2CEvent}, futures::Race, logging::{LogId, LogIdGen}, taskpool::{get_task_pool, NetworkTaskPool}, Connection, ConnectionError};
@@ -30,17 +31,19 @@ pub struct WantsSocket {
 
 impl EndpointBuilder<WantsSocket> {
     /// Uses a pre-existing standard library UDP socket.
-    pub fn use_existing(self, socket: UdpSocket) -> EndpointBuilder<WantsQuicConfig> {
+    pub fn use_existing(self, socket: UdpSocket) -> EndpointBuilder<WantsChannelRegistry> {
         let socket = blocking::unblock(move || Async::new(socket));
 
         EndpointBuilder {
             task_pool: self.task_pool,
-            state: WantsQuicConfig { socket },
+            state: WantsChannelRegistry {
+                socket
+            },
         }
     }
 
     /// Binds to the given address, creating a new socket.
-    pub fn bind<A>(self, address: A) -> EndpointBuilder<WantsQuicConfig>
+    pub fn bind<A>(self, address: A) -> EndpointBuilder<WantsChannelRegistry>
     where
         A: ToSocketAddrs,
         A: Send + Sync + 'static,
@@ -52,14 +55,35 @@ impl EndpointBuilder<WantsSocket> {
 
         EndpointBuilder {
             task_pool: self.task_pool,
-            state: WantsQuicConfig { socket },
+            state: WantsChannelRegistry {
+                socket
+            },
+        }
+    }
+}
+
+/// Step for adding a [`ChannelRegistry`] used by connections.
+pub struct WantsChannelRegistry {
+    socket: Task<Result<Async<UdpSocket>, std::io::Error>>,
+}
+
+impl EndpointBuilder<WantsChannelRegistry> {
+    /// Adds a [`ChannelRegistry`].
+    pub fn with_channel_registry(self, registry: Arc<ChannelRegistry>) -> EndpointBuilder<WantsQuicConfig> {
+        EndpointBuilder {
+            task_pool: self.task_pool,
+            state: WantsQuicConfig {
+                previous: self.state,
+                registry,
+            },
         }
     }
 }
 
 /// State for adding a reset key.
 pub struct WantsQuicConfig {
-    socket: Task<Result<Async<UdpSocket>, std::io::Error>>,
+    previous: WantsChannelRegistry,
+    registry: Arc<ChannelRegistry>,
 }
 
 impl EndpointBuilder<WantsQuicConfig> {
@@ -86,9 +110,10 @@ impl EndpointBuilder<CanBecomeServer> {
     pub fn client_only(self) -> LoadingEndpoint {
         LoadingEndpoint(self.task_pool.spawn(async move {
             Endpoint::new_inner(
-                self.state.previous.socket,
+                self.state.previous.previous.socket,
                 self.state.config,
                 async { None },
+                self.state.previous.registry,
             ).await
         }))
     }
@@ -102,9 +127,10 @@ impl EndpointBuilder<CanBecomeServer> {
     ) -> LoadingEndpoint {
         LoadingEndpoint(self.task_pool.spawn(async move {
             Endpoint::new_inner(
-                self.state.previous.socket,
+                self.state.previous.previous.socket,
                 self.state.config,
                 async { Some(Ok(config)) },
+                self.state.previous.registry,
             ).await
         }))
     }
@@ -119,7 +145,7 @@ impl EndpointBuilder<CanBecomeServer> {
     {
         LoadingEndpoint(self.task_pool.spawn(async move {
             Endpoint::new_inner(
-                self.state.previous.socket,
+                self.state.previous.previous.socket,
                 self.state.config,
                 async {
                     let config = match future.await {
@@ -129,6 +155,7 @@ impl EndpointBuilder<CanBecomeServer> {
 
                     return Some(Ok(config))
                 },
+                self.state.previous.registry,
             ).await
         }))
     }
@@ -168,6 +195,7 @@ impl Endpoint {
         socket: Task<Result<Async<UdpSocket>, std::io::Error>>,
         config: Arc<EndpointConfig>,
         server: impl Future<Output = Option<Result<Arc<quinn_proto::ServerConfig>, EndpointError>>> + Send + Sync + 'static,
+        registry: Arc<ChannelRegistry>,
     ) -> Result<Endpoint, EndpointError> {
         // Retrieve task pool and create a logging id
         let log_id = LogIdGen::next();
@@ -221,6 +249,8 @@ impl Endpoint {
                 io_send_tx,
 
                 lifestage: Lifestage::Running,
+
+                registry,
 
                 quinn: quinn_proto::Endpoint::new(
                     config,
@@ -404,6 +434,8 @@ struct State {
     io_send_tx: Sender<DgramSend>,
 
     lifestage: Lifestage,
+
+    registry: Arc<ChannelRegistry>,
 
     quinn: quinn_proto::Endpoint,
 

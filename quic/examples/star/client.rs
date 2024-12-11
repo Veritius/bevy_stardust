@@ -3,6 +3,7 @@ mod shared;
 use std::sync::Arc;
 use bevy_app::prelude::*;
 use bevy_ecs::prelude::*;
+use bevy_stardust::prelude::*;
 use bevy_stardust_quic::*;
 use shared::*;
 
@@ -17,9 +18,10 @@ fn main() {
 
     shared::setup(&mut app);
 
-    app.add_systems(Startup, |mut endpoints: ResMut<Endpoints>| {
+    app.add_systems(Startup, |mut endpoints: ResMut<Endpoints>, channels: Channels| {
         let endpoint = EndpointBuilder::new()
             .bind(WILDCARD_ADDRESS)
+            .with_channel_registry(channels.clone_arc())
             .use_existing(Arc::new(EndpointConfig::default()))
             .client_only();
 
