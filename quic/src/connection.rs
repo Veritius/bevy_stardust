@@ -410,13 +410,13 @@ async fn driver(
     }
 
     let mut stream = pin!({
-            let close_signal_rx = state.close_signal_rx.clone().map(|v| Event::CloseSignal(v));
-            let e2c_event_rx = state.e2c_event_rx.clone().map(|v| Event::E2CEvent(v));
-            let message_outgoing_rx = state.message_outgoing_rx.clone().map(|v| Event::OutgoingMessage(v));
+        let close_signal_rx = state.close_signal_rx.clone().map(|v| Event::CloseSignal(v));
+        let e2c_event_rx = state.e2c_event_rx.clone().map(|v| Event::E2CEvent(v));
+        let message_outgoing_rx = state.message_outgoing_rx.clone().map(|v| Event::OutgoingMessage(v));
 
-            close_signal_rx
-                .or(e2c_event_rx)
-                .or(message_outgoing_rx)
+        close_signal_rx
+            .or(e2c_event_rx)
+            .or(message_outgoing_rx)
     });
 
     loop {
