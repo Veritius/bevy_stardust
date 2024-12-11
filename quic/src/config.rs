@@ -71,6 +71,10 @@ mod transport {
     }
 }
 
+pub mod error {
+    pub struct InvalidInitialCypherSuite;
+}
+
 pub mod endpoint {
     use std::{net::ToSocketAddrs, time::Duration};
     use super::*;
@@ -294,5 +298,33 @@ pub mod client {
         server_name: Arc<str>,
 
         transport_config: Arc<TransportConfig>,
+    }
+
+    impl ClientConfigBuilder<WantsCryptoConfig> {
+        pub fn with_tls_config(
+            self,
+            config: Arc<rustls::ClientConfig>,
+            suite: rustls::quic::Suite,
+        ) -> Result<ClientConfigBuilder<Ready>, error::InvalidInitialCypherSuite> {
+            Ok(ClientConfigBuilder { state: Ready {
+                remote_address: self.state.remote_address,
+                server_name: self.state.server_name,
+                transport_config: self.state.transport_config,
+                crypto_config: Arc::new(quinn_proto::crypto::rustls::QuicClientConfig::with_initial(
+                    config,
+                    suite,
+                ).map_err(|_| error::InvalidInitialCypherSuite)?),
+                quic_version: 1,
+            } })
+        }
+    }
+
+    pub struct Ready {
+        remote_address: SocketAddr,
+        server_name: Arc<str>,
+
+        transport_config: Arc<TransportConfig>,
+        crypto_config: Arc<dyn quinn_proto::crypto::ClientConfig>,
+        quic_version: u32,
     }
 }
