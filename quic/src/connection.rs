@@ -514,7 +514,7 @@ impl State {
             quinn_proto::Event::Stream(event) => self.handle_quinn_stream_event(event),
             quinn_proto::Event::DatagramReceived => self.handle_potential_incoming_dgrams(),
             quinn_proto::Event::DatagramsUnblocked => todo!(),
-    
+
             quinn_proto::Event::Connected => todo!(),
             quinn_proto::Event::ConnectionLost { reason } => todo!(),
     
