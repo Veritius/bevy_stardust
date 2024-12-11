@@ -11,12 +11,66 @@ pub use rustls::{
 };
 
 pub use rustls;
-pub use quinn_proto;
-pub use ring;
 
+pub use transport::TransportConfig;
 pub use endpoint::EndpointConfig;
 pub use server::ServerConfig;
 pub use client::ClientConfig;
+
+mod transport {
+    use std::time::Duration;
+
+    pub struct TransportConfig {
+        inner: quinn_proto::TransportConfig,
+    }
+
+    impl Default for TransportConfig {
+        fn default() -> Self {
+            Self {
+                inner: quinn_proto::TransportConfig::default(),
+            }
+        }
+    }
+
+    impl TransportConfig {
+        pub fn allow_spin_bit(&mut self, value: bool) -> &mut Self {
+            self.inner.allow_spin(value);
+            return self;
+        }
+
+        pub fn dgram_send_buf_size(&mut self, value: usize) -> &mut Self {
+            self.inner.datagram_send_buffer_size(value);
+            return self;
+        }
+
+        pub fn set_initial_mtu(&mut self, value: u16) -> &mut Self {
+            self.inner.initial_mtu(value.max(1200));
+            return self;
+        }
+
+        pub fn set_keep_alive_interval(&mut self, value: Option<Duration>) -> &mut Self {
+            self.inner.keep_alive_interval(value);
+            return self;
+        }
+
+        pub fn set_packet_loss_threshold(&mut self, value: u32) -> &mut Self {
+            self.inner.packet_threshold(value.max(3));
+            return self;
+        }
+
+        pub fn set_receive_window(&mut self, value: u64) -> &mut Self {
+            let value = value.min((2u64.pow(62))-1);
+            let value = quinn_proto::VarInt::from_u64(value).unwrap();
+            self.inner.receive_window(value);
+            return self;
+        }
+
+        pub fn set_transmit_window(&mut self, value: u64) -> &mut Self {
+            self.inner.send_window(value);
+            return self;
+        }
+    }
+}
 
 pub mod endpoint {
     use std::{net::ToSocketAddrs, time::Duration};
