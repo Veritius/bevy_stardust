@@ -21,7 +21,7 @@ mod transport {
 
     /// Transport parameters for QUIC.
     pub struct TransportConfig {
-        inner: quinn_proto::TransportConfig,
+        pub(crate) inner: quinn_proto::TransportConfig,
     }
 
     impl Default for TransportConfig {
@@ -209,7 +209,7 @@ pub mod server {
     impl ServerConfigBuilder<WantsTransportConfig> {
         pub fn with_transport_config(
             self,
-            transport_config: Arc<TransportConfig>,
+            transport_config: TransportConfig,
         ) -> ServerConfigBuilder<WantsCryptoConfig> {
             ServerConfigBuilder { state: WantsCryptoConfig {
                 transport_config,
@@ -219,7 +219,7 @@ pub mod server {
 
     /// State for adding cryptographic/TLS configuration.
     pub struct WantsCryptoConfig {
-        transport_config: Arc<TransportConfig>,
+        transport_config: TransportConfig,
     }
 
     impl ServerConfigBuilder<WantsCryptoConfig> {
@@ -234,7 +234,7 @@ pub mod server {
 
     /// State for adding a Stardust channel registry.
     pub struct WantsChannelRegistry {
-        transport_config: Arc<TransportConfig>,
+        transport_config: TransportConfig,
         crypto: Arc<dyn quinn_proto::crypto::ServerConfig>,
     }
 
@@ -242,8 +242,31 @@ pub mod server {
         pub fn with_channels(
             self,
             registry: Arc<ChannelRegistry>,
-        ) -> ServerConfigBuilder<()> {
-            todo!()
+        ) -> ServerConfigBuilder<Ready> {
+            ServerConfigBuilder { state: Ready {
+                transport_config: self.state.transport_config,
+                crypto: self.state.crypto,
+                registry,
+            } }
+        }
+    }
+
+    /// Ready to complete, some additional configuration allowed.
+    pub struct Ready {
+        transport_config: TransportConfig,
+        crypto: Arc<dyn quinn_proto::crypto::ServerConfig>,
+        registry: Arc<ChannelRegistry>,
+    }
+
+    impl ServerConfigBuilder<Ready> {
+        pub fn build(self) -> ServerConfig {
+            let mut quinn = quinn_proto::ServerConfig::with_crypto(self.state.crypto);
+            quinn.transport_config(self.state.transport_config.inner.into());
+
+            ServerConfig {
+                quinn: Arc::new(quinn),
+                channels: self.state.registry,
+            }
         }
     }
 }
@@ -355,6 +378,10 @@ pub mod client {
         pub fn set_quic_version(&mut self, version: u32) -> &mut Self {
             self.state.quic_version = version;
             return self;
+        }
+
+        pub fn build(self) -> ClientConfig {
+            todo!()
         }
     }
 }
