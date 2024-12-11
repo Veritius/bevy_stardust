@@ -466,13 +466,14 @@ impl State {
         self.quinn.handle_timeout(Instant::now());
 
         // Drain all datagrams into the sending queue
-        if let Some(transmit) = self.quinn.poll_transmit(
+        while let Some(transmit) = self.quinn.poll_transmit(
             Instant::now(),
             1,
             scratch,
         )  {
             let payload = Bytes::copy_from_slice(&scratch[..transmit.size]);
             self.dgram_tx.send(payload);
+            scratch.clear();
         }
 
         // Drain all endpoint events into the channel
