@@ -448,7 +448,10 @@ async fn driver(
 
         state.tick(&mut scratch);
 
-        if state.quinn.is_drained() { return Ok(()); }
+        if state.quinn.is_drained() {
+            *state.shared.outer_state.lock().unwrap() = ConnectionState::Closed;
+            return Ok(());
+        }
     }
 }
 
