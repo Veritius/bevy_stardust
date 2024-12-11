@@ -99,8 +99,12 @@ pub mod endpoint {
     }
 
     impl EndpointConfigBuilder<WantsSocket> {
-        /// This operation will block until complete.
-        /// It is strongly recommended to use the `blocking` crate.
+        /// Binds a new UDP socket to use with the endpoint.
+        ///
+        /// # Warning
+        /// This operation will block for a substantial amount of time due to interacting with the OS.
+        /// This may cause issues such as stutters and general unexpected delays in a game tick.
+        /// To avoid this, it's recommended to use the `blocking` crate or to create a thread.
         pub fn bind_address(
             self,
             address: impl ToSocketAddrs,
@@ -108,8 +112,12 @@ pub mod endpoint {
             self.with_socket(UdpSocket::bind(address)?)
         }
 
-        /// This operation will block until complete.
-        /// It is strongly recommended to use the `blocking` crate.
+        /// Uses an existing UDP socket with the endpoint.
+        ///
+        /// # Warning
+        /// This operation will block for a substantial amount of time due to interacting with the OS.
+        /// This may cause issues such as stutters and general unexpected delays in a game tick.
+        /// To avoid this, it's recommended to use the `blocking` crate or to create a thread.
         pub fn with_socket(
             self,
             socket: UdpSocket,
