@@ -272,29 +272,6 @@ struct ConnectionAttempt {
     rx: Receiver<ConnectionAttemptResponse>,
 }
 
-impl Future for ConnectionAttempt {
-    type Output = ConnectionAttemptResponse;
-
-    fn poll(
-        self: std::pin::Pin<&mut Self>,
-        cx: &mut std::task::Context<'_>,
-    ) -> std::task::Poll<Self::Output> {
-        match pin!(self.rx.recv()).poll(cx) {
-            // Response received from sender
-            Poll::Ready(Ok(v)) => Poll::Ready(v),
-
-            // Channel is dropped and empty
-            // Fabricate a response saying we were rejected
-            Poll::Ready(Err(_)) => Poll::Ready(ConnectionAttemptResponse::Rejected(
-                ConnectionError::EndpointClosed,
-            )),
-
-            // Nothing yet, keep waiting
-            Poll::Pending => Poll::Pending,
-        }
-    }
-}
-
 struct Shared {
     outer_state: Mutex<ConnectionState>
 }
@@ -367,14 +344,20 @@ async fn build_task(
     bundle: ChannelBundle,
 ) -> Result<(), ConnectionError> {
     // Wait for the response of the endpoint
-    let accepted = match attempt.await {
+    let accepted = match attempt.rx.recv().await {
         // directly return this and continue with the rest of the code
-        ConnectionAttemptResponse::Accepted(response) => response,
+        Ok(ConnectionAttemptResponse::Accepted(response)) => response,
 
         // if we get rejected, we just end the task right here
-        ConnectionAttemptResponse::Rejected(response) => {
+        Ok(ConnectionAttemptResponse::Rejected(response)) => {
             return Err(response);
         },
+
+        // If an error occurs, it means the channel was dropped,
+        // so we can safely assume that the endpoint is now closed.
+        Err(_) => {
+            return Err(ConnectionError::EndpointClosed);
+        }
     };
 
     // Construct the state object
