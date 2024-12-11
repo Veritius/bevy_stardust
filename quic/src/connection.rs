@@ -1,5 +1,6 @@
 use std::{future::Future, net::SocketAddr, pin::{pin, Pin}, sync::{Arc, Mutex}, task::{Context, Poll}, time::Instant};
 use async_channel::{Receiver, Sender};
+use async_io::Timer;
 use async_task::Task;
 use bevy_ecs::prelude::*;
 use bevy_stardust::prelude::*;
@@ -404,6 +405,7 @@ async fn driver(
     use futures_lite::StreamExt;
 
     enum Event {
+        DeadlineHit,
         CloseSignal(ConnectionCloseSignal),
         E2CEvent(E2CEvent),
         OutgoingMessage(ChannelMessage),
@@ -422,20 +424,29 @@ async fn driver(
     let mut scratch = Vec::new();
 
     loop {
-        let event = match stream.next().await {
+        let timer = match state.poll_timeout() {
+            Some(deadline) => Timer::at(deadline),
+            None => Timer::never(),
+        };
+
+        let future = futures_lite::future::race(
+            stream.next(),
+            async { timer.await; Some(Event::DeadlineHit) },
+        );
+
+        let event = match future.await {
             Some(event) => event,
             None => todo!(),
         };
 
         match event {
+            Event::DeadlineHit => {},
             Event::CloseSignal(signal) => state.handle_close_signal(signal),
             Event::E2CEvent(event) => state.handle_e2c_event(event),
             Event::OutgoingMessage(message) => state.handle_outgoing_message(message),
         }
 
         state.tick(&mut scratch);
-
-        todo!()
     }
 }
 
