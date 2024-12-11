@@ -1,9 +1,9 @@
-use std::{collections::HashMap, future::Future, net::{SocketAddr, ToSocketAddrs, UdpSocket}, pin::{pin, Pin}, sync::{atomic::{AtomicUsize, Ordering}, Arc, Mutex, Weak}, task::{Context, Poll}, time::Instant};
+use std::{collections::HashMap, future::Future, net::{SocketAddr, ToSocketAddrs, UdpSocket}, pin::{pin, Pin}, sync::{Arc, Mutex, Weak}, time::Instant};
 use async_task::Task;
 use async_channel::{Receiver, Sender};
 use async_io::Async;
 use bytes::{Bytes, BytesMut};
-use quinn_proto::{ConnectionHandle, DatagramEvent, EndpointConfig, EndpointEvent, ServerConfig, TransportConfig};
+use quinn_proto::{ConnectionHandle, DatagramEvent, EndpointConfig, EndpointEvent, ServerConfig};
 use crate::{connection::{ConnectError, ConnectionAccepted, ConnectionAttemptResponse, ConnectionCloseSignal, OutgoingConnectionAttempt}, events::{C2EEvent, C2EEventSender, E2CEvent}, futures::Race, logging::{LogId, LogIdGen}, taskpool::{get_task_pool, NetworkTaskPool}, Connection, ConnectionError};
 
 /// A builder for an [`Endpoint`].
