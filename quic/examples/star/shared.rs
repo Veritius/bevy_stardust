@@ -5,7 +5,7 @@ use bevy_ecs::prelude::*;
 use bevy_app::{prelude::*, ScheduleRunnerPlugin};
 use bevy_log::{info, LogPlugin};
 use bevy_stardust::prelude::*;
-use bevy_stardust_quic::*;
+use bevy_stardust_quic::{*, config::*};
 use rustls_pemfile::Item;
 use utilities::WaitingEndpoints;
 

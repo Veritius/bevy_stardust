@@ -1,165 +1,10 @@
-use std::{collections::HashMap, future::Future, net::{SocketAddr, ToSocketAddrs, UdpSocket}, pin::{pin, Pin}, sync::{Arc, Mutex, Weak}, time::Instant};
+use std::{collections::HashMap, future::Future, io::Error as IoError, net::{SocketAddr, ToSocketAddrs, UdpSocket}, pin::{pin, Pin}, sync::{Arc, Mutex, Weak}, time::Instant};
 use async_task::Task;
 use async_channel::{Receiver, Sender};
 use async_io::Async;
-use bevy_stardust::channels::ChannelRegistry;
 use bytes::{Bytes, BytesMut};
-use quinn_proto::{ConnectionHandle, DatagramEvent, EndpointConfig, EndpointEvent, ServerConfig};
-use crate::{connection::{ConnectError, ConnectionAccepted, ConnectionAttemptResponse, ConnectionCloseSignal, OutgoingConnectionAttempt}, events::{C2EEvent, C2EEventSender, E2CEvent}, futures::Race, logging::{LogId, LogIdGen}, taskpool::{get_task_pool, NetworkTaskPool}, Connection, ConnectionError};
-
-/// A builder for an [`Endpoint`].
-pub struct EndpointBuilder<S = ()> {
-    task_pool: &'static NetworkTaskPool,
-    state: S,
-}
-
-impl EndpointBuilder<()> {
-    /// Creates a new [`EndpointBuilder`].
-    #[must_use]
-    pub fn new() -> EndpointBuilder::<WantsSocket> {
-        EndpointBuilder {
-            task_pool: get_task_pool(),
-            state: WantsSocket { _p: () },
-        }
-    }
-}
-
-/// State for adding a socket.
-pub struct WantsSocket {
-    _p: (),
-}
-
-impl EndpointBuilder<WantsSocket> {
-    /// Uses a pre-existing standard library UDP socket.
-    pub fn use_existing(self, socket: UdpSocket) -> EndpointBuilder<WantsChannelRegistry> {
-        let socket = blocking::unblock(move || Async::new(socket));
-
-        EndpointBuilder {
-            task_pool: self.task_pool,
-            state: WantsChannelRegistry {
-                socket
-            },
-        }
-    }
-
-    /// Binds to the given address, creating a new socket.
-    pub fn bind<A>(self, address: A) -> EndpointBuilder<WantsChannelRegistry>
-    where
-        A: ToSocketAddrs,
-        A: Send + Sync + 'static,
-        A::Iter: Send + Sync + 'static,
-    {
-        // We have to bind the socket manually with blocking because AsyncToSocketAddrs has weird trait requirements
-        // that can never be fulfilled while trying to use simple async closures like this. Oh well, it's good enough.
-        let socket = blocking::unblock(move || Async::new(UdpSocket::bind(address)?));
-
-        EndpointBuilder {
-            task_pool: self.task_pool,
-            state: WantsChannelRegistry {
-                socket
-            },
-        }
-    }
-}
-
-/// Step for adding a [`ChannelRegistry`] used by connections.
-pub struct WantsChannelRegistry {
-    socket: Task<Result<Async<UdpSocket>, std::io::Error>>,
-}
-
-impl EndpointBuilder<WantsChannelRegistry> {
-    /// Adds a [`ChannelRegistry`].
-    pub fn with_channel_registry(self, registry: Arc<ChannelRegistry>) -> EndpointBuilder<WantsQuicConfig> {
-        EndpointBuilder {
-            task_pool: self.task_pool,
-            state: WantsQuicConfig {
-                previous: self.state,
-                registry,
-            },
-        }
-    }
-}
-
-/// State for adding a reset key.
-pub struct WantsQuicConfig {
-    previous: WantsChannelRegistry,
-    registry: Arc<ChannelRegistry>,
-}
-
-impl EndpointBuilder<WantsQuicConfig> {
-    /// Uses an existing reset key.
-    pub fn use_existing(self, config: Arc<EndpointConfig>) -> EndpointBuilder<CanBecomeServer> {
-        EndpointBuilder {
-            task_pool: self.task_pool,
-            state: CanBecomeServer {
-                previous: self.state,
-                config,
-            },
-        }
-    }
-}
-
-/// State for optionally configuring server behavior.
-pub struct CanBecomeServer {
-    previous: WantsQuicConfig,
-    config: Arc<EndpointConfig>,
-}
-
-impl EndpointBuilder<CanBecomeServer> {
-    /// Skips server configuration.
-    pub fn client_only(self) -> LoadingEndpoint {
-        LoadingEndpoint(self.task_pool.spawn(async move {
-            Endpoint::new_inner(
-                self.state.previous.previous.socket,
-                self.state.config,
-                async { None },
-                self.state.previous.registry,
-            ).await
-        }))
-    }
-
-    /// Add server configuration to handle incoming connections.
-    /// 
-    /// Accepts the config values as-is.
-    pub fn server_from_config(
-        self,
-        config: Arc<ServerConfig>,
-    ) -> LoadingEndpoint {
-        LoadingEndpoint(self.task_pool.spawn(async move {
-            Endpoint::new_inner(
-                self.state.previous.previous.socket,
-                self.state.config,
-                async { Some(Ok(config)) },
-                self.state.previous.registry,
-            ).await
-        }))
-    }
-
-    /// Add server configuration to handle incoming connections.
-    /// 
-    /// Loads the config values from a future.
-    pub fn server_from_future<F>(self, future: F) -> LoadingEndpoint
-    where
-        F: Future<Output = Result<Arc<ServerConfig>, EndpointError>>,
-        F: Send + Sync + 'static,
-    {
-        LoadingEndpoint(self.task_pool.spawn(async move {
-            Endpoint::new_inner(
-                self.state.previous.previous.socket,
-                self.state.config,
-                async {
-                    let config = match future.await {
-                        Ok(v) => v,
-                        Err(e) => return Some(Err(e)),
-                    };
-
-                    return Some(Ok(config))
-                },
-                self.state.previous.registry,
-            ).await
-        }))
-    }
-}
+use quinn_proto::{ConnectionHandle, DatagramEvent, EndpointEvent};
+use crate::{config::{EndpointConfig, ServerConfig}, connection::{ConnectError, ConnectionAccepted, ConnectionAttemptResponse, ConnectionCloseSignal, OutgoingConnectionAttempt}, events::{C2EEvent, C2EEventSender, E2CEvent}, futures::Race, logging::{LogId, LogIdGen}, taskpool::{get_task_pool, NetworkTaskPool}, Connection, ConnectionError};
 
 /// A [`Future`] for the creation of an [`Endpoint`].
 /// 
@@ -191,32 +36,26 @@ impl Future for LoadingEndpoint {
 pub struct Endpoint(Arc<Handle>);
 
 impl Endpoint {
-    async fn new_inner(
-        socket: Task<Result<Async<UdpSocket>, std::io::Error>>,
-        config: Arc<EndpointConfig>,
-        server: impl Future<Output = Option<Result<Arc<quinn_proto::ServerConfig>, EndpointError>>> + Send + Sync + 'static,
-        registry: Arc<ChannelRegistry>,
-    ) -> Result<Endpoint, EndpointError> {
+    pub fn new(
+        config: EndpointConfig,
+        server_config: Option<ServerConfig>,
+    ) -> Endpoint {
+        Self::new_inner(
+            config,
+            server_config,
+        )
+    }
+
+    fn new_inner(
+        config: EndpointConfig,
+        server_config: Option<ServerConfig>,
+    ) -> Endpoint {
         // Retrieve task pool and create a logging id
         let log_id = LogIdGen::next();
         let task_pool = get_task_pool();
 
-        // Zip the futures to run them at the same time
-        let (socket, server_config) = futures_lite::future::zip(
-            socket,
-            server,
-        ).await;
-
-        // Unwrap any errors and wrap them in appropriate types
-        let socket = Arc::new(socket?);
-        let server_config = match server_config {
-            Some(Ok(v)) => Some(v),
-            Some(Err(e)) => return Err(e),
-            None => None,
-        };
-
         // Unwrapping is fine here because we always bind our sockets
-        let address = socket.get_ref().local_addr().unwrap();
+        let address = config.socket.get_ref().local_addr().unwrap();
 
         // Create channels for communication
         let (io_recv_tx, io_recv_rx) = async_channel::unbounded();
@@ -237,10 +76,10 @@ impl Endpoint {
                 outgoing_request_rx,
                 incoming_connect_tx,
 
-                io_socket: socket.clone(),
+                io_socket: config.socket.clone(),
 
                 io_task: task_pool.spawn(io_task(
-                    socket,
+                    config.socket,
                     io_recv_tx,
                     io_send_rx
                 )),
@@ -250,11 +89,9 @@ impl Endpoint {
 
                 lifestage: Lifestage::Running,
 
-                registry,
-
                 quinn: quinn_proto::Endpoint::new(
-                    config,
-                    server_config,
+                    config.quinn.clone(),
+                    todo!(),
                     true,
                     None,
                 ),
@@ -283,7 +120,7 @@ impl Endpoint {
         log::debug!("Endpoint {log_id} successfully created on socket {address}");
 
         // Return endpoint handle
-        return Ok(Endpoint(handle));
+        return Endpoint(handle);
     }
 
     /// Gracefully closes all connections and shuts down the endpoint.
@@ -434,8 +271,6 @@ struct State {
     io_send_tx: Sender<DgramSend>,
 
     lifestage: Lifestage,
-
-    registry: Arc<ChannelRegistry>,
 
     quinn: quinn_proto::Endpoint,
 
@@ -776,9 +611,9 @@ fn handle_out_attempt(
     // Try to create a connection through Quinn first
     let (handle, quinn) = match state.quinn.connect(
         Instant::now(),
-        attempt.data.config,
-        attempt.data.remote_address,
-        &attempt.data.server_name,
+        attempt.data.config.quinn,
+        attempt.data.config.remote_address,
+        &attempt.data.config.server_name,
     ) {
         Ok(v) => v,
         Err(err) => {
@@ -786,8 +621,8 @@ fn handle_out_attempt(
             let err = ConnectionError::ConnectError(ConnectError::Quic(err));
 
             // Log the rejection for debugging purposes
-            log::debug!("Outgoing connection {} to {} rejected by endpoint {}: {err:?}",
-                state.log_id, attempt.data.remote_address, attempt.data.remote_address);
+            // log::debug!("Outgoing connection {} to {} rejected by endpoint {}: {err:?}",
+            //     state.log_id, attempt.data.config.remote_address);
 
             // Message handling to notify the receiver so it can be dropped
             let _ = attempt.tx.send_blocking(ConnectionAttemptResponse::Rejected(err));

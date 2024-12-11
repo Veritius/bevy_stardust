@@ -4,8 +4,8 @@ use async_io::Timer;
 use async_task::Task;
 use bevy_ecs::prelude::*;
 use bevy_stardust::prelude::*;
-use quinn_proto::{ClientConfig, EndpointEvent};
-use crate::{endpoint::{ConnectionDgramSender, Endpoint}, events::{C2EEvent, C2EEventSender, E2CEvent}, logging::{LogId, LogIdGen}, taskpool::get_task_pool};
+use quinn_proto::EndpointEvent;
+use crate::{config::ClientConfig, endpoint::{ConnectionDgramSender, Endpoint}, events::{C2EEvent, C2EEventSender, E2CEvent}, logging::{LogId, LogIdGen}, taskpool::get_task_pool};
 
 /// A unique handle to a QUIC connection.
 /// 
@@ -46,8 +46,6 @@ impl Connection {
     #[must_use]
     pub fn connect(
         endpoint: Endpoint,
-        remote_address: SocketAddr,
-        server_name: Arc<str>,
         config: ClientConfig,
     ) -> Connection {
         // Create attempt sender/receiver pair and various channels for communication
@@ -59,8 +57,6 @@ impl Connection {
         // Construct and send the attempt to the endpoint
         endpoint.request_outgoing(OutgoingConnectionAttempt {
             data: ConnectionAttemptData {
-                remote_address,
-                server_name,
                 config,
                 close_signal_tx: close_signal_tx.clone(),
             },
@@ -247,10 +243,7 @@ pub(crate) struct OutgoingConnectionAttempt {
 }
 
 pub(crate) struct ConnectionAttemptData {
-    pub remote_address: SocketAddr,
-    pub server_name: Arc<str>,
     pub config: ClientConfig,
-
     pub close_signal_tx: Sender<ConnectionCloseSignal>,
 }
 
