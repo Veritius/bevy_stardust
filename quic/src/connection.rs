@@ -505,7 +505,7 @@ impl State {
             quinn_proto::Event::Connected => todo!(),
             quinn_proto::Event::ConnectionLost { reason } => todo!(),
     
-            quinn_proto::Event::HandshakeDataReady => todo!(),
+            quinn_proto::Event::HandshakeDataReady => { /* Don't care */ },
         }
     }
 
