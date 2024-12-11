@@ -302,12 +302,8 @@ impl Unpin for State {}
 
 impl Drop for State {
     fn drop(&mut self) {
-        // Notify the endpoint of the state object being dropped
-        // This is necessary to free up memory in the endpoint
-        // Blocking sends should be fine since the channel is unbounded
-        let _ = self.c2e_event_tx.send_blocking(C2EEvent::Quinn(
-            EndpointEvent::drained()
-        ));
+        if self.lifestage == Lifestage::Closed { return }
+        self.update_lifestage(Lifestage::Closed);
     }
 }
 
@@ -430,7 +426,6 @@ async fn driver(
 
         if state.quinn.is_drained() {
             state.update_lifestage(Lifestage::Closed);
-            let _ = state.c2e_event_tx.send_blocking(C2EEvent::Quinn(EndpointEvent::drained()));
             return Ok(());
         }
     }
