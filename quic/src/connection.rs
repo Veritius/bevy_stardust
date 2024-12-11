@@ -450,6 +450,7 @@ async fn driver(
 
         if state.quinn.is_drained() {
             *state.shared.outer_state.lock().unwrap() = ConnectionState::Closed;
+            let _ = state.c2e_event_tx.send_blocking(C2EEvent::Quinn(EndpointEvent::drained()));
             return Ok(());
         }
     }
