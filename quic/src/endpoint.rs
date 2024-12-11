@@ -797,7 +797,7 @@ fn handle_out_attempt(
         state.quinn.handle_event(handle, EndpointEvent::drained());
 
         // Log the request being denied
-        log::trace!("Outgoing connection from {address} was almost accepted by endpoint {} but the handle was dropped", state.log_id);
+        log::debug!("Outgoing connection from {address} was almost accepted by endpoint {} but the handle was dropped", state.log_id);
 
         // All done.
         return;
@@ -810,5 +810,5 @@ fn handle_out_attempt(
     });
 
     // Log the connection being accepted
-    log::trace!("Outgoing connection from {address} was accepted by endpoint {}", state.log_id);
+    log::debug!("Outgoing connection from {address} was accepted by endpoint {}", state.log_id);
 }
