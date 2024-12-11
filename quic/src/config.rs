@@ -187,6 +187,15 @@ pub mod server {
     pub struct WantsChannelRegistry {
         crypto: Arc<dyn quinn_proto::crypto::ServerConfig>,
     }
+
+    impl ServerConfigBuilder<WantsChannelRegistry> {
+        pub fn with_channels(
+            self,
+            registry: Arc<ChannelRegistry>,
+        ) -> ServerConfigBuilder<()> {
+            todo!()
+        }
+    }
 }
 
 pub mod client {
@@ -223,6 +232,20 @@ pub mod client {
             self,
             remote_address: SocketAddr,
             server_name: impl Into<Arc<str>>,
+        ) -> ClientConfigBuilder<WantsTransportConfig> {
+            todo!()
+        }
+    }
+
+    pub struct WantsTransportConfig {
+        remote_address: SocketAddr,
+        server_name: Arc<str>,
+    }
+
+    impl WantsTransportConfig {
+        pub fn with_transport_config(
+            self,
+            transport_config: Arc<TransportConfig>,
         ) -> ClientConfigBuilder<WantsCryptoConfig> {
             todo!()
         }
@@ -231,5 +254,7 @@ pub mod client {
     pub struct WantsCryptoConfig {
         remote_address: SocketAddr,
         server_name: Arc<str>,
+
+        transport: Arc<TransportConfig>,
     }
 }
