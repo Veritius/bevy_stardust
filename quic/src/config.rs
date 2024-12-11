@@ -19,6 +19,7 @@ pub use client::ClientConfig;
 mod transport {
     use std::time::Duration;
 
+    /// Transport parameters for QUIC.
     pub struct TransportConfig {
         inner: quinn_proto::TransportConfig,
     }
@@ -71,20 +72,24 @@ mod transport {
     }
 }
 
+/// Error types for configuration.
 pub mod error {
     pub struct InvalidInitialCypherSuite;
 }
 
+/// Endpoint configuration.
 pub mod endpoint {
     use std::{net::ToSocketAddrs, time::Duration};
     use super::*;
 
+    /// Endpoint configuration.
     pub struct EndpointConfig {
         pub(crate) socket: Arc<Async<UdpSocket>>,
         pub(crate) quinn: Arc<quinn_proto::EndpointConfig>,
     }
 
     impl EndpointConfig {
+        /// Returns a builder to create the configuration value.
         pub fn builder() -> EndpointConfigBuilder<WantsSocket> {
             EndpointConfigBuilder {
                 state: WantsSocket {
@@ -94,10 +99,12 @@ pub mod endpoint {
         }
     }
 
+    /// A builder for [`EndpointConfig`].
     pub struct EndpointConfigBuilder<T> {
         state: T
     }
 
+    /// State for adding a UDP socket.
     pub struct WantsSocket {
         _p: (),
     }
@@ -133,6 +140,7 @@ pub mod endpoint {
         }
     }
 
+    /// Ready to complete, some additional configuration allowed.
     pub struct Ready {
         socket: Arc<Async<UdpSocket>>,
         config: quinn_proto::EndpointConfig,
@@ -167,15 +175,18 @@ pub mod endpoint {
     }
 }
 
+/// Server configuration, for incoming connections.
 pub mod server {
     use super::*;
 
+    /// Server configuration. Required to accept incoming connections.
     pub struct ServerConfig {
         pub(crate) quinn: Arc<quinn_proto::ServerConfig>,
         pub(crate) channels: Arc<ChannelRegistry>,
     }
 
     impl ServerConfig {
+        /// Returns a builder to create the configuration value.
         pub fn builder() -> ServerConfigBuilder<WantsTransportConfig> {
             ServerConfigBuilder {
                 state: WantsTransportConfig {
@@ -185,10 +196,12 @@ pub mod server {
         }
     }
 
+    /// A builder for [`ServerConfig`].
     pub struct ServerConfigBuilder<T> {
         state: T
     }
 
+    /// State for adding associated [`TransportConfig`] values.
     pub struct WantsTransportConfig {
         _p: (),
     }
@@ -204,6 +217,7 @@ pub mod server {
         }
     }
 
+    /// State for adding cryptographic/TLS configuration.
     pub struct WantsCryptoConfig {
         transport_config: Arc<TransportConfig>,
     }
@@ -218,6 +232,7 @@ pub mod server {
         }
     }
 
+    /// State for adding a Stardust channel registry.
     pub struct WantsChannelRegistry {
         transport_config: Arc<TransportConfig>,
         crypto: Arc<dyn quinn_proto::crypto::ServerConfig>,
@@ -233,9 +248,11 @@ pub mod server {
     }
 }
 
+/// Client configuration, for outgoing connections.
 pub mod client {
     use super::*;
 
+    /// Client configuration. Required to create outgoing connections.
     pub struct ClientConfig {
         pub(crate) remote_address: SocketAddr,
         pub(crate) server_name: Arc<str>,
@@ -245,6 +262,7 @@ pub mod client {
     }
 
     impl ClientConfig {
+        /// Returns a builder to create the configuration value.
         pub fn builder() -> ClientConfigBuilder<WantsServerDetails> {
             ClientConfigBuilder {
                 state: WantsServerDetails {
@@ -254,10 +272,12 @@ pub mod client {
         }
     }
 
+    /// A builder for [`ClientConfig`].
     pub struct ClientConfigBuilder<T> {
         state: T,
     }
 
+    /// A state for adding host details.
     pub struct WantsServerDetails {
         _p: (),
     }
@@ -275,6 +295,7 @@ pub mod client {
         }
     }
 
+    /// A state for adding associated [`TransportConfig`] values.
     pub struct WantsTransportConfig {
         remote_address: SocketAddr,
         server_name: Arc<str>,
@@ -293,6 +314,7 @@ pub mod client {
         }
     }
 
+    /// A state for adding cryptographic/TLS configuration.
     pub struct WantsCryptoConfig {
         remote_address: SocketAddr,
         server_name: Arc<str>,
@@ -319,6 +341,7 @@ pub mod client {
         }
     }
 
+    /// Ready to complete, some additional configuration allowed.
     pub struct Ready {
         remote_address: SocketAddr,
         server_name: Arc<str>,
