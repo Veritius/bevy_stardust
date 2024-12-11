@@ -3,14 +3,13 @@ use async_io::Async;
 use bevy_stardust::channels::ChannelRegistry;
 
 pub use rustls::{
+    self,
     RootCertStore,
     pki_types::{
         CertificateDer,
         PrivateKeyDer,
     },
 };
-
-pub use rustls;
 
 pub use transport::TransportConfig;
 pub use endpoint::EndpointConfig;
