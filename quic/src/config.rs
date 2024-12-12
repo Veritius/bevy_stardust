@@ -18,56 +18,67 @@ pub use client::ClientConfig;
 
 mod transport {
     use std::time::Duration;
+    use super::*;
 
-    /// Transport parameters for QUIC.
-    pub struct TransportConfig {
-        pub(crate) inner: quinn_proto::TransportConfig,
+    pub struct TransportConfigBuilder {
+        quinn: quinn_proto::TransportConfig,
     }
 
-    impl Default for TransportConfig {
-        fn default() -> Self {
-            Self {
-                inner: quinn_proto::TransportConfig::default(),
-            }
-        }
-    }
-
-    impl TransportConfig {
+    impl TransportConfigBuilder {
         pub fn allow_spin_bit(&mut self, value: bool) -> &mut Self {
-            self.inner.allow_spin(value);
+            self.quinn.allow_spin(value);
             return self;
         }
 
         pub fn dgram_send_buf_size(&mut self, value: usize) -> &mut Self {
-            self.inner.datagram_send_buffer_size(value);
+            self.quinn.datagram_send_buffer_size(value);
             return self;
         }
 
         pub fn set_initial_mtu(&mut self, value: u16) -> &mut Self {
-            self.inner.initial_mtu(value.max(1200));
+            self.quinn.initial_mtu(value.max(1200));
             return self;
         }
 
         pub fn set_keep_alive_interval(&mut self, value: Option<Duration>) -> &mut Self {
-            self.inner.keep_alive_interval(value);
+            self.quinn.keep_alive_interval(value);
             return self;
         }
 
         pub fn set_packet_loss_threshold(&mut self, value: u32) -> &mut Self {
-            self.inner.packet_threshold(value.max(3));
+            self.quinn.packet_threshold(value.max(3));
             return self;
         }
 
         pub fn set_receive_window(&mut self, value: u64) -> &mut Self {
             let value = value.min((2u64.pow(62))-1);
             let value = quinn_proto::VarInt::from_u64(value).unwrap();
-            self.inner.receive_window(value);
+            self.quinn.receive_window(value);
             return self;
         }
 
         pub fn set_transmit_window(&mut self, value: u64) -> &mut Self {
-            self.inner.send_window(value);
+            self.quinn.send_window(value);
             return self;
+        }
+
+        pub fn build(self) -> Arc<TransportConfig> {
+            Arc::new(TransportConfig {
+                quinn: Arc::new(self.quinn),
+            })
+        }
+    }
+
+    /// Transport parameters for QUIC.
+    pub struct TransportConfig {
+        pub(crate) quinn: Arc<quinn_proto::TransportConfig>,
+    }
+
+    impl TransportConfig {
+        pub fn builder() -> TransportConfigBuilder {
+            TransportConfigBuilder {
+                quinn: quinn_proto::TransportConfig::default(),
+            }
         }
     }
 }
@@ -170,7 +181,10 @@ pub mod endpoint {
 
     impl EndpointConfigBuilder<Ready> {
         pub fn build(self) -> EndpointConfig {
-            todo!()
+            EndpointConfig {
+                socket: self.state.socket,
+                quinn: Arc::new(self.state.config),
+            }
         }
     }
 }
@@ -261,7 +275,7 @@ pub mod server {
     impl ServerConfigBuilder<Ready> {
         pub fn build(self) -> ServerConfig {
             let mut quinn = quinn_proto::ServerConfig::with_crypto(self.state.crypto);
-            quinn.transport_config(self.state.transport_config.inner.into());
+            quinn.transport_config(self.state.transport_config.quinn.into());
 
             ServerConfig {
                 quinn: Arc::new(quinn),
@@ -350,8 +364,8 @@ pub mod client {
             self,
             config: Arc<rustls::ClientConfig>,
             suite: rustls::quic::Suite,
-        ) -> Result<ClientConfigBuilder<Ready>, error::InvalidInitialCypherSuite> {
-            Ok(ClientConfigBuilder { state: Ready {
+        ) -> Result<ClientConfigBuilder<WantsChannelRegistry>, error::InvalidInitialCypherSuite> {
+            Ok(ClientConfigBuilder { state: WantsChannelRegistry {
                 remote_address: self.state.remote_address,
                 server_name: self.state.server_name,
                 transport_config: self.state.transport_config,
@@ -359,8 +373,32 @@ pub mod client {
                     config,
                     suite,
                 ).map_err(|_| error::InvalidInitialCypherSuite)?),
-                quic_version: 1,
             } })
+        }
+    }
+
+    /// State for adding a Stardust channel registry.
+    pub struct WantsChannelRegistry {
+        remote_address: SocketAddr,
+        server_name: Arc<str>,
+
+        transport_config: Arc<TransportConfig>,
+        crypto_config: Arc<dyn quinn_proto::crypto::ClientConfig>,
+    }
+
+    impl ClientConfigBuilder<WantsChannelRegistry> {
+        pub fn with_channel_registry(
+            self,
+            channel_registry: Arc<ChannelRegistry>,
+        ) -> ClientConfigBuilder<Ready> {
+            ClientConfigBuilder { state: Ready {
+                remote_address: self.state.remote_address,
+                server_name: self.state.server_name,
+                transport_config: self.state.transport_config,
+                crypto_config: self.state.crypto_config,
+                quic_version: 1,
+                channel_registry,
+            } }
         }
     }
 
@@ -372,6 +410,8 @@ pub mod client {
         transport_config: Arc<TransportConfig>,
         crypto_config: Arc<dyn quinn_proto::crypto::ClientConfig>,
         quic_version: u32,
+
+        channel_registry: Arc<ChannelRegistry>,
     }
 
     impl ClientConfigBuilder<Ready> {
@@ -381,7 +421,15 @@ pub mod client {
         }
 
         pub fn build(self) -> ClientConfig {
-            todo!()
+            let mut quinn = quinn_proto::ClientConfig::new(self.state.crypto_config);
+            quinn.transport_config(self.state.transport_config.quinn.clone());
+
+            ClientConfig {
+                remote_address: self.state.remote_address,
+                server_name: self.state.server_name,
+                quinn,
+                channels: todo!(),
+            }
         }
     }
 }
