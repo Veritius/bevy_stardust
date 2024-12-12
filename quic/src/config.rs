@@ -223,7 +223,7 @@ pub mod server {
     impl ServerConfigBuilder<WantsTransportConfig> {
         pub fn with_transport_config(
             self,
-            transport_config: TransportConfig,
+            transport_config: Arc<TransportConfig>,
         ) -> ServerConfigBuilder<WantsCryptoConfig> {
             ServerConfigBuilder { state: WantsCryptoConfig {
                 transport_config,
@@ -233,7 +233,7 @@ pub mod server {
 
     /// State for adding cryptographic/TLS configuration.
     pub struct WantsCryptoConfig {
-        transport_config: TransportConfig,
+        transport_config: Arc<TransportConfig>,
     }
 
     impl ServerConfigBuilder<WantsCryptoConfig> {
@@ -242,14 +242,15 @@ pub mod server {
             cert_chain: Vec<CertificateDer<'static>>,
             key: PrivateKeyDer<'static>,
         ) -> Result<ServerConfigBuilder<WantsChannelRegistry>, rustls::Error> {
-            todo!()
+            Ok(ServerConfigBuilder { state: WantsChannelRegistry {
+                quinn: Arc::new(quinn_proto::ServerConfig::with_single_cert(cert_chain, key)?),
+            }})
         }
     }
 
     /// State for adding a Stardust channel registry.
     pub struct WantsChannelRegistry {
-        transport_config: TransportConfig,
-        crypto: Arc<dyn quinn_proto::crypto::ServerConfig>,
+        quinn: Arc<quinn_proto::ServerConfig>,
     }
 
     impl ServerConfigBuilder<WantsChannelRegistry> {
@@ -258,8 +259,7 @@ pub mod server {
             registry: Arc<ChannelRegistry>,
         ) -> ServerConfigBuilder<Ready> {
             ServerConfigBuilder { state: Ready {
-                transport_config: self.state.transport_config,
-                crypto: self.state.crypto,
+                quinn: self.state.quinn,
                 registry,
             } }
         }
@@ -267,18 +267,14 @@ pub mod server {
 
     /// Ready to complete, some additional configuration allowed.
     pub struct Ready {
-        transport_config: TransportConfig,
-        crypto: Arc<dyn quinn_proto::crypto::ServerConfig>,
+        quinn: Arc<quinn_proto::ServerConfig>,
         registry: Arc<ChannelRegistry>,
     }
 
     impl ServerConfigBuilder<Ready> {
         pub fn build(self) -> ServerConfig {
-            let mut quinn = quinn_proto::ServerConfig::with_crypto(self.state.crypto);
-            quinn.transport_config(self.state.transport_config.quinn.into());
-
             ServerConfig {
-                quinn: Arc::new(quinn),
+                quinn: self.state.quinn,
                 channels: self.state.registry,
             }
         }
