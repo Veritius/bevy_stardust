@@ -1,10 +1,10 @@
-use std::{collections::HashMap, future::Future, io::Error as IoError, net::{SocketAddr, ToSocketAddrs, UdpSocket}, pin::{pin, Pin}, sync::{Arc, Mutex, Weak}, time::Instant};
+use std::{collections::HashMap, future::Future, net::{SocketAddr, UdpSocket}, pin::{pin, Pin}, sync::{Arc, Mutex, Weak}, time::Instant};
 use async_task::Task;
 use async_channel::{Receiver, Sender};
 use async_io::Async;
 use bytes::{Bytes, BytesMut};
 use quinn_proto::{ConnectionHandle, DatagramEvent, EndpointEvent};
-use crate::{config::{EndpointConfig, ServerConfig}, connection::{ConnectError, ConnectionAccepted, ConnectionAttemptResponse, ConnectionCloseSignal, OutgoingConnectionAttempt}, events::{C2EEvent, C2EEventSender, E2CEvent}, futures::Race, logging::{LogId, LogIdGen}, taskpool::{get_task_pool, NetworkTaskPool}, Connection, ConnectionError};
+use crate::{config::{EndpointConfig, ServerConfig}, connection::{ConnectError, ConnectionAccepted, ConnectionAttemptResponse, OutgoingConnectionAttempt}, events::{C2EEvent, C2EEventSender, E2CEvent}, futures::Race, logging::{LogId, LogIdGen}, taskpool::{get_task_pool, NetworkTaskPool}, Connection, ConnectionError};
 
 /// A [`Future`] for the creation of an [`Endpoint`].
 /// 
@@ -103,11 +103,10 @@ impl Endpoint {
             };
 
             // Start driver task to run in the background
-            let driver = task_pool.spawn(driver(state));
+            task_pool.spawn(driver(state)).detach();
 
             Handle {
                 log_id: log_id.clone(),
-                driver,
 
                 outer_state: Mutex::new(EndpointState::Running),
                 close_signal_tx,
@@ -242,7 +241,6 @@ impl From<std::io::Error> for EndpointError {
 
 struct Handle {
     log_id: LogId,
-    driver: Task<Result<(), EndpointError>>,
 
     outer_state: Mutex<EndpointState>,
     close_signal_tx: Sender<EndpointCloseSignal>,
@@ -252,7 +250,8 @@ struct Handle {
 
 impl Drop for Handle {
     fn drop(&mut self) {
-        log::trace!("Handle for endpoint {} dropped", self.log_id);
+        log::trace!("Endpoint {} closing as the handle was dropped", self.log_id);
+        let _ = self.close_signal_tx.send_blocking(EndpointCloseSignal {});
     }
 }
 
@@ -286,10 +285,11 @@ impl Unpin for State {}
 impl Drop for State {
     fn drop(&mut self) {
         match self.lifestage {
-            Lifestage::Running | Lifestage::Closing => log::warn!("Endpoint {} was dropped without being closed", self.log_id),
+            Lifestage::Running | Lifestage::Closing => log::error!("Endpoint {} was dropped without being closed", self.log_id),
             Lifestage::Closed => log::trace!("Endpoint {} dropped", self.log_id),
         }
 
+        // Update the life stage visible in handles
         self.update_lifestage(Lifestage::Closed);
     }
 }
@@ -331,7 +331,13 @@ enum Lifestage {
 
 struct HeldConnection {
     e2c_event_tx: Sender<E2CEvent>,
-    close_signal_tx: Sender<ConnectionCloseSignal>,
+}
+
+impl Drop for HeldConnection {
+    fn drop(&mut self) {
+        // Inform the peer of the handle being dropped so it can terminate
+        let _ = self.e2c_event_tx.send_blocking(E2CEvent::EndpointClosed);
+    }
 }
 
 struct EndpointCloseSignal {
@@ -429,16 +435,16 @@ async fn driver(
         let dgram_recv_rx = state.io_recv_rx.clone().map(|v| Event::DgramRecv(v));
         let outgoing_request_rx = state.outgoing_request_rx.clone().map(|v| Event::OutgoingAttempt(v));
 
-        close_signal_rx
-            .or(c2e_event_rx)
+        c2e_event_rx
             .or(dgram_recv_rx)
+            .or(close_signal_rx)
             .or(outgoing_request_rx)
     });
 
     loop {
         let event = match stream.next().await {
             Some(event) => event,
-            None => todo!(),
+            None => { continue; },
         };
 
         match event {
@@ -446,6 +452,19 @@ async fn driver(
             Event::C2EEvent(handle, event) => handle_c2e_event(&mut state, handle, event),
             Event::DgramRecv(dgram) => handle_dgram_recv(&mut state, dgram),
             Event::OutgoingAttempt(attempt) => handle_out_attempt(&mut state, attempt),
+        }
+
+        match state.lifestage {
+            Lifestage::Running => continue,
+
+            Lifestage::Closing if state.connections.len() == 0 => {
+                state.update_lifestage(Lifestage::Closed);
+                return Ok(());
+            },
+
+            Lifestage::Closing => continue,
+
+            Lifestage::Closed => return Ok(()),
         }
     }
 }
@@ -470,7 +489,7 @@ fn handle_close_signal(
     for (_, connection) in state.connections.iter() {
         // We're fine to ignore any errors from this method, since if it does happen,
         // it means the connection has already been signalled to shut down before this point.
-        let _ = connection.close_signal_tx.try_send(ConnectionCloseSignal::endpoint_shutdown());
+        let _ = connection.e2c_event_tx.try_send(E2CEvent::EndpointClosed);
     }
 
     // Log the close signal
@@ -483,6 +502,12 @@ fn handle_c2e_event(
     event: C2EEvent,
 ) {
     match event {
+        // Event sent when the connection has terminated
+        C2EEvent::ConnectionClosed => {
+            // Remove from map: we no longer need to keep it around
+            let _ = state.connections.remove(&handle);
+        },
+
         // Quinn events are given directly to the inner endpoint state for handling
         C2EEvent::Quinn(event) => {
             if let Some(event) = state.quinn.handle_event(
@@ -545,7 +570,7 @@ fn handle_dgram_recv(
                     let (e2c_event_tx, e2c_event_rx) = async_channel::unbounded();
 
                     // Construct connection
-                    let (connection, close_signal_tx) = Connection::incoming(
+                    let connection = Connection::incoming(
                         Endpoint(endpoint_handle),
                         ConnectionAccepted {
                             quinn: Box::new(quinn),
@@ -561,7 +586,6 @@ fn handle_dgram_recv(
                     // Add connection to the map
                     state.connections.insert(handle, HeldConnection {
                         e2c_event_tx,
-                        close_signal_tx,
                     });
 
                     // Throw the connection into the queue for the user to pick up
@@ -608,12 +632,20 @@ fn handle_out_attempt(
     state: &mut State,
     attempt: OutgoingConnectionAttempt,
 ) {
+    match state.lifestage {
+        Lifestage::Running => { /* Do nothing */ },
+        Lifestage::Closing | Lifestage::Closed => {
+            let _ = attempt.tx.send_blocking(ConnectionAttemptResponse::Rejected(ConnectionError::EndpointClosed));
+            return;
+        }
+    }
+
     // Try to create a connection through Quinn first
     let (handle, quinn) = match state.quinn.connect(
         Instant::now(),
-        attempt.data.config.quinn,
-        attempt.data.config.remote_address,
-        &attempt.data.config.server_name,
+        todo!(),
+        todo!(),
+        todo!(),
     ) {
         Ok(v) => v,
         Err(err) => {
@@ -673,7 +705,6 @@ fn handle_out_attempt(
     // Add connection to the map
     state.connections.insert(handle, HeldConnection {
         e2c_event_tx,
-        close_signal_tx: attempt.data.close_signal_tx,
     });
 
     // Log the connection being accepted

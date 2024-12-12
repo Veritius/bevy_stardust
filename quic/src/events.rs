@@ -2,6 +2,7 @@ use async_channel::{SendError, Sender};
 use quinn_proto::ConnectionHandle;
 
 pub(crate) enum E2CEvent {
+    EndpointClosed,
     Quinn(quinn_proto::ConnectionEvent),
 }
 
@@ -12,6 +13,7 @@ impl From<quinn_proto::ConnectionEvent> for E2CEvent {
 }
 
 pub(crate) enum C2EEvent {
+    ConnectionClosed,
     Quinn(quinn_proto::EndpointEvent),
 }
 

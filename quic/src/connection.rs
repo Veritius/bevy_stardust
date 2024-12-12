@@ -1,11 +1,10 @@
 use std::{net::SocketAddr, pin::pin, sync::{Arc, Mutex}, time::{Duration, Instant}};
 use async_channel::{Receiver, Sender};
 use async_io::Timer;
-use async_task::Task;
 use bevy_ecs::prelude::*;
 use bevy_stardust::prelude::*;
-use quinn_proto::EndpointEvent;
-use crate::{config::ClientConfig, endpoint::{ConnectionDgramSender, Endpoint}, events::{C2EEvent, C2EEventSender, E2CEvent}, logging::{LogId, LogIdGen}, taskpool::get_task_pool};
+use quinn_proto::ClientConfig;
+use crate::{endpoint::{ConnectionDgramSender, Endpoint}, events::{C2EEvent, C2EEventSender, E2CEvent}, logging::{LogId, LogIdGen}, taskpool::get_task_pool};
 
 /// A unique handle to a QUIC connection.
 /// 
@@ -23,7 +22,6 @@ use crate::{config::ClientConfig, endpoint::{ConnectionDgramSender, Endpoint}, e
 #[require(PeerMessages<Outgoing>(PeerMessages::new))]
 #[require(PeerLifestage(|| PeerLifestage::Handshaking))]
 pub struct Connection {
-    task: Task<Result<(), ConnectionError>>,
     shared: Arc<Shared>,
 
     close_signal_tx: Sender<ConnectionCloseSignal>,
@@ -33,7 +31,7 @@ pub struct Connection {
 
 impl Drop for Connection {
     fn drop(&mut self) {
-        // Order the task to close, since normally dropping it would detach it, running it to completion in the background.
+        // Order the task to close, since it's detached and it would otherwise run forever in the background.
         // We also don't care about the error case here since it means the connection is already closing or closed.
         let _ = self.close_signal_tx.try_send(ConnectionCloseSignal {
 
@@ -58,7 +56,6 @@ impl Connection {
         endpoint.request_outgoing(OutgoingConnectionAttempt {
             data: ConnectionAttemptData {
                 config,
-                close_signal_tx: close_signal_tx.clone(),
             },
 
             tx,
@@ -82,16 +79,15 @@ impl Connection {
         let task_pool = get_task_pool();
 
         // Spawn a task to build and run the endpoint
-        let task = task_pool.spawn(build_task(
+        task_pool.spawn(build_task(
             endpoint,
             shared.clone(),
             attempt,
             bundle,
-        ));
+        )).detach();
 
         // Return component handle thingy
         return Connection {
-            task,
             shared,
 
             close_signal_tx,
@@ -103,7 +99,7 @@ impl Connection {
     pub(crate) fn incoming(
         endpoint: Endpoint,
         data: ConnectionAccepted,
-    ) -> (Connection, Sender<ConnectionCloseSignal>) {
+    ) -> Connection {
         let log_id = LogIdGen::next();
 
         // Fetch some data before we lose the ability to access it
@@ -137,11 +133,10 @@ impl Connection {
         let task_pool = get_task_pool();
 
         // Spawn the driver directly since we've already constructed the endpoint
-        let task = task_pool.spawn(driver(state));
+        task_pool.spawn(driver(state)).detach();
 
         // Construct connection handle
         let connection = Connection {
-            task,
             shared,
 
             close_signal_tx: close_signal_tx.clone(),
@@ -154,7 +149,7 @@ impl Connection {
         log::debug!("Incoming connection {log_id} from address {address} created");
 
         // Return component handle thingy
-        return (connection, close_signal_tx);
+        return connection;
     }
 
     /// Gracefully closes the connection.
@@ -244,7 +239,6 @@ pub(crate) struct OutgoingConnectionAttempt {
 
 pub(crate) struct ConnectionAttemptData {
     pub config: ClientConfig,
-    pub close_signal_tx: Sender<ConnectionCloseSignal>,
 }
 
 pub(crate) enum ConnectionAttemptResponse {
@@ -295,12 +289,10 @@ impl Unpin for State {}
 
 impl Drop for State {
     fn drop(&mut self) {
-        // Notify the endpoint of the state object being dropped
-        // This is necessary to free up memory in the endpoint
-        // Blocking sends should be fine since the channel is unbounded
-        let _ = self.c2e_event_tx.send_blocking(C2EEvent::Quinn(
-            EndpointEvent::drained()
-        ));
+        let _ = self.c2e_event_tx.send_blocking(C2EEvent::ConnectionClosed);
+
+        if self.lifestage == Lifestage::Closed { return }
+        self.update_lifestage(Lifestage::Closed);
     }
 }
 
@@ -312,16 +304,8 @@ enum Lifestage {
     Closed,
 }
 
-pub(crate) struct ConnectionCloseSignal {
+struct ConnectionCloseSignal {
 
-}
-
-impl ConnectionCloseSignal {
-    pub(crate) fn endpoint_shutdown() -> ConnectionCloseSignal {
-        ConnectionCloseSignal {
-            
-        }
-    }
 }
 
 struct ChannelBundle {
@@ -422,10 +406,16 @@ async fn driver(
         state.tick(&mut scratch);
 
         if state.quinn.is_drained() {
-            *state.shared.outer_state.lock().unwrap() = ConnectionState::Closed;
-            let _ = state.c2e_event_tx.send_blocking(C2EEvent::Quinn(EndpointEvent::drained()));
+            state.update_lifestage(Lifestage::Closed);
             return Ok(());
         }
+    }
+}
+
+impl State {
+    fn update_lifestage(&mut self, lifestage: Lifestage) {
+        self.lifestage = lifestage;
+        *self.shared.outer_state.lock().unwrap() = lifestage.into();
     }
 }
 
@@ -443,6 +433,7 @@ impl State {
 
     fn handle_e2c_event(&mut self, event: E2CEvent, ) {
         match event {
+            E2CEvent::EndpointClosed => todo!(),
             E2CEvent::Quinn(event) => self.quinn.handle_event(event),
         }
     }
@@ -495,8 +486,15 @@ impl State {
             quinn_proto::Event::DatagramReceived => self.handle_potential_incoming_dgrams(),
             quinn_proto::Event::DatagramsUnblocked => todo!(),
 
-            quinn_proto::Event::Connected => todo!(),
-            quinn_proto::Event::ConnectionLost { reason } => todo!(),
+            quinn_proto::Event::Connected => {
+                log::debug!("Connection {} now fully connected", self.log_id);
+                self.update_lifestage(Lifestage::Connected);
+            },
+
+            quinn_proto::Event::ConnectionLost { reason } => {
+                log::debug!("Connection {} lost: {reason}", self.log_id);
+                self.update_lifestage(Lifestage::Closing);
+            },
     
             quinn_proto::Event::HandshakeDataReady => { /* Don't care */ },
         }
