@@ -5,7 +5,7 @@ use async_io::Async;
 use bevy_stardust::channels::ChannelRegistry;
 use bytes::{Bytes, BytesMut};
 use quinn_proto::{ConnectionHandle, DatagramEvent, EndpointConfig, EndpointEvent, ServerConfig};
-use crate::{connection::{ConnectError, ConnectionAccepted, ConnectionAttemptResponse, ConnectionCloseSignal, OutgoingConnectionAttempt}, events::{C2EEvent, C2EEventSender, E2CEvent}, futures::Race, logging::{LogId, LogIdGen}, taskpool::{get_task_pool, NetworkTaskPool}, Connection, ConnectionError};
+use crate::{connection::{ConnectError, ConnectionAccepted, ConnectionAttemptResponse, OutgoingConnectionAttempt}, events::{C2EEvent, C2EEventSender, E2CEvent}, futures::Race, logging::{LogId, LogIdGen}, taskpool::{get_task_pool, NetworkTaskPool}, Connection, ConnectionError};
 
 /// A builder for an [`Endpoint`].
 pub struct EndpointBuilder<S = ()> {
@@ -456,11 +456,6 @@ impl Drop for State {
 
         // Update the life stage visible in handles
         self.update_lifestage(Lifestage::Closed);
-
-        // Inform any remaining connections that we're closing
-        self.connections.values().for_each(|connection| {
-            let _ =  connection.close_signal_tx.send_blocking(ConnectionCloseSignal::endpoint_shutdown());
-        });
     }
 }
 
@@ -501,7 +496,13 @@ enum Lifestage {
 
 struct HeldConnection {
     e2c_event_tx: Sender<E2CEvent>,
-    close_signal_tx: Sender<ConnectionCloseSignal>,
+}
+
+impl Drop for HeldConnection {
+    fn drop(&mut self) {
+        // Inform the peer of the handle being dropped so it can terminate
+        let _ = self.e2c_event_tx.send_blocking(E2CEvent::EndpointClosed);
+    }
 }
 
 struct EndpointCloseSignal {
@@ -653,7 +654,7 @@ fn handle_close_signal(
     for (_, connection) in state.connections.iter() {
         // We're fine to ignore any errors from this method, since if it does happen,
         // it means the connection has already been signalled to shut down before this point.
-        let _ = connection.close_signal_tx.try_send(ConnectionCloseSignal::endpoint_shutdown());
+        let _ = connection.e2c_event_tx.try_send(E2CEvent::EndpointClosed);
     }
 
     // Log the close signal
@@ -666,8 +667,8 @@ fn handle_c2e_event(
     event: C2EEvent,
 ) {
     match event {
-        // Drained events are sent when the connection is closing itself
-        C2EEvent::Drained => {
+        // Event sent when the connection has terminated
+        C2EEvent::ConnectionClosed => {
             // Remove from map: we no longer need to keep it around
             let _ = state.connections.remove(&handle);
         },
@@ -734,7 +735,7 @@ fn handle_dgram_recv(
                     let (e2c_event_tx, e2c_event_rx) = async_channel::unbounded();
 
                     // Construct connection
-                    let (connection, close_signal_tx) = Connection::incoming(
+                    let connection = Connection::incoming(
                         Endpoint(endpoint_handle),
                         ConnectionAccepted {
                             quinn: Box::new(quinn),
@@ -750,7 +751,6 @@ fn handle_dgram_recv(
                     // Add connection to the map
                     state.connections.insert(handle, HeldConnection {
                         e2c_event_tx,
-                        close_signal_tx,
                     });
 
                     // Throw the connection into the queue for the user to pick up
@@ -870,7 +870,6 @@ fn handle_out_attempt(
     // Add connection to the map
     state.connections.insert(handle, HeldConnection {
         e2c_event_tx,
-        close_signal_tx: attempt.data.close_signal_tx,
     });
 
     // Log the connection being accepted

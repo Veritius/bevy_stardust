@@ -61,7 +61,6 @@ impl Connection {
                 remote_address,
                 server_name,
                 config,
-                close_signal_tx: close_signal_tx.clone(),
             },
 
             tx,
@@ -105,7 +104,7 @@ impl Connection {
     pub(crate) fn incoming(
         endpoint: Endpoint,
         data: ConnectionAccepted,
-    ) -> (Connection, Sender<ConnectionCloseSignal>) {
+    ) -> Connection {
         let log_id = LogIdGen::next();
 
         // Fetch some data before we lose the ability to access it
@@ -155,7 +154,7 @@ impl Connection {
         log::debug!("Incoming connection {log_id} from address {address} created");
 
         // Return component handle thingy
-        return (connection, close_signal_tx);
+        return connection;
     }
 
     /// Gracefully closes the connection.
@@ -247,8 +246,6 @@ pub(crate) struct ConnectionAttemptData {
     pub remote_address: SocketAddr,
     pub server_name: Arc<str>,
     pub config: ClientConfig,
-
-    pub close_signal_tx: Sender<ConnectionCloseSignal>,
 }
 
 pub(crate) enum ConnectionAttemptResponse {
@@ -299,7 +296,7 @@ impl Unpin for State {}
 
 impl Drop for State {
     fn drop(&mut self) {
-        let _ = self.c2e_event_tx.send_blocking(C2EEvent::Drained);
+        let _ = self.c2e_event_tx.send_blocking(C2EEvent::ConnectionClosed);
 
         if self.lifestage == Lifestage::Closed { return }
         self.update_lifestage(Lifestage::Closed);
@@ -314,16 +311,8 @@ enum Lifestage {
     Closed,
 }
 
-pub(crate) struct ConnectionCloseSignal {
+struct ConnectionCloseSignal {
 
-}
-
-impl ConnectionCloseSignal {
-    pub(crate) fn endpoint_shutdown() -> ConnectionCloseSignal {
-        ConnectionCloseSignal {
-            
-        }
-    }
 }
 
 struct ChannelBundle {
@@ -451,6 +440,7 @@ impl State {
 
     fn handle_e2c_event(&mut self, event: E2CEvent, ) {
         match event {
+            E2CEvent::EndpointClosed => todo!(),
             E2CEvent::Quinn(event) => self.quinn.handle_event(event),
         }
     }
