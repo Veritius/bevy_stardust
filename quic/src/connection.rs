@@ -1,7 +1,6 @@
 use std::{net::SocketAddr, pin::pin, sync::{Arc, Mutex}, time::{Duration, Instant}};
 use async_channel::{Receiver, Sender};
 use async_io::Timer;
-use async_task::Task;
 use bevy_ecs::prelude::*;
 use bevy_stardust::prelude::*;
 use quinn_proto::ClientConfig;
