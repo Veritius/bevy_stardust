@@ -12,6 +12,7 @@ impl From<quinn_proto::ConnectionEvent> for E2CEvent {
 }
 
 pub(crate) enum C2EEvent {
+    Drained,
     Quinn(quinn_proto::EndpointEvent),
 }
 

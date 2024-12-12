@@ -4,7 +4,7 @@ use async_io::Timer;
 use async_task::Task;
 use bevy_ecs::prelude::*;
 use bevy_stardust::prelude::*;
-use quinn_proto::{ClientConfig, EndpointEvent};
+use quinn_proto::ClientConfig;
 use crate::{endpoint::{ConnectionDgramSender, Endpoint}, events::{C2EEvent, C2EEventSender, E2CEvent}, logging::{LogId, LogIdGen}, taskpool::get_task_pool};
 
 /// A unique handle to a QUIC connection.
@@ -23,7 +23,6 @@ use crate::{endpoint::{ConnectionDgramSender, Endpoint}, events::{C2EEvent, C2EE
 #[require(PeerMessages<Outgoing>(PeerMessages::new))]
 #[require(PeerLifestage(|| PeerLifestage::Handshaking))]
 pub struct Connection {
-    task: Task<Result<(), ConnectionError>>,
     shared: Arc<Shared>,
 
     close_signal_tx: Sender<ConnectionCloseSignal>,
@@ -33,7 +32,7 @@ pub struct Connection {
 
 impl Drop for Connection {
     fn drop(&mut self) {
-        // Order the task to close, since normally dropping it would detach it, running it to completion in the background.
+        // Order the task to close, since it's detached and it would otherwise run forever in the background.
         // We also don't care about the error case here since it means the connection is already closing or closed.
         let _ = self.close_signal_tx.try_send(ConnectionCloseSignal {
 
@@ -86,16 +85,15 @@ impl Connection {
         let task_pool = get_task_pool();
 
         // Spawn a task to build and run the endpoint
-        let task = task_pool.spawn(build_task(
+        task_pool.spawn(build_task(
             endpoint,
             shared.clone(),
             attempt,
             bundle,
-        ));
+        )).detach();
 
         // Return component handle thingy
         return Connection {
-            task,
             shared,
 
             close_signal_tx,
@@ -141,11 +139,10 @@ impl Connection {
         let task_pool = get_task_pool();
 
         // Spawn the driver directly since we've already constructed the endpoint
-        let task = task_pool.spawn(driver(state));
+        task_pool.spawn(driver(state)).detach();
 
         // Construct connection handle
         let connection = Connection {
-            task,
             shared,
 
             close_signal_tx: close_signal_tx.clone(),
@@ -302,6 +299,8 @@ impl Unpin for State {}
 
 impl Drop for State {
     fn drop(&mut self) {
+        let _ = self.c2e_event_tx.send_blocking(C2EEvent::Drained);
+
         if self.lifestage == Lifestage::Closed { return }
         self.update_lifestage(Lifestage::Closed);
     }

@@ -38,8 +38,6 @@ fn main() {
                 "server.example.com".into(),
                 ClientConfig::with_root_certificates(root_certs()).unwrap(),
             ));
-
-            endpoints.endpoints.push(endpoint);
         }
     });
 
