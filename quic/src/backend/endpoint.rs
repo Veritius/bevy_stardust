@@ -34,12 +34,12 @@ pub(super) struct State {
 
     connections: HashMap<ConnectionHandle, Connection>,
 
-    connection_event_tx: async_channel::Sender<(ConnectionHandle, C2EEvent)>,
-    connection_event_rx: async_channel::Receiver<(ConnectionHandle, C2EEvent)>,
+    c2e_tx: async_channel::Sender<(ConnectionHandle, C2EEvent)>,
+    c2e_rx: async_channel::Receiver<(ConnectionHandle, C2EEvent)>,
 }
 
 struct Connection {
-    endpoint_event_tx: async_channel::Sender<E2CEvent>,
+    e2c_tx: async_channel::Sender<E2CEvent>,
 }
 
 pub(super) enum Driver {}

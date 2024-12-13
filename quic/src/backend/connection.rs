@@ -35,9 +35,9 @@ pub(super) struct State {
     quinn: quinn_proto::Connection,
     handle: ConnectionHandle,
 
-    endpoint_event_rx: async_channel::Receiver<E2CEvent>,
-    connection_event_tx: async_channel::Sender<(ConnectionHandle, C2EEvent)>,
-    dgram_send_tx: async_channel::Sender<DgramSend>,
+    e2c_rx: async_channel::Receiver<E2CEvent>,
+    c2e_tx: async_channel::Sender<(ConnectionHandle, C2EEvent)>,
+    dgram_tx: async_channel::Sender<DgramSend>,
 
     message_recv_tx: crossbeam_channel::Sender<ChannelMessage>,
     message_send_rx: async_channel::Receiver<ChannelMessage>,
