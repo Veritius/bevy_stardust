@@ -20,6 +20,7 @@ pub(super) struct State {
     close_signal_rx: async_channel::Receiver<CloseSignal>,
 
     quinn: quinn_proto::Connection,
+    handle: ConnectionHandle,
 
     endpoint_event_rx: async_channel::Receiver<E2CEvent>,
     connection_event_tx: async_channel::Sender<(ConnectionHandle, C2EEvent)>,
