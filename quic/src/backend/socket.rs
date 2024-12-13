@@ -1,7 +1,7 @@
-use std::{io, net::{SocketAddr, UdpSocket}, pin::Pin, sync::Arc, task::{Context, Poll}};
+use std::{io, net::{SocketAddr, UdpSocket}, pin::{pin, Pin}, sync::Arc, task::{Context, Poll}};
 use async_io::{Async, Readable};
 use bytes::BytesMut;
-use futures_lite::{FutureExt, Stream};
+use futures_lite::{FutureExt, Stream, StreamExt};
 use super::taskpool::get_task_pool;
 
 pub(super) struct DgramRecv {
@@ -12,6 +12,10 @@ pub(super) struct DgramRecv {
 pub(super) struct DgramSend {
     pub address: SocketAddr,
     pub payload: BytesMut,
+}
+
+pub(super) struct SocketConfig {
+    pub recv_buf_size: usize,
 }
 
 pub(super) struct Socket {
@@ -25,12 +29,13 @@ pub(super) struct Socket {
 impl Socket {
     pub fn new(
         socket: Arc<Async<UdpSocket>>,
+        config: SocketConfig,
     ) -> Socket {
         let (recv_tx, recv_rx) = async_channel::unbounded();
         let (send_tx, send_rx) = async_channel::unbounded();
 
         let task = get_task_pool().spawn(driver(
-            1472, // TODO: Make configurable.
+            config,
             socket.clone(),
             recv_tx,
             send_rx,
@@ -46,12 +51,67 @@ impl Socket {
 }
 
 async fn driver(
-    scratch: usize,
+    config: SocketConfig,
     socket: Arc<Async<UdpSocket>>,
     recv_tx: async_channel::Sender<DgramRecv>,
     send_rx: async_channel::Receiver<DgramSend>,
 ) -> Result<(), io::Error> {
-    let mut scratch: Vec<u8> = Vec::with_capacity(scratch);
+    let mut scratch: Vec<u8> = Vec::with_capacity(config.recv_buf_size);
+
+    enum Event {
+        Recv(DgramRecv),
+        Send(DgramSend),
+
+        IoError(io::Error),
+    }
+
+    let mut stream = pin!({
+        // Stream for receiving datagrams from the socket
+        let recv_stream = DgramRecvStream::new(&mut scratch[..], &socket)
+        .map(|val| match val {
+            Ok(val) => Event::Recv(val),
+            Err(err) => Event::IoError(err),
+        });
+
+        // Stream for sending datagrams from the socket
+        let send_stream = send_rx
+            .map(|v| Event::Send(v));
+
+        futures_lite::stream::or(
+            recv_stream,
+            send_stream,
+        )
+    });
+
+    // Drain events as much as possible
+    while let Some(event) = stream.next().await {
+        match event {
+            // Datagram received from socket
+            Event::Recv(dgram_recv) => {
+                // Add the datagram to the queue of channels
+                if let Err(async_channel::SendError(_)) = recv_tx.send(dgram_recv).await {
+                    // If an error occurs it means the channel is closed, so there's no receiver,
+                    // so we just drop it since it'll never reach its intended target.
+                    // We also return since there's no point keeping ourselves open now.
+                    return Ok(());
+                };
+            },
+
+            // Datagram queued for sending by someone
+            Event::Send(dgram_send) => {
+                match socket.send_to(&dgram_send.payload, dgram_send.address).await {
+                    // Nothing of note
+                    Ok(_) => { continue },
+
+                    // IO error occurred when trying to send
+                    Err(err) => return Err(err),
+                }
+            },
+
+            // IO error reported by a stream or something
+            Event::IoError(err) => return Err(err),
+        }
+    }
 
     todo!()
 }
@@ -92,7 +152,7 @@ impl<'a> Stream for DgramRecvStream<'a> {
                         payload: (&self.scratch[..len]).into(),
                     });
 
-                // Reset the read future
+                // Create a new Readable future so we can be woken
                 // It's not stated what happens if it's polled after it's used
                 // so we err on the side of caution and just recreate it
                 self.readable = self.socket.readable();
