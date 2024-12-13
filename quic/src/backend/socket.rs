@@ -1,6 +1,7 @@
-use std::{io, net::{SocketAddr, UdpSocket}, sync::Arc};
-use async_io::Async;
+use std::{io, net::{SocketAddr, UdpSocket}, pin::Pin, sync::Arc, task::{Context, Poll}};
+use async_io::{Async, Readable};
 use bytes::BytesMut;
+use futures_lite::{FutureExt, Stream};
 use super::taskpool::get_task_pool;
 
 pub(super) struct DgramRecv {
@@ -53,4 +54,52 @@ async fn driver(
     let mut scratch: Vec<u8> = Vec::with_capacity(scratch);
 
     todo!()
+}
+
+struct DgramRecvStream<'a> {
+    scratch: &'a mut [u8],
+    socket: &'a Async<UdpSocket>,
+    readable: Readable<'a, UdpSocket>,
+}
+
+impl<'a> DgramRecvStream<'a> {
+    fn new(
+        scratch: &'a mut [u8],
+        socket: &'a Async<UdpSocket>
+    ) -> DgramRecvStream<'a> {
+        DgramRecvStream {
+            scratch,
+            socket,
+            readable: socket.readable(),
+        }
+    }
+}
+
+impl<'a> Stream for DgramRecvStream<'a> {
+    type Item = Result<DgramRecv, io::Error>;
+
+    fn poll_next(
+        mut self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+    ) -> Poll<Option<Self::Item>> {
+        match self.readable.poll(cx) {
+            Poll::Pending => Poll::Pending,
+            Poll::Ready(_) => {
+                // This won't block as the readable handle is ready, which only returns ready when a read operation wouldn't block
+                let r = futures_lite::future::block_on(self.socket.recv_from(&mut self.scratch))
+                    .map(|(len, address)| DgramRecv {
+                        address,
+                        payload: (&self.scratch[..len]).into(),
+                    });
+
+                // Reset the read future
+                // It's not stated what happens if it's polled after it's used
+                // so we err on the side of caution and just recreate it
+                self.readable = self.socket.readable();
+
+                // Return our result
+                return Poll::Ready(Some(r));
+            },
+        }
+    }
 }
