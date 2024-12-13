@@ -16,7 +16,7 @@ struct CloseSignal {
 
 }
 
-pub(crate) struct State {
+pub(super) struct State {
     close_signal_rx: async_channel::Receiver<CloseSignal>,
 
     quinn: quinn_proto::Connection,
@@ -25,7 +25,7 @@ pub(crate) struct State {
     connection_event_tx: async_channel::Sender<(ConnectionHandle, C2EEvent)>,
 }
 
-pub(crate) enum Driver {}
+pub(super) enum Driver {}
 
 impl Driver {
     pub fn run(

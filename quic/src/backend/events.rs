@@ -1,4 +1,4 @@
-pub(crate) enum E2CEvent {
+pub(super) enum E2CEvent {
     EndpointClosed,
     Quinn(quinn_proto::ConnectionEvent),
 }
@@ -9,7 +9,7 @@ impl From<quinn_proto::ConnectionEvent> for E2CEvent {
     }
 }
 
-pub(crate) enum C2EEvent {
+pub(super) enum C2EEvent {
     ConnectionClosed,
     Quinn(quinn_proto::EndpointEvent),
 }

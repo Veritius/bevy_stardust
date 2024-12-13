@@ -5,9 +5,9 @@ use crossbeam_channel::{Receiver, Sender};
 
 const THREAD_TIMEOUT: Duration = Duration::from_millis(500);
 
-pub(crate) static NETWORK_TASK_POOL: OnceLock<NetworkTaskPool> = OnceLock::new();
+pub(super) static NETWORK_TASK_POOL: OnceLock<NetworkTaskPool> = OnceLock::new();
 
-pub(crate) struct NetworkTaskPool {
+pub(super) struct NetworkTaskPool {
     fallback_thread: Once,
     task_queue: ConcurrentQueue<Runnable>,
 
@@ -16,7 +16,7 @@ pub(crate) struct NetworkTaskPool {
 }
 
 impl NetworkTaskPool {
-    pub(crate) fn spawn<F, O>(&self, future: F) -> Task<O>
+    pub fn spawn<F, O>(&self, future: F) -> Task<O>
     where
         F: Future<Output = O>,
         F: Send + Sync + 'static,
@@ -43,7 +43,7 @@ impl NetworkTaskPool {
     }
 }
 
-pub(crate) fn get_task_pool() -> &'static NetworkTaskPool {
+pub(super) fn get_task_pool() -> &'static NetworkTaskPool {
     NETWORK_TASK_POOL.get_or_init(|| {
         let (waker_tx, waker_rx) = crossbeam_channel::unbounded();
 

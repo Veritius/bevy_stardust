@@ -17,7 +17,7 @@ struct CloseSignal {
 
 }
 
-pub(crate) struct State {
+pub(super) struct State {
     close_signal_rx: async_channel::Receiver<CloseSignal>,
 
     socket: Socket,
@@ -34,7 +34,7 @@ struct Connection {
     event_tx: async_channel::Sender<E2CEvent>,
 }
 
-pub(crate) enum Driver {}
+pub(super) enum Driver {}
 
 impl Driver {
     pub fn run(
