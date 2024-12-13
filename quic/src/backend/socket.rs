@@ -4,6 +4,10 @@ use bytes::BytesMut;
 use futures_lite::{FutureExt, Stream, StreamExt};
 use super::taskpool::get_task_pool;
 
+pub(crate) struct SocketConfig {
+    pub recv_buf_size: usize,
+}
+
 pub(super) struct DgramRecv {
     pub address: SocketAddr,
     pub payload: BytesMut,
@@ -12,10 +16,6 @@ pub(super) struct DgramRecv {
 pub(super) struct DgramSend {
     pub address: SocketAddr,
     pub payload: BytesMut,
-}
-
-pub(super) struct SocketConfig {
-    pub recv_buf_size: usize,
 }
 
 pub(super) struct Socket {
