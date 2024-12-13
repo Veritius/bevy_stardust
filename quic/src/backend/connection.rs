@@ -1,5 +1,5 @@
 use quinn_proto::ConnectionHandle;
-use super::events::{C2EEvent, E2CEvent};
+use super::{events::{C2EEvent, E2CEvent}, taskpool::get_task_pool};
 
 pub(crate) struct Handle {
     close_signal_tx: async_channel::Sender<CloseSignal>,
@@ -32,7 +32,9 @@ impl Driver {
     pub fn run(
         state: State,
     ) {
-        todo!()
+        get_task_pool()
+            .spawn(driver(state))
+            .detach();
     }
 }
 
