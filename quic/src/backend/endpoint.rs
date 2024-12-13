@@ -39,7 +39,7 @@ pub(super) struct State {
 }
 
 struct Connection {
-    event_tx: async_channel::Sender<E2CEvent>,
+    endpoint_event_tx: async_channel::Sender<E2CEvent>,
 }
 
 pub(super) enum Driver {}
