@@ -1,8 +1,10 @@
 use std::collections::HashMap;
 use quinn_proto::ConnectionHandle;
-use super::events::{C2EEvent, E2CEvent};
+use super::{events::{C2EEvent, E2CEvent}, socket::Socket};
 
 pub(crate) struct State {
+    socket: Socket,
+
     quinn: quinn_proto::Endpoint,
 
     connections: HashMap<ConnectionHandle, Connection>,
