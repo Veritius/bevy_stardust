@@ -1,6 +1,6 @@
 use bevy_stardust::prelude::ChannelMessage;
 use quinn_proto::ConnectionHandle;
-use super::{events::{C2EEvent, E2CEvent}, taskpool::get_task_pool};
+use super::{events::{C2EEvent, E2CEvent}, socket::DgramSend, taskpool::get_task_pool};
 
 pub(crate) struct Handle {
     close_signal_tx: async_channel::Sender<CloseSignal>,
@@ -28,6 +28,7 @@ pub(super) struct State {
 
     endpoint_event_rx: async_channel::Receiver<E2CEvent>,
     connection_event_tx: async_channel::Sender<(ConnectionHandle, C2EEvent)>,
+    dgram_send_tx: async_channel::Sender<DgramSend>,
 
     message_recv_tx: crossbeam_channel::Sender<ChannelMessage>,
     message_send_rx: async_channel::Receiver<ChannelMessage>,
