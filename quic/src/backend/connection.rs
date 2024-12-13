@@ -38,7 +38,6 @@ impl Driver {
     }
 }
 
-
 async fn driver(
     mut state: State,
 ) {
