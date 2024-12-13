@@ -29,6 +29,7 @@ impl Socket {
         let (send_tx, send_rx) = async_channel::unbounded();
 
         let task = get_task_pool().spawn(driver(
+            1472, // TODO: Make configurable.
             socket.clone(),
             recv_tx,
             send_rx,
@@ -44,9 +45,12 @@ impl Socket {
 }
 
 async fn driver(
+    scratch: usize,
     socket: Arc<Async<UdpSocket>>,
     recv_tx: async_channel::Sender<DgramRecv>,
     send_rx: async_channel::Receiver<DgramSend>,
 ) -> Result<(), io::Error> {
+    let mut scratch: Vec<u8> = Vec::with_capacity(scratch);
+
     todo!()
 }
