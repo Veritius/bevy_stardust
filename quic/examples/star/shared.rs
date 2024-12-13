@@ -7,7 +7,6 @@ use bevy_log::{info, LogPlugin};
 use bevy_stardust::prelude::*;
 use bevy_stardust_quic::*;
 use rustls_pemfile::Item;
-use utilities::WaitingEndpoints;
 
 // NOTE: It is very, very, very bad practice to compile-in certificates.
 // This is only done for the sake of simplicity. In reality, you should

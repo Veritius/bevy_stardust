@@ -1,21 +1,14 @@
 #![doc = include_str!("../README.md")]
 #![warn(missing_docs)]
 
+mod backend;
+mod ecs;
 mod events;
-mod futures;
 mod logging;
 mod plugin;
 mod systems;
-mod taskpool;
 
-pub mod connection;
-pub mod endpoint;
-pub mod utilities;
-
-pub use connection::{Connection, ConnectionState, ConnectError, ConnectionError};
-pub use endpoint::{Endpoint, EndpointWeak, EndpointBuilder, EndpointState, EndpointError};
 pub use plugin::QuicPlugin;
-pub use taskpool::WorkerThreads;
 
 pub use rustls::{
     RootCertStore,

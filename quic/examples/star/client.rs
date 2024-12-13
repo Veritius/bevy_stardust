@@ -19,26 +19,26 @@ fn main() {
     shared::setup(&mut app);
 
     app.add_systems(Startup, |mut endpoints: ResMut<Endpoints>, channels: Channels| {
-        let endpoint = EndpointBuilder::new()
-            .bind(WILDCARD_ADDRESS)
-            .with_channel_registry(channels.clone_arc())
-            .use_existing(Arc::new(EndpointConfig::default()))
-            .client_only();
+        // let endpoint = EndpointBuilder::new()
+        //     .bind(WILDCARD_ADDRESS)
+        //     .with_channel_registry(channels.clone_arc())
+        //     .use_existing(Arc::new(EndpointConfig::default()))
+        //     .client_only();
 
-        endpoints.waiting.insert(endpoint);
+        // endpoints.waiting.insert(endpoint);
     });
 
     app.add_systems(Update, |mut endpoints: ResMut<Endpoints>, mut commands: Commands| {
-        while let Some(endpoint) = endpoints.waiting.poll() {
-            let endpoint = endpoint.unwrap();
+        // while let Some(endpoint) = endpoints.waiting.poll() {
+        //     let endpoint = endpoint.unwrap();
 
-            commands.spawn(Connection::connect(
-                endpoint.clone(),
-                SERVER_ADDRESS,
-                "server.example.com".into(),
-                ClientConfig::with_root_certificates(root_certs()).unwrap(),
-            ));
-        }
+        //     commands.spawn(Connection::connect(
+        //         endpoint.clone(),
+        //         SERVER_ADDRESS,
+        //         "server.example.com".into(),
+        //         ClientConfig::with_root_certificates(root_certs()).unwrap(),
+        //     ));
+        // }
     });
 
     app.run();
