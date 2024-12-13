@@ -1,8 +1,11 @@
+use std::sync::Arc;
 use bevy_stardust::prelude::ChannelMessage;
 use quinn_proto::ConnectionHandle;
 use super::{events::{C2EEvent, E2CEvent}, socket::DgramSend, taskpool::get_task_pool};
 
 pub(crate) struct Handle {
+    shared: Arc<Shared>,
+
     close_signal_tx: async_channel::Sender<CloseSignal>,
 
     message_recv_rx: crossbeam_channel::Receiver<ChannelMessage>,
@@ -20,7 +23,13 @@ struct CloseSignal {
 
 }
 
+struct Shared {
+
+}
+
 pub(super) struct State {
+    shared: Arc<Shared>,
+
     close_signal_rx: async_channel::Receiver<CloseSignal>,
 
     quinn: quinn_proto::Connection,

@@ -1,8 +1,10 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 use quinn_proto::ConnectionHandle;
 use super::{events::{C2EEvent, E2CEvent}, socket::Socket, taskpool::get_task_pool};
 
 pub(crate) struct Handle {
+    shared: Arc<Shared>,
+
     close_signal_tx: async_channel::Sender<CloseSignal>,
 }
 
@@ -17,7 +19,13 @@ struct CloseSignal {
 
 }
 
+struct Shared {
+
+}
+
 pub(super) struct State {
+    shared: Arc<Shared>,
+
     close_signal_rx: async_channel::Receiver<CloseSignal>,
 
     socket: Socket,
