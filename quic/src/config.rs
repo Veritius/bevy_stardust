@@ -380,7 +380,6 @@ pub mod client {
 
     pub enum Error {
         Tls(rustls::Error),
-        VerifierBuilderError(rustls::server::VerifierBuilderError),
         NoInitialCypherSuite,
     }
 }
