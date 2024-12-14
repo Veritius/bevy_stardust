@@ -157,6 +157,10 @@ impl State {
         self.lifestage = lifestage;
         *self.shared.state.lock().unwrap() = lifestage;
     }
+
+    fn send_c2e_event(&self, event: C2EEvent) {
+        let _ = self.c2e_tx.send_blocking((self.handle, event));
+    }
 }
 
 #[derive(Clone, Copy, PartialEq)]
@@ -290,7 +294,12 @@ async fn driver(
             Lifestage::Connecting => todo!(),
             Lifestage::Connected => todo!(),
             Lifestage::Closing => todo!(),
-            Lifestage::Closed => todo!(),
+
+            // Break the loop: we're done
+            Lifestage::Closed => break,
         }
     }
+
+    // Inform the endpoint that the connection is closing
+    state.send_c2e_event(C2EEvent::ConnectionClosed);
 }
