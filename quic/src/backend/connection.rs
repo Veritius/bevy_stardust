@@ -4,7 +4,7 @@ use bevy_stardust::{channels::ChannelRegistry, prelude::ChannelMessage};
 use futures_lite::StreamExt;
 use quinn_proto::ConnectionHandle;
 use crate::config::ClientConfig;
-use super::{events::{C2EEvent, E2CEvent}, outgoing::{OutgoingConnectionReceiver, OutgoingRequestParams}, socket::DgramSend, taskpool::get_task_pool};
+use super::{events::{C2EEvent, E2CEvent}, outgoing::{OutgoingConnectionReceiver, OutgoingRequestParams}, protocol::Protocol, socket::DgramSend, taskpool::get_task_pool};
 
 pub(crate) fn outgoing(
     endpoint: &super::endpoint::Handle,
@@ -84,7 +84,7 @@ pub(super) fn incoming(
         e2c_rx: params.e2c_rx,
         c2e_tx: params.c2e_tx,
         dgram_tx: params.dgram_tx,
-        channels: params.channels,
+        protocol: Protocol::new(params.channels),
         message_recv_tx,
         message_send_rx,
     })).detach();
@@ -152,7 +152,8 @@ pub(super) struct State {
     c2e_tx: async_channel::Sender<(ConnectionHandle, C2EEvent)>,
     dgram_tx: async_channel::Sender<DgramSend>,
 
-    channels: Arc<ChannelRegistry>,
+    protocol: Protocol,
+
     message_recv_tx: crossbeam_channel::Sender<ChannelMessage>,
     message_send_rx: async_channel::Receiver<ChannelMessage>,
 }
@@ -245,7 +246,8 @@ async fn outgoing_task(
 
         dgram_tx: accepted.dgram_tx,
 
-        channels: accepted.channels,
+        protocol: Protocol::new(accepted.channels),
+
         message_recv_tx,
         message_send_rx,
     };

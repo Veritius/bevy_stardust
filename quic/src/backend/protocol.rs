@@ -1,7 +1,23 @@
-use std::collections::BTreeMap;
-use bevy_stardust::prelude::ChannelId;
+use std::{collections::BTreeMap, sync::Arc};
+use bevy_stardust::{channels::ChannelRegistry, prelude::ChannelId};
 use bevy_stardust_extras::numbers::{VarInt, Sequence};
 use bytes::{Buf, BufMut, Bytes};
+
+pub(super) struct Protocol {
+    channels: Arc<ChannelRegistry>,
+
+    seq_map: SeqMap,
+}
+
+impl Protocol {
+    pub fn new(channels: Arc<ChannelRegistry>) -> Protocol {
+        Protocol {
+            channels,
+
+            seq_map: SeqMap::new(),
+        }
+    }
+}
 
 struct SeqMap {
     local: BTreeMap<ChannelId, SeqRecord>,
