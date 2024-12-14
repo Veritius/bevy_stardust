@@ -1,7 +1,13 @@
 use std::{sync::Arc, time::Duration};
 use bevy_stardust::channels::ChannelRegistry;
 
-pub use rustls::{self, pki_types::{CertificateDer, PrivateKeyDer}, RootCertStore};
+pub use rustls::{
+    self,
+    pki_types::{CertificateDer, PrivateKeyDer},
+    RootCertStore,
+    ServerConfig as TlsServerConfig,
+    ClientConfig as TlsClientConfig,
+};
 
 pub use transport::TransportConfig;
 pub use endpoint::EndpointConfig;
@@ -184,8 +190,25 @@ pub mod server {
             self,
             cert_chain: Vec<CertificateDer<'static>>,
             private_key: PrivateKeyDer<'static>,
-        ) -> Result<ServerConfigBuilder<WantsTransportConfig>, rustls::Error> {
-            todo!()
+        ) -> Result<ServerConfigBuilder<WantsTransportConfig>, Error> {
+            let tls = TlsServerConfig::builder()
+                .with_no_client_auth()
+                .with_single_cert(cert_chain, private_key)
+                .map_err(|v| Error::Tls(v))?;
+
+            return self.with_tls_config(tls);
+        }
+
+        pub fn with_tls_config(
+            self,
+            tls: impl Into<Arc<TlsServerConfig>>,
+        ) -> Result<ServerConfigBuilder<WantsTransportConfig>, Error> {
+            let crypto = quinn_proto::crypto::rustls::QuicServerConfig::try_from(tls.into())
+                .map_err(|_| Error::NoInitialCypherSuite)?;
+
+            Ok(ServerConfigBuilder(WantsTransportConfig { 
+                crypto: Arc::new(crypto),
+            }))
         }
     }
 
@@ -244,6 +267,11 @@ pub mod server {
                 channels: self.0.channels,
             }
         }
+    }
+
+    pub enum Error {
+        Tls(rustls::Error),
+        NoInitialCypherSuite,
     }
 }
 
