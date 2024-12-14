@@ -5,3 +5,9 @@ use crate::backend::EndpointHandle;
 pub struct Endpoint {
     handle: EndpointHandle,
 }
+
+impl Endpoint {
+    pub fn new() -> Endpoint {
+        todo!()
+    }
+}

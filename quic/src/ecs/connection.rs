@@ -5,3 +5,11 @@ use crate::backend::ConnectionHandle;
 pub struct Connection {
     handle: ConnectionHandle,
 }
+
+impl Connection {
+    pub fn new(
+        endpoint: &super::endpoint::Endpoint,
+    ) -> Connection {
+        todo!()
+    }
+}
