@@ -22,7 +22,7 @@ pub(crate) fn outgoing(
     // Submit a request to the endpoint to create an outgoing connection
     endpoint.submit_outgoing_request(request);
 
-    // Channels for communicating wtih the handle
+    // Channels for communicating with the handle
     let (close_signal_tx, close_signal_rx) = async_channel::unbounded();
     let (message_recv_tx, message_recv_rx) = crossbeam_channel::unbounded();
     let (message_send_tx, message_send_rx) = async_channel::unbounded();
@@ -37,6 +37,50 @@ pub(crate) fn outgoing(
         listener,
 
         close_signal_rx,
+        message_recv_tx,
+        message_send_rx,
+    })).detach();
+
+    return Handle {
+        shared,
+        close_signal_tx,
+        message_recv_rx,
+        message_send_tx,
+    };
+}
+
+pub(super) struct IncomingParams {
+    pub quinn: quinn_proto::Connection,
+    pub handle: quinn_proto::ConnectionHandle,
+
+    pub e2c_rx: async_channel::Receiver<E2CEvent>,
+    pub c2e_tx: async_channel::Sender<(ConnectionHandle, C2EEvent)>,
+
+    pub dgram_tx: async_channel::Sender<DgramSend>,
+}
+
+pub(super) fn incoming(
+    params: IncomingParams,
+) -> Handle {
+    // Channels for communicating with the handle
+    let (close_signal_tx, close_signal_rx) = async_channel::unbounded();
+    let (message_recv_tx, message_recv_rx) = crossbeam_channel::unbounded();
+    let (message_send_tx, message_send_rx) = async_channel::unbounded();
+
+    let shared = Arc::new(Shared {
+        state: Mutex::new(Lifestage::Connected),
+    });
+
+    // Create the state, and run and detach the driver
+    get_task_pool().spawn(driver(State {
+        shared: shared.clone(),
+        lifestage: Lifestage::Connected,
+        close_signal_rx,
+        quinn: params.quinn,
+        handle: params.handle,
+        e2c_rx: params.e2c_rx,
+        c2e_tx: params.c2e_tx,
+        dgram_tx: params.dgram_tx,
         message_recv_tx,
         message_send_rx,
     })).detach();

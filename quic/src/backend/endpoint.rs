@@ -14,6 +14,7 @@ pub(crate) fn new(
     let (close_signal_tx, close_signal_rx) = async_channel::unbounded();
     let (outgoing_request_tx, outgoing_request_rx) = async_channel::unbounded();
     let (c2e_tx, c2e_rx) = async_channel::unbounded();
+    let (incoming_accept_tx, incoming_accept_rx) = crossbeam_channel::unbounded();
 
     let shared = Arc::new(Shared {
         state: Mutex::new(Lifestage::Established),
@@ -43,6 +44,7 @@ pub(crate) fn new(
         connections: HashMap::new(),
 
         outgoing_request_rx,
+        incoming_accept_tx,
 
         c2e_tx,
         c2e_rx,
@@ -56,6 +58,7 @@ pub(crate) fn new(
 
         close_signal_tx,
         outgoing_request_tx,
+        incoming_accept_rx,
     };
 }
 
@@ -64,6 +67,7 @@ pub(crate) struct Handle {
 
     close_signal_tx: async_channel::Sender<CloseSignal>,
     outgoing_request_tx: async_channel::Sender<OutgoingConnectionRequest>,
+    incoming_accept_rx: crossbeam_channel::Receiver<super::connection::Handle>,
 }
 
 impl Drop for Handle {
@@ -107,6 +111,7 @@ pub(super) struct State {
 
     connections: HashMap<ConnectionHandle, Connection>,
     outgoing_request_rx: async_channel::Receiver<OutgoingConnectionRequest>,
+    incoming_accept_tx: crossbeam_channel::Sender<super::connection::Handle>,
 
     c2e_tx: async_channel::Sender<(ConnectionHandle, C2EEvent)>,
     c2e_rx: async_channel::Receiver<(ConnectionHandle, C2EEvent)>,
@@ -223,7 +228,37 @@ fn handle_dgram_recv(
 
             // A new incoming connection has appeared
             DatagramEvent::NewConnection(incoming) => {
-                todo!()
+                match state.quinn.accept(
+                    incoming, 
+                    Instant::now(),
+                    scratch,
+                    None,
+                ) {
+                    // Connection was accepted
+                    Ok((handle, quinn)) => {
+                        use super::connection::{incoming, IncomingParams};
+
+                        // Channels for communication
+                        let (e2c_tx, e2c_rx) = async_channel::unbounded();
+
+                        // Throw the handle at the endpoint
+                        let _ = state.incoming_accept_tx.send(incoming(IncomingParams {
+                            quinn,
+                            handle,
+
+                            e2c_rx,
+                            c2e_tx: state.c2e_tx.clone(),
+                            dgram_tx: state.socket.send_tx.clone(),
+                        }));
+
+                        // Add connection to storage
+                        state.connections.insert(handle, Connection {
+                            e2c_tx,
+                        });
+                    },
+
+                    Err(err) => todo!(),
+                }
             },
 
             // The endpoint wants to send a datagram
@@ -283,7 +318,7 @@ fn handle_outgoing_request(
                 dgram_tx: state.socket.send_tx.clone(),
             });
 
-            // Add connection to our set of values
+            // Add connection to storage
             state.connections.insert(handle, Connection {
                 e2c_tx,
             });
