@@ -2,6 +2,7 @@
 #![warn(missing_docs)]
 
 mod backend;
+mod config;
 mod ecs;
 mod logging;
 mod plugin;
