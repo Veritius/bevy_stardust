@@ -13,7 +13,7 @@ pub mod transport {
 
     #[derive(Clone)]
     pub struct TransportConfig {
-        quinn: Arc<quinn_proto::TransportConfig>,
+        pub(crate) quinn: Arc<quinn_proto::TransportConfig>,
     }
 
     impl TransportConfig {
@@ -113,7 +113,7 @@ pub mod endpoint {
 
     #[derive(Clone)]
     pub struct EndpointConfig {
-        quinn: Arc<quinn_proto::EndpointConfig>,
+        pub(crate) quinn: Arc<quinn_proto::EndpointConfig>,
     }
 
     impl EndpointConfig {
@@ -161,10 +161,90 @@ pub mod server {
 
     #[derive(Clone)]
     pub struct ServerConfig {
-        quinn: Arc<quinn_proto::ServerConfig>,
+        pub(crate) quinn: Arc<quinn_proto::ServerConfig>,
+        pub(crate) transport: Arc<TransportConfig>,
 
+        pub(crate) channels: Arc<ChannelRegistry>,
+    }
+
+    impl ServerConfig {
+        pub fn builder() -> ServerConfigBuilder<WantsCryptoConfig> {
+            ServerConfigBuilder(WantsCryptoConfig { _p: () })
+        }
+    }
+
+    pub struct ServerConfigBuilder<T>(T);
+
+    pub struct WantsCryptoConfig {
+        _p: (),
+    }
+
+    impl ServerConfigBuilder<WantsCryptoConfig> {
+        pub fn with_single_cert(
+            self,
+            cert_chain: Vec<CertificateDer<'static>>,
+            private_key: PrivateKeyDer<'static>,
+        ) -> Result<ServerConfigBuilder<WantsTransportConfig>, rustls::Error> {
+            todo!()
+        }
+    }
+
+    pub struct WantsTransportConfig {
+        crypto: Arc<dyn quinn_proto::crypto::ServerConfig>,
+    }
+
+    impl ServerConfigBuilder<WantsTransportConfig> {
+        pub fn with_transport_config(
+            self,
+            config: impl Into<Arc<TransportConfig>>,
+        ) -> ServerConfigBuilder<WantsChannelRegistry> {
+            let config = config.into();
+
+            ServerConfigBuilder(WantsChannelRegistry {
+                quinn: {
+                    let mut quinn = quinn_proto::ServerConfig::with_crypto(self.0.crypto);
+                    quinn.transport = config.quinn.clone();
+                    quinn
+                },
+
+                transport: config,
+            })
+        }
+    }
+
+    pub struct WantsChannelRegistry {
+        quinn: quinn_proto::ServerConfig,
+        transport: Arc<TransportConfig>,
+    }
+
+    impl ServerConfigBuilder<WantsChannelRegistry> {
+        pub fn with_channel_registry(
+            self,
+            channels: Arc<ChannelRegistry>,
+        ) -> ServerConfigBuilder<Ready> {
+            ServerConfigBuilder(Ready {
+                quinn: self.0.quinn,
+                transport: self.0.transport,
+                channels,
+            })
+        }
+    }
+
+    pub struct Ready {
+        quinn: quinn_proto::ServerConfig,
+        transport: Arc<TransportConfig>,
         channels: Arc<ChannelRegistry>,
-    }    
+    }
+
+    impl ServerConfigBuilder<Ready> {
+        pub fn finish(self) -> ServerConfig {
+            ServerConfig {
+                quinn: Arc::new(self.0.quinn),
+                transport: self.0.transport,
+                channels: self.0.channels,
+            }
+        }
+    }
 }
 
 pub mod client {
@@ -172,8 +252,8 @@ pub mod client {
 
     #[derive(Clone)]
     pub struct ClientConfig {
-        quinn: quinn_proto::ClientConfig,
+        pub(crate) quinn: quinn_proto::ClientConfig,
 
-        channels: Arc<ChannelRegistry>,
+        pub(crate) channels: Arc<ChannelRegistry>,
     }
 }
