@@ -281,7 +281,106 @@ pub mod client {
     #[derive(Clone)]
     pub struct ClientConfig {
         pub(crate) quinn: quinn_proto::ClientConfig,
+        pub(crate) transport: Arc<TransportConfig>,
 
         pub(crate) channels: Arc<ChannelRegistry>,
+    }
+
+    impl ClientConfig {
+        pub fn builder() -> ClientConfigBuilder<WantsCryptoConfig> {
+            ClientConfigBuilder(WantsCryptoConfig { _p: () })
+        }
+    }
+
+    pub struct ClientConfigBuilder<T>(T);
+
+    pub struct WantsCryptoConfig {
+        _p: (),
+    }
+
+    impl ClientConfigBuilder<WantsCryptoConfig> {
+        pub fn with_root_certificates(
+            self,
+            certs: impl Into<Arc<RootCertStore>>,
+        ) -> Result<ClientConfigBuilder<WantsTransportConfig>, Error> {
+            let tls = TlsClientConfig::builder()
+                .with_root_certificates(certs.into())
+                .with_no_client_auth();
+
+            return self.with_tls_config(tls);
+        }
+
+        pub fn with_tls_config(
+            self,
+            tls: impl Into<Arc<TlsClientConfig>>,
+        ) -> Result<ClientConfigBuilder<WantsTransportConfig>, Error> {
+            Ok(ClientConfigBuilder(WantsTransportConfig {
+                crypto: Arc::new(quinn_proto::crypto::rustls::QuicClientConfig::try_from(tls.into())
+                    .map_err(|_| Error::NoInitialCypherSuite)?),
+            }))
+        }
+    }
+
+    pub struct WantsTransportConfig {
+        crypto: Arc<dyn quinn_proto::crypto::ClientConfig>,
+    }
+
+    impl ClientConfigBuilder<WantsTransportConfig> {
+        pub fn with_transport_config(
+            self,
+            config: impl Into<Arc<TransportConfig>>,
+        ) -> ClientConfigBuilder<WantsChannelRegistry> {
+            let config = config.into();
+
+            ClientConfigBuilder(WantsChannelRegistry {
+                quinn: {
+                    let mut quinn = quinn_proto::ClientConfig::new(self.0.crypto);
+                    quinn.transport_config(config.quinn.clone());
+                    quinn
+                },
+
+                transport: config,
+            })
+        }
+    }
+
+    pub struct WantsChannelRegistry {
+        quinn: quinn_proto::ClientConfig,
+        transport: Arc<TransportConfig>,
+    }
+
+    impl ClientConfigBuilder<WantsChannelRegistry> {
+        pub fn with_channel_registry(
+            self,
+            channels: Arc<ChannelRegistry>,
+        ) -> ClientConfigBuilder<Ready> {
+            ClientConfigBuilder(Ready {
+                quinn: self.0.quinn,
+                transport: self.0.transport,
+                channels,
+            })
+        }
+    }
+
+    pub struct Ready {
+        quinn: quinn_proto::ClientConfig,
+        transport: Arc<TransportConfig>,
+        channels: Arc<ChannelRegistry>,
+    }
+
+    impl ClientConfigBuilder<Ready> {
+        pub fn finish(self) -> ClientConfig {
+            ClientConfig {
+                quinn: self.0.quinn,
+                transport: self.0.transport,
+                channels: self.0.channels,
+            }
+        }
+    }
+
+    pub enum Error {
+        Tls(rustls::Error),
+        VerifierBuilderError(rustls::server::VerifierBuilderError),
+        NoInitialCypherSuite,
     }
 }
