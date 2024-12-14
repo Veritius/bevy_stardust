@@ -18,6 +18,20 @@ impl Drop for Handle {
     }
 }
 
+impl Handle {
+    pub fn state(&self) -> Lifestage {
+        self.shared.state.lock().unwrap().clone()
+    }
+
+    pub fn send_close_signal(&self) {
+        let _ = self.close_signal_tx.send_blocking(CloseSignal {});
+    }
+
+    pub(super) fn submit_outgoing_request(&self, request: OutgoingConnectionRequest) {
+        let _ = self.outgoing_request_tx.send_blocking(request);
+    }
+}
+
 struct CloseSignal {
 
 }
@@ -51,7 +65,7 @@ impl State {
 }
 
 #[derive(Clone, Copy, PartialEq)]
-enum Lifestage {
+pub(crate) enum Lifestage {
     Established,
     Closing,
     Closed

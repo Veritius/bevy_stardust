@@ -20,6 +20,24 @@ impl Drop for Handle {
     }
 }
 
+impl Handle {
+    pub fn state(&self) -> Lifestage {
+        self.shared.state.lock().unwrap().clone()
+    }
+
+    pub fn send_close_signal(&self) {
+        let _ = self.close_signal_tx.send_blocking(CloseSignal {});
+    }
+
+    pub fn queue_message_send(&self, message: ChannelMessage) {
+        let _ = self.message_send_tx.send_blocking(message);
+    }
+
+    pub fn message_recv_iter(&self) -> impl Iterator<Item = ChannelMessage> + '_ {
+        self.message_recv_rx.try_iter()
+    }
+}
+
 struct CloseSignal {
 
 }
@@ -53,7 +71,7 @@ impl State {
 }
 
 #[derive(Clone, Copy, PartialEq)]
-enum Lifestage {
+pub(crate) enum Lifestage {
     Established,
     Closing,
     Closed
