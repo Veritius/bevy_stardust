@@ -115,6 +115,45 @@ pub mod endpoint {
     pub struct EndpointConfig {
         quinn: Arc<quinn_proto::EndpointConfig>,
     }
+
+    impl EndpointConfig {
+        pub fn builder() -> EndpointConfigBuilder {
+            EndpointConfigBuilder::new()
+        }
+    }
+
+    pub struct EndpointConfigBuilder {
+        quinn: quinn_proto::EndpointConfig,
+    }
+
+    impl EndpointConfigBuilder {
+        pub fn new() -> Self {
+            Self {
+                quinn: quinn_proto::EndpointConfig::default(),
+            }
+        }
+
+        pub fn reset_key(&mut self, key: ring::hmac::Key) -> &mut Self {
+            self.quinn.reset_key(Arc::new(key));
+            return self;
+        }
+
+        pub fn min_reset_interval(&mut self, value: Duration) -> &mut Self {
+            self.quinn.min_reset_interval(value);
+            return self;
+        }
+
+        pub fn allow_grease_bit(&mut self, value: bool) -> &mut Self {
+            self.quinn.grease_quic_bit(value);
+            return self;
+        }
+
+        pub fn finish(self) -> EndpointConfig {
+            EndpointConfig {
+                quinn: Arc::new(self.quinn),
+            }
+        }
+    }
 }
 
 pub mod server {
