@@ -2,7 +2,15 @@ use std::{pin::pin, sync::{Arc, Mutex}};
 use bevy_stardust::prelude::ChannelMessage;
 use futures_lite::StreamExt;
 use quinn_proto::ConnectionHandle;
+use crate::config::ClientConfig;
 use super::{events::{C2EEvent, E2CEvent}, socket::DgramSend, taskpool::get_task_pool};
+
+pub(crate) fn outgoing(
+    endpoint: &super::endpoint::Handle,
+    config: ClientConfig,
+) -> Handle {
+    todo!()
+}
 
 pub(crate) struct Handle {
     shared: Arc<Shared>,

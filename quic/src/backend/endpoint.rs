@@ -1,8 +1,16 @@
-use std::{collections::HashMap, pin::pin, sync::{Arc, Mutex}};
+use std::{collections::HashMap, net::UdpSocket, pin::pin, sync::{Arc, Mutex}};
 use futures_lite::StreamExt;
 use quinn_proto::ConnectionHandle;
-use crate::backend::socket::DgramRecv;
+use crate::{backend::socket::DgramRecv, config::{EndpointConfig, ServerConfig}};
 use super::{events::{C2EEvent, E2CEvent}, outgoing::OutgoingConnectionRequest, socket::Socket, taskpool::get_task_pool};
+
+pub(crate) fn new(
+    socket: UdpSocket,
+    config: EndpointConfig,
+    server: Option<ServerConfig>,
+) -> Handle {
+    todo!()
+}
 
 pub(crate) struct Handle {
     shared: Arc<Shared>,
