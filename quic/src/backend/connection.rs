@@ -1,4 +1,4 @@
-use std::{pin::pin, sync::Arc};
+use std::{pin::pin, sync::{Arc, Mutex}};
 use bevy_stardust::prelude::ChannelMessage;
 use futures_lite::StreamExt;
 use quinn_proto::ConnectionHandle;
@@ -25,11 +25,12 @@ struct CloseSignal {
 }
 
 struct Shared {
-
+    state: Mutex<Lifestage>,
 }
 
 pub(super) struct State {
     shared: Arc<Shared>,
+    lifestage: Lifestage,
 
     close_signal_rx: async_channel::Receiver<CloseSignal>,
 
@@ -42,6 +43,20 @@ pub(super) struct State {
 
     message_recv_tx: crossbeam_channel::Sender<ChannelMessage>,
     message_send_rx: async_channel::Receiver<ChannelMessage>,
+}
+
+impl State {
+    fn update_lifestage(&mut self, lifestage: Lifestage) {
+        self.lifestage = lifestage;
+        *self.shared.state.lock().unwrap() = lifestage;
+    }
+}
+
+#[derive(Clone, Copy, PartialEq)]
+enum Lifestage {
+    Established,
+    Closing,
+    Closed
 }
 
 pub(super) enum Driver {}

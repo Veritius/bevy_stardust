@@ -1,4 +1,4 @@
-use std::{collections::HashMap, pin::pin, sync::Arc};
+use std::{collections::HashMap, pin::pin, sync::{Arc, Mutex}};
 use futures_lite::StreamExt;
 use quinn_proto::ConnectionHandle;
 use crate::backend::socket::DgramRecv;
@@ -22,11 +22,12 @@ struct CloseSignal {
 }
 
 struct Shared {
-
+    state: Mutex<Lifestage>,
 }
 
 pub(super) struct State {
     shared: Arc<Shared>,
+    lifestage: Lifestage,
 
     close_signal_rx: async_channel::Receiver<CloseSignal>,
 
@@ -38,6 +39,20 @@ pub(super) struct State {
 
     c2e_tx: async_channel::Sender<(ConnectionHandle, C2EEvent)>,
     c2e_rx: async_channel::Receiver<(ConnectionHandle, C2EEvent)>,
+}
+
+impl State {
+    fn update_lifestage(&mut self, lifestage: Lifestage) {
+        self.lifestage = lifestage;
+        *self.shared.state.lock().unwrap() = lifestage;
+    }
+}
+
+#[derive(Clone, Copy, PartialEq)]
+enum Lifestage {
+    Established,
+    Closing,
+    Closed
 }
 
 struct Connection {
