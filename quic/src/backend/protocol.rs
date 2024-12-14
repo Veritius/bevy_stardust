@@ -1,6 +1,44 @@
+use std::collections::BTreeMap;
 use bevy_stardust::prelude::ChannelId;
 use bevy_stardust_extras::numbers::{VarInt, Sequence};
 use bytes::{Buf, BufMut, Bytes};
+
+struct SeqMap {
+    local: BTreeMap<ChannelId, SeqRecord>,
+    remote: BTreeMap<ChannelId, SeqRecord>,
+}
+
+impl SeqMap {
+    fn new() -> Self {
+        Self {
+            local: BTreeMap::new(),
+            remote: BTreeMap::new(),
+        }
+    }
+}
+
+struct SeqRecord(Sequence<u16>);
+
+impl SeqRecord {
+    fn new() -> Self {
+        Self(Sequence::from(0))
+    }
+
+    fn next(&mut self) -> Sequence<u16> {
+        let v = self.0;
+        self.0.increment();
+        return v;
+    }
+
+    fn latest(&mut self, index: Sequence<u16>) -> bool {
+        if index > self.0 {
+            self.0 = index;
+            return true;
+        } else {
+            return false;
+        }
+    }
+}
 
 struct Segment(Bytes);
 
