@@ -1,4 +1,5 @@
 use std::{net::SocketAddr, pin::pin, sync::{Arc, Mutex}};
+use async_io::Timer;
 use bevy_stardust::prelude::ChannelMessage;
 use futures_lite::StreamExt;
 use quinn_proto::ConnectionHandle;
@@ -205,6 +206,7 @@ async fn driver(
         E2CEvent(E2CEvent),
         MessageSend(ChannelMessage),
         CloseSignal(CloseSignal),
+        Timeout,
     }
 
     let mut stream = pin!({
@@ -218,7 +220,17 @@ async fn driver(
     });
 
     loop {
-        let event = match stream.next().await {
+        let timer = match state.quinn.poll_timeout() {
+            Some(deadline) => Timer::at(deadline),
+            None => Timer::never()
+        };
+
+        let future = futures_lite::future::or(
+            stream.next(),
+            async { timer.await; Some(Event::Timeout) },
+        );
+
+        let event = match future.await {
             Some(event) => event,
             None => todo!(),
         };
@@ -227,6 +239,7 @@ async fn driver(
             Event::E2CEvent(event) => todo!(),
             Event::MessageSend(message) => todo!(),
             Event::CloseSignal(signal) => todo!(),
+            Event::Timeout => todo!(),
         }
 
         match state.lifestage {
