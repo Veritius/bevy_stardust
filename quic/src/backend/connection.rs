@@ -258,9 +258,12 @@ async fn driver(
     }
 
     let mut stream = pin!({
-        let e2c_rx = state.e2c_rx.map(|v| Event::E2CEvent(v));
-        let message_send_rx = state.message_send_rx.map(|v| Event::MessageSend(v));
-        let close_signal_rx = state.close_signal_rx.map(|v| Event::CloseSignal(v));
+        // TODO: See about avoiding cloning these receivers
+        // This is done because creating the stream takes ownership of the channel,
+        // so the state object can't be handed off to other functions as it's incomplete.
+        let e2c_rx = state.e2c_rx.clone().map(|v| Event::E2CEvent(v));
+        let message_send_rx = state.message_send_rx.clone().map(|v| Event::MessageSend(v));
+        let close_signal_rx = state.close_signal_rx.clone().map(|v| Event::CloseSignal(v));
 
         e2c_rx
             .or(message_send_rx)
@@ -291,15 +294,68 @@ async fn driver(
         }
 
         match state.lifestage {
-            Lifestage::Connecting => todo!(),
-            Lifestage::Connected => todo!(),
-            Lifestage::Closing => todo!(),
+            // If we're in either of these stages we continue the loop
+            Lifestage::Connecting | Lifestage::Connected => { continue },
+
+            // The closing stage is used as a step before Closed,
+            // to ensure we do everything that needs to be done before stopping.
+            Lifestage::Closing => {
+                // Checks for things we need to do before stopping
+                if !state.quinn.is_drained() { continue }
+
+                // All checks passed, break the loop
+                break;
+            },
 
             // Break the loop: we're done
             Lifestage::Closed => break,
         }
     }
 
+    // Update the lifestage since it might still be viewed
+    state.update_lifestage(Lifestage::Closed);
+
     // Inform the endpoint that the connection is closing
     state.send_c2e_event(C2EEvent::ConnectionClosed);
+}
+
+fn handle_quinn_events(
+    state: &mut State,
+) {
+    use quinn_proto::Event;
+
+    while let Some(event) = state.quinn.poll() {
+        match event {
+            Event::Connected => {
+                state.update_lifestage(Lifestage::Connected);
+            },
+
+            Event::ConnectionLost { reason } => {
+                state.update_lifestage(Lifestage::Closing);
+            },
+
+            Event::Stream(event) => handle_stream_event(state, event),
+
+            Event::DatagramReceived => todo!(),
+            Event::DatagramsUnblocked => todo!(),
+
+            Event::HandshakeDataReady => { /* We don't care */ },
+        }
+    }
+}
+
+fn handle_stream_event(
+    state: &mut State,
+    event: quinn_proto::StreamEvent,
+) {
+    use quinn_proto::StreamEvent;
+
+    match event {
+        StreamEvent::Opened { dir } => todo!(),
+        StreamEvent::Readable { id } => todo!(),
+        StreamEvent::Writable { id } => todo!(),
+        StreamEvent::Finished { id } => todo!(),
+        StreamEvent::Stopped { id, error_code } => todo!(),
+        StreamEvent::Available { dir } => todo!(),
+    }
 }
