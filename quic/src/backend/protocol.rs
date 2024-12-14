@@ -2,11 +2,19 @@ use std::{collections::BTreeMap, sync::Arc};
 use bevy_stardust::{channels::ChannelRegistry, prelude::ChannelId};
 use bevy_stardust_extras::numbers::{VarInt, Sequence};
 use bytes::{Buf, BufMut, Bytes};
+use quinn_proto::StreamId;
 
 pub(super) struct Protocol {
     channels: Arc<ChannelRegistry>,
 
     seq_map: SeqMap,
+
+    send_stream_id_index: u64,
+    send_stream_id_map: BTreeMap<ChannelId, StreamId>,
+    send_stream_id_map_rev: BTreeMap<StreamId, ChannelId>,
+    send_stream_waiting_chunks: BTreeMap<StreamId, Vec<Bytes>>,
+
+    recv_stream_buffers: BTreeMap<StreamId, RecvStreamBuf>,
 }
 
 impl Protocol {
@@ -15,8 +23,19 @@ impl Protocol {
             channels,
 
             seq_map: SeqMap::new(),
+
+            send_stream_id_index: 0,
+            send_stream_id_map: BTreeMap::new(),
+            send_stream_id_map_rev: BTreeMap::new(),
+            send_stream_waiting_chunks: BTreeMap::new(),
+
+            recv_stream_buffers: BTreeMap::new(),
         }
     }
+}
+
+struct RecvStreamBuf {
+
 }
 
 struct SeqMap {
