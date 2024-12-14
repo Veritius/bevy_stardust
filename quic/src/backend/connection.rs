@@ -1,5 +1,6 @@
-use std::sync::Arc;
+use std::{pin::pin, sync::Arc};
 use bevy_stardust::prelude::ChannelMessage;
+use futures_lite::StreamExt;
 use quinn_proto::ConnectionHandle;
 use super::{events::{C2EEvent, E2CEvent}, socket::DgramSend, taskpool::get_task_pool};
 
@@ -58,5 +59,27 @@ impl Driver {
 async fn driver(
     mut state: State,
 ) {
-    todo!()
+    enum Event {
+        E2CEvent(E2CEvent),
+        MessageSend(ChannelMessage),
+        CloseSignal(CloseSignal),
+    }
+
+    let mut stream = pin!({
+        let e2c_rx = state.e2c_rx.map(|v| Event::E2CEvent(v));
+        let message_send_rx = state.message_send_rx.map(|v| Event::MessageSend(v));
+        let close_signal_rx = state.close_signal_rx.map(|v| Event::CloseSignal(v));
+
+        e2c_rx
+            .or(message_send_rx)
+            .or(close_signal_rx)
+    });
+
+    while let Some(event) = stream.next().await {
+        match event {
+            Event::E2CEvent(event) => todo!(),
+            Event::MessageSend(channel_message) => todo!(),
+            Event::CloseSignal(close_signal) => todo!(),
+        }
+    };
 }

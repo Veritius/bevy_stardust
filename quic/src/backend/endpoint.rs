@@ -1,5 +1,7 @@
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::HashMap, pin::pin, sync::Arc};
+use futures_lite::StreamExt;
 use quinn_proto::ConnectionHandle;
+use crate::backend::socket::DgramRecv;
 use super::{events::{C2EEvent, E2CEvent}, socket::Socket, taskpool::get_task_pool};
 
 pub(crate) struct Handle {
@@ -57,5 +59,27 @@ impl Driver {
 async fn driver(
     mut state: State,
 ) {
-    todo!()
+    enum Event {
+        C2EEvent((ConnectionHandle, C2EEvent)),
+        DgramRecv(DgramRecv),
+        CloseSignal(CloseSignal),
+    }
+
+    let mut stream = pin!({
+        let c2e_rx = state.c2e_rx.map(|v| Event::C2EEvent(v));
+        let dgram_rx = state.socket.recv_rx.map(|v| Event::DgramRecv(v));
+        let close_signal_rx = state.close_signal_rx.map(|v| Event::CloseSignal(v));
+
+        c2e_rx
+            .or(dgram_rx)
+            .or(close_signal_rx)
+    });
+
+    while let Some(event) = stream.next().await {
+        match event {
+            Event::C2EEvent((handle, event)) => todo!(),
+            Event::DgramRecv(dgram) => todo!(),
+            Event::CloseSignal(close_signal) => todo!(),
+        }
+    }
 }
