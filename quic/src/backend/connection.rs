@@ -78,8 +78,8 @@ async fn driver(
     while let Some(event) = stream.next().await {
         match event {
             Event::E2CEvent(event) => todo!(),
-            Event::MessageSend(channel_message) => todo!(),
-            Event::CloseSignal(close_signal) => todo!(),
+            Event::MessageSend(message) => todo!(),
+            Event::CloseSignal(signal) => todo!(),
         }
     };
 }

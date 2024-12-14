@@ -79,7 +79,7 @@ async fn driver(
         match event {
             Event::C2EEvent((handle, event)) => todo!(),
             Event::DgramRecv(dgram) => todo!(),
-            Event::CloseSignal(close_signal) => todo!(),
+            Event::CloseSignal(signal) => todo!(),
         }
     }
 }
