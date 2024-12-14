@@ -3,7 +3,7 @@ use async_io::Async;
 use futures_lite::StreamExt;
 use quinn_proto::ConnectionHandle;
 use crate::{backend::{outgoing::RejectedData, socket::DgramRecv}, config::{EndpointConfig, ServerConfig}};
-use super::{events::{C2EEvent, E2CEvent}, outgoing::OutgoingConnectionRequest, socket::{Socket, SocketConfig}, taskpool::get_task_pool};
+use super::{events::{C2EEvent, E2CEvent}, outgoing::{AcceptedData, OutgoingConnectionRequest}, socket::{Socket, SocketConfig}, taskpool::get_task_pool};
 
 pub(crate) fn new(
     socket: Async<UdpSocket>,
@@ -215,7 +215,24 @@ fn handle_outgoing_request(
         &params.server_name,
     ) {
         Ok((handle, quinn)) => {
-            todo!()
+            // Channels for communication
+            let (e2c_tx, e2c_rx) = async_channel::unbounded();
+
+            // Inform task that it was accepted
+            request.accept(AcceptedData {
+                quinn,
+                handle,
+
+                e2c_rx,
+                c2e_tx: state.c2e_tx.clone(),
+
+                dgram_tx: state.socket.send_tx.clone(),
+            });
+
+            // Add connection to our set of values
+            state.connections.insert(handle, Connection {
+                e2c_tx,
+            });
         },
 
         Err(_) => todo!(),
