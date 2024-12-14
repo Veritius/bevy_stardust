@@ -1,6 +1,6 @@
 use std::{net::SocketAddr, pin::pin, sync::{Arc, Mutex}};
 use async_io::Timer;
-use bevy_stardust::prelude::ChannelMessage;
+use bevy_stardust::{channels::ChannelRegistry, prelude::ChannelMessage};
 use futures_lite::StreamExt;
 use quinn_proto::ConnectionHandle;
 use crate::config::ClientConfig;
@@ -37,6 +37,7 @@ pub(crate) fn outgoing(
         listener,
 
         close_signal_rx,
+
         message_recv_tx,
         message_send_rx,
     })).detach();
@@ -57,6 +58,8 @@ pub(super) struct IncomingParams {
     pub c2e_tx: async_channel::Sender<(ConnectionHandle, C2EEvent)>,
 
     pub dgram_tx: async_channel::Sender<DgramSend>,
+
+    pub channels: Arc<ChannelRegistry>,
 }
 
 pub(super) fn incoming(
@@ -81,6 +84,7 @@ pub(super) fn incoming(
         e2c_rx: params.e2c_rx,
         c2e_tx: params.c2e_tx,
         dgram_tx: params.dgram_tx,
+        channels: params.channels,
         message_recv_tx,
         message_send_rx,
     })).detach();
@@ -148,6 +152,7 @@ pub(super) struct State {
     c2e_tx: async_channel::Sender<(ConnectionHandle, C2EEvent)>,
     dgram_tx: async_channel::Sender<DgramSend>,
 
+    channels: Arc<ChannelRegistry>,
     message_recv_tx: crossbeam_channel::Sender<ChannelMessage>,
     message_send_rx: async_channel::Receiver<ChannelMessage>,
 }
@@ -188,6 +193,7 @@ struct OutgoingTaskParams {
     listener: OutgoingConnectionReceiver,
 
     close_signal_rx: async_channel::Receiver<CloseSignal>,
+
     message_recv_tx: crossbeam_channel::Sender<ChannelMessage>,
     message_send_rx: async_channel::Receiver<ChannelMessage>,
 }
@@ -239,6 +245,7 @@ async fn outgoing_task(
 
         dgram_tx: accepted.dgram_tx,
 
+        channels: accepted.channels,
         message_recv_tx,
         message_send_rx,
     };

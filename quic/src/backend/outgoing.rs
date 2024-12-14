@@ -1,4 +1,5 @@
 use std::{net::SocketAddr, sync::Arc};
+use bevy_stardust::channels::ChannelRegistry;
 use quinn_proto::ConnectionHandle;
 use crate::config::ClientConfig;
 use super::{events::{C2EEvent, E2CEvent}, socket::DgramSend};
@@ -80,6 +81,8 @@ pub(super) struct AcceptedData {
     pub c2e_tx: async_channel::Sender<(ConnectionHandle, C2EEvent)>,
 
     pub dgram_tx: async_channel::Sender<DgramSend>,
+
+    pub channels: Arc<ChannelRegistry>,
 }
 
 pub(super) struct RejectedData {

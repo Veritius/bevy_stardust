@@ -48,6 +48,8 @@ pub(crate) fn new(
 
         c2e_tx,
         c2e_rx,
+
+        server_config: server,
     };
 
     // Spawn and detach the task to run it in the background
@@ -115,6 +117,8 @@ pub(super) struct State {
 
     c2e_tx: async_channel::Sender<(ConnectionHandle, C2EEvent)>,
     c2e_rx: async_channel::Receiver<(ConnectionHandle, C2EEvent)>,
+
+    server_config: Option<ServerConfig>,
 }
 
 impl State {
@@ -249,6 +253,10 @@ fn handle_dgram_recv(
                             e2c_rx,
                             c2e_tx: state.c2e_tx.clone(),
                             dgram_tx: state.socket.send_tx.clone(),
+
+                            // It's fine to unwrap this since if we got this far, it means that a server config was provided.
+                            // We can assume this because Quinn would have just rejected the connection without reaching this point.
+                            channels: state.server_config.as_ref().unwrap().channels.clone(),
                         }));
 
                         // Add connection to storage
@@ -316,6 +324,8 @@ fn handle_outgoing_request(
                 c2e_tx: state.c2e_tx.clone(),
 
                 dgram_tx: state.socket.send_tx.clone(),
+
+                channels: params.config.channels,
             });
 
             // Add connection to storage
