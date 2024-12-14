@@ -19,6 +19,8 @@ impl Segment {
         VarInt::try_from(self.0.len() as u64).unwrap()
             .write(buf).map_err(|_| InsufficientSpace)?;
 
+        if buf.remaining_mut() < self.0.len() { return Err(InsufficientSpace) }
+
         // Put the rest of the segment into the buffer
         buf.put_slice(&self.0);
 
