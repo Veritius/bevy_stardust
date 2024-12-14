@@ -235,6 +235,9 @@ fn handle_outgoing_request(
             });
         },
 
-        Err(_) => todo!(),
+        Err(_) => {
+            // Inform task that it was rejected
+            request.reject(RejectedData {});
+        },
     }
 }
