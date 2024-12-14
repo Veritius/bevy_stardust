@@ -287,9 +287,9 @@ async fn driver(
         };
 
         match event {
-            Event::E2CEvent(event) => todo!(),
-            Event::MessageSend(message) => todo!(),
-            Event::CloseSignal(signal) => todo!(),
+            Event::E2CEvent(event) => handle_e2c_event(&mut state, event),
+            Event::MessageSend(message) => handle_message_send(&mut state, message),
+            Event::CloseSignal(signal) => handle_close_signal(&mut state, signal),
             Event::Timeout => todo!(),
         }
 
@@ -317,6 +317,27 @@ async fn driver(
 
     // Inform the endpoint that the connection is closing
     state.send_c2e_event(C2EEvent::ConnectionClosed);
+}
+
+fn handle_e2c_event(
+    state: &mut State,
+    event: E2CEvent,
+) {
+    todo!()
+}
+
+fn handle_message_send(
+    state: &mut State,
+    message: ChannelMessage,
+) {
+    todo!()
+}
+
+fn handle_close_signal(
+    state: &mut State,
+    signal: CloseSignal,
+) {
+    todo!()
 }
 
 fn handle_quinn_events(
