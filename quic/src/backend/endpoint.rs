@@ -2,12 +2,13 @@ use std::{collections::HashMap, pin::pin, sync::{Arc, Mutex}};
 use futures_lite::StreamExt;
 use quinn_proto::ConnectionHandle;
 use crate::backend::socket::DgramRecv;
-use super::{events::{C2EEvent, E2CEvent}, socket::Socket, taskpool::get_task_pool};
+use super::{events::{C2EEvent, E2CEvent}, outgoing::OutgoingConnectionRequest, socket::Socket, taskpool::get_task_pool};
 
 pub(crate) struct Handle {
     shared: Arc<Shared>,
 
     close_signal_tx: async_channel::Sender<CloseSignal>,
+    outgoing_request_tx: async_channel::Sender<OutgoingConnectionRequest>,
 }
 
 impl Drop for Handle {
@@ -36,6 +37,7 @@ pub(super) struct State {
     quinn: quinn_proto::Endpoint,
 
     connections: HashMap<ConnectionHandle, Connection>,
+    outgoing_request_rx: async_channel::Receiver<OutgoingConnectionRequest>,
 
     c2e_tx: async_channel::Sender<(ConnectionHandle, C2EEvent)>,
     c2e_rx: async_channel::Receiver<(ConnectionHandle, C2EEvent)>,
@@ -77,16 +79,19 @@ async fn driver(
     enum Event {
         C2EEvent((ConnectionHandle, C2EEvent)),
         DgramRecv(DgramRecv),
+        OutgoingRequest(OutgoingConnectionRequest),
         CloseSignal(CloseSignal),
     }
 
     let mut stream = pin!({
         let c2e_rx = state.c2e_rx.map(|v| Event::C2EEvent(v));
         let dgram_rx = state.socket.recv_rx.map(|v| Event::DgramRecv(v));
+        let outgoing_request_rx = state.outgoing_request_rx.map(|v| Event::OutgoingRequest(v));
         let close_signal_rx = state.close_signal_rx.map(|v| Event::CloseSignal(v));
 
         c2e_rx
             .or(dgram_rx)
+            .or(outgoing_request_rx)
             .or(close_signal_rx)
     });
 
@@ -99,6 +104,7 @@ async fn driver(
         match event {
             Event::C2EEvent((handle, event)) => todo!(),
             Event::DgramRecv(dgram) => todo!(),
+            Event::OutgoingRequest(request) => todo!(),
             Event::CloseSignal(signal) => todo!(),
         }
 
