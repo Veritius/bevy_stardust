@@ -48,25 +48,20 @@ impl Message {
 
         match code {
             0 => {
-                let channel = decode_varint(buf)?.into();
-                let payload = Segment::read(buf)?.0;
-
                 return Ok(Self::Unordered {
-                    channel,
-                    payload,
+                    channel: decode_varint(buf)?.into(),
+                    payload: Segment::read(buf)?.0,
                 })
             },
 
             1 => {
-                let channel = decode_varint(buf)?.into();
-                if buf.remaining() < 2 { return Err(MessageDecodeError::EndOfInput); }
-                let sequence = buf.get_u16().into();
-                let payload = Segment::read(buf)?.0;
-
                 return Ok(Self::Sequenced {
-                    channel,
-                    sequence,
-                    payload,
+                    channel: decode_varint(buf)?.into(),
+                    sequence: {
+                        if buf.remaining() < 2 { return Err(MessageDecodeError::EndOfInput); }
+                        buf.get_u16().into()
+                    },
+                    payload: Segment::read(buf)?.0,
                 })
             },
 
@@ -80,20 +75,9 @@ impl Message {
                 channel,
                 payload,
             } => {
-                let code = VarInt::from_u32(0);
+                encode_varint(0, buf)?;
+                encode_varint(*channel, buf)?;
 
-                // Calculate the amount of space needed to write the message
-                // If it's too low, we can return an error early
-                let channel = VarInt::from(*channel);
-                let b_len_sum = (code.len() + channel.len()) as usize;
-                if buf.remaining_mut() < b_len_sum { return Err(InsufficientSpace); }
-
-                // Write everything
-                // Unwrapping is fine since we checked that there's enough space
-                code.write(buf).unwrap();
-                channel.write(buf).unwrap();
-
-                // can't unwrap here
                 Segment(payload.clone()).write(buf)?;
             },
 
@@ -102,22 +86,12 @@ impl Message {
                 sequence,
                 payload,
             } => {
-                let code = VarInt::from_u32(1);
+                encode_varint(1, buf)?;
+                encode_varint(*channel, buf)?;
 
-                // Calculate the amount of space needed to write the message
-                // If it's too low, we can return an error early
-                let channel = VarInt::from(*channel);
-                let seq_len = 2; // amount of bytes a u16 takes up, as we don't encode it as a varint
-                let b_len_sum = seq_len + (code.len() + channel.len()) as usize;
-                if buf.remaining_mut() < b_len_sum { return Err(InsufficientSpace); }
-
-                // Write everything
-                // Unwrapping is fine since we checked that there's enough space
-                code.write(buf).unwrap();
-                channel.write(buf).unwrap();
+                if buf.remaining_mut() < 2 { return Err(InsufficientSpace) }
                 buf.put_u16(sequence.inner());
 
-                // can't unwrap here
                 Segment(payload.clone()).write(buf)?;
             },
         }
@@ -143,4 +117,8 @@ struct InsufficientSpace;
 
 fn decode_varint<B: Buf>(buf: &mut B) -> Result<VarInt, EndOfInput> {
     VarInt::read(buf).map_err(|_| EndOfInput)
+}
+
+fn encode_varint<B: BufMut>(value: impl Into<VarInt>, buf: &mut B) -> Result<(), InsufficientSpace> {
+    value.into().write(buf).map_err(|_| InsufficientSpace)
 }
