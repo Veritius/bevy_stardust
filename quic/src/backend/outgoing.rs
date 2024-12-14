@@ -51,7 +51,7 @@ pub(super) struct RequestNeedsResponse {
 }
 
 impl RequestNeedsResponse {
-    pub fn accept(self, data: impl Into<AcceptedData>) {
+    pub fn accept(self, data: impl Into<Box<AcceptedData>>) {
         let _ = self.tx.send_blocking(Response::Accepted(data.into()));
     }
 
@@ -65,7 +65,10 @@ pub(super) struct OutgoingConnectionReceiver {
 }
 
 pub(super) enum Response {
-    Accepted(AcceptedData),
+    // boxed because the quinn state is huge and there's no guarantee of
+    // how much it'll move around by the time it reaches the endpoint
+    Accepted(Box<AcceptedData>),
+
     Rejected(RejectedData),
 }
 

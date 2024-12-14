@@ -1,8 +1,8 @@
-use std::{collections::HashMap, net::UdpSocket, pin::pin, sync::{Arc, Mutex}};
+use std::{collections::HashMap, net::UdpSocket, pin::pin, sync::{Arc, Mutex}, time::Instant};
 use async_io::Async;
 use futures_lite::StreamExt;
 use quinn_proto::ConnectionHandle;
-use crate::{backend::socket::DgramRecv, config::{EndpointConfig, ServerConfig}};
+use crate::{backend::{outgoing::RejectedData, socket::DgramRecv}, config::{EndpointConfig, ServerConfig}};
 use super::{events::{C2EEvent, E2CEvent}, outgoing::OutgoingConnectionRequest, socket::{Socket, SocketConfig}, taskpool::get_task_pool};
 
 pub(crate) fn new(
@@ -152,10 +152,13 @@ async fn driver(
     }
 
     let mut stream = pin!({
-        let c2e_rx = state.c2e_rx.map(|v| Event::C2EEvent(v));
-        let dgram_rx = state.socket.recv_rx.map(|v| Event::DgramRecv(v));
-        let outgoing_request_rx = state.outgoing_request_rx.map(|v| Event::OutgoingRequest(v));
-        let close_signal_rx = state.close_signal_rx.map(|v| Event::CloseSignal(v));
+        // TODO: See about avoiding cloning these receivers
+        // This is done because creating the stream takes ownership of the channel,
+        // so the state object can't be handed off to other functions as it's incomplete.
+        let c2e_rx = state.c2e_rx.clone().map(|v| Event::C2EEvent(v));
+        let dgram_rx = state.socket.recv_rx.clone().map(|v| Event::DgramRecv(v));
+        let outgoing_request_rx = state.outgoing_request_rx.clone().map(|v| Event::OutgoingRequest(v));
+        let close_signal_rx = state.close_signal_rx.clone().map(|v| Event::CloseSignal(v));
 
         c2e_rx
             .or(dgram_rx)
@@ -172,7 +175,7 @@ async fn driver(
         match event {
             Event::C2EEvent((handle, event)) => todo!(),
             Event::DgramRecv(dgram) => todo!(),
-            Event::OutgoingRequest(request) => todo!(),
+            Event::OutgoingRequest(request) => handle_outgoing_request(&mut state, request),
             Event::CloseSignal(signal) => todo!(),
         }
 
@@ -181,5 +184,40 @@ async fn driver(
             Lifestage::Closing => todo!(),
             Lifestage::Closed => todo!(),
         }
+    }
+}
+
+fn handle_outgoing_request(
+    state: &mut State,
+    request: OutgoingConnectionRequest,
+) {
+    // Check lifestage
+    match state.lifestage {
+        // In the established state, it's fine to accept requests, so we continue
+        Lifestage::Established => {},
+
+        // In the closing or closed states, we won't accept requests
+        Lifestage::Closing | Lifestage::Closed => {
+            // Inform the connection of the rejection
+            request.split().1.reject(RejectedData {});
+            return;
+        },
+    }
+
+    let (params, request) = request.split();
+
+    // Try to create the connection
+    // Quinn handles most of this so we start here
+    match state.quinn.connect(
+        Instant::now(),
+        params.config.quinn,
+        params.remote_addr,
+        &params.server_name,
+    ) {
+        Ok((handle, quinn)) => {
+            todo!()
+        },
+
+        Err(_) => todo!(),
     }
 }
