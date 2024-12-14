@@ -2,6 +2,7 @@ mod connection;
 mod endpoint;
 mod events;
 mod outgoing;
+mod protocol;
 mod socket;
 mod taskpool;
 
