@@ -120,6 +120,8 @@ pub mod endpoint {
     #[derive(Clone)]
     pub struct EndpointConfig {
         pub(crate) quinn: Arc<quinn_proto::EndpointConfig>,
+
+        pub(crate) recv_buf_size: usize,
     }
 
     impl EndpointConfig {
@@ -130,12 +132,15 @@ pub mod endpoint {
 
     pub struct EndpointConfigBuilder {
         quinn: quinn_proto::EndpointConfig,
+
+        recv_buf_size: usize,
     }
 
     impl EndpointConfigBuilder {
         pub fn new() -> Self {
             Self {
                 quinn: quinn_proto::EndpointConfig::default(),
+                recv_buf_size: 1472,
             }
         }
 
@@ -154,9 +159,15 @@ pub mod endpoint {
             return self;
         }
 
+        pub fn recv_buffer_size(&mut self, value: usize) -> &mut Self {
+            self.recv_buf_size = value.max(1200);
+            return self;
+        }
+
         pub fn finish(self) -> EndpointConfig {
             EndpointConfig {
                 quinn: Arc::new(self.quinn),
+                recv_buf_size: self.recv_buf_size, 
             }
         }
     }

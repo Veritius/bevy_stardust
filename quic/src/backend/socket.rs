@@ -28,9 +28,11 @@ pub(super) struct Socket {
 
 impl Socket {
     pub fn new(
-        socket: Arc<Async<UdpSocket>>,
+        socket: Async<UdpSocket>,
         config: SocketConfig,
     ) -> Socket {
+        let socket = Arc::new(socket);
+
         let (recv_tx, recv_rx) = async_channel::unbounded();
         let (send_tx, send_rx) = async_channel::unbounded();
 

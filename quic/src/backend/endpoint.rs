@@ -1,15 +1,61 @@
 use std::{collections::HashMap, net::UdpSocket, pin::pin, sync::{Arc, Mutex}};
+use async_io::Async;
 use futures_lite::StreamExt;
 use quinn_proto::ConnectionHandle;
 use crate::{backend::socket::DgramRecv, config::{EndpointConfig, ServerConfig}};
-use super::{events::{C2EEvent, E2CEvent}, outgoing::OutgoingConnectionRequest, socket::Socket, taskpool::get_task_pool};
+use super::{events::{C2EEvent, E2CEvent}, outgoing::OutgoingConnectionRequest, socket::{Socket, SocketConfig}, taskpool::get_task_pool};
 
 pub(crate) fn new(
-    socket: UdpSocket,
+    socket: Async<UdpSocket>,
     config: EndpointConfig,
     server: Option<ServerConfig>,
 ) -> Handle {
-    todo!()
+    let (close_signal_tx, close_signal_rx) = async_channel::unbounded();
+    let (outgoing_request_tx, outgoing_request_rx) = async_channel::unbounded();
+    let (c2e_tx, c2e_rx) = async_channel::unbounded();
+
+    let shared = Arc::new(Shared {
+        state: Mutex::new(Lifestage::Established),
+    });
+
+    let state = State {
+        shared: shared.clone(),
+
+        lifestage: Lifestage::Established,
+
+        close_signal_rx,
+
+        socket: Socket::new(
+            socket,
+            SocketConfig {
+                recv_buf_size: config.recv_buf_size,
+            },
+        ),
+
+        quinn: quinn_proto::Endpoint::new(
+            config.quinn,
+            server.clone().map(|v| v.quinn),
+            true,
+            None,
+        ),
+
+        connections: HashMap::new(),
+
+        outgoing_request_rx,
+
+        c2e_tx,
+        c2e_rx,
+    };
+
+    // Spawn and detach the task to run it in the background
+    get_task_pool().spawn(driver(state)).detach();
+
+    return Handle {
+        shared,
+
+        close_signal_tx,
+        outgoing_request_tx,
+    };
 }
 
 pub(crate) struct Handle {
