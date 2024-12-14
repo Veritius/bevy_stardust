@@ -1,8 +1,9 @@
 use std::{collections::HashMap, net::UdpSocket, pin::pin, sync::{Arc, Mutex}, time::Instant};
 use async_io::Async;
+use bytes::BytesMut;
 use futures_lite::StreamExt;
 use quinn_proto::ConnectionHandle;
-use crate::{backend::{outgoing::RejectedData, socket::DgramRecv}, config::{EndpointConfig, ServerConfig}};
+use crate::{backend::{outgoing::RejectedData, socket::{DgramRecv, DgramSend}}, config::{EndpointConfig, ServerConfig}};
 use super::{events::{C2EEvent, E2CEvent}, outgoing::{AcceptedData, OutgoingConnectionRequest}, socket::{Socket, SocketConfig}, taskpool::get_task_pool};
 
 pub(crate) fn new(
@@ -166,6 +167,9 @@ async fn driver(
             .or(close_signal_rx)
     });
 
+    // Scratch space for various operations
+    let mut scratch = Vec::new();
+
     loop {
         let event = match stream.next().await {
             Some(event) => event,
@@ -174,7 +178,7 @@ async fn driver(
 
         match event {
             Event::C2EEvent((handle, event)) => handle_c2e_event(&mut state, handle, event),
-            Event::DgramRecv(dgram) => handle_dgram_recv(&mut state, dgram),
+            Event::DgramRecv(dgram) => handle_dgram_recv(&mut state, dgram, &mut scratch),
             Event::OutgoingRequest(request) => handle_outgoing_request(&mut state, request),
             Event::CloseSignal(signal) => handle_close_signal(&mut state, signal),
         }
@@ -198,8 +202,43 @@ fn handle_c2e_event(
 fn handle_dgram_recv(
     state: &mut State,
     dgram: DgramRecv,
+    scratch: &mut Vec<u8>,
 ) {
-    todo!()
+    use quinn_proto::DatagramEvent;
+
+    if let Some(event) = state.quinn.handle(
+        Instant::now(),
+        dgram.address,
+        None,
+        None,
+        dgram.payload,
+        scratch,
+    ) {
+        match event {
+            // An event needs to be forwarded to an existing connection
+            DatagramEvent::ConnectionEvent(handle, event) => {
+                let connection = state.connections.get(&handle).unwrap();
+                let _ = connection.e2c_tx.send_blocking(E2CEvent::Quinn(event));
+            },
+
+            // A new incoming connection has appeared
+            DatagramEvent::NewConnection(incoming) => {
+                todo!()
+            },
+
+            // The endpoint wants to send a datagram
+            DatagramEvent::Response(transmit) => {
+                let _ = state.socket.send_tx.send_blocking(DgramSend {
+                    address: transmit.destination,
+                    payload: {
+                        let mut buf = BytesMut::with_capacity(transmit.size);
+                        buf.extend_from_slice(&scratch[..transmit.size]);
+                        buf
+                    },
+                });
+            },
+        }
+    }
 }
 
 fn handle_outgoing_request(
