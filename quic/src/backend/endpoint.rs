@@ -173,10 +173,10 @@ async fn driver(
         };
 
         match event {
-            Event::C2EEvent((handle, event)) => todo!(),
-            Event::DgramRecv(dgram) => todo!(),
+            Event::C2EEvent((handle, event)) => handle_c2e_event(&mut state, handle, event),
+            Event::DgramRecv(dgram) => handle_dgram_recv(&mut state, dgram),
             Event::OutgoingRequest(request) => handle_outgoing_request(&mut state, request),
-            Event::CloseSignal(signal) => todo!(),
+            Event::CloseSignal(signal) => handle_close_signal(&mut state, signal),
         }
 
         match state.lifestage {
@@ -185,6 +185,21 @@ async fn driver(
             Lifestage::Closed => todo!(),
         }
     }
+}
+
+fn handle_c2e_event(
+    state: &mut State,
+    handle: ConnectionHandle,
+    event: C2EEvent,
+) {
+    todo!()
+}
+
+fn handle_dgram_recv(
+    state: &mut State,
+    dgram: DgramRecv,
+) {
+    todo!()
 }
 
 fn handle_outgoing_request(
@@ -240,4 +255,11 @@ fn handle_outgoing_request(
             request.reject(RejectedData {});
         },
     }
+}
+
+fn handle_close_signal(
+    state: &mut State,
+    signal: CloseSignal,
+) {
+    todo!()
 }
