@@ -42,7 +42,6 @@ enum Message {
     },
 }
 
-// TODO: Reduce code repetition because there's a lot
 impl Message {
     fn read<B: Buf>(buf: &mut B) -> Result<Self, MessageDecodeError> {
         let code: u64 = decode_varint(buf)?.into();
@@ -50,10 +49,7 @@ impl Message {
         match code {
             0 => {
                 let channel = decode_varint(buf)?.into();
-                let length: usize = u64::from(decode_varint(buf)?)
-                    .try_into().map_err(|_| MessageDecodeError::TooLarge)?;
-                if buf.remaining() < length { return Err(MessageDecodeError::EndOfInput); }
-                let payload = buf.copy_to_bytes(length);
+                let payload = Segment::read(buf)?.0;
 
                 return Ok(Self::Unordered {
                     channel,
@@ -65,10 +61,7 @@ impl Message {
                 let channel = decode_varint(buf)?.into();
                 if buf.remaining() < 2 { return Err(MessageDecodeError::EndOfInput); }
                 let sequence = buf.get_u16().into();
-                let length: usize = u64::from(decode_varint(buf)?)
-                    .try_into().map_err(|_| MessageDecodeError::TooLarge)?;
-                if buf.remaining() < length { return Err(MessageDecodeError::EndOfInput); }
-                let payload = buf.copy_to_bytes(length);
+                let payload = Segment::read(buf)?.0;
 
                 return Ok(Self::Sequenced {
                     channel,
@@ -92,16 +85,16 @@ impl Message {
                 // Calculate the amount of space needed to write the message
                 // If it's too low, we can return an error early
                 let channel = VarInt::from(*channel);
-                let pld_len = VarInt::try_from(payload.len()).unwrap(); // once again unwrapping is fine because a 46,116 tb message is ridiculous
-                let b_len_sum = payload.len() + (code.len() + channel.len() + pld_len.len()) as usize;
+                let b_len_sum = (code.len() + channel.len()) as usize;
                 if buf.remaining_mut() < b_len_sum { return Err(InsufficientSpace); }
 
                 // Write everything
                 // Unwrapping is fine since we checked that there's enough space
                 code.write(buf).unwrap();
                 channel.write(buf).unwrap();
-                pld_len.write(buf).unwrap();
-                buf.put_slice(&payload);
+
+                // can't unwrap here
+                Segment(payload.clone()).write(buf)?;
             },
 
             Message::Sequenced {
@@ -114,9 +107,8 @@ impl Message {
                 // Calculate the amount of space needed to write the message
                 // If it's too low, we can return an error early
                 let channel = VarInt::from(*channel);
-                let seq_len = 2; // amount of bytes a u16 takes up, we don't encode it as a varint
-                let pld_len = VarInt::try_from(payload.len()).unwrap(); // once again unwrapping is fine because a 46,116 tb message is ridiculous
-                let b_len_sum = payload.len() + seq_len + (code.len() + channel.len() + pld_len.len()) as usize;
+                let seq_len = 2; // amount of bytes a u16 takes up, as we don't encode it as a varint
+                let b_len_sum = seq_len + (code.len() + channel.len()) as usize;
                 if buf.remaining_mut() < b_len_sum { return Err(InsufficientSpace); }
 
                 // Write everything
@@ -124,8 +116,9 @@ impl Message {
                 code.write(buf).unwrap();
                 channel.write(buf).unwrap();
                 buf.put_u16(sequence.inner());
-                pld_len.write(buf).unwrap();
-                buf.put_slice(&payload);
+
+                // can't unwrap here
+                Segment(payload.clone()).write(buf)?;
             },
         }
 
