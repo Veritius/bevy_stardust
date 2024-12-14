@@ -90,11 +90,22 @@ async fn driver(
             .or(close_signal_rx)
     });
 
-    while let Some(event) = stream.next().await {
+    loop {
+        let event = match stream.next().await {
+            Some(event) => event,
+            None => todo!(),
+        };
+
         match event {
             Event::C2EEvent((handle, event)) => todo!(),
             Event::DgramRecv(dgram) => todo!(),
             Event::CloseSignal(signal) => todo!(),
+        }
+
+        match state.lifestage {
+            Lifestage::Established => todo!(),
+            Lifestage::Closing => todo!(),
+            Lifestage::Closed => todo!(),
         }
     }
 }
